@@ -86,6 +86,11 @@ export interface Order {
   gift?: GiftInfo;
   /** "gift_card" orders buy a digital gift card instead of clothes. */
   kind?: "goods" | "gift_card";
+  /** When each step of the order happened, for the tracker. */
+  paidAt?: string;
+  packedAt?: string;
+  readyAt?: string;
+  completedAt?: string;
   /** Where a goods order came from; a Buy now order leaves the bag alone. */
   source?: "bag" | "buy_now";
   /** For gift_card orders: the card that was issued. */
@@ -117,6 +122,13 @@ export function findOrder(id: string): Order | null {
     }
     return o;
   }, true);
+}
+
+/** For /track: the order number and the phone it was placed with must both match. */
+export function findOrderByNumber(number: string, phone: string): Order | null {
+  const n = number.trim().toUpperCase().replace(/^(EP-?)?/, "EP-");
+  const o = db((d) => d.orders.find((x) => x.number === n && x.phone === phone) ?? null);
+  return o ? findOrder(o.id) : null;
 }
 
 export function findOrderByGiftToken(token: string): Order | null {

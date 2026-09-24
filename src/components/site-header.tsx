@@ -14,6 +14,7 @@ import { AnimatedNavFramer, useScrollCollapse } from "./ui/navigation-menu";
 import { TwentyTwelveOne as SmoothDropdown, type SmoothDropdownItem } from "./ui/smooth-dropdown";
 import { signOut } from "@/app/auth-actions";
 import {
+  DeliveryTracking01Icon,
   HangerIcon,
   HelpCircleIcon,
   InformationCircleIcon,
@@ -37,6 +38,7 @@ const menu: SmoothDropdownItem[] = [
   { id: "/how-it-works", href: "/how-it-works", label: "How it works", icon: HelpCircleIcon },
   { id: "/size-guide", href: "/size-guide", label: "Your size in cm", icon: RulerIcon },
   { id: "/alerts", href: "/alerts", label: "Drop alerts", icon: Notification01Icon },
+  { id: "/track", href: "/track", label: "Track an order", icon: DeliveryTracking01Icon },
   { id: "/about", href: "/about", label: "About", icon: InformationCircleIcon },
 ];
 

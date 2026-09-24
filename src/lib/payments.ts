@@ -23,6 +23,7 @@ export async function confirmPayment(orderId: string) {
 
   updateOrder(order.id, (o) => {
     o.status = "paid";
+    o.paidAt = new Date().toISOString();
   });
 
   // ---- A piece sent as a gift ----

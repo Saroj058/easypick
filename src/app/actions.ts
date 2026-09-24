@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { checkGiftCard, spendGiftCard } from "@/lib/gift-cards";
 import { normaliseNepaliMobile } from "@/lib/format";
-import { saveOrder, type Order, type OrderLine } from "@/lib/orders";
+import { findOrderByNumber, saveOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
 import { confirmPayment } from "@/lib/payments";
 import { site } from "@/lib/site";
 import { getProducts } from "@/lib/store";
@@ -144,4 +144,48 @@ export async function payInTestMode(form: FormData) {
   const id = String(form.get("orderId") ?? "");
   await confirmPayment(id);
   redirect(`/order/${id}`);
+}
+
+/** Stands in for the helper's admin screen while it doesn't exist: moves a paid order one step on. Disabled in production. */
+export async function advanceOrderInTestMode(form: FormData) {
+  if (process.env.NODE_ENV === "production") return;
+  const id = String(form.get("orderId") ?? "");
+  const now = new Date().toISOString();
+  updateOrder(id, (o) => {
+    if (o.status === "paid" && !o.packedAt) o.packedAt = now;
+    else if (o.status === "paid") {
+      o.status = o.method === "pickup" ? "ready_for_pickup" : "out_for_delivery";
+      o.readyAt = now;
+    } else if (o.status === "ready_for_pickup" || o.status === "out_for_delivery") {
+      o.status = "completed";
+      o.completedAt = now;
+    }
+  });
+  redirect(`/order/${id}`);
+}
+
+// ---------- Track an order without an account ----------
+
+export type TrackState = { status: "idle" } | { status: "error"; message: string; number: string; phone: string };
+
+const trackTries = new Map<string, { n: number; since: number }>();
+
+export async function trackOrder(_prev: TrackState, form: FormData): Promise<TrackState> {
+  const typedPhone = String(form.get("phone") ?? "");
+  const phone = normaliseNepaliMobile(typedPhone);
+  const number = String(form.get("number") ?? "");
+  const fail = (message: string): TrackState => ({ status: "error", message, number, phone: typedPhone });
+  if (!phone || !/\d{6}/.test(number)) return fail("Enter your order number (EP-123456) and the mobile number you used.");
+
+  // A few tries per number, so order numbers can't be guessed.
+  const t = trackTries.get(phone);
+  const fresh = !t || Date.now() - t.since > 10 * 60_000;
+  const tries = fresh ? { n: 0, since: Date.now() } : t;
+  if (tries.n >= 8) return fail("Too many tries. Please wait 10 minutes.");
+  tries.n++;
+  trackTries.set(phone, tries);
+
+  const order = findOrderByNumber(number, phone);
+  if (!order) return fail("We couldn't find that order. Check the number on your receipt and the phone you ordered with.");
+  redirect(`/order/${order.id}`);
 }

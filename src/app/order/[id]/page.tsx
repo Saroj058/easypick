@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CheckStatus } from "./check-status";
 import { ClearBag } from "./clear-bag";
 import { ShareGiftLink } from "@/components/share-gift-link";
 import { Barcode } from "@/components/hang-tag";
 import { formatPrice } from "@/lib/format";
 import { findOrder, type Order } from "@/lib/orders";
-import { payInTestMode } from "@/app/actions";
+import { advanceOrderInTestMode, payInTestMode } from "@/app/actions";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Your order", robots: { index: false } };
@@ -78,6 +79,66 @@ function GiftProgress({ order }: { order: Order }) {
       )}
       {g.message && !g.thanks && <p className="mt-6 text-[15px] text-steel-dark">Your note: &ldquo;{g.message}&rdquo;</p>}
       <p className="mt-3 text-[13px] text-steel-dark">{g.showPrice ? "The price is shown to them." : "The price is hidden from them."}</p>
+      <CheckStatus className="mt-6" />
+    </section>
+  );
+}
+
+/** Paid → Packed → Ready at the counter / On the way → Collected / Delivered, with times. */
+function OrderTracker({ order }: { order: Order }) {
+  const pickup = order.method === "pickup";
+  const ready = order.status === "ready_for_pickup" || order.status === "out_for_delivery" || order.status === "completed";
+  const done = order.status === "completed";
+  const steps: { label: string; note?: string; at?: string; done: boolean }[] = [
+    { label: "Paid", at: order.paidAt ?? order.createdAt, done: true },
+    { label: "Packed", note: "The helper has picked your pieces off the rack.", at: order.packedAt, done: Boolean(order.packedAt) || ready },
+    pickup
+      ? { label: "Ready at the counter", note: "Bring your order number. We hold it for 7 days.", at: order.readyAt, done: ready }
+      : { label: "On the way", note: "The rider calls before arriving.", at: order.readyAt, done: ready },
+    { label: pickup ? "Collected" : "Delivered", at: order.completedAt, done },
+  ];
+  const current = steps.findIndex((s) => !s.done);
+
+  return (
+    <section aria-labelledby="order-status" className="mt-10 bg-photo p-5 md:p-6">
+      <h2 id="order-status" className="text-lg font-semibold">
+        Order status
+      </h2>
+      <ol className="mt-5">
+        {steps.map((s, i) => (
+          <li key={s.label} className="relative flex gap-4 pb-6 last:pb-0">
+            {i < steps.length - 1 && (
+              <span className={`absolute left-[5px] top-4 h-full w-px ${steps[i + 1].done ? "bg-ink" : "bg-mist"}`} aria-hidden />
+            )}
+            <span
+              className={`relative mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full ${
+                s.done ? "bg-ink" : i === current ? "border-2 border-ink bg-volt" : "border border-steel-dark bg-paper"
+              }`}
+              aria-hidden
+            />
+            <span>
+              <span className={s.done || i === current ? "font-semibold" : "text-steel-dark"}>{s.label}</span>
+              {s.at && s.done && <span className="ml-2 text-[13px] text-steel-dark">{time.format(new Date(s.at))}</span>}
+              {i === current && <span className="ml-2 text-[13px] text-steel-dark">Next</span>}
+              {s.note && (s.done || i === current) && <span className="block text-[14px] text-steel-dark">{s.note}</span>}
+              <span className="sr-only">{s.done ? " (done)" : i === current ? " (next)" : " (not yet)"}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+      <CheckStatus className="mt-6" />
+      {process.env.NODE_ENV !== "production" && !done && (
+        <form action={advanceOrderInTestMode}>
+          <input type="hidden" name="orderId" value={order.id} />
+          <button type="submit" className="min-h-11 text-[13px] text-steel-dark underline underline-offset-2">
+            Move to the next step (test mode, until the helper&apos;s screen exists)
+          </button>
+        </form>
+      )}
+      <p className="mt-3 text-[13px] text-steel-dark">
+        Come back any time: <Link href="/track" className="underline underline-offset-2">{site.url.replace(/^https?:\/\//, "")}/track</Link> with <span className="whitespace-nowrap">{order.number}</span> and your
+        phone number.
+      </p>
     </section>
   );
 }
@@ -134,6 +195,7 @@ export default async function OrderPage({ params }: PageProps<"/order/[id]">) {
       )}
 
       {order.gift && paid && <GiftProgress order={order} />}
+      {!order.gift && order.kind !== "gift_card" && paid && <OrderTracker order={order} />}
 
       {order.kind === "gift_card" && order.issuedCardCode && (
         <section aria-label="Gift card" className="mt-10 bg-photo p-5 md:p-6">
