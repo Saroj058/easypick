@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Inter, JetBrains_Mono, Mukta } from "next/font/google";
 
+import { PendingBagAdd } from "@/components/bag-gate";
 import { BagProvider } from "@/components/bag-provider";
 import { SiteFooter } from "@/components/site-footer";
 import { MobileTabBar, SiteHeader } from "@/components/site-header";
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </main>
           <SiteFooter />
           <MobileTabBar />
+          <PendingBagAdd />
         </BagProvider>
       </body>
     </html>

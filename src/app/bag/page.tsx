@@ -3,19 +3,34 @@
 import Link from "next/link";
 
 import { useBag } from "@/components/bag-provider";
+import { useMe } from "@/components/session";
 import { formatPrice } from "@/lib/format";
 import { site } from "@/lib/site";
 
 export default function BagPage() {
   const { lines, ready, subtotal, setQty, remove } = useBag();
+  const me = useMe();
 
   return (
     <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">
       <title>Bag | Easypick</title>
       <h1 className="display text-[40px] md:text-[72px]">Bag</h1>
 
-      {!ready ? (
+      {!ready || me === undefined ? (
         <div className="mt-10 h-40" aria-hidden />
+      ) : me === null ? (
+        <div className="mt-10">
+          <p className="text-lg">Your bag is saved to your account.</p>
+          <p className="mt-2 text-steel-dark">Log in to add pieces and check out. Want just one piece? Tap Buy now on it. No account needed.</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/login?reason=bag&next=/bag" className="btn btn-volt">
+              Log in
+            </Link>
+            <Link href="/shop" className="btn btn-outline">
+              Shop all
+            </Link>
+          </div>
+        </div>
       ) : lines.length === 0 ? (
         <div className="mt-10">
           <p className="text-steel-dark">Your bag is empty.</p>

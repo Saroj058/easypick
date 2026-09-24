@@ -36,12 +36,19 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   if (user) redirect(next);
 
   const signup = sp.mode === "signup";
+  const forBag = sp.reason === "bag";
   const error = typeof sp.error === "string" ? errors[sp.error] : undefined;
 
   return (
     <div className="container-ep max-w-md pb-24 pt-12 text-center md:pt-20">
-      <h1 className="display display-h1">{signup ? "Join Easypick." : "Welcome back."}</h1>
-      <p className="mt-3 text-lg text-steel-dark">{signup ? "One account for the website and the store." : "Log in to see your orders and saved size."}</p>
+      <h1 className="display display-h1">{forBag ? "Log in to use your bag." : signup ? "Join Easypick." : "Welcome back."}</h1>
+      <p className="mt-3 text-lg text-steel-dark">
+        {forBag
+          ? "Your bag is saved to your account. Just want one piece? Go back and tap Buy now. No account needed."
+          : signup
+            ? "One account for the website and the store."
+            : "Log in to see your orders and saved size."}
+      </p>
 
       <div className="mt-10 text-left">
         {error && (
@@ -62,7 +69,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </Link>
       </p>
       <p className="mt-6 text-[13px] text-steel-dark">
-        You don&apos;t need an account to shop. By continuing you agree to our{" "}
+        No account needed for Buy now or gifts. By continuing you agree to our{" "}
         <Link href="/terms" className="underline">
           terms
         </Link>{" "}

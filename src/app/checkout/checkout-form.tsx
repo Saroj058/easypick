@@ -9,7 +9,7 @@ import { useBag } from "@/components/bag-provider";
 import { useMe, usePrefilled } from "@/components/session";
 import { formatPrice } from "@/lib/format";
 import { site } from "@/lib/site";
-import type { FulfilmentMethod } from "@/lib/types";
+import type { BagLine, FulfilmentMethod } from "@/lib/types";
 
 const providers = [
   { value: "esewa", label: "eSewa" },
@@ -31,8 +31,12 @@ function Option({ name, value, checked, onChange, title, note }: { name: string;
 
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 
-export function CheckoutForm() {
-  const { lines, ready, subtotal } = useBag();
+/** Checks out the bag (needs an account), or one piece with `buyNow` (no account needed). */
+export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
+  const bag = useBag();
+  const lines = buyNow ? [buyNow] : bag.lines;
+  const ready = buyNow ? true : bag.ready;
+  const subtotal = buyNow ? buyNow.price * buyNow.qty : bag.subtotal;
   const me = useMe();
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, { status: "idle" });
@@ -74,6 +78,7 @@ export function CheckoutForm() {
   return (
     <form action={action} className="mt-10 space-y-12" noValidate>
       <input type="hidden" name="bag" value={JSON.stringify(lines)} />
+      <input type="hidden" name="mode" value={buyNow ? "buy_now" : "bag"} />
       <input type="hidden" name="giftCard" value={card?.code ?? ""} />
 
       <section aria-labelledby="co-phone">
@@ -97,15 +102,7 @@ export function CheckoutForm() {
         />
         <p className="mt-2 text-[13px] text-steel-dark">
           Order updates come by SMS.{" "}
-          {me === null && (
-            <>
-              No account needed, or{" "}
-              <Link href="/login?next=/checkout" className="font-semibold text-ink underline underline-offset-2">
-                log in
-              </Link>{" "}
-              to save this order to your account.
-            </>
-          )}
+          {me === null && buyNow && <>No account needed.</>}
           {me && <>This order will be saved to your account.</>}
         </p>
       </section>

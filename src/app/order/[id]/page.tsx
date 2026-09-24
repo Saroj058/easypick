@@ -102,7 +102,7 @@ export default async function OrderPage({ params }: PageProps<"/order/[id]">) {
 
   return (
     <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">
-      <ClearBag />
+      {order.source === "bag" && <ClearBag />}
       <p className="text-sm font-semibold text-steel-dark">Order {order.number}</p>
       <h1 className="display mt-3 text-[40px] md:text-[72px]">{heading}</h1>
 

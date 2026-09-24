@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import type { Category, Product, Size } from "@/lib/types";
-import { useBag } from "./bag-provider";
+import { useAddToBag } from "./bag-gate";
 import { useFitProfile } from "./fit-finder";
 import { Barcode } from "./hang-tag";
 import { GarmentSvg } from "./product-image";
@@ -43,7 +43,7 @@ export function encodeFit(fit: Fit) {
 }
 
 export function FitBuilder({ products, initial }: { products: Product[]; initial: Fit }) {
-  const { add } = useBag();
+  const addToBagOrLogin = useAddToBag();
   const profile = useFitProfile();
   const [fit, setFit] = useState<Fit>(initial);
   const [added, setAdded] = useState(false);
@@ -75,10 +75,10 @@ export function FitBuilder({ products, initial }: { products: Product[]; initial
   const ready = lines.length > 0 && !missingSize && !missingRequired;
 
   function addAll() {
-    for (const l of lines) {
-      if (l.variant) add({ slug: l.product.slug, sku: l.variant.sku, name: l.product.name, size: l.variant.size, colour: l.pick.colour, price: l.price });
-    }
-    setAdded(true);
+    const items = lines.flatMap((l) =>
+      l.variant ? [{ slug: l.product.slug, sku: l.variant.sku, name: l.product.name, size: l.variant.size, colour: l.pick.colour, price: l.price }] : [],
+    );
+    if (addToBagOrLogin(items)) setAdded(true);
   }
 
   async function share() {

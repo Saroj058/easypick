@@ -86,6 +86,8 @@ export interface Order {
   gift?: GiftInfo;
   /** "gift_card" orders buy a digital gift card instead of clothes. */
   kind?: "goods" | "gift_card";
+  /** Where a goods order came from; a Buy now order leaves the bag alone. */
+  source?: "bag" | "buy_now";
   /** For gift_card orders: the card that was issued. */
   issuedCardCode?: string;
   /** For gift_card orders: where the card was emailed and whether it went out. */

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { describeMatch, hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import type { Colour, LiveStock, Product, Size } from "@/lib/types";
-import { useBag } from "./bag-provider";
+import { useAddToBag } from "./bag-gate";
 import { GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
 
@@ -23,7 +23,7 @@ type Props = Pick<
 export function BuyPanel(props: Props) {
   const { slug, name, colours, variants, status } = props;
   const price = props.salePrice ?? props.price;
-  const { add } = useBag();
+  const addToBagOrLogin = useAddToBag();
 
   const sizes = Array.from(new Set(variants.map((v) => v.size)));
   const oneSize = sizes.length === 1 && sizes[0] === "ONE";
@@ -63,7 +63,7 @@ export function BuyPanel(props: Props) {
 
   function addToBag() {
     if (!variant || sellable <= 0) return;
-    add({ slug, sku: variant.sku, name, size: variant.size, colour: colour.name, price });
+    if (!addToBagOrLogin([{ slug, sku: variant.sku, name, size: variant.size, colour: colour.name, price }])) return;
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
   }
@@ -187,12 +187,18 @@ export function BuyPanel(props: Props) {
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         {status === "live" ? (
           <>
-            <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="btn btn-volt flex-1">
-              {added ? "Added" : size ? "Add to bag" : "Pick a size"}
+            {variant && sellable > 0 ? (
+              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="btn btn-volt flex-1">
+                Buy now
+              </Link>
+            ) : (
+              <button type="button" disabled className="btn btn-volt flex-1">
+                Pick a size
+              </button>
+            )}
+            <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="btn btn-ink flex-1">
+              {added ? "Added" : "Add to bag"}
             </button>
-            <Link href={`/visit?try=${slug}`} className="btn btn-outline flex-1">
-              Try in store
-            </Link>
           </>
         ) : (
           <>
@@ -206,10 +212,18 @@ export function BuyPanel(props: Props) {
         )}
       </div>
       {status === "live" && (
-        <Link href={`/gift/${slug}`} className="btn btn-outline mt-3 w-full">
-          <GiftIcon className="h-5 w-5" />
-          Send as gift
-        </Link>
+        <>
+          <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag is saved to your account.</p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <Link href={`/gift/${slug}`} className="btn btn-outline flex-1">
+              <GiftIcon className="h-5 w-5" />
+              Send as gift
+            </Link>
+            <Link href={`/visit?try=${slug}`} className="btn btn-outline flex-1">
+              Try in store
+            </Link>
+          </div>
+        </>
       )}
       <p className="sr-only" role="status">
         {added ? `${name}, ${colour.name}, size ${size} added to bag` : ""}

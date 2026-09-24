@@ -61,6 +61,12 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
     return { status: "error", message: "Your bag is empty." };
   }
 
+  // The bag is for account holders. "Buy now" is one piece and needs no account.
+  const buyNow = form.get("mode") === "buy_now";
+  const user = await getCurrentUser();
+  if (buyNow) bag = [{ ...bag[0], qty: 1 }];
+  else if (!user) return { status: "error", message: "Log in to check out your bag, or use Buy now on a single piece." };
+
   // Never trust prices or stock from the browser: rebuild every line from the catalogue.
   const catalogue = await getProducts();
   const lines: OrderLine[] = [];
@@ -114,6 +120,7 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
     giftCard,
     total: subtotal + deliveryFee - (giftCard?.applied ?? 0),
     status: giftCard && giftCard.applied >= subtotal + deliveryFee ? "paid" : "awaiting_payment",
+    source: buyNow ? "buy_now" : "bag",
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + 15 * 60_000).toISOString(),
   };
@@ -122,7 +129,7 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
   // then create the payment with the provider and redirect to its checkout URL.
   // The order becomes "paid" only after the API verifies the payment server-to-server,
   // never from the provider's browser redirect.
-  saveOrder(order, (await getCurrentUser())?.id);
+  saveOrder(order, user?.id);
   redirect(`/order/${order.id}`);
 }
 
