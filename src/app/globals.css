@@ -1,26 +1,368 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Easypick visual system — see "Easypick Website" doc, Visual system section. */
+@theme {
+  --color-ink: #0a0a0a;
+  --color-graphite: #1c1c1e;
+  --color-steel: #8e8e93; /* decoration or 24px+ text only (3.3:1 on white) */
+  --color-steel-dark: #6c6c70; /* muted body text on paper/photo */
+  --color-mist: #e5e5ea;
+  --color-paper: #ffffff;
+  --color-photo: #f2f2f2;
+  --color-volt: #c6ff3d;
+  --color-error-light: #b42318;
+  --color-error-dark: #ff6b5a;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* shadcn/ui token names, mapped onto the Easypick palette so components in
+     src/components/ui match the rest of the site. */
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-muted: #f2f2f2;
+  --color-muted-foreground: #6c6c70;
+  --color-border: #e5e5ea;
+  --color-input: #6c6c70;
+  --color-ring: #0a0a0a;
+  --color-primary: #0a0a0a;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f2f2f2;
+  --color-secondary-foreground: #0a0a0a;
+  --color-accent: #f2f2f2;
+  --color-accent-foreground: #0a0a0a;
+  --color-destructive: #b42318;
+  --color-destructive-foreground: #ffffff;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --font-display: var(--font-barlow), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-nepali: var(--font-mukta), var(--font-inter), sans-serif;
+
+  /* Fluid type scale: mobile → desktop */
+  --text-hero: clamp(3.5rem, 1.2rem + 9.8vw, 8.5rem);
+  --text-h1: clamp(2.5rem, 1.6rem + 4vw, 4.5rem);
+  --text-h2: clamp(1.75rem, 1.3rem + 2vw, 2.75rem);
+  --text-stat: clamp(3rem, 1.6rem + 6vw, 7rem);
+
+  --radius-btn: 2px;
+
+  --animate-fade-up: fade-up 260ms ease-out both;
+  @keyframes fade-up {
+    from {
+      opacity: 0.001;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
+    /* Keep focused elements clear of the sticky header and mobile tab bar. */
+    scroll-padding-top: 72px;
+    scroll-padding-bottom: 72px;
+  }
+  @media (min-width: 1024px) {
+    html {
+      scroll-padding-bottom: 0;
+    }
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  @media (min-width: 1024px) {
+    body {
+      font-size: 18px;
+    }
+  }
+  button:not(:disabled),
+  [role="button"],
+  summary,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+  .on-dark :focus-visible {
+    outline-color: var(--color-volt);
+  }
+  .on-dark .btn-volt:focus-visible {
+    outline-color: var(--color-paper);
+  }
+}
+
+@layer components {
+  .container-ep {
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: 16px;
+  }
+  @media (min-width: 768px) {
+    .container-ep {
+      padding-inline: 32px;
+    }
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    line-height: 0.92;
+  }
+  .display-hero {
+    font-size: var(--text-hero);
+    letter-spacing: -0.025em;
+    line-height: 0.84;
+  }
+  .display-h1 {
+    font-size: var(--text-h1);
+    letter-spacing: -0.015em;
+    line-height: 0.9;
+  }
+  .display-h2 {
+    font-size: var(--text-h2);
+    line-height: 0.95;
+  }
+
+  .section {
+    padding-block: 64px;
+  }
+  @media (min-width: 768px) {
+    .section {
+      padding-block: 96px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .section {
+      padding-block: 160px;
+    }
+  }
+
+  /* Buttons: 52px tall, 2px corners, uppercase. One solid + one outline per screen at most. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 52px;
+    padding-inline: 28px;
+    border-radius: var(--radius-btn);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      background-color 200ms,
+      color 200ms,
+      border-color 200ms,
+      opacity 200ms,
+      transform 120ms;
+  }
+  .btn:active {
+    transform: scale(0.98);
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .btn-volt {
+    background: var(--color-volt);
+    color: var(--color-ink);
+  }
+  .btn-ink {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .btn-outline {
+    border: 1.5px solid currentColor;
+  }
+  /* Hover only on devices that hover, so colours don't stick after a tap on Android. */
+  @media (hover: hover) {
+    .btn-volt:hover {
+      background: #b5f020;
+    }
+    .btn-ink:hover {
+      background: var(--color-graphite);
+    }
+    .btn-outline:hover {
+      background: color-mix(in srgb, currentColor 8%, transparent);
+    }
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  /* Spec-sheet section marker: "02 / DROP 01" */
+  .index {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tag-volt {
+    display: inline-block;
+    background: var(--color-volt);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: var(--radius-btn);
+  }
+
+  /* Paper hang tag with notched top corners and a punched hole. */
+  .hang-tag {
+    position: relative;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%, 0 14px);
+  }
+  .hang-tag::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    margin-left: -5px;
+    border-radius: 9999px;
+    background: var(--hole, var(--color-graphite));
+  }
+
+  /* Receipt strip with a torn zig-zag bottom edge. */
+  .receipt {
+    background: var(--color-paper);
+    --zz: 10px;
+    padding-bottom: calc(var(--zz) + 20px);
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% calc(100% - var(--zz)),
+      95% 100%,
+      90% calc(100% - var(--zz)),
+      85% 100%,
+      80% calc(100% - var(--zz)),
+      75% 100%,
+      70% calc(100% - var(--zz)),
+      65% 100%,
+      60% calc(100% - var(--zz)),
+      55% 100%,
+      50% calc(100% - var(--zz)),
+      45% 100%,
+      40% calc(100% - var(--zz)),
+      35% 100%,
+      30% calc(100% - var(--zz)),
+      25% 100%,
+      20% calc(100% - var(--zz)),
+      15% 100%,
+      10% calc(100% - var(--zz)),
+      5% 100%,
+      0 calc(100% - var(--zz))
+    );
+  }
+  .leader {
+    flex: 1;
+    margin-inline: 8px;
+    border-bottom: 1.5px dotted var(--color-steel);
+    transform: translateY(-5px);
+  }
+
+  /* Store ticker: one line, scrolls slowly, static under reduced motion. */
+  .ticker-track {
+    display: flex;
+    width: max-content;
+    animation: ticker 48s linear infinite;
+  }
+  .ticker:hover .ticker-track,
+  .ticker:focus-within .ticker-track {
+    animation-play-state: paused;
+  }
+  @keyframes ticker {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .prose-ep h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 28px;
+    line-height: 1;
+    margin-top: 48px;
+    margin-bottom: 12px;
+  }
+  .prose-ep p,
+  .prose-ep li {
+    color: #3a3a3c;
+    margin-bottom: 12px;
+  }
+  .prose-ep ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+}
+
+/* Scroll reveal: fade up once. Only hides elements after JS has run (see reveal-root.tsx). */
+[data-reveal] {
+  transition:
+    opacity 260ms ease-out,
+    transform 260ms ease-out;
+  transition-delay: calc(min(var(--i, 0), 3) * 70ms);
+}
+.reveal-on [data-reveal]:not([data-shown]) {
+  opacity: 0.001;
+  transform: translateY(12px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ticker-track {
+    animation: none !important;
+    width: auto;
+    flex-wrap: wrap;
+  }
+  .ticker-dup {
+    display: none;
+  }
 }

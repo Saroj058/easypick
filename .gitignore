@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local data store (accounts, sessions, orders) until the Store API exists
+/.data/
+
+!.env.example
