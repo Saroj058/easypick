@@ -20,7 +20,7 @@ export default async function AdminLogin() {
       </div>
       <h1 className="display display-h1">Staff login.</h1>
       <p className="mt-3 text-lg text-steel-dark">For the Easypick team: orders, stock and products.</p>
-      {adminConfigured() ? (
+      {(await adminConfigured()) ? (
         <AdminLoginForm />
       ) : (
         <p className="mt-10 bg-photo px-4 py-3 text-[14px]">

@@ -55,6 +55,18 @@ export const sessions = pgTable(
   (t) => [index("sessions_user_idx").on(t.userId)],
 );
 
+// ---------- Staff (admin screen) ----------
+
+export const staff = pgTable("staff", {
+  id: text("id").primaryKey(),
+  /** As typed (e.g. "Saroj"); logins ignore upper/lower case. */
+  username: text("username").notNull().unique(),
+  /** scrypt, see lib/staff.ts. Never the password itself. */
+  passwordHash: text("password_hash").notNull(),
+  createdAt: ts("created_at").notNull(),
+  updatedAt: ts("updated_at").notNull(),
+});
+
 // ---------- Catalogue ----------
 
 /** A product without its variants (those are rows in `variants`, so stock changes are atomic). */

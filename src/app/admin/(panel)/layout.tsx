@@ -20,7 +20,9 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
             <span className="rounded-[2px] bg-ink px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-paper">Admin</span>
           </Link>
           <div className="flex items-center gap-4 text-[14px]">
-            <span className="hidden text-steel-dark sm:inline">{who}</span>
+            <Link href="/admin/account" className="hidden min-h-11 content-center text-steel-dark hover:text-ink sm:block" title="Your login">
+              {who.username}
+            </Link>
             <Link href="/" target="_blank" rel="noopener" className="min-h-11 content-center text-steel-dark hover:text-ink">
               View site ↗
             </Link>

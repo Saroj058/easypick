@@ -9,7 +9,7 @@ import { createProduct, findProduct, notifyRestocked, saveFestivals, setStock, u
 import { notifySms } from "@/lib/notify";
 import { findOrder, updateOrder } from "@/lib/orders";
 import { saveProductPhoto } from "@/lib/photos";
-import { checkAdminLogin, endAdminSession, requireStaff, startAdminSession } from "@/lib/staff";
+import { changeStaffLogin, checkAdminLogin, endAdminSession, requireStaff, startAdminSession } from "@/lib/staff";
 import type { Category, Colour, Fit, Gender, Measurements, Product, ProductStatus, Size } from "@/lib/types";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -35,14 +35,41 @@ export async function signInAdmin(_prev: LoginState, form: FormData): Promise<Lo
   const cur = !t || Date.now() - t.since > WINDOW ? { n: 0, since: Date.now() } : t;
   if (cur.n >= 5) return { status: "error", message: "Too many tries. Wait 15 minutes, then try again.", username };
 
-  if (!checkAdminLogin(username, password)) {
+  const member = await checkAdminLogin(username, password);
+  if (!member) {
     cur.n++;
     tries.set(ip, cur);
     return { status: "error", message: "That username and password don't match.", username };
   }
   tries.delete(ip);
-  await startAdminSession(username);
+  await startAdminSession(member.id);
   redirect("/admin");
+}
+
+// ---------- Your staff login ----------
+
+export type AccountState =
+  | { status: "idle" }
+  | { status: "saved"; message: string }
+  | { status: "error"; field: "current" | "username" | "password"; message: string };
+
+export async function changeUsername(_prev: AccountState, form: FormData): Promise<AccountState> {
+  const me = await requireStaff();
+  const res = await changeStaffLogin(me.id, String(form.get("current") ?? ""), { username: str(form, "username") });
+  if (!res.ok) return { status: "error", field: res.field, message: res.message };
+  revalidatePath("/admin", "layout");
+  return { status: "saved", message: "Username changed. Use it next time you sign in." };
+}
+
+export async function changePassword(_prev: AccountState, form: FormData): Promise<AccountState> {
+  const me = await requireStaff();
+  const password = String(form.get("password") ?? "");
+  if (password !== String(form.get("confirm") ?? "")) return { status: "error", field: "password", message: "The two new passwords don't match." };
+  const res = await changeStaffLogin(me.id, String(form.get("current") ?? ""), { password });
+  if (!res.ok) return { status: "error", field: res.field, message: res.message };
+  // Keep this device signed in; every other device is signed out by the new password.
+  await startAdminSession(me.id);
+  return { status: "saved", message: "Password changed. Other devices have been signed out." };
 }
 
 export async function signOutAdmin() {
