@@ -1,14 +1,14 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import type { Product } from "@/lib/types";
 import { BuyPanel } from "./buy-panel";
+import { BagIcon } from "./icons";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
 
-/** "+" on a product card: pick colour and size, then Buy now or Add to bag, without leaving the page. */
+/** Small bag button on a product card: pick colour and size, then Buy now or Add to bag, without leaving the page. */
 export function QuickBuy({ product, className = "" }: { product: Product; className?: string }) {
   const [open, setOpen] = useState(false);
   if (product.status !== "live") return null;
@@ -16,12 +16,17 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
+        {/* 44px tap area around a quieter 36px glass chip. On hover screens it only shows on hover
+            (or keyboard focus) and opens out to say "Quick buy". */}
         <button
           type="button"
           aria-label={`Quick buy: ${product.name}`}
-          className={`grid h-11 w-11 place-items-center rounded-full bg-paper/95 text-ink shadow-[0_1px_4px_rgba(0,0,0,0.18)] transition-colors hover:bg-ink hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${className}`}
+          className={`peer/qb flex h-11 min-w-11 items-center justify-end outline-none transition-opacity duration-200 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100 ${className}`}
         >
-          <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+          <span className="flex h-9 items-center gap-1.5 rounded-full bg-paper/80 px-2.5 text-ink ring-1 ring-ink/10 backdrop-blur-md transition-colors duration-200 hover:bg-ink hover:text-paper [button:focus-visible_&]:outline [button:focus-visible_&]:outline-2 [button:focus-visible_&]:outline-offset-2 [button:focus-visible_&]:outline-ink">
+            <BagIcon className="h-4 w-4" />
+            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] [@media(hover:hover)]:inline">Quick buy</span>
+          </span>
         </button>
       </SheetTrigger>
       <SheetContent
