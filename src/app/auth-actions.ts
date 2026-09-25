@@ -64,7 +64,7 @@ export async function completeProfile(_prev: ProfileState, form: FormData): Prom
   if (!name) return { status: "error", message: "Tell us what to call you." };
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { status: "error", message: "That email doesn't look right." };
   if (phoneRaw && !phone) return { status: "error", message: "Enter a 10-digit Nepali mobile number, or leave it empty." };
-  updateUser(user.id, { name, email: email ?? user.email, alerts, ...(!user.phone && { contactPhone: phone }) });
+  await updateUser(user.id, { name, email: email ?? user.email, alerts, ...(!user.phone && { contactPhone: phone }) });
   redirect(safeNext(form.get("next")));
 }
 
@@ -75,7 +75,7 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   if (!name) return { status: "error", message: "Name can't be empty." };
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { status: "error", message: "That email doesn't look right." };
   if (phoneRaw && !phone) return { status: "error", message: "Enter a 10-digit Nepali mobile number, or leave it empty." };
-  updateUser(user.id, { name, email, alerts, ...(!user.phone && { contactPhone: phone }) });
+  await updateUser(user.id, { name, email, alerts, ...(!user.phone && { contactPhone: phone }) });
   return { status: "saved" };
 }
 
@@ -91,5 +91,5 @@ export async function saveMyFit(fit: FitProfile) {
   const user = await getCurrentUser();
   if (!user) return;
   const clean = (n: unknown) => (typeof n === "number" && n >= 40 && n <= 200 ? Math.round(n) : undefined);
-  updateUser(user.id, { fit: { chest: clean(fit.chest), length: clean(fit.length), waist: clean(fit.waist) } });
+  await updateUser(user.id, { fit: { chest: clean(fit.chest), length: clean(fit.length), waist: clean(fit.waist) } });
 }

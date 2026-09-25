@@ -147,7 +147,7 @@ function OrderTracker({ order }: { order: Order }) {
 
 export default async function OrderPage({ params }: PageProps<"/order/[id]">) {
   const { id } = await params;
-  const order = findOrder(id);
+  const order = await findOrder(id);
   if (!order) notFound();
 
   const awaiting = order.status === "awaiting_payment";

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
-import type { Order } from "@/lib/orders";
+import { paidOrders, type Order } from "@/lib/orders";
 import { site } from "@/lib/site";
 import { setOrderStep } from "@/app/admin/actions";
 
@@ -69,7 +68,7 @@ function statusLabel(o: Order) {
 export default async function AdminOrders({ searchParams }: PageProps<"/admin/orders">) {
   const sp = await searchParams;
   const view: View = typeof sp.view === "string" && sp.view in views ? (sp.view as View) : "pack";
-  const paid = db((d) => d.orders.filter((o) => o.status !== "awaiting_payment" && o.status !== "expired"));
+  const paid = await paidOrders();
   const list = paid.filter((o) => inView(o, view)).sort((a, b) => Date.parse(a.paidAt ?? a.createdAt) - Date.parse(b.paidAt ?? b.createdAt));
   if (view === "done" || view === "all") list.reverse();
 

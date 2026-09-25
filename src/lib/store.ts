@@ -1,14 +1,17 @@
 import "server-only";
 
-import { db } from "./db";
+import { eq } from "drizzle-orm";
+
+import { allDrops, loadProducts } from "./catalogue";
+import { getDb, schema } from "./db";
 import type { Drop, LiveStock, Product, ProductStatus } from "./types";
 
 // Data access for the website. With STORE_API_URL set, reads from the Store API
 // (FastAPI). Without it, serves the local catalogue (seeded from mock-data.ts and
 // edited in the admin screen) so the site runs before the API exists.
 
-const localProducts = () => db((d) => structuredClone(d.products));
-const localDrops = () => db((d) => structuredClone(d.drops));
+const localProducts = async () => loadProducts(await getDb());
+const localDrops = () => allDrops();
 //
 // The API key stays on the server; nothing here is imported by client components.
 
@@ -43,7 +46,7 @@ export function effectiveStatus(p: Product, dropList: Drop[], now = Date.now()):
 const PUBLIC: ProductStatus[] = ["live", "sold_out", "scheduled"];
 
 export async function getDrops(): Promise<Drop[]> {
-  const list = API_URL ? await api<Drop[]>("/drops", CATALOGUE) : localDrops();
+  const list = API_URL ? await api<Drop[]>("/drops", CATALOGUE) : await localDrops();
   return [...list].sort((a, b) => Date.parse(b.releaseAt) - Date.parse(a.releaseAt));
 }
 
@@ -65,7 +68,7 @@ export async function getDropTimeline(now = Date.now()) {
 
 export async function getProducts(): Promise<Product[]> {
   const [list, dropList] = await Promise.all([
-    API_URL ? api<Product[]>("/products?channel=website", CATALOGUE) : Promise.resolve(localProducts()),
+    API_URL ? api<Product[]>("/products?channel=website", CATALOGUE) : localProducts(),
     getDrops(),
   ]);
   return list
@@ -116,8 +119,10 @@ export async function getLiveStock(slug: string): Promise<LiveStock | null> {
   if (API_URL) {
     return api<LiveStock>(`/products/${encodeURIComponent(slug)}/stock`, { cache: "no-store" });
   }
-  const p = db((d) => d.products.find((x) => x.slug === slug));
-  if (!p) return null;
+  const db = await getDb();
+  const [exists] = await db.select({ slug: schema.products.slug }).from(schema.products).where(eq(schema.products.slug, slug));
+  if (!exists) return null;
+  const [p] = await loadProducts(db, [slug]);
   return {
     slug,
     updatedAt: new Date().toISOString(),

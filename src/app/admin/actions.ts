@@ -60,11 +60,11 @@ export async function setOrderStep(form: FormData) {
   await requireStaff();
   const id = str(form, "orderId");
   const step = str(form, "step") as OrderStep;
-  const order = findOrder(id);
+  const order = await findOrder(id);
   if (!order || order.status === "awaiting_payment" || order.status === "expired") return;
   const now = new Date().toISOString();
 
-  updateOrder(id, (o) => {
+  await updateOrder(id, (o) => {
     if (step === "packed") {
       o.packedAt ??= now;
       if (o.gift) o.gift.packedAt ??= now;
@@ -103,7 +103,7 @@ const STATUSES: ProductStatus[] = ["draft", "scheduled", "live", "sold_out", "ar
 export async function saveProduct(_prev: SaveState, form: FormData): Promise<SaveState> {
   await requireStaff();
   const slug = str(form, "slug");
-  const product = findProduct(slug);
+  const product = await findProduct(slug);
   if (!product) return { status: "error", message: "Product not found." };
 
   const price = int(form, "price");
@@ -121,13 +121,13 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     counts[v.sku] = n;
   }
 
-  updateProduct(slug, (p) => {
+  await updateProduct(slug, (p) => {
     p.price = price;
     p.salePrice = salePrice;
     p.status = status;
     p.shortDescription = str(form, "shortDescription") || p.shortDescription;
   });
-  const restocked = setStock(slug, counts);
+  const restocked = await setStock(slug, counts);
   const told = await notifyRestocked(restocked);
 
   revalidatePath("/", "layout");
@@ -152,7 +152,7 @@ export async function addProduct(_prev: SaveState, form: FormData): Promise<Save
   if (!name) return { status: "error", message: "Give it a name." };
   const slug = slugify(str(form, "slug") || name);
   if (!slug) return { status: "error", message: "The name needs some letters or numbers." };
-  if (findProduct(slug)) return { status: "error", message: `There's already a product at /product/${slug}. Change the name or link.` };
+  if (await findProduct(slug)) return { status: "error", message: `There's already a product at /product/${slug}. Change the name or link.` };
 
   const category = str(form, "category") as Category;
   if (!(category in CATEGORY_CODE)) return { status: "error", message: "Choose a category." };
@@ -205,7 +205,7 @@ export async function addProduct(_prev: SaveState, form: FormData): Promise<Save
   }
 
   const live = form.get("publish") === "on";
-  createProduct({
+  await createProduct({
     id: randomUUID(),
     slug,
     name,
@@ -243,7 +243,7 @@ export async function saveFestivalList(_prev: SaveState, form: FormData): Promis
     .map((name, i) => ({ id: randomUUID(), name: name.trim(), date: dates[i], orderBy: orderBys[i] }))
     .filter((f) => f.name && f.date && f.orderBy);
   if (list.some((f) => f.orderBy > f.date)) return { status: "error", message: "The order-by day has to be on or before the festival." };
-  saveFestivals(list);
+  await saveFestivals(list);
   revalidatePath("/", "layout");
   return { status: "saved", message: "Saved." };
 }

@@ -1,97 +1,161 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
-import { db, type Festival, type RestockAlert } from "./db";
+import { getDb, productRows, schema, type DB, type Festival, type RestockAlert } from "./db";
 import { giftEmailHtml } from "./email";
 import { notifyEmail, notifySms } from "./notify";
 import { site } from "./site";
-import type { Product, Size } from "./types";
+import type { Drop, Product, Size } from "./types";
 
-// Changes to the local catalogue: the admin screen, paid orders taking stock off
-// the rack, and "tell me when my size is back". Swaps for Store API calls later.
+// The catalogue in the database: products (one row each) and their colour/size
+// variants (one row each, holding stock). Used by the website, the admin screen,
+// paid orders taking stock off the rack, and "tell me when my size is back".
+
+/** Products with their variants, in display order. */
+export async function loadProducts(db: DB, slugs?: string[]): Promise<Product[]> {
+  const rows = await db
+    .select()
+    .from(schema.products)
+    .where(slugs ? inArray(schema.products.slug, slugs) : undefined)
+    .orderBy(asc(schema.products.position), asc(schema.products.slug));
+  if (!rows.length) return [];
+  const vs = await db
+    .select()
+    .from(schema.variants)
+    .where(
+      inArray(
+        schema.variants.productSlug,
+        rows.map((r) => r.slug),
+      ),
+    )
+    .orderBy(asc(schema.variants.position));
+  return rows.map((r) => ({
+    ...r.data,
+    slug: r.slug,
+    status: r.status,
+    variants: vs
+      .filter((v) => v.productSlug === r.slug)
+      .map((v) => ({ sku: v.sku, size: v.size, colour: v.colour, stock: v.stock, ...(v.lastPieceOnFloor && { lastPieceOnFloor: true }) })),
+  }));
+}
 
 /** Every product, including drafts and archived ones (the website only shows public ones). */
-export function allProducts(): Product[] {
-  return db((d) => structuredClone(d.products));
+export async function allProducts(): Promise<Product[]> {
+  return loadProducts(await getDb());
 }
 
-export function findProduct(slug: string): Product | null {
-  return db((d) => structuredClone(d.products.find((p) => p.slug === slug) ?? null));
+export async function findProduct(slug: string): Promise<Product | null> {
+  const [p] = await loadProducts(await getDb(), [slug]);
+  return p ?? null;
 }
 
-export function createProduct(p: Product) {
-  db((d) => {
-    if (d.products.some((x) => x.slug === p.slug)) throw new Error("slug taken");
-    d.products.push(p);
-  }, true);
+export async function allDrops(): Promise<Drop[]> {
+  const db = await getDb();
+  return db.select().from(schema.drops).orderBy(asc(schema.drops.releaseAt));
 }
 
-export function updateProduct(slug: string, fn: (p: Product) => void) {
-  return db((d) => {
-    const p = d.products.find((x) => x.slug === slug);
-    if (p) fn(p);
-    return p ?? null;
-  }, true);
+export async function createProduct(p: Product) {
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    const [{ n }] = await tx.select({ n: sql<number>`coalesce(max(${schema.products.position}), -1) + 1` }).from(schema.products);
+    const rows = productRows(p, Number(n));
+    await tx.insert(schema.products).values(rows.product);
+    if (rows.variants.length) await tx.insert(schema.variants).values(rows.variants);
+  });
+}
+
+/** Change a product's details (not its stock: that's setStock). */
+export async function updateProduct(slug: string, fn: (p: Product) => void) {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const [row] = await tx.select().from(schema.products).where(eq(schema.products.slug, slug)).for("update");
+    if (!row) return null;
+    const p: Product = { ...structuredClone(row.data), slug: row.slug, status: row.status, variants: [] };
+    fn(p);
+    const { product } = productRows(p, row.position);
+    await tx
+      .update(schema.products)
+      .set({ status: product.status, data: product.data, updatedAt: new Date().toISOString() })
+      .where(eq(schema.products.slug, slug));
+    return p;
+  });
 }
 
 /**
  * Set stock counts. Returns the SKUs that went from none to some, so the people
  * who asked to hear about them can be told.
  */
-export function setStock(slug: string, counts: Record<string, number>): string[] {
-  const restocked: string[] = [];
-  updateProduct(slug, (p) => {
-    for (const v of p.variants) {
+export async function setStock(slug: string, counts: Record<string, number>): Promise<string[]> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const current = await tx.select().from(schema.variants).where(eq(schema.variants.productSlug, slug)).for("update");
+    const restocked: string[] = [];
+    for (const v of current) {
       const next = counts[v.sku];
       if (next === undefined || !Number.isFinite(next)) continue;
       const n = Math.max(0, Math.floor(next));
       if (v.stock <= 0 && n > 0) restocked.push(v.sku);
-      v.stock = n;
-      if (n > 1) v.lastPieceOnFloor = false;
+      await tx
+        .update(schema.variants)
+        .set({ stock: n, ...(n > 1 && { lastPieceOnFloor: false }) })
+        .where(eq(schema.variants.sku, v.sku));
     }
+    return restocked;
   });
-  return restocked;
 }
 
-/** Paid orders take their pieces off stock; a cancelled hold puts them back. */
-export function adjustStock(lines: { sku: string; qty: number }[], direction: -1 | 1) {
-  db((d) => {
+/** Paid orders take their pieces off stock; a swapped or cancelled hold puts them back. Never below zero. */
+export async function adjustStock(lines: { sku: string; qty: number }[], direction: -1 | 1) {
+  const db = await getDb();
+  await db.transaction(async (tx) => {
     for (const l of lines) {
-      for (const p of d.products) {
-        const v = p.variants.find((x) => x.sku === l.sku);
-        if (v) v.stock = Math.max(0, v.stock + direction * l.qty);
-      }
+      await tx
+        .update(schema.variants)
+        .set({ stock: sql`greatest(0, ${schema.variants.stock} + ${direction * l.qty})` })
+        .where(eq(schema.variants.sku, l.sku));
     }
-  }, true);
+  });
 }
 
 // ---------- Restock alerts ----------
 
-export function addRestockAlert(input: Omit<RestockAlert, "id" | "createdAt" | "notifiedAt">) {
-  db((d) => {
-    const dupe = d.restockAlerts.find(
-      (a) => a.sku === input.sku && !a.notifiedAt && ((input.email && a.email === input.email) || (input.phone && a.phone === input.phone)),
-    );
-    if (dupe) return;
-    d.restockAlerts.push({ ...input, id: randomUUID(), createdAt: new Date().toISOString(), notifiedAt: null });
-  }, true);
+export async function addRestockAlert(input: Omit<RestockAlert, "id" | "createdAt" | "notifiedAt">) {
+  const db = await getDb();
+  const who = input.email ? eq(schema.restockAlerts.email, input.email) : eq(schema.restockAlerts.phone, input.phone ?? "");
+  const dupe = await db
+    .select({ id: schema.restockAlerts.id })
+    .from(schema.restockAlerts)
+    .where(and(eq(schema.restockAlerts.sku, input.sku), isNull(schema.restockAlerts.notifiedAt), who));
+  if (dupe.length) return;
+  await db.insert(schema.restockAlerts).values({ ...input, id: randomUUID(), createdAt: new Date().toISOString(), notifiedAt: null });
 }
 
-/** Waiting requests per SKU, for the admin stock screen. */
-export function restockDemand(): Record<string, number> {
-  return db((d) =>
-    d.restockAlerts.filter((a) => !a.notifiedAt).reduce<Record<string, number>>((m, a) => ((m[a.sku] = (m[a.sku] ?? 0) + 1), m), {}),
-  );
+/** Waiting requests per SKU, for the admin screen. */
+export async function restockDemand(): Promise<Record<string, number>> {
+  const db = await getDb();
+  const rows = await db
+    .select({ sku: schema.restockAlerts.sku, n: sql<number>`count(*)` })
+    .from(schema.restockAlerts)
+    .where(isNull(schema.restockAlerts.notifiedAt))
+    .groupBy(schema.restockAlerts.sku);
+  return Object.fromEntries(rows.map((r) => [r.sku, Number(r.n)]));
 }
 
 /** Tells everyone waiting on these SKUs that they're back. Returns how many were told. */
 export async function notifyRestocked(skus: string[]): Promise<number> {
   if (!skus.length) return 0;
-  const waiting = db((d) => d.restockAlerts.filter((a) => skus.includes(a.sku) && !a.notifiedAt));
+  const db = await getDb();
+  const waiting = await db
+    .select()
+    .from(schema.restockAlerts)
+    .where(and(inArray(schema.restockAlerts.sku, skus), isNull(schema.restockAlerts.notifiedAt)));
+  if (!waiting.length) return 0;
+  const names = new Map((await loadProducts(db, [...new Set(waiting.map((a) => a.slug))])).map((p) => [p.slug, p.name]));
+
   for (const a of waiting) {
-    const p = findProduct(a.slug);
-    const name = p?.name ?? "Your piece";
+    const name = names.get(a.slug) ?? "Your piece";
     const url = `${site.url}/product/${a.slug}`;
     const what = `${name} in ${a.colour}, size ${a.size === "ONE" ? "one size" : a.size}`;
     await notifySms(a.phone, `Easypick: ${what} is back in stock. ${url}`);
@@ -107,23 +171,31 @@ export async function notifyRestocked(skus: string[]): Promise<number> {
       `${what} is back in stock: ${url}`,
     );
   }
-  db((d) => {
-    const now = new Date().toISOString();
-    for (const a of d.restockAlerts) if (waiting.some((w) => w.id === a.id)) a.notifiedAt = now;
-  }, true);
+  await db
+    .update(schema.restockAlerts)
+    .set({ notifiedAt: new Date().toISOString() })
+    .where(
+      inArray(
+        schema.restockAlerts.id,
+        waiting.map((a) => a.id),
+      ),
+    );
   return waiting.length;
 }
 
 // ---------- Festivals ----------
 
-export function festivals(): Festival[] {
-  return db((d) => [...d.festivals].sort((a, b) => a.date.localeCompare(b.date)));
+export async function festivals(): Promise<Festival[]> {
+  const db = await getDb();
+  return db.select().from(schema.festivals).orderBy(asc(schema.festivals.date));
 }
 
-export function saveFestivals(list: Festival[]) {
-  db((d) => {
-    d.festivals = list;
-  }, true);
+export async function saveFestivals(list: Festival[]) {
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    await tx.delete(schema.festivals);
+    if (list.length) await tx.insert(schema.festivals).values(list);
+  });
 }
 
 export type { Festival, Size };

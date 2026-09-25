@@ -9,15 +9,15 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/admin/products/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  return { title: findProduct(slug)?.name ?? "Product" };
+  return { title: (await findProduct(slug))?.name ?? "Product" };
 }
 
 export default async function AdminProduct({ params, searchParams }: PageProps<"/admin/products/[slug]">) {
   const { slug } = await params;
   const { added } = await searchParams;
-  const product = findProduct(slug);
+  const product = await findProduct(slug);
   if (!product) notFound();
-  const demand = restockDemand();
+  const demand = await restockDemand();
 
   return (
     <div className="max-w-3xl">

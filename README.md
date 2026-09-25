@@ -1,31 +1,41 @@
 # Easypick website
 
-Next.js 16 (App Router) + Tailwind v4. Public site for Easypick: drops, shop, product pages with live stock, bag, checkout, store info and policies.
+Next.js 16 (App Router) + Tailwind v4 + PostgreSQL. Public site for Easypick (drops, shop, live stock, bag, checkout, gifting, gift cards, accounts) and the staff admin at `/admin`.
 
 ## Run
 
 ```bash
 npm install
-cp .env.example .env.local   # optional
+cp .env.example .env.local   # then fill in what you need
 npm run dev                  # http://localhost:3000
 ```
 
-Without `STORE_API_URL`, the site serves the sample catalogue in `src/lib/mock-data.ts`.
+`npm run dev` also starts a local PostgreSQL (from the `embedded-postgres` package, nothing else to install), stored in `.data/postgres` on `127.0.0.1:5433`. Stop the site with Ctrl+C so the database shuts down cleanly.
+
+## Database
+
+| Command | What |
+| --- | --- |
+| `npm run db:generate` | After changing `src/lib/db/schema.ts`: writes a new migration into `/drizzle`. |
+| `npm run db:migrate` | Applies migrations to `DATABASE_URL` (the live database). Locally they run on start. |
+| `npm run db:studio` | Browse the data in Drizzle Studio (set `DATABASE_URL` first). |
+
+For the live site set `DATABASE_URL` to a hosted PostgreSQL (e.g. Supabase, Mumbai region). Tables are created on first start unless `DB_AUTO_MIGRATE=false`. The first time an empty database starts, it imports `.data/easypick.json` if present (the old file store), otherwise the sample catalogue.
 
 ## Where things live
 
 | Path | What |
 | --- | --- |
-| `src/lib/store.ts` | All catalogue reads. Swaps from mock data to the Store API when `STORE_API_URL` is set. |
-| `src/lib/types.ts` | Product, variant, drop and stock shapes the API must return. |
+| `src/lib/db/schema.ts` | Tables: users, sessions, codes, products, variants (stock), drops, orders, gift cards, restock alerts, festivals. |
+| `src/lib/db/index.ts` | Connection, migrations, first-run import. |
+| `src/lib/catalogue.ts` | Products and stock changes (admin, paid orders, restock alerts). |
+| `src/lib/store.ts` | Catalogue reads for the website. Swaps to the Store API when `STORE_API_URL` is set. |
+| `src/lib/orders.ts`, `gift-cards.ts`, `auth.ts` | Orders, gift cards, accounts and sessions. |
 | `src/lib/site.ts` | Store address, hours, contacts, company details, delivery fees (several TODOs). |
-| `src/app/actions.ts` | Server actions: drop-alert sign-up, place order (re-prices and re-checks stock on the server). |
-| `src/app/api/stock/[slug]` | Live stock by size, polled every 30s by product pages. |
-| `src/app/api/revalidate` | Webhook for the Store API to refresh pages after a product or drop changes. |
+| `src/app/admin` | Staff screen; login with `ADMIN_USERNAME` / `ADMIN_PASSWORD`. |
 
-## Not wired up yet (needs the Store API)
+## Not wired up yet
 
-- Payments: checkout creates an order in memory and shows a test-mode notice. Real flow: API creates order + payment, provider verifies server-to-server, only then "paid".
-- Phone OTP sign-in and the account page.
-- Saving drop-alert sign-ups (currently logged in dev only).
-- Real product photos (placeholders are drawn from the product colour until `images[].src` is set).
+- Payments: orders show a test-mode "Pay now" until eSewa / Khalti / Fonepay merchant accounts exist. Only a server-to-server confirmation may mark an order paid.
+- SMS gateway for order texts and login codes (codes show on screen in development).
+- Hosting, domain, and image storage for product photos uploaded in the admin.

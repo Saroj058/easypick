@@ -37,7 +37,7 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/account");
 
-  const orders = ordersFor(user.id, user.phone);
+  const orders = await ordersFor(user.id, user.phone);
   const first = user.name?.split(" ")[0];
   const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, day: "numeric", month: "short", year: "numeric" });
 

@@ -1,6 +1,8 @@
 import "server-only";
 
-import { db } from "./db";
+import { and, desc, eq, notInArray, or } from "drizzle-orm";
+
+import { getDb, giftCardRow, orderRow, schema, type DB } from "./db";
 import type { FulfilmentMethod, PaymentProvider, Size } from "./types";
 
 // Online orders. The real ledger lives in the Store API (one stock ledger for web
@@ -99,54 +101,89 @@ export interface Order {
   cardEmail?: { to: string; status: "sent" | "failed" | "skipped" };
 }
 
-export function saveOrder(order: Order, userId?: string | null) {
-  db((d) => {
-    d.orders.push({ ...order, userId: userId ?? null });
-  }, true);
+export async function saveOrder(order: Order, userId?: string | null) {
+  const db = await getDb();
+  await db.insert(schema.orders).values(orderRow(order, userId ?? null));
 }
 
-export function findOrder(id: string): Order | null {
-  return db((d) => {
-    const o = d.orders.find((x) => x.id === id);
-    if (!o) return null;
-    if (o.status === "awaiting_payment" && Date.parse(o.expiresAt) < Date.now()) {
-      o.status = "expired";
-      // Give back any gift card balance this unpaid order had reserved.
-      if (o.giftCard) {
-        const card = d.giftCards.find((c) => c.code === o.giftCard!.code);
-        if (card && card.uses.some((u) => u.orderId === o.id && !u.refunded)) {
-          card.balance += o.giftCard.applied;
-          card.uses = card.uses.map((u) => (u.orderId === o.id ? { ...u, refunded: true } : u));
-        }
-      }
+type Tx = Parameters<Parameters<DB["transaction"]>[0]>[0];
+
+/** An unpaid order past its 15 minutes: mark it expired and give back any gift card balance it held. */
+async function expireIfLate(tx: Tx, o: Order) {
+  if (o.status !== "awaiting_payment" || Date.parse(o.expiresAt) >= Date.now()) return o;
+  const order: Order = { ...o, status: "expired" };
+  if (o.giftCard) {
+    const [card] = await tx.select().from(schema.giftCards).where(eq(schema.giftCards.code, o.giftCard.code)).for("update");
+    if (card && card.data.uses.some((u) => u.orderId === o.id && !u.refunded)) {
+      const data = {
+        ...card.data,
+        balance: card.balance + o.giftCard.applied,
+        uses: card.data.uses.map((u) => (u.orderId === o.id ? { ...u, refunded: true } : u)),
+      };
+      await tx.update(schema.giftCards).set(giftCardRow(data)).where(eq(schema.giftCards.code, card.code));
     }
-    return o;
-  }, true);
+  }
+  await tx.update(schema.orders).set({ status: "expired", data: order }).where(eq(schema.orders.id, o.id));
+  return order;
+}
+
+export async function findOrder(id: string): Promise<Order | null> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const [row] = await tx.select().from(schema.orders).where(eq(schema.orders.id, id)).for("update");
+    return row ? expireIfLate(tx, row.data) : null;
+  });
 }
 
 /** For /track: the order number and the phone it was placed with must both match. */
-export function findOrderByNumber(number: string, phone: string): Order | null {
+export async function findOrderByNumber(number: string, phone: string): Promise<Order | null> {
   const n = number.trim().toUpperCase().replace(/^(EP-?)?/, "EP-");
-  const o = db((d) => d.orders.find((x) => x.number === n && x.phone === phone) ?? null);
-  return o ? findOrder(o.id) : null;
+  const db = await getDb();
+  const [row] = await db
+    .select({ id: schema.orders.id })
+    .from(schema.orders)
+    .where(and(eq(schema.orders.number, n), eq(schema.orders.phone, phone)));
+  return row ? findOrder(row.id) : null;
 }
 
-export function findOrderByGiftToken(token: string): Order | null {
-  return db((d) => d.orders.find((o) => o.gift?.token === token) ?? null);
+export async function findOrderByGiftToken(token: string): Promise<Order | null> {
+  const db = await getDb();
+  const [row] = await db.select().from(schema.orders).where(eq(schema.orders.giftToken, token));
+  return row?.data ?? null;
 }
 
-export function updateOrder(id: string, fn: (o: Order) => void): Order | null {
-  return db((d) => {
-    const o = d.orders.find((x) => x.id === id);
-    if (!o) return null;
-    fn(o);
-    return o;
-  }, true);
+/** Change an order safely: the row is locked while `fn` edits it. */
+export async function updateOrder(id: string, fn: (o: Order) => void): Promise<Order | null> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const [row] = await tx.select().from(schema.orders).where(eq(schema.orders.id, id)).for("update");
+    if (!row) return null;
+    const order = structuredClone(row.data);
+    fn(order);
+    await tx.update(schema.orders).set(orderRow(order, row.userId)).where(eq(schema.orders.id, id));
+    return order;
+  });
 }
 
 /** Orders for an account: placed while signed in, or with the same phone number. */
-export function ordersFor(userId: string, phone: string | null): Order[] {
-  return db((d) =>
-    d.orders.filter((o) => o.userId === userId || (phone !== null && o.phone === phone)).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
-  );
+export async function ordersFor(userId: string, phone: string | null): Promise<Order[]> {
+  const db = await getDb();
+  const rows = await db
+    .select({ data: schema.orders.data })
+    .from(schema.orders)
+    .where(phone ? or(eq(schema.orders.userId, userId), eq(schema.orders.phone, phone)) : eq(schema.orders.userId, userId))
+    .orderBy(desc(schema.orders.createdAt));
+  return rows.map((r) => r.data);
 }
+
+/** Paid orders (anything past "awaiting payment"), for the admin screen. */
+export async function paidOrders(): Promise<Order[]> {
+  const db = await getDb();
+  const rows = await db
+    .select({ data: schema.orders.data })
+    .from(schema.orders)
+    .where(notInArray(schema.orders.status, ["awaiting_payment", "expired"]))
+    .orderBy(desc(schema.orders.createdAt));
+  return rows.map((r) => r.data);
+}
+

@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
 
 const statusLabel = { draft: "Draft", in_review: "In review", scheduled: "Scheduled", live: "Live", sold_out: "Sold out", archived: "Archived" } as const;
 
-export default function AdminProducts() {
-  const products = allProducts();
-  const demand = restockDemand();
+export default async function AdminProducts() {
+  const products = await allProducts();
+  const demand = await restockDemand();
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">

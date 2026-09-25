@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 /** The receiver's private gift page. Shows no price and nothing about the buyer except the name they chose to share. */
 export default async function GiftRevealPage({ params }: PageProps<"/g/[token]">) {
   const { token } = await params;
-  const order = findOrderByGiftToken(token);
+  const order = await findOrderByGiftToken(token);
   if (!order?.gift || !/^[\w-]{20,40}$/.test(token)) notFound();
 
   // A gift only opens once it's paid for.

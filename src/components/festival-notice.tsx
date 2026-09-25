@@ -13,13 +13,13 @@ const both = (ymd: string) => `${nice.format(at(ymd))} (${formatBS(at(ymd))})`;
  * "Order by … for delivery before Dashain." Shows from three weeks before the
  * order-by day until the festival itself. Dates are set in the admin screen.
  */
-export function FestivalNotice({ className = "" }: { className?: string }) {
+export async function FestivalNotice({ className = "" }: { className?: string }) {
   const today = ktmDay.format(new Date());
   const soon = new Date(`${today}T12:00:00+05:45`);
   soon.setDate(soon.getDate() + SHOW_FROM_DAYS);
   const horizon = ktmDay.format(soon);
 
-  const f = festivals().find((x) => today <= x.date && x.orderBy <= horizon);
+  const f = (await festivals()).find((x) => today <= x.date && x.orderBy <= horizon);
   if (!f) return null;
   const open = today <= f.orderBy;
 

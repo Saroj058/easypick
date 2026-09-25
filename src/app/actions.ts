@@ -103,9 +103,9 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
   let giftCard: Order["giftCard"];
   const cardInput = String(form.get("giftCard") ?? "").trim();
   if (cardInput) {
-    const check = checkGiftCard(cardInput, `checkout:${phone}`);
+    const check = await checkGiftCard(cardInput, `checkout:${phone}`);
     if (!check.ok) return { status: "error", field: "giftCard", message: check.message };
-    const applied = spendGiftCard(check.code, subtotal + deliveryFee, orderId);
+    const applied = await spendGiftCard(check.code, subtotal + deliveryFee, orderId);
     if (applied > 0) giftCard = { code: check.code, applied };
   }
 
@@ -131,9 +131,9 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
   // then create the payment with the provider and redirect to its checkout URL.
   // The order becomes "paid" only after the API verifies the payment server-to-server,
   // never from the provider's browser redirect.
-  saveOrder(order, user?.id);
+  await saveOrder(order, user?.id);
   // Remember how they like to get and pay for things, so next checkout is one tap.
-  if (user) updateUser(user.id, { checkout: { method, provider, address: address ?? user.checkout?.address } });
+  if (user) await updateUser(user.id, { checkout: { method, provider, address: address ?? user.checkout?.address } });
   redirect(`/order/${order.id}`);
 }
 
@@ -155,7 +155,7 @@ export async function advanceOrderInTestMode(form: FormData) {
   if (process.env.NODE_ENV === "production") return;
   const id = String(form.get("orderId") ?? "");
   const now = new Date().toISOString();
-  updateOrder(id, (o) => {
+  await updateOrder(id, (o) => {
     if (o.status === "paid" && !o.packedAt) o.packedAt = now;
     else if (o.status === "paid") {
       o.status = o.method === "pickup" ? "ready_for_pickup" : "out_for_delivery";
@@ -189,7 +189,7 @@ export async function trackOrder(_prev: TrackState, form: FormData): Promise<Tra
   tries.n++;
   trackTries.set(phone, tries);
 
-  const order = findOrderByNumber(number, phone);
+  const order = await findOrderByNumber(number, phone);
   if (!order) return fail("We couldn't find that order. Check the number on your receipt and the phone you ordered with.");
   redirect(`/order/${order.id}`);
 }
@@ -211,7 +211,7 @@ export async function requestRestock(_prev: RestockState, form: FormData): Promi
   const phone = email ? null : normaliseNepaliMobile(contact);
   if (!email && !phone) return { status: "error", message: "Enter your email or a 10-digit mobile number." };
 
-  addRestockAlert({ slug, sku, size: variant.size, colour: variant.colour, email, phone });
+  await addRestockAlert({ slug, sku, size: variant.size, colour: variant.colour, email, phone });
   const what = variant.size === "ONE" ? variant.colour : `${variant.colour}, ${variant.size}`;
   return { status: "done", message: `Done. We'll ${email ? "email" : "text"} you once when ${what} is back.` };
 }

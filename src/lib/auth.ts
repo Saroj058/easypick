@@ -4,7 +4,9 @@ import { createHash, createHmac, randomBytes, randomInt, randomUUID, timingSafeE
 import { cookies } from "next/headers";
 import { cache } from "react";
 
-import { db, type User } from "./db";
+import { and, eq, gt, lt, ne } from "drizzle-orm";
+
+import { getDb, schema, type User } from "./db";
 import { sendSms, smsProvider } from "./sms";
 import { sendWhatsAppCode, whatsappConfigured } from "./whatsapp";
 
@@ -13,7 +15,7 @@ import { sendWhatsAppCode, whatsappConfigured } from "./whatsapp";
 // number creates the account.
 //
 // Sessions are server-side: the browser holds a random token in an httpOnly
-// cookie, the store keeps only its hash, so logging out really ends it.
+// cookie, the database keeps only its hash, so logging out really ends it.
 
 export const SESSION_COOKIE = "ep_session";
 const SESSION_DAYS = 30;
@@ -57,7 +59,8 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
     return { ok: false, message: "Phone sign-in isn't available right now. Use Google or Facebook." };
   }
 
-  const existing = db((d) => d.otps.find((o) => o.phone === phone));
+  const db = await getDb();
+  const [existing] = await db.select().from(schema.otps).where(eq(schema.otps.phone, phone));
   const recent = existing?.sentAt.filter((t) => now - t < 3600_000) ?? [];
 
   if (recent.length && now - recent[recent.length - 1] < RESEND_AFTER_MS) {
@@ -68,10 +71,8 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
   }
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  db((d) => {
-    d.otps = d.otps.filter((o) => o.phone !== phone);
-    d.otps.push({ phone, hash: codeHash(phone, code), expiresAt: now + CODE_TTL_MS, triesLeft: CODE_TRIES, sentAt: [...recent, now] });
-  }, true);
+  const otp = { phone, hash: codeHash(phone, code), expiresAt: now + CODE_TTL_MS, triesLeft: CODE_TRIES, sentAt: [...recent, now] };
+  await db.insert(schema.otps).values(otp).onConflictDoUpdate({ target: schema.otps.phone, set: otp });
 
   try {
     if (via === "whatsapp") await sendWhatsAppCode(phone, code);
@@ -94,17 +95,19 @@ export type VerifyResult = { ok: true; user: User; isNew: boolean } | { ok: fals
 
 export async function verifyCode(phone: string, code: string): Promise<VerifyResult> {
   const now = Date.now();
-  const check = db((d) => {
-    const otp = d.otps.find((o) => o.phone === phone);
+  const db = await getDb();
+  const check = await db.transaction(async (tx) => {
+    const [otp] = await tx.select().from(schema.otps).where(eq(schema.otps.phone, phone)).for("update");
     if (!otp || otp.expiresAt < now) return "expired" as const;
     if (otp.triesLeft <= 0) return "locked" as const;
     if (!safeEqual(otp.hash, codeHash(phone, code))) {
-      otp.triesLeft -= 1;
-      return otp.triesLeft <= 0 ? ("locked" as const) : ("wrong" as const);
+      const triesLeft = otp.triesLeft - 1;
+      await tx.update(schema.otps).set({ triesLeft }).where(eq(schema.otps.phone, phone));
+      return triesLeft <= 0 ? ("locked" as const) : ("wrong" as const);
     }
-    otp.expiresAt = 0; // one use only
+    await tx.update(schema.otps).set({ expiresAt: 0 }).where(eq(schema.otps.phone, phone)); // one use only
     return "ok" as const;
-  }, true);
+  });
 
   if (check === "expired") return { ok: false, message: "That code has expired. Send a new one." };
   if (check === "locked") return { ok: false, message: "Too many wrong tries. Send a new code." };
@@ -113,24 +116,26 @@ export async function verifyCode(phone: string, code: string): Promise<VerifyRes
   // Already signed in (e.g. with Google) and adding a phone: attach it to that account.
   const current = await getCurrentUser();
   if (current && !current.phone) {
-    const taken = db((d) => d.users.some((u) => u.phone === phone && u.id !== current.id));
-    if (taken) return { ok: false, message: "That number already has an Easypick account. Sign out and sign in with it instead." };
-    const user = updateUser(current.id, { phone, contactPhone: null })!;
+    const taken = await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(and(eq(schema.users.phone, phone), ne(schema.users.id, current.id)));
+    if (taken.length) return { ok: false, message: "That number already has an Easypick account. Sign out and sign in with it instead." };
+    const user = (await updateUser(current.id, { phone, contactPhone: null }))!;
     return { ok: true, user, isNew: false };
   }
 
   const iso = new Date(now).toISOString();
-  const { user, isNew } = db((d) => {
-    let u = d.users.find((x) => x.phone === phone);
-    const fresh = !u;
-    if (!u) {
-      u = { id: randomUUID(), phone, name: null, email: null, alerts: false, fit: null, createdAt: iso, lastLoginAt: iso };
-      d.users.push(u);
-    } else {
-      u.lastLoginAt = iso;
-    }
-    return { user: u, isNew: fresh };
-  }, true);
+  const [existingUser] = await db.update(schema.users).set({ lastLoginAt: iso }).where(eq(schema.users.phone, phone)).returning();
+  const isNew = !existingUser;
+  const user: User =
+    existingUser ??
+    (
+      await db
+        .insert(schema.users)
+        .values({ id: randomUUID(), phone, name: null, email: null, alerts: false, fit: null, createdAt: iso, lastLoginAt: iso })
+        .returning()
+    )[0];
 
   await startSession(user.id);
   return { ok: true, user, isNew };
@@ -156,25 +161,32 @@ export async function signInWithProvider(p: ProviderProfile): Promise<{ user: Us
   const iso = new Date().toISOString();
   const email = p.email?.toLowerCase() ?? null;
 
-  const result = db((d) => {
-    let u = d.users.find((x) => x[key] === p.id);
-    if (!u && email && p.emailVerified) u = d.users.find((x) => x.email === email && x.emailVerified);
+  const db = await getDb();
+  const idCol = key === "googleId" ? schema.users.googleId : schema.users.facebookId;
+  const result = await db.transaction(async (tx) => {
+    let [u] = await tx.select().from(schema.users).where(eq(idCol, p.id));
+    if (!u && email && p.emailVerified)
+      [u] = await tx
+        .select()
+        .from(schema.users)
+        .where(and(eq(schema.users.email, email), eq(schema.users.emailVerified, true)));
     const fresh = !u;
     if (!u) {
-      u = { id: randomUUID(), phone: null, name: p.name, email, alerts: false, fit: null, createdAt: iso, lastLoginAt: iso };
-      d.users.push(u);
+      [u] = await tx
+        .insert(schema.users)
+        .values({ id: randomUUID(), phone: null, name: p.name, email, alerts: false, fit: null, createdAt: iso, lastLoginAt: iso })
+        .returning();
     }
-    u[key] = p.id;
-    u.name ??= p.name;
+    const patch: Partial<typeof schema.users.$inferInsert> = { [key]: p.id, name: u.name ?? p.name, lastLoginAt: iso };
     if (email && p.emailVerified && (!u.email || !u.emailVerified)) {
-      u.email = email;
-      u.emailVerified = true;
-    } else {
-      u.email ??= email;
+      patch.email = email;
+      patch.emailVerified = true;
+    } else if (!u.email) {
+      patch.email = email;
     }
-    u.lastLoginAt = iso;
-    return { user: u, isNew: fresh };
-  }, true);
+    const [updated] = await tx.update(schema.users).set(patch).where(eq(schema.users.id, u.id)).returning();
+    return { user: updated as User, isNew: fresh };
+  });
 
   await startSession(result.user.id);
   return result;
@@ -185,9 +197,12 @@ export async function signInWithProvider(p: ProviderProfile): Promise<{ user: Us
 async function startSession(userId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = Date.now() + SESSION_DAYS * 86_400_000;
-  db((d) => {
-    d.sessions.push({ tokenHash: sha(token), userId, expiresAt, createdAt: Date.now() });
-  }, true);
+  const db = await getDb();
+  await db.insert(schema.sessions).values({ tokenHash: sha(token), userId, expiresAt, createdAt: Date.now() });
+  // Tidy up while here: expired sessions and old codes.
+  const now = Date.now();
+  await db.delete(schema.sessions).where(lt(schema.sessions.expiresAt, now));
+  await db.delete(schema.otps).where(lt(schema.otps.expiresAt, now - 3600_000));
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -201,33 +216,39 @@ async function startSession(userId: string) {
 export const getCurrentUser = cache(async (): Promise<User | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const hash = sha(token);
-  return db((d) => {
-    const s = d.sessions.find((x) => x.tokenHash === hash && x.expiresAt > Date.now());
-    return s ? (d.users.find((u) => u.id === s.userId) ?? null) : null;
-  });
+  const db = await getDb();
+  const [row] = await db
+    .select({ user: schema.users })
+    .from(schema.sessions)
+    .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))
+    .where(and(eq(schema.sessions.tokenHash, sha(token)), gt(schema.sessions.expiresAt, Date.now())));
+  return row?.user ?? null;
 });
 
 export async function endSession() {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (token) {
-    const hash = sha(token);
-    db((d) => {
-      d.sessions = d.sessions.filter((s) => s.tokenHash !== hash);
-    }, true);
+    const db = await getDb();
+    await db.delete(schema.sessions).where(eq(schema.sessions.tokenHash, sha(token)));
   }
   jar.delete(SESSION_COOKIE);
 }
 
-export function updateUser(id: string, patch: Partial<Pick<User, "name" | "email" | "alerts" | "fit" | "phone" | "contactPhone" | "checkout">>): User | null {
-  return db((d) => {
-    const u = d.users.find((x) => x.id === id);
+export async function updateUser(
+  id: string,
+  patch: Partial<Pick<User, "name" | "email" | "alerts" | "fit" | "phone" | "contactPhone" | "checkout">>,
+): Promise<User | null> {
+  const db = await getDb();
+  return db.transaction(async (tx) => {
+    const [u] = await tx.select().from(schema.users).where(eq(schema.users.id, id)).for("update");
     if (!u) return null;
-    if (patch.email !== undefined && patch.email !== u.email) u.emailVerified = false;
-    Object.assign(u, patch);
-    return u;
-  }, true);
+    const set: Partial<typeof schema.users.$inferInsert> = { ...patch };
+    // A typed-in email is not verified, even when the old one was.
+    if (patch.email !== undefined && patch.email !== u.email) set.emailVerified = false;
+    const [updated] = await tx.update(schema.users).set(set).where(eq(schema.users.id, id)).returning();
+    return updated;
+  });
 }
 
 /** Only allow redirects back into this site. */

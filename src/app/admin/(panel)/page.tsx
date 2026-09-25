@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { allProducts, restockDemand } from "@/lib/catalogue";
-import { db } from "@/lib/db";
+import { paidOrders } from "@/lib/orders";
 import { formatPrice } from "@/lib/format";
 import { site } from "@/lib/site";
 
@@ -9,15 +9,15 @@ export const dynamic = "force-dynamic";
 
 const day = new Intl.DateTimeFormat("en-CA", { timeZone: site.timezone });
 
-export default function AdminToday() {
-  const orders = db((d) => d.orders.filter((o) => o.status !== "awaiting_payment" && o.status !== "expired"));
+export default async function AdminToday() {
+  const orders = await paidOrders();
   const today = day.format(new Date());
   const todays = orders.filter((o) => day.format(new Date(o.paidAt ?? o.createdAt)) === today);
   const toPack = orders.filter((o) => o.status === "paid" && !o.packedAt && o.kind !== "gift_card" && !(o.gift?.mode === "pick" && o.gift.status !== "chosen" && o.gift.status !== "delivered"));
   const toHandOver = orders.filter((o) => o.status === "paid" && o.packedAt);
   const waitingGifts = orders.filter((o) => o.gift?.mode === "pick" && (o.gift.status === "sent" || o.gift.status === "opened"));
-  const demand = restockDemand();
-  const products = allProducts();
+  const demand = await restockDemand();
+  const products = await allProducts();
   const low = products
     .filter((p) => p.status === "live")
     .flatMap((p) => p.variants.map((v) => ({ p, v })))

@@ -1,9 +1,8 @@
 import "server-only";
 
 import { adjustStock } from "./catalogue";
-import { db } from "./db";
 import { giftEmailHtml } from "./email";
-import { activateGiftCard } from "./gift-cards";
+import { activateGiftCard, findGiftCard } from "./gift-cards";
 import { notifyEmail, notifySms } from "./notify";
 import { findOrder, updateOrder } from "./orders";
 import { site } from "./site";
@@ -19,15 +18,15 @@ import { site } from "./site";
  * Never from the browser redirect after paying. Safe to call twice.
  */
 export async function confirmPayment(orderId: string) {
-  const order = findOrder(orderId);
+  const order = await findOrder(orderId);
   if (!order || order.status !== "awaiting_payment") return order;
 
-  updateOrder(order.id, (o) => {
+  await updateOrder(order.id, (o) => {
     o.status = "paid";
     o.paidAt = new Date().toISOString();
   });
   // Sold: take the pieces off stock (gift cards aren't stock).
-  if (order.kind !== "gift_card") adjustStock(order.lines, -1);
+  if (order.kind !== "gift_card") await adjustStock(order.lines, -1);
 
   // ---- A piece sent as a gift ----
   if (order.gift) {
@@ -60,15 +59,15 @@ export async function confirmPayment(orderId: string) {
       }),
       `${from} sent you a gift from Easypick.${g.message ? `\n\n"${g.message}"` : ""}\n\nOpen your gift: ${link}`,
     );
-    updateOrder(order.id, (o) => {
+    await updateOrder(order.id, (o) => {
       o.gift!.emailStatus = emailStatus;
     });
   }
 
   // ---- A gift card ----
   if (order.kind === "gift_card" && order.issuedCardCode) {
-    activateGiftCard(order.issuedCardCode);
-    const card = db((d) => d.giftCards.find((c) => c.code === order.issuedCardCode));
+    await activateGiftCard(order.issuedCardCode);
+    const card = await findGiftCard(order.issuedCardCode);
     if (card) {
       const from = card.senderName ?? "Someone";
       const amount = `Rs ${card.value.toLocaleString("en-IN")}`;
@@ -88,7 +87,7 @@ export async function confirmPayment(orderId: string) {
         `${from} sent you an Easypick gift card worth ${amount}.\nCode: ${card.code}\nUse it at ${site.url}/shop or in store. Valid 12 months.`,
       );
       if (card.recipientEmail) {
-        updateOrder(order.id, (o) => {
+        await updateOrder(order.id, (o) => {
           o.cardEmail = { to: card.recipientEmail!, status: cardEmailStatus };
         });
       }
@@ -96,5 +95,5 @@ export async function confirmPayment(orderId: string) {
   }
 
   // TODO: SMS the buyer their receipt once the SMS gateway is live.
-  return findOrder(orderId);
+  return await findOrder(orderId);
 }

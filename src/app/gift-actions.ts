@@ -125,7 +125,7 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
     gift,
     kind: "goods",
   };
-  saveOrder(order, (await getCurrentUser())?.id);
+  await saveOrder(order, (await getCurrentUser())?.id);
 
   // The receiver is emailed the link once payment is confirmed (lib/payments.ts).
   redirect(`/order/${order.id}`);
@@ -157,7 +157,7 @@ export async function buyGiftCard(_prev: GiftState, form: FormData): Promise<Gif
   const anonymous = form.get("anonymous") === "on";
   const senderName = anonymous ? null : str(form, "senderName", 40) || null;
   const orderId = randomUUID();
-  const card = issueGiftCard({
+  const card = await issueGiftCard({
     value,
     status: "pending_payment",
     purchaserPhone: buyerPhone,
@@ -186,7 +186,7 @@ export async function buyGiftCard(_prev: GiftState, form: FormData): Promise<Gif
     kind: "gift_card",
     issuedCardCode: card.code,
   };
-  saveOrder(order, (await getCurrentUser())?.id);
+  await saveOrder(order, (await getCurrentUser())?.id);
 
   // The card is switched on and sent to them once payment is confirmed (lib/payments.ts).
   redirect(`/order/${order.id}`);
@@ -200,15 +200,15 @@ async function who() {
 }
 
 export async function previewGiftCard(code: string): Promise<CardCheck> {
-  return checkGiftCard(code, await who());
+  return await checkGiftCard(code, await who());
 }
 
 // ---------- The receiver's gift page (/g/<token>) ----------
 
 export async function openGift(token: string) {
-  const order = findOrderByGiftToken(token);
+  const order = await findOrderByGiftToken(token);
   if (!order?.gift || order.gift.status !== "sent") return;
-  updateOrder(order.id, (o) => {
+  await updateOrder(order.id, (o) => {
     o.gift!.status = "opened";
     o.gift!.openedAt = new Date().toISOString();
   });
@@ -218,7 +218,7 @@ export async function openGift(token: string) {
 export type ChooseState = { status: "idle" } | { status: "error"; message: string } | { status: "done"; welcomeCode?: string };
 
 export async function chooseGift(_prev: ChooseState, form: FormData): Promise<ChooseState> {
-  const order = findOrderByGiftToken(str(form, "token", 64));
+  const order = await findOrderByGiftToken(str(form, "token", 64));
   const gift = order?.gift;
   if (!order || !gift || gift.mode !== "pick") return { status: "error", message: "This gift link isn't valid." };
   if (gift.status === "chosen" || gift.status === "converted") return { status: "done" };
@@ -244,7 +244,7 @@ export async function chooseGift(_prev: ChooseState, form: FormData): Promise<Ch
   // Welcome credit for the receiver's own first order (once per gift).
   const welcome = gift.welcomeCode
     ? null
-    : issueGiftCard(
+    : await issueGiftCard(
         {
           value: site.gifting.welcomeCredit,
           status: "active",
@@ -262,10 +262,10 @@ export async function chooseGift(_prev: ChooseState, form: FormData): Promise<Ch
 
   // The buyer's guess was taken off stock when they paid; swap it for the size actually chosen.
   if (!held && order.status !== "awaiting_payment") {
-    adjustStock([{ sku: order.lines[0].sku, qty: 1 }], 1);
-    adjustStock([{ sku: variant.sku, qty: 1 }], -1);
+    await adjustStock([{ sku: order.lines[0].sku, qty: 1 }], 1);
+    await adjustStock([{ sku: variant.sku, qty: 1 }], -1);
   }
-  updateOrder(order.id, (o) => {
+  await updateOrder(order.id, (o) => {
     o.lines[0] = { ...o.lines[0], sku: variant.sku, size: variant.size, colour };
     o.method = method;
     o.gift!.receiver = { method, address, slot };
@@ -282,13 +282,13 @@ export async function chooseGift(_prev: ChooseState, form: FormData): Promise<Ch
 export type ThanksState = { status: "idle" } | { status: "error"; message: string } | { status: "sent" };
 
 export async function sendThanks(_prev: ThanksState, form: FormData): Promise<ThanksState> {
-  const order = findOrderByGiftToken(str(form, "token", 64));
+  const order = await findOrderByGiftToken(str(form, "token", 64));
   const gift = order?.gift;
   if (!order || !gift) return { status: "error", message: "This gift link isn't valid." };
   if (gift.thanks) return { status: "sent" };
   const text = str(form, "thanks", 200);
   if (!text) return { status: "error", message: "Write a few words first." };
-  updateOrder(order.id, (o) => {
+  await updateOrder(order.id, (o) => {
     o.gift!.thanks = { text, at: new Date().toISOString() };
   });
   await notify(order.phone, `${gift.receiverName.split(" ")[0]} says thank you: "${text}"`);
@@ -297,11 +297,11 @@ export async function sendThanks(_prev: ThanksState, form: FormData): Promise<Th
 
 /** Receiver's size is sold out (or they'd rather choose later): swap the gift for a card of the same value. */
 export async function giftToCard(token: string): Promise<{ ok: boolean; code?: string }> {
-  const order = findOrderByGiftToken(token);
+  const order = await findOrderByGiftToken(token);
   const gift = order?.gift;
   if (!order || !gift || gift.mode !== "pick" || gift.status === "chosen" || gift.status === "converted") return { ok: false };
   const line = order.lines[0];
-  const card = issueGiftCard({
+  const card = await issueGiftCard({
     value: line.unitPrice * line.qty,
     status: "active",
     purchaserPhone: order.phone,
@@ -313,7 +313,7 @@ export async function giftToCard(token: string): Promise<{ ok: boolean; code?: s
     sendOn: null,
     orderId: null,
   });
-  updateOrder(order.id, (o) => {
+  await updateOrder(order.id, (o) => {
     o.gift!.status = "converted";
     o.gift!.convertedCardCode = card.code;
   });
@@ -335,11 +335,11 @@ export async function giftToCard(token: string): Promise<{ ok: boolean; code?: s
 
 /** Receiver would rather try sizes on in the store. The held piece waits at the counter under their gift code. */
 export async function tryGiftInStore(token: string): Promise<{ ok: boolean; code?: string }> {
-  const order = findOrderByGiftToken(token);
+  const order = await findOrderByGiftToken(token);
   const gift = order?.gift;
   if (!order || !gift || gift.mode !== "pick") return { ok: false };
   if (gift.status === "chosen" || gift.status === "converted") return { ok: gift.receiver?.tryInStore === true, code: order.number };
-  updateOrder(order.id, (o) => {
+  await updateOrder(order.id, (o) => {
     o.method = "pickup";
     o.gift!.receiver = { method: "pickup", tryInStore: true };
     o.gift!.status = "chosen";
