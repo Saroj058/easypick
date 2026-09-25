@@ -63,16 +63,21 @@ export function HangTag({ product, size = "M", colour, className = "" }: { produ
 }
 
 /**
- * The small tag that hangs on every product card: fixed price and the RFID barcode,
- * on a string from the top of the photo. Decorative; the price is also written below the card.
+ * The small tag that hangs off the bottom edge of every product card: fixed price and the
+ * RFID barcode, on a string tied just inside the photo. Decorative; screen readers get the price from the card.
  */
 export function MiniTag({ product, className = "" }: { product: Product; className?: string }) {
   const sku = product.variants[0]?.sku ?? product.id;
   const soldOut = product.status === "sold_out";
   return (
-    <div className={`tag-hang pointer-events-none flex flex-col items-center ${className}`} aria-hidden>
-      <span className="h-3 w-px bg-ink/50 md:h-5" />
-      <div className="hang-tag w-[54px] px-1 pb-1.5 pt-4 font-mono shadow-[0_2px_6px_rgba(0,0,0,0.12)] [--hole:var(--color-photo)] before:top-[6px] before:h-2 before:w-2 before:-ml-1 md:w-[76px] md:px-2 md:pb-2 md:pt-5 md:before:top-[10px] md:before:h-2.5 md:before:w-2.5 md:before:-ml-[5px]">
+    // The shadow sits on this wrapper: the tag's cut corners (clip-path) would clip a shadow on the tag itself.
+    <div
+      className={`tag-hang pointer-events-none flex flex-col items-center [filter:drop-shadow(0_0_0.6px_rgba(0,0,0,0.45))_drop-shadow(0_5px_8px_rgba(0,0,0,0.13))] ${className}`}
+      aria-hidden
+    >
+      <span className="h-2 w-2 rounded-full border border-ink/60 bg-paper" />
+      <span className="h-4 w-px bg-ink/60 md:h-5" />
+      <div className="hang-tag w-[54px] px-1 pb-1.5 pt-4 font-mono [--hole:var(--color-mist)] before:top-[6px] before:h-2 before:w-2 before:-ml-1 md:w-[76px] md:px-2 md:pb-2 md:pt-5 md:before:top-[10px] md:before:h-2.5 md:before:w-2.5 md:before:-ml-[5px]">
         <p className={`whitespace-nowrap text-center text-[9.5px] font-semibold leading-none tabular-nums md:text-[12px] ${soldOut ? "text-steel-dark line-through" : ""}`}>
           {formatPrice(product.salePrice ?? product.price)}
         </p>

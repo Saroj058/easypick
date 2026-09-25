@@ -23,6 +23,7 @@ export function ProductCard({ product, priority, sizes }: { product: Product; pr
 
   return (
     <Link href={`/product/${product.slug}`} className="group block cursor-pointer">
+      <div className="relative">
       <div className="relative overflow-hidden">
         <ProductImage image={front} category={product.category} colourHex={hex} priority={priority} decorative sizes={sizes} />
         {back && (
@@ -30,23 +31,20 @@ export function ProductCard({ product, priority, sizes }: { product: Product; pr
             <ProductImage image={back} category={product.category} colourHex={hex} decorative sizes={sizes} />
           </div>
         )}
-        <MiniTag product={product} className="absolute right-1.5 top-0 z-10 md:right-4" />
         {note && <span className={`absolute left-3 top-3 ${product.status === "scheduled" ? "tag-volt" : "index bg-paper px-2 py-1"}`}>{note}</span>}
       </div>
-      <div className="mt-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <h3 className="line-clamp-2 text-[15px] font-semibold decoration-1 underline-offset-4 group-hover:underline">{product.name}</h3>
-          <p className="shrink-0 font-mono text-[14px] tabular-nums">
-            {product.salePrice ? (
-              <>
-                <span className="sr-only">Sale price </span>
-                {formatPrice(price)}
-              </>
-            ) : (
-              formatPrice(price)
-            )}
-          </p>
-        </div>
+        {/* Tied just above the hem of the photo, hanging down outside the card. */}
+        <MiniTag product={product} className="absolute right-2 top-full z-10 -mt-3 md:right-4" />
+      </div>
+      {/* Room on the right for the hanging tag, which carries the price. */}
+      <div className="mt-3 pr-[62px] md:pr-[92px]">
+        <h3 className="line-clamp-2 text-[15px] font-semibold decoration-1 underline-offset-4 group-hover:underline">
+          {product.name}
+          <span className="sr-only">
+            , {product.salePrice ? "sale price " : ""}
+            {formatPrice(price)}
+          </span>
+        </h3>
         <p className="mt-0.5 text-[13px] text-steel-dark">
           {product.colours.length > 1 ? `${product.colours.length} colours` : product.colours[0].name}
           {product.salePrice && (
