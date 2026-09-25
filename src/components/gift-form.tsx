@@ -115,6 +115,7 @@ export function GiftForm({ product }: { product: Product }) {
       <input type="hidden" name="method" value={method} />
       <input type="hidden" name="colour" value={colour} />
       <input type="hidden" name="size" value={size ?? ""} />
+      <input type="hidden" name="showPrice" value={showPrice ? "on" : ""} />
 
       <div className="mb-8">
         <p className="text-sm text-steel-dark">
@@ -206,7 +207,7 @@ export function GiftForm({ product }: { product: Product }) {
               </li>
               <li>
                 <span className="font-semibold">3. We hold one for them meanwhile.</span>{" "}
-                <span className="text-steel-dark">You choose whether they see the price (next step).</span>
+                <span className="text-steel-dark">You choose whether they see the price (below).</span>
               </li>
             </ol>
           </div>
@@ -249,14 +250,6 @@ export function GiftForm({ product }: { product: Product }) {
           <Choice name="wrapUi" value="standard" checked={wrap === "standard"} onChange={() => setWrap("standard")} title="Easypick bag" note="Tissue and a printed card. Free." />
           <Choice name="wrapUi" value="premium" checked={wrap === "premium"} onChange={() => setWrap("premium")} title="Premium black box" note={`Sealed box and card. ${formatPrice(site.gifting.premiumWrapFee)}.`} />
         </div>
-        <fieldset>
-          <legend className={label}>The price</legend>
-          <input type="hidden" name="showPrice" value={showPrice ? "on" : ""} />
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
-            <Choice name="priceUi" value="hide" checked={!showPrice} onChange={() => setShowPrice(false)} title="Hide the price" note="Recommended. They never see what it cost." />
-            <Choice name="priceUi" value="show" checked={showPrice} onChange={() => setShowPrice(true)} title="Show the price" note="On their gift page and gift receipt." />
-          </div>
-        </fieldset>
         <MessageCard to={receiverName} from={senderName} message={message} wrap={wrap} price={showPrice ? formatPrice(price) : null} />
       </section>
 
@@ -430,7 +423,20 @@ export function GiftForm({ product }: { product: Product }) {
           </button>
         )}
       </div>
-      <p className="mt-3 text-center text-[13px] text-steel-dark">{showPrice ? "They'll see the price." : "They never see the price."}</p>
+      {/* Show or hide the price, on every step. Off by default. */}
+      <label className="mt-4 flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-[2px] bg-photo px-4 py-3">
+        <span>
+          <span className="block text-[15px] font-semibold">Show the price to them</span>
+          <span className="block text-[13px] text-steel-dark">
+            {showPrice ? "They'll see it on their gift page and gift receipt." : "Off: they never see what it cost."}
+          </span>
+        </span>
+        <input type="checkbox" role="switch" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} className="peer sr-only" />
+        <span
+          aria-hidden
+          className="relative h-7 w-12 shrink-0 rounded-full bg-steel transition-colors duration-200 after:absolute after:left-0.5 after:top-0.5 after:h-6 after:w-6 after:rounded-full after:bg-paper after:shadow after:transition-transform after:duration-200 peer-checked:bg-ink peer-checked:after:translate-x-5 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink"
+        />
+      </label>
     </form>
   );
 }
