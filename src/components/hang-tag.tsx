@@ -61,3 +61,26 @@ export function HangTag({ product, size = "M", colour, className = "" }: { produ
     </div>
   );
 }
+
+/**
+ * The small tag that hangs on every product card: fixed price and the RFID barcode,
+ * on a string from the top of the photo. Decorative; the price is also written below the card.
+ */
+export function MiniTag({ product, className = "" }: { product: Product; className?: string }) {
+  const sku = product.variants[0]?.sku ?? product.id;
+  const soldOut = product.status === "sold_out";
+  return (
+    <div className={`tag-hang pointer-events-none flex flex-col items-center ${className}`} aria-hidden>
+      <span className="h-3 w-px bg-ink/50 md:h-5" />
+      <div className="hang-tag w-[54px] px-1 pb-1.5 pt-4 font-mono shadow-[0_2px_6px_rgba(0,0,0,0.12)] [--hole:var(--color-photo)] before:top-[6px] before:h-2 before:w-2 before:-ml-1 md:w-[76px] md:px-2 md:pb-2 md:pt-5 md:before:top-[10px] md:before:h-2.5 md:before:w-2.5 md:before:-ml-[5px]">
+        <p className={`whitespace-nowrap text-center text-[9.5px] font-semibold leading-none tabular-nums md:text-[12px] ${soldOut ? "text-steel-dark line-through" : ""}`}>
+          {formatPrice(product.salePrice ?? product.price)}
+        </p>
+        <p className="mt-1 whitespace-nowrap text-center text-[6.5px] uppercase tracking-[0.1em] text-steel-dark md:text-[7px] md:tracking-[0.12em]">
+          {soldOut ? "Sold out" : <>Fixed<span className="hidden md:inline"> price</span></>}
+        </p>
+        <Barcode value={sku} className="mt-1 h-2.5 w-full text-ink md:mt-1.5 md:h-3" />
+      </div>
+    </div>
+  );
+}

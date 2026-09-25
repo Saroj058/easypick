@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BuyPanel } from "@/components/buy-panel";
+import { HangTag } from "@/components/hang-tag";
 import { ChevronIcon } from "@/components/icons";
 import { ProductGrid } from "@/components/product-card";
 import { ProductImage } from "@/components/product-image";
@@ -109,7 +110,20 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               }`}
             >
               {product.images.map((img, i) => (
-                <li key={i} className={`shrink-0 snap-center lg:w-auto ${product.images.length > 1 ? "w-[86%]" : "w-full"}`}>
+                <li key={i} className={`relative shrink-0 snap-center lg:w-auto ${product.images.length > 1 ? "w-[86%]" : "w-full"}`}>
+                  {i === 0 && (
+                    // The same tag that hangs on the piece in the store: price, cm, RFID.
+                    <div className="absolute right-7 top-0 z-10 origin-top-right scale-[0.6] md:right-10 md:scale-[0.8] xl:scale-90">
+                      <div className="tag-hang flex flex-col items-center">
+                        <span className="h-8 w-px bg-ink/50" aria-hidden />
+                        <HangTag
+                          product={product}
+                          size={sizes.includes("M") ? "M" : sizes[0]}
+                          className="shadow-[0_4px_14px_rgba(0,0,0,0.14)] [--hole:var(--color-photo)]"
+                        />
+                      </div>
+                    </div>
+                  )}
                   <ProductImage
                     image={img}
                     category={product.category}

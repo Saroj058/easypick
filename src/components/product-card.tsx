@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { formatPrice } from "@/lib/format";
 import type { Product, Size } from "@/lib/types";
+import { MiniTag } from "./hang-tag";
 import { ProductImage } from "./product-image";
 
 const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL"];
@@ -29,6 +30,7 @@ export function ProductCard({ product, priority, sizes }: { product: Product; pr
             <ProductImage image={back} category={product.category} colourHex={hex} decorative sizes={sizes} />
           </div>
         )}
+        <MiniTag product={product} className="absolute right-1.5 top-0 z-10 md:right-4" />
         {note && <span className={`absolute left-3 top-3 ${product.status === "scheduled" ? "tag-volt" : "index bg-paper px-2 py-1"}`}>{note}</span>}
       </div>
       <div className="mt-3">

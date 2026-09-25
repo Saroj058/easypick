@@ -255,6 +255,17 @@
     background: var(--hole, var(--color-graphite));
   }
 
+  /* A tag hanging on a string from the top of a product photo. Sways a little on hover. */
+  .tag-hang {
+    transform-origin: 50% 0;
+    transform: rotate(-5deg);
+    transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .group:hover .tag-hang,
+  .group:focus-visible .tag-hang {
+    transform: rotate(3deg);
+  }
+
   /* Receipt strip with a torn zig-zag bottom edge. */
   .receipt {
     background: var(--color-paper);
