@@ -67,7 +67,8 @@ export function LoginPanel({
         <>
           <div className="space-y-3">
             {social("google", "Continue with Google", GoogleMark)}
-            {social("facebook", "Continue with Facebook", FacebookMark)}
+            {/* Shown only once Facebook sign-in is set up (FACEBOOK_APP_ID / SECRET). */}
+            {providers.facebook && social("facebook", "Continue with Facebook", FacebookMark)}
           </div>
 
           <div className="flex items-center gap-4" aria-hidden>

@@ -6,6 +6,7 @@ import { signOut } from "@/app/auth-actions";
 import { FitFinder } from "@/components/fit-finder";
 import { ProfileForm } from "@/components/profile-form";
 import { getCurrentUser } from "@/lib/auth";
+import { isConfigured } from "@/lib/oauth";
 import { formatPrice } from "@/lib/format";
 import { ordersFor } from "@/lib/orders";
 import { site } from "@/lib/site";
@@ -124,10 +125,12 @@ export default async function AccountPage() {
                 <span>Google</span>
                 <span className="text-steel-dark">{user.googleId ? "Connected" : "Not connected"}</span>
               </li>
-              <li className="flex items-center justify-between gap-4">
-                <span>Facebook</span>
-                <span className="text-steel-dark">{user.facebookId ? "Connected" : "Not connected"}</span>
-              </li>
+              {(user.facebookId || isConfigured("facebook")) && (
+                <li className="flex items-center justify-between gap-4">
+                  <span>Facebook</span>
+                  <span className="text-steel-dark">{user.facebookId ? "Connected" : "Not connected"}</span>
+                </li>
+              )}
             </ul>
             {!user.phone && (
               <p className="mt-4 text-[13px] text-steel-dark">

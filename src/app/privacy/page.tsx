@@ -16,8 +16,8 @@ export default function PrivacyPage() {
       <ul>
         <li>Your phone number, when you order, pay at the kiosk, or sign up for drop alerts.</li>
         <li>
-          If you create an account: your name, and optionally your email and your saved measurements in cm. If you sign in with Google or
-          Facebook, we receive your name, email and an account ID from them. Never your password.
+          If you create an account: your name, and optionally your email and your saved measurements in cm. If you sign in with Google, we
+          receive your name, email and an account ID from Google. Never your password.
         </li>
         <li>Your delivery address and landmark, if you choose delivery.</li>
         <li>What you bought and when, online and in store.</li>
