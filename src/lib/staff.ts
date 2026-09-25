@@ -143,19 +143,22 @@ export const currentStaff = cache(async (): Promise<StaffMember | null> => {
   return { id: row.id, username: row.username, role: row.role };
 });
 
-/** For admin pages and actions: the staff member, or off to the staff login. */
-export async function requireStaff(): Promise<StaffMember> {
+/** For staff pages and actions: the staff member, or off to a staff login. */
+export async function requireStaff(login = "/admin/login"): Promise<StaffMember> {
   const who = await currentStaff();
-  if (!who) redirect("/admin/login");
+  if (!who) redirect(login);
   return who;
 }
 
-/** Owner-only pages and actions. Helpers are sent to Today. */
+/** Owner-only pages and actions (the admin). Helpers are sent to their own portal. */
 export async function requireOwner(): Promise<StaffMember> {
   const who = await requireStaff();
-  if (who.role !== "owner") redirect("/admin?denied=1");
+  if (who.role !== "owner") redirect("/helper");
   return who;
 }
+
+/** Where a staff member lands after signing in: helpers use /helper, owners /admin. */
+export const staffHome = (who: Pick<StaffMember, "role">) => (who.role === "helper" ? "/helper" : "/admin");
 
 /** Writes to the admin activity log. */
 export async function logStaff(who: StaffMember, action: string, target?: string | null, detail?: Record<string, unknown>) {

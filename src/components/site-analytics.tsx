@@ -3,7 +3,7 @@
 import { Analytics, type BeforeSendEvent } from "@vercel/analytics/next";
 
 // Private links (gift pages, order pages, the admin) are never sent: their URLs are secrets.
-const PRIVATE = /^\/(admin|g|order|pay|account)(\/|$)/;
+const PRIVATE = /^\/(admin|helper|g|order|pay|account)(\/|$)/;
 
 /** Cookie-free page counts (Vercel Web Analytics). Query strings other than utm_* are dropped. */
 export function SiteAnalytics() {

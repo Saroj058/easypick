@@ -3,13 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { adminConfigured, currentStaff } from "@/lib/staff";
+import { adminConfigured, currentStaff, staffHome } from "@/lib/staff";
 import { AdminLoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Staff login", robots: { index: false, follow: false } };
 
 export default async function AdminLogin() {
-  if (await currentStaff()) redirect("/admin");
+  const who = await currentStaff();
+  if (who) redirect(staffHome(who));
   return (
     <div className="container-ep max-w-md pb-16 pt-10 md:pt-16">
       <div className="mb-12 flex items-center justify-between">

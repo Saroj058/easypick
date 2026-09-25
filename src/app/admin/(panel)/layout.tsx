@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { signOutAdmin } from "@/app/admin/actions";
 import { requireStaff } from "@/lib/staff";
@@ -12,6 +13,8 @@ export const metadata: Metadata = { title: { default: "Admin", template: "%s | E
 /** The staff frame: a slim bar with the sections, no shop header, footer or tab bar. */
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const who = await requireStaff();
+  // Helpers have their own, simpler portal.
+  if (who.role === "helper") redirect("/helper");
   return (
     <div className="min-h-dvh bg-paper">
       <header className="sticky top-0 z-40 border-b border-mist bg-paper/95 pt-[env(safe-area-inset-top)] backdrop-blur">

@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
       { source: "/g/:path*", headers: privateLinks },
       { source: "/order/:path*", headers: privateLinks },
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/helper/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ];
   },
   experimental: {

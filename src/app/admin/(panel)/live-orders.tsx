@@ -28,7 +28,7 @@ function chime(ctx: AudioContext) {
  * Checks for new paid orders every 30 seconds while the admin is open: plays a chime,
  * shows a bar, refreshes the page, and puts the waiting count in the tab title.
  */
-export function LiveOrders() {
+export function LiveOrders({ href = "/admin/orders?view=pack" }: { href?: string }) {
   const router = useRouter();
   const [fresh, setFresh] = useState<string | null>(null);
   const seen = useRef<string | null | undefined>(undefined);
@@ -82,7 +82,7 @@ export function LiveOrders() {
       <div className="container-ep flex min-h-12 items-center justify-between gap-4 text-[15px] font-semibold text-ink">
         <span>New order {fresh} is paid.</span>
         <span className="flex items-center gap-4">
-          <Link href="/admin/orders?view=pack" onClick={() => setFresh(null)} className="underline underline-offset-2">
+          <Link href={href} onClick={() => setFresh(null)} className="underline underline-offset-2">
             See it
           </Link>
           <button type="button" onClick={() => setFresh(null)} className="min-h-11 min-w-11" aria-label="Close">

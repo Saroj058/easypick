@@ -11,8 +11,8 @@ export interface Me {
   phone: string | null;
   fit: FitProfile | null;
   checkout: SavedCheckout | null;
-  /** Can open the admin screen. */
-  staff: boolean;
+  /** Signed in to the staff side too: owners use /admin, helpers /helper. */
+  staff: "owner" | "helper" | null;
 }
 
 // One shared request per page; re-checked on navigation so logging in or out

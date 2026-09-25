@@ -73,8 +73,9 @@ export async function signInAdmin(_prev: LoginState, form: FormData): Promise<Lo
   await clearLimit(byIp);
   await clearLimit(byUser);
   await startAdminSession(member.id);
-  await logStaff(member, "signed in", null, { ip });
-  redirect("/admin");
+  await logStaff(member, "signed in", null, { ip, portal: str(form, "portal") || "admin" });
+  // Helpers always go to their portal; an owner signing in on the helper login goes there too.
+  redirect(member.role === "helper" || str(form, "portal") === "helper" ? "/helper" : "/admin");
 }
 
 // ---------- Your staff login ----------
@@ -105,9 +106,9 @@ export async function changePassword(_prev: AccountState, form: FormData): Promi
   return { status: "saved", message: "Password changed. Other devices have been signed out." };
 }
 
-export async function signOutAdmin() {
+export async function signOutAdmin(form?: FormData) {
   await endAdminSession();
-  redirect("/admin/login");
+  redirect(form?.get("portal") === "helper" ? "/helper/login" : "/admin/login");
 }
 
 // ---------- Staff accounts (owner) ----------
@@ -169,6 +170,7 @@ export async function setOrderStep(form: FormData) {
     return { save: true, result: o };
   });
   if (!order) return;
+  revalidatePath("/helper", "layout");
   if (step === "ready" && !order.gift) {
     after(() =>
       notifySms(
@@ -192,6 +194,7 @@ export async function clearAttention(form: FormData) {
     return { save: true, result: null };
   });
   revalidatePath(`/admin/orders/${id}`);
+  revalidatePath(`/helper/order/${id}`);
 }
 
 /**
@@ -291,6 +294,7 @@ export async function exchangeLine(_prev: SaveState, form: FormData): Promise<Sa
       await logStaff(me, "exchange", id, { line: i, newSku });
       catalogueChanged();
       revalidatePath(`/admin/orders/${id}`);
+      revalidatePath(`/helper/order/${id}`);
     }
     return res;
   } catch (e) {

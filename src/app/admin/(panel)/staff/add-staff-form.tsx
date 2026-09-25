@@ -35,7 +35,7 @@ export function AddStaffForm({ min }: { min: number }) {
           <input type="radio" name="role" value="helper" defaultChecked className="mt-1 h-5 w-5 accent-ink" />
           <span>
             <span className="font-semibold">Helper</span>
-            <span className="block text-[14px] text-steel-dark">Packs and hands over orders, exchanges sizes, updates stock.</span>
+            <span className="block text-[14px] text-steel-dark">Uses the helper portal (/helper): packs and hands over orders, swaps sizes, updates stock. No prices, refunds or reports.</span>
           </span>
         </label>
         <label className="flex min-h-11 items-start gap-3 text-[15px]">

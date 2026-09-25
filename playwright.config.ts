@@ -15,7 +15,8 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure" },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "phone", use: { ...devices["Pixel 7"] }, grep: /@phone/ },
+    // After desktop: some phone checks use accounts the desktop tests create.
+    { name: "phone", use: { ...devices["Pixel 7"] }, grep: /@phone/, dependencies: ["desktop"] },
   ],
   webServer: {
     command: `node scripts/with-db.mjs --local next dev --port ${PORT}`,

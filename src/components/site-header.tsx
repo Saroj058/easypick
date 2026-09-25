@@ -86,7 +86,7 @@ export function SiteHeader() {
     me
       ? { id: "/account", href: "/account", label: "Account", icon: UserHugeIcon }
       : { id: "/login", href: "/login", label: "Log in / Sign up", icon: Login01Icon },
-    ...(me?.staff ? [{ id: "/admin", href: "/admin", label: "Admin", icon: DashboardSquare01Icon }] : []),
+    ...(me?.staff ? [me.staff === "helper" ? { id: "/helper", href: "/helper", label: "Helper", icon: DashboardSquare01Icon } : { id: "/admin", href: "/admin", label: "Admin", icon: DashboardSquare01Icon }] : []),
     ...(me ? [{ id: "logout", label: "Log out", icon: LogoutIcon, danger: true, onSelect: () => void signOut() }] : []),
   ];
 

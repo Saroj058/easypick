@@ -6,13 +6,15 @@ import { signInAdmin, type LoginState } from "@/app/admin/actions";
 
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 
-export function AdminLoginForm() {
+/** Staff login. `portal` picks where an owner lands (helpers always go to /helper). */
+export function AdminLoginForm({ portal = "admin" }: { portal?: "admin" | "helper" }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(signInAdmin, { status: "idle" });
   const [show, setShow] = useState(false);
   const err = state.status === "error" ? state : null;
 
   return (
     <form action={action} className="mt-10 space-y-5">
+      <input type="hidden" name="portal" value={portal} />
       <div>
         <label htmlFor="username" className="block text-sm font-semibold">
           Username
