@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { adminConfigured, currentStaff } from "@/lib/staff";
@@ -9,7 +11,13 @@ export const metadata: Metadata = { title: "Staff login", robots: { index: false
 export default async function AdminLogin() {
   if (await currentStaff()) redirect("/admin");
   return (
-    <div className="container-ep max-w-md pb-24 pt-12 md:pt-20">
+    <div className="container-ep max-w-md pb-16 pt-10 md:pt-16">
+      <div className="mb-12 flex items-center justify-between">
+        <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} className="h-6 w-auto" priority />
+        <Link href="/" className="min-h-11 content-center text-[14px] text-steel-dark hover:text-ink">
+          Back to the shop
+        </Link>
+      </div>
       <h1 className="display display-h1">Staff login.</h1>
       <p className="mt-3 text-lg text-steel-dark">For the Easypick team: orders, stock and products.</p>
       {adminConfigured() ? (

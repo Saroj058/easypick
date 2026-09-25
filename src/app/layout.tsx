@@ -3,6 +3,7 @@ import { Barlow_Condensed, Inter, JetBrains_Mono, Mukta } from "next/font/google
 
 import { PendingBagAdd } from "@/components/bag-gate";
 import { BagProvider } from "@/components/bag-provider";
+import { ShopChrome } from "@/components/shop-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { MobileTabBar, SiteHeader } from "@/components/site-header";
 import { site } from "@/lib/site";
@@ -33,12 +34,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${barlow.variable} ${inter.variable} ${jetbrains.variable} ${mukta.variable} antialiased`}>
       <body className="flex min-h-dvh flex-col">
         <BagProvider>
-          <SiteHeader />
+          <ShopChrome>
+            <SiteHeader />
+          </ShopChrome>
           <main id="main" className="flex-1">
             {children}
           </main>
-          <SiteFooter />
-          <MobileTabBar />
+          <ShopChrome>
+            <SiteFooter />
+            <MobileTabBar />
+          </ShopChrome>
           <PendingBagAdd />
         </BagProvider>
       </body>

@@ -15,8 +15,8 @@ export function AdminNav() {
   const path = usePathname();
   const current = (href: string) => (href === "/admin" ? path === "/admin" : href === "/admin/products" ? path.startsWith("/admin/products") && path !== "/admin/products/new" : path.startsWith(href));
   return (
-    <nav aria-label="Admin" className="-mx-4 mt-6 overflow-x-auto px-4">
-      <ul className="flex gap-2 border-b border-mist">
+    <nav aria-label="Admin sections" className="-mx-4 overflow-x-auto px-4">
+      <ul className="-mb-px flex gap-2">
         {links.map((l) => (
           <li key={l.href}>
             <Link

@@ -154,7 +154,7 @@ export function ProductForm({ product, demand }: { product: Product; demand: Rec
         <input id="shortDescription" name="shortDescription" defaultValue={product.shortDescription} className={input} />
       </div>
 
-      <div className="sticky bottom-20 flex items-center gap-4 border-t border-mist bg-paper py-3 lg:bottom-0">
+      <div className="sticky bottom-0 flex items-center gap-4 border-t border-mist bg-paper py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
         <button type="submit" disabled={pending} className="btn btn-volt min-w-40">
           {pending ? "Saving…" : "Save"}
         </button>
