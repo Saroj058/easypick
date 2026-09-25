@@ -17,6 +17,8 @@ type Props = Pick<
   "slug" | "name" | "price" | "salePrice" | "colours" | "variants" | "status" | "fit" | "modelNote" | "category" | "measurements"
 > & {
   dropLabel?: string;
+  /** Quick-buy sheet on product cards: no gift/try-in-store row or notes. */
+  compact?: boolean;
 };
 
 /** Colour + size pickers with live stock, Add to bag and Try in store. */
@@ -29,7 +31,7 @@ export function BuyPanel(props: Props) {
   const oneSize = sizes.length === 1 && sizes[0] === "ONE";
 
   const [colour, setColour] = useState<Colour>(colours[0]);
-  const [size, setSize] = useState<Size | null>(oneSize ? "ONE" : null);
+  const [picked, setSize] = useState<Size | null>(oneSize ? "ONE" : null);
   const [stock, setStock] = useState<LiveStock | null>(null);
   const [error, setError] = useState(false);
   const [added, setAdded] = useState(false);
@@ -57,6 +59,13 @@ export function BuyPanel(props: Props) {
   }, [load, status]);
 
   const stockFor = (s: Size) => stock?.sizes.find((x) => x.size === s && x.colour === colour.name);
+  const sellableOf = (s: Size) => {
+    const st = stockFor(s);
+    return st ? st.stock - (st.inStoreOnly ? 1 : 0) : 0;
+  };
+  // Their saved fit is picked for them when it's in stock; tapping another size overrides it.
+  const autoSize = !picked && match && sellableOf(match.size) > 0 ? match.size : null;
+  const size = picked ?? autoSize;
   const selected = size ? stockFor(size) : undefined;
   const sellable = selected ? selected.stock - (selected.inStoreOnly ? 1 : 0) : 0;
   const variant = size ? variants.find((v) => v.size === size && v.colour === colour.name) : undefined;
@@ -134,6 +143,9 @@ export function BuyPanel(props: Props) {
               </span>
             </p>
           )}
+          {autoSize && (
+            <p className="mb-1 text-[13px] text-steel-dark">We picked your size. Tap another to change it.</p>
+          )}
           {fitOpen && (
             <div id={`fit-${slug}`} className="my-4 border border-mist bg-photo p-4">
               <FitFinder compact onSaved={() => setFitOpen(false)} />
@@ -182,7 +194,7 @@ export function BuyPanel(props: Props) {
         </fieldset>
       )}
 
-      {props.modelNote && <p className="mt-2 text-[13px] text-steel-dark">{props.modelNote}</p>}
+      {!props.compact && props.modelNote && <p className="mt-2 text-[13px] text-steel-dark">{props.modelNote}</p>}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         {status === "live" ? (
@@ -211,7 +223,7 @@ export function BuyPanel(props: Props) {
           </>
         )}
       </div>
-      {status === "live" && (
+      {status === "live" && !props.compact && (
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag is saved to your account.</p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">

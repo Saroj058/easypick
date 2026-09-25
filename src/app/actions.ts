@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, updateUser } from "@/lib/auth";
 import { checkGiftCard, spendGiftCard } from "@/lib/gift-cards";
 import { normaliseNepaliMobile } from "@/lib/format";
 import { findOrderByNumber, saveOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
@@ -130,6 +130,8 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
   // The order becomes "paid" only after the API verifies the payment server-to-server,
   // never from the provider's browser redirect.
   saveOrder(order, user?.id);
+  // Remember how they like to get and pay for things, so next checkout is one tap.
+  if (user) updateUser(user.id, { checkout: { method, provider, address: address ?? user.checkout?.address } });
   redirect(`/order/${order.id}`);
 }
 

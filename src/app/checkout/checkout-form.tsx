@@ -40,8 +40,15 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   const me = useMe();
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, { status: "idle" });
-  const [method, setMethod] = useState<FulfilmentMethod>("pickup");
-  const [provider, setProvider] = useState("esewa");
+  // Until they choose, use what they picked last time (saved to their account).
+  const saved = me?.checkout ?? null;
+  const [methodChoice, setMethod] = useState<FulfilmentMethod | null>(null);
+  const [providerChoice, setProvider] = useState<string | null>(null);
+  const method = methodChoice ?? saved?.method ?? "pickup";
+  const provider = providerChoice ?? saved?.provider ?? "esewa";
+  const areaField = usePrefilled(saved?.address?.area);
+  const landmarkField = usePrefilled(saved?.address?.landmark);
+  const detailsField = usePrefilled(saved?.address?.details);
   const [cardOpen, setCardOpen] = useState(false);
   const [cardCode, setCardCode] = useState("");
   const [card, setCard] = useState<{ code: string; balance: number } | null>(null);
@@ -111,6 +118,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
         <h2 id="co-method" className="display text-[28px]">
           2. Pickup or delivery
         </h2>
+        {saved && <p className="mt-1 text-[13px] text-steel-dark">Filled in from your last order. Change anything you like.</p>}
         <div className="mt-4 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-labelledby="co-method">
           <Option name="method" value="pickup" checked={method === "pickup"} onChange={() => setMethod("pickup")} title="Store pickup" note="Free · ready the same day" />
           <Option
@@ -128,19 +136,28 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
               <label htmlFor="area" className="block text-sm font-semibold">
                 Area
               </label>
-              <input id="area" name="area" autoComplete="address-level3" placeholder="e.g. Baneshwor, Kathmandu" required aria-invalid={err?.field === "area"} className={input} />
+              <input
+                id="area"
+                name="area"
+                autoComplete="address-level3"
+                placeholder="e.g. Baneshwor, Kathmandu"
+                required
+                {...areaField}
+                aria-invalid={err?.field === "area"}
+                className={input}
+              />
             </div>
             <div>
               <label htmlFor="landmark" className="block text-sm font-semibold">
                 Nearby landmark
               </label>
-              <input id="landmark" name="landmark" placeholder="e.g. opposite Big Mart" required className={input} />
+              <input id="landmark" name="landmark" placeholder="e.g. opposite Big Mart" required {...landmarkField} className={input} />
             </div>
             <div>
               <label htmlFor="details" className="block text-sm font-semibold">
                 House, floor or other directions <span className="font-normal text-steel-dark">(optional)</span>
               </label>
-              <input id="details" name="details" autoComplete="address-line2" className={input} />
+              <input id="details" name="details" autoComplete="address-line2" {...detailsField} className={input} />
             </div>
           </div>
         )}

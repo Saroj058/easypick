@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import type { FitProfile } from "./fit-profile";
 import type { GiftCard } from "./gift-cards";
 import type { Order } from "./orders";
+import type { SavedCheckout } from "./types";
 
 // A tiny JSON-file store so accounts, sessions and orders survive restarts while
 // the Store API (FastAPI + PostgreSQL) doesn't exist yet. Every function here maps
@@ -30,6 +31,8 @@ export interface User {
   facebookId?: string;
   alerts: boolean; // drop alerts by WhatsApp/SMS
   fit: FitProfile | null;
+  /** Last checkout choices, filled in next time so paying is one tap. */
+  checkout?: SavedCheckout;
   createdAt: string;
   lastLoginAt: string;
 }

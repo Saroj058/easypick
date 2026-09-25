@@ -220,7 +220,7 @@ export async function endSession() {
   jar.delete(SESSION_COOKIE);
 }
 
-export function updateUser(id: string, patch: Partial<Pick<User, "name" | "email" | "alerts" | "fit" | "phone" | "contactPhone">>): User | null {
+export function updateUser(id: string, patch: Partial<Pick<User, "name" | "email" | "alerts" | "fit" | "phone" | "contactPhone" | "checkout">>): User | null {
   return db((d) => {
     const u = d.users.find((x) => x.id === id);
     if (!u) return null;

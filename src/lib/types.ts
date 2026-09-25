@@ -90,4 +90,11 @@ export interface BagLine {
 }
 
 export type FulfilmentMethod = "pickup" | "delivery";
+
+/** An account's last checkout choices, filled in next time. */
+export interface SavedCheckout {
+  method: FulfilmentMethod;
+  provider: PaymentProvider;
+  address?: { area: string; landmark: string; details: string };
+}
 export type PaymentProvider = "esewa" | "khalti" | "fonepay";

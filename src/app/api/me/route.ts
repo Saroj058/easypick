@@ -8,6 +8,6 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const user = await getCurrentUser();
-  const body = user ? { user: { name: user.name, phone: user.phone ?? user.contactPhone ?? null, fit: user.fit } } : { user: null };
+  const body = user ? { user: { name: user.name, phone: user.phone ?? user.contactPhone ?? null, fit: user.fit, checkout: user.checkout ?? null } } : { user: null };
   return Response.json(body, { headers: { "Cache-Control": "private, no-store" } });
 }

@@ -4,11 +4,13 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import type { FitProfile } from "@/lib/fit-profile";
+import type { SavedCheckout } from "@/lib/types";
 
 export interface Me {
   name: string | null;
   phone: string | null;
   fit: FitProfile | null;
+  checkout: SavedCheckout | null;
 }
 
 // One shared request per page; re-checked on navigation so logging in or out
