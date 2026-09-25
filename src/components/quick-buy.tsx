@@ -8,7 +8,7 @@ import { BuyPanel } from "./buy-panel";
 import { BagIcon } from "./icons";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
 
-/** Small bag button on a product card: pick colour and size, then Buy now or Add to bag, without leaving the page. */
+/** "Add to bag" button on a product card: pick colour and size, then Buy now or Add to bag, without leaving the page. */
 export function QuickBuy({ product, className = "" }: { product: Product; className?: string }) {
   const [open, setOpen] = useState(false);
   if (product.status !== "live") return null;
@@ -17,15 +17,15 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         {/* 44px tap area around a quieter 36px glass chip. On hover screens it only shows on hover
-            (or keyboard focus) and opens out to say "Quick buy". */}
+            (or keyboard focus) and opens out to say "Add to bag". */}
         <button
           type="button"
-          aria-label={`Quick buy: ${product.name}`}
+          aria-label={`Add to bag: ${product.name}`}
           className={`peer/qb flex h-11 min-w-11 items-center justify-end outline-none transition-opacity duration-200 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100 ${className}`}
         >
           <span className="flex h-9 items-center gap-1.5 rounded-full bg-paper/80 px-2.5 text-ink ring-1 ring-ink/10 backdrop-blur-md transition-colors duration-200 hover:bg-ink hover:text-paper [button:focus-visible_&]:outline [button:focus-visible_&]:outline-2 [button:focus-visible_&]:outline-offset-2 [button:focus-visible_&]:outline-ink">
             <BagIcon className="h-4 w-4" />
-            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] [@media(hover:hover)]:inline">Quick buy</span>
+            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] [@media(hover:hover)]:inline">Add to bag</span>
           </span>
         </button>
       </SheetTrigger>

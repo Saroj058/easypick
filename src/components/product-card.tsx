@@ -127,9 +127,11 @@ export function ProductCard({
         </div>
       </Link>
       {/* Outside the link: a button can't sit inside one. */}
-      <div className="absolute right-2 top-2 z-10 flex flex-col items-end md:right-3 md:top-3">
-        <QuickBuy product={product} />
-        <SaveButton slug={product.slug} name={product.name} variant="chip" />
+      {/* Add to bag: top right of the photo. */}
+      <QuickBuy product={product} className="absolute right-2 top-2 z-10 md:right-3 md:top-3" />
+      {/* Save: bottom left of the photo (a 4:5 box laid over it, so it tracks the photo's size). */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 aspect-[4/5]">
+        <SaveButton slug={product.slug} name={product.name} variant="chip" className="pointer-events-auto absolute bottom-1 left-1 md:bottom-2 md:left-2" />
       </div>
     </div>
   );

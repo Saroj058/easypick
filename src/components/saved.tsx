@@ -91,7 +91,7 @@ export function SaveButton({ slug, name, variant = "inline", className = "" }: {
         onClick={() => toggleSaved(slug)}
         aria-pressed={saved}
         aria-label={label}
-        className={`flex h-11 w-11 items-center justify-end outline-none transition-opacity duration-200 ${saved ? "" : "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100"} ${className}`}
+        className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${saved ? "" : "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100"} ${className}`}
       >
         <span className="grid h-9 w-9 place-items-center rounded-full bg-paper/80 text-ink ring-1 ring-ink/10 backdrop-blur-md [button:focus-visible_&]:outline [button:focus-visible_&]:outline-2 [button:focus-visible_&]:outline-offset-2 [button:focus-visible_&]:outline-ink">
           <Heart filled={saved} className={`h-4 w-4 ${saved ? "text-[#d70015]" : ""}`} />
