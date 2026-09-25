@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth";
+import { adjustStock } from "@/lib/catalogue";
 import { normaliseNepaliMobile } from "@/lib/format";
 import {
   GIFT_CARD_MAX,
@@ -259,6 +260,11 @@ export async function chooseGift(_prev: ChooseState, form: FormData): Promise<Ch
         site.gifting.welcomeCreditDays,
       );
 
+  // The buyer's guess was taken off stock when they paid; swap it for the size actually chosen.
+  if (!held && order.status !== "awaiting_payment") {
+    adjustStock([{ sku: order.lines[0].sku, qty: 1 }], 1);
+    adjustStock([{ sku: variant.sku, qty: 1 }], -1);
+  }
   updateOrder(order.id, (o) => {
     o.lines[0] = { ...o.lines[0], sku: variant.sku, size: variant.size, colour };
     o.method = method;

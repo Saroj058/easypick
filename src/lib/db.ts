@@ -6,7 +6,10 @@ import { dirname, join } from "node:path";
 import type { FitProfile } from "./fit-profile";
 import type { GiftCard } from "./gift-cards";
 import type { Order } from "./orders";
-import type { SavedCheckout } from "./types";
+import { drops as seedDrops, products as seedProducts } from "./mock-data";
+import type { Drop, Festival, Product, SavedCheckout, Size } from "./types";
+
+export type { Festival };
 
 // A tiny JSON-file store so accounts, sessions and orders survive restarts while
 // the Store API (FastAPI + PostgreSQL) doesn't exist yet. Every function here maps
@@ -52,12 +55,31 @@ export interface SessionRecord {
   createdAt: number;
 }
 
+/** "Tell me when my size is back": one request for one size of one colour. */
+export interface RestockAlert {
+  id: string;
+  slug: string;
+  sku: string;
+  size: Size;
+  colour: string;
+  email: string | null;
+  phone: string | null;
+  createdAt: string;
+  notifiedAt: string | null;
+}
+
+
 interface Data {
   users: User[];
   otps: OtpRecord[];
   sessions: SessionRecord[];
   orders: (Order & { userId?: string | null })[];
   giftCards: GiftCard[];
+  /** The catalogue, edited in the admin screen. Seeded from mock-data.ts the first time. */
+  products: Product[];
+  drops: Drop[];
+  restockAlerts: RestockAlert[];
+  festivals: Festival[];
 }
 
 const FILE = join(process.cwd(), ".data", "easypick.json");
@@ -69,11 +91,16 @@ function load(): Data {
     try {
       g.__epDb = JSON.parse(readFileSync(FILE, "utf8")) as Data;
     } catch {
-      g.__epDb = { users: [], otps: [], sessions: [], orders: [], giftCards: [] };
+      g.__epDb = { users: [], otps: [], sessions: [], orders: [], giftCards: [], products: [], drops: [], restockAlerts: [], festivals: [] };
     }
   }
   // Lists added after the first release; older files (or a store already in memory) may not have them.
-  g.__epDb.giftCards ??= [];
+  const d = g.__epDb;
+  d.giftCards ??= [];
+  d.restockAlerts ??= [];
+  d.festivals ??= [];
+  if (!d.products?.length) d.products = structuredClone(seedProducts);
+  if (!d.drops?.length) d.drops = structuredClone(seedDrops);
   return g.__epDb;
 }
 

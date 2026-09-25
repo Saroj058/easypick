@@ -1,11 +1,14 @@
 import "server-only";
 
-import { drops as mockDrops, products as mockProducts } from "./mock-data";
+import { db } from "./db";
 import type { Drop, LiveStock, Product, ProductStatus } from "./types";
 
 // Data access for the website. With STORE_API_URL set, reads from the Store API
-// (FastAPI). Without it, serves the sample catalogue in mock-data.ts so the site
-// can be built and designed before the API exists.
+// (FastAPI). Without it, serves the local catalogue (seeded from mock-data.ts and
+// edited in the admin screen) so the site runs before the API exists.
+
+const localProducts = () => db((d) => structuredClone(d.products));
+const localDrops = () => db((d) => structuredClone(d.drops));
 //
 // The API key stays on the server; nothing here is imported by client components.
 
@@ -40,7 +43,7 @@ export function effectiveStatus(p: Product, dropList: Drop[], now = Date.now()):
 const PUBLIC: ProductStatus[] = ["live", "sold_out", "scheduled"];
 
 export async function getDrops(): Promise<Drop[]> {
-  const list = API_URL ? await api<Drop[]>("/drops", CATALOGUE) : mockDrops;
+  const list = API_URL ? await api<Drop[]>("/drops", CATALOGUE) : localDrops();
   return [...list].sort((a, b) => Date.parse(b.releaseAt) - Date.parse(a.releaseAt));
 }
 
@@ -62,7 +65,7 @@ export async function getDropTimeline(now = Date.now()) {
 
 export async function getProducts(): Promise<Product[]> {
   const [list, dropList] = await Promise.all([
-    API_URL ? api<Product[]>("/products?channel=website", CATALOGUE) : Promise.resolve(mockProducts),
+    API_URL ? api<Product[]>("/products?channel=website", CATALOGUE) : Promise.resolve(localProducts()),
     getDrops(),
   ]);
   return list
@@ -113,7 +116,7 @@ export async function getLiveStock(slug: string): Promise<LiveStock | null> {
   if (API_URL) {
     return api<LiveStock>(`/products/${encodeURIComponent(slug)}/stock`, { cache: "no-store" });
   }
-  const p = mockProducts.find((x) => x.slug === slug);
+  const p = db((d) => d.products.find((x) => x.slug === slug));
   if (!p) return null;
   return {
     slug,

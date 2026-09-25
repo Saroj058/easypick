@@ -1,5 +1,6 @@
 import "server-only";
 
+import { adjustStock } from "./catalogue";
 import { db } from "./db";
 import { giftEmailHtml } from "./email";
 import { activateGiftCard } from "./gift-cards";
@@ -25,6 +26,8 @@ export async function confirmPayment(orderId: string) {
     o.status = "paid";
     o.paidAt = new Date().toISOString();
   });
+  // Sold: take the pieces off stock (gift cards aren't stock).
+  if (order.kind !== "gift_card") adjustStock(order.lines, -1);
 
   // ---- A piece sent as a gift ----
   if (order.gift) {

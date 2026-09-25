@@ -91,6 +91,16 @@ export interface BagLine {
 
 export type FulfilmentMethod = "pickup" | "delivery";
 
+/** A festival banner: "Order by … for delivery before …". Set in the admin screen. */
+export interface Festival {
+  id: string;
+  name: string;
+  /** The day people want it by (e.g. Tika), YYYY-MM-DD, Kathmandu time. */
+  date: string;
+  /** Last day to order for delivery before it, YYYY-MM-DD. */
+  orderBy: string;
+}
+
 /** An account's last checkout choices, filled in next time. */
 export interface SavedCheckout {
   method: FulfilmentMethod;
