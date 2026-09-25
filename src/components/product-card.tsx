@@ -4,7 +4,7 @@ import { formatPrice } from "@/lib/format";
 import type { Product, Size } from "@/lib/types";
 import { MiniTag } from "./hang-tag";
 import { ProductImage } from "./product-image";
-import { QuickBuy } from "./quick-buy";
+import { HeartAdd, QuickBuy } from "./quick-buy";
 
 const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL"];
 
@@ -126,11 +126,11 @@ export function ProductCard({
         </div>
       </Link>
       {/* Outside the link: a button can't sit inside one. */}
-      {/* Quick buy: top right of the photo. */}
+      {/* Quick buy: top right of the photo, straight to checkout. */}
       <QuickBuy product={product} className="absolute right-2 top-2 z-10 md:right-3 md:top-3" />
       {/* Heart = add to bag: bottom left of the photo (a 4:5 box laid over it, so it tracks the photo's size). */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 aspect-[4/5]">
-        <QuickBuy product={product} mode="bag" className="pointer-events-auto absolute bottom-1 left-1 md:bottom-2 md:left-2" />
+        <HeartAdd product={product} className="pointer-events-auto absolute bottom-1 left-1 md:bottom-2 md:left-2" />
       </div>
     </div>
   );

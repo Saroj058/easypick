@@ -39,12 +39,35 @@ export function useAddToBag() {
   );
 }
 
-/** Finishes an Add to bag that was waiting on a login, and says so. Mounted once in the layout. */
+const TOAST_EVENT = "ep:bag-toast";
+const describe = (l: Omit<BagLine, "qty">) => `${l.name} (${l.colour}${l.size === "ONE" ? "" : `, ${l.size}`})`;
+
+/** Shows the small bag confirmation at the bottom of the screen. */
+export function showBagToast(text: string) {
+  window.dispatchEvent(new CustomEvent<string>(TOAST_EVENT, { detail: text }));
+}
+
+export function addedMessage(l: Omit<BagLine, "qty">) {
+  return `Added ${describe(l)} to your bag.`;
+}
+
+/**
+ * The bag confirmation popup. Also finishes an Add to bag that was waiting on a login.
+ * Mounted once in the layout.
+ */
 export function PendingBagAdd() {
   const me = useMe();
   const { add, ready } = useBag();
-  const [count, setCount] = useState(0);
+  const [message, setMessage] = useState<string | null>(null);
 
+  // Any "added" / "already in your bag" note from the page.
+  useEffect(() => {
+    const on = (e: Event) => setMessage((e as CustomEvent<string>).detail);
+    window.addEventListener(TOAST_EVENT, on);
+    return () => window.removeEventListener(TOAST_EVENT, on);
+  }, []);
+
+  // Back from logging in: add what they picked before.
   useEffect(() => {
     if (!me || !ready) return;
     let items: unknown;
@@ -55,19 +78,24 @@ export function PendingBagAdd() {
       return;
     }
     if (!Array.isArray(items) || items.length === 0) return;
-    (items as Omit<BagLine, "qty">[]).forEach(add);
+    const lines = items as Omit<BagLine, "qty">[];
+    lines.forEach(add);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-off note after login
-    setCount(items.length);
-    const t = setTimeout(() => setCount(0), 5000);
-    return () => clearTimeout(t);
+    setMessage(lines.length === 1 ? addedMessage(lines[0]) : `${lines.length} pieces added to your bag.`);
   }, [me, ready, add]);
+
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(() => setMessage(null), 4500);
+    return () => clearTimeout(t);
+  }, [message]);
 
   return (
     <div role="status" className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 lg:bottom-8">
-      {count > 0 && (
-        <p className="pointer-events-auto flex items-center gap-4 rounded-[2px] bg-ink px-5 py-3 text-[15px] text-paper shadow-lg">
-          {count === 1 ? "Added to your bag." : `${count} pieces added to your bag.`}
-          <Link href="/bag" className="font-semibold text-volt underline underline-offset-2">
+      {message && (
+        <p className="animate-fade-up pointer-events-auto flex max-w-md items-center gap-4 rounded-[2px] bg-ink px-5 py-3 text-[15px] text-paper shadow-lg">
+          <span>{message}</span>
+          <Link href="/bag" className="shrink-0 font-semibold text-volt underline underline-offset-2">
             View bag
           </Link>
         </p>

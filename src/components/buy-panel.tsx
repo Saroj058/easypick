@@ -20,10 +20,6 @@ type Props = Pick<
   "slug" | "name" | "price" | "salePrice" | "colours" | "variants" | "status" | "fit" | "modelNote" | "category" | "measurements"
 > & {
   dropLabel?: string;
-  /** Quick-buy sheet on product cards: no gift/try-in-store row or notes. */
-  compact?: boolean;
-  /** Which action leads: "buy" (Buy now first, the default) or "bag" (Add to bag first). */
-  lead?: "buy" | "bag";
 };
 
 /** Colour + size pickers with live stock, Add to bag and Try in store. */
@@ -81,23 +77,6 @@ export function BuyPanel(props: Props) {
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
   }
-
-  const leadBag = props.lead === "bag";
-  const buyButton =
-    variant && sellable > 0 ? (
-      <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className={`btn flex-1 ${leadBag ? "btn-ink" : "btn-volt"}`}>
-        Buy now
-      </Link>
-    ) : (
-      <button type="button" disabled className={`btn flex-1 ${leadBag ? "btn-ink" : "btn-volt"}`}>
-        {leadBag ? "Buy now" : "Pick a size"}
-      </button>
-    );
-  const bagButton = (
-    <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className={`btn flex-1 ${leadBag ? "btn-volt" : "btn-ink"}`}>
-      {added ? "Added" : leadBag && !size ? "Pick a size" : "Add to bag"}
-    </button>
-  );
 
   return (
     <div>
@@ -226,21 +205,24 @@ export function BuyPanel(props: Props) {
         </fieldset>
       )}
 
-      {!props.compact && props.modelNote && <p className="mt-2 text-[13px] text-steel-dark">{props.modelNote}</p>}
+      {props.modelNote && <p className="mt-2 text-[13px] text-steel-dark">{props.modelNote}</p>}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         {status === "live" ? (
-          leadBag ? (
-            <>
-              {bagButton}
-              {buyButton}
-            </>
-          ) : (
-            <>
-              {buyButton}
-              {bagButton}
-            </>
-          )
+          <>
+            {variant && sellable > 0 ? (
+              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="btn btn-volt flex-1">
+                Buy now
+              </Link>
+            ) : (
+              <button type="button" disabled className="btn btn-volt flex-1">
+                Pick a size
+              </button>
+            )}
+            <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="btn btn-ink flex-1">
+              {added ? "Added" : "Add to bag"}
+            </button>
+          </>
         ) : (
           <>
             <Link href="/alerts" className="btn btn-volt flex-1">
@@ -255,7 +237,7 @@ export function BuyPanel(props: Props) {
       {status === "sold_out" && (
         <RestockForm key={colour.name} slug={slug} options={variants.filter((v) => v.colour === colour.name).map((v) => ({ sku: v.sku, size: v.size }))} />
       )}
-      {status === "live" && !props.compact && (
+      {status === "live" && (
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag is saved to your account.</p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">

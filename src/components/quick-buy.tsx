@@ -1,13 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
-import type { Product } from "@/lib/types";
+import { matchSize } from "@/lib/fit-profile";
+import type { Product, Variant } from "@/lib/types";
+import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
 import { useBag } from "./bag-provider";
-import { BuyPanel } from "./buy-panel";
+import { useFitProfile } from "./fit-finder";
 import { BagIcon } from "./icons";
-import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
+
+// The two one-tap buttons on a product card. Neither asks for a size: they use the
+// person's saved size when it's in stock, otherwise M, otherwise the first size in stock.
+// The size can be changed in the bag or on the product page.
+
+const sellable = (v: Variant) => v.stock - (v.lastPieceOnFloor ? 1 : 0) > 0;
+
+function useCardVariant(product: Product): Variant | null {
+  const profile = useFitProfile();
+  const inStock = product.variants.filter(sellable);
+  if (!inStock.length) return null;
+  const firstColour = product.colours[0]?.name;
+  const fit = matchSize(product.category, product.measurements, profile)?.size;
+  for (const size of [fit, "M", "ONE"]) {
+    if (!size) continue;
+    const v = inStock.find((x) => x.size === size && x.colour === firstColour) ?? inStock.find((x) => x.size === size);
+    if (v) return v;
+  }
+  return inStock.find((x) => x.colour === firstColour) ?? inStock[0];
+}
+
+const glass =
+  "bg-paper/80 text-ink ring-1 ring-ink/10 backdrop-blur-md transition-colors duration-200 [:focus-visible>&]:outline [:focus-visible>&]:outline-2 [:focus-visible>&]:outline-offset-2 [:focus-visible>&]:outline-ink";
+// Hidden until hover on hover screens; always shown on phones.
+const reveal = "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100";
+
+/** Quick buy (top right of the photo): straight to the Buy now checkout. */
+export function QuickBuy({ product, className = "" }: { product: Product; className?: string }) {
+  const variant = useCardVariant(product);
+  if (product.status !== "live" || !variant) return null;
+  const size = variant.size === "ONE" ? "" : `, size ${variant.size}`;
+  return (
+    <Link
+      href={`/buy/${product.slug}?sku=${encodeURIComponent(variant.sku)}`}
+      aria-label={`Quick buy: ${product.name} (${variant.colour}${size})`}
+      className={`flex h-11 min-w-11 items-center justify-end outline-none transition-opacity duration-200 ${reveal} ${className}`}
+    >
+      <span className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 hover:bg-ink hover:text-paper ${glass}`}>
+        <BagIcon className="h-4 w-4" />
+        <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] [@media(hover:hover)]:inline">Quick buy</span>
+      </span>
+    </Link>
+  );
+}
 
 const Heart = ({ filled, className }: { filled: boolean; className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} aria-hidden fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round">
@@ -15,74 +59,34 @@ const Heart = ({ filled, className }: { filled: boolean; className?: string }) =
   </svg>
 );
 
-/**
- * Buttons on a product card that open a sheet to pick colour and size without leaving the page.
- *   "buy": Quick buy (top right of the photo), Buy now leads.
- *   "bag": the heart (bottom left), Add to bag leads; it turns red once the piece is in the bag.
- */
-export function QuickBuy({ product, mode = "buy", className = "" }: { product: Product; mode?: "buy" | "bag"; className?: string }) {
-  const [open, setOpen] = useState(false);
+/** The heart (bottom left of the photo): one tap adds it to the bag. Logged out → log in first, then it's added. */
+export function HeartAdd({ product, className = "" }: { product: Product; className?: string }) {
+  const variant = useCardVariant(product);
   const { lines } = useBag();
-  if (product.status !== "live") return null;
+  const addToBag = useAddToBag();
+  if (product.status !== "live" || !variant) return null;
   const inBag = lines.some((l) => l.slug === product.slug);
-  const glass =
-    "bg-paper/80 text-ink ring-1 ring-ink/10 backdrop-blur-md transition-colors duration-200 [button:focus-visible_&]:outline [button:focus-visible_&]:outline-2 [button:focus-visible_&]:outline-offset-2 [button:focus-visible_&]:outline-ink";
-  // Hidden until hover on hover screens (unless the heart is already red); always shown on phones.
-  const reveal = "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100";
+
+  function onTap() {
+    if (inBag) {
+      showBagToast(`${product.name} is already in your bag.`);
+      return;
+    }
+    const line = { slug: product.slug, sku: variant!.sku, name: product.name, size: variant!.size, colour: variant!.colour, price: product.salePrice ?? product.price };
+    if (addToBag([line])) showBagToast(addedMessage(line));
+  }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        {mode === "buy" ? (
-          <button type="button" aria-label={`Quick buy: ${product.name}`} className={`flex h-11 min-w-11 items-center justify-end outline-none transition-opacity duration-200 ${reveal} ${className}`}>
-            <span className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 hover:bg-ink hover:text-paper ${glass}`}>
-              <BagIcon className="h-4 w-4" />
-              <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] [@media(hover:hover)]:inline">Quick buy</span>
-            </span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            aria-label={inBag ? `${product.name} is in your bag. Add another` : `Add to bag: ${product.name}`}
-            className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${inBag ? "" : reveal} ${className}`}
-          >
-            <span className={`grid h-9 w-9 place-items-center rounded-full ${glass}`}>
-              <Heart filled={inBag} className={`h-4 w-4 ${inBag ? "text-[#d70015]" : ""}`} />
-            </span>
-          </button>
-        )}
-      </SheetTrigger>
-      <SheetContent
-        side="bottom"
-        className="max-h-[88dvh] overflow-y-auto rounded-t-[14px] border-mist bg-paper px-4 pb-[calc(28px+env(safe-area-inset-bottom))] pt-3"
-      >
-        <div className="mx-auto max-w-lg">
-          <span className="mx-auto mb-5 block h-1 w-10 rounded-full bg-mist" aria-hidden />
-          <SheetTitle className="display pr-10 text-[32px] leading-none">{product.name}</SheetTitle>
-          <SheetDescription className="mt-2 text-[14px] text-steel-dark">
-            {product.shortDescription}{" "}
-            <Link href={`/product/${product.slug}`} className="whitespace-nowrap font-semibold text-ink underline underline-offset-2">
-              Full details
-            </Link>
-          </SheetDescription>
-          <div className="mt-5">
-            <BuyPanel
-              compact
-              lead={mode}
-              slug={product.slug}
-              name={product.name}
-              price={product.price}
-              salePrice={product.salePrice}
-              colours={product.colours}
-              variants={product.variants}
-              status={product.status}
-              fit={product.fit}
-              category={product.category}
-              measurements={product.measurements}
-            />
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+    <button
+      type="button"
+      onClick={onTap}
+      aria-pressed={inBag}
+      aria-label={inBag ? `${product.name} is in your bag` : `Add ${product.name} to bag`}
+      className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${inBag ? "" : reveal} ${className}`}
+    >
+      <span className={`grid h-9 w-9 place-items-center rounded-full ${glass}`}>
+        <Heart filled={inBag} className={`h-4 w-4 ${inBag ? "text-[#d70015]" : ""}`} />
+      </span>
+    </button>
   );
 }
