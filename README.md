@@ -20,7 +20,7 @@ npm run dev                  # http://localhost:3000
 | `npm run db:migrate` | Applies migrations to `DATABASE_URL` (the live database). Locally they run on start. |
 | `npm run db:studio` | Browse the data in Drizzle Studio (set `DATABASE_URL` first). |
 
-For the live site set `DATABASE_URL` to a hosted PostgreSQL (e.g. Supabase, Mumbai region). Tables are created on first start unless `DB_AUTO_MIGRATE=false`. The first time an empty database starts, it imports `.data/easypick.json` if present (the old file store), otherwise the sample catalogue.
+For the live site set `DATABASE_URL` to a hosted PostgreSQL (e.g. Supabase, Mumbai region). Tables are created on first start unless `DB_AUTO_MIGRATE=false`, and an empty database starts with the sample catalogue. To use the local database again, comment out `DATABASE_URL` in `.env.local`.
 
 ## Where things live
 

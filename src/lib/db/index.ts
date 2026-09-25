@@ -1,6 +1,5 @@
 import "server-only";
 
-import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { count, eq } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -18,9 +17,9 @@ import * as schema from "./schema";
 //   This laptop → `npm run dev` starts a real PostgreSQL (embedded-postgres, stored in .data/postgres)
 //                 and sets DATABASE_URL for you (scripts/with-db.mjs). Nothing to install by hand.
 //
-// Migrations in /drizzle run on first use. The first time an empty database starts,
-// it takes in the old .data/easypick.json (accounts, orders, gift cards, catalogue) if
-// there is one, otherwise the sample catalogue.
+// Migrations in /drizzle run on first use. An empty database starts with the sample
+// catalogue. (The old .data/easypick.json file store was imported into the local database
+// once and is kept only as a backup.)
 
 export type DB = PgDatabase<PgQueryResultHKT, typeof schema>;
 export { schema };
@@ -116,26 +115,10 @@ async function insertCatalogue(db: DB, list: Product[], dropList: Drop[]) {
   if (dropList.length) await db.insert(schema.drops).values(dropList).onConflictDoNothing();
 }
 
-interface LegacyFile {
-  users?: User[];
-  sessions?: { tokenHash: string; userId: string; expiresAt: number; createdAt: number }[];
-  orders?: (Order & { userId?: string | null })[];
-  giftCards?: GiftCard[];
-  products?: Product[];
-  drops?: Drop[];
-  restockAlerts?: RestockAlert[];
-  festivals?: Festival[];
-  festivalsSeeded?: boolean;
-}
-
 async function seed(db: DB) {
+  // An empty database starts with the sample catalogue and drops (edit them in the admin screen).
   const [{ n }] = await db.select({ n: count() }).from(schema.products);
-  if (n === 0) {
-    const legacyPath = join(process.cwd(), ".data", "easypick.json");
-    const legacy: LegacyFile | null = existsSync(legacyPath) ? JSON.parse(readFileSync(legacyPath, "utf8")) : null;
-    if (legacy) await importLegacy(db, legacy);
-    else await insertCatalogue(db, structuredClone(seedProducts), structuredClone(seedDrops));
-  }
+  if (n === 0) await insertCatalogue(db, structuredClone(seedProducts), structuredClone(seedDrops));
 
   // This year's Dashain and Tihar (Tika days per the official 2083 calendar), added once.
   // Staff can change or remove them in the admin screen.
@@ -149,42 +132,6 @@ async function seed(db: DB) {
       ]);
     await db.insert(schema.meta).values({ key: "festivals_seeded", value: "1" }).onConflictDoNothing();
   }
-}
-
-/** Moves everything from the old JSON file into the database, once. */
-async function importLegacy(db: DB, d: LegacyFile) {
-  await insertCatalogue(db, d.products?.length ? d.products : structuredClone(seedProducts), d.drops?.length ? d.drops : structuredClone(seedDrops));
-  for (const u of d.users ?? []) {
-    await db
-      .insert(schema.users)
-      .values({
-        id: u.id,
-        phone: u.phone,
-        contactPhone: u.contactPhone ?? null,
-        name: u.name,
-        email: u.email,
-        emailVerified: Boolean(u.emailVerified),
-        googleId: u.googleId ?? null,
-        facebookId: u.facebookId ?? null,
-        alerts: u.alerts,
-        fit: u.fit,
-        checkout: u.checkout ?? null,
-        createdAt: u.createdAt,
-        lastLoginAt: u.lastLoginAt,
-      })
-      .onConflictDoNothing();
-  }
-  const userIds = new Set((d.users ?? []).map((u) => u.id));
-  const liveSessions = (d.sessions ?? []).filter((s) => s.expiresAt > Date.now() && userIds.has(s.userId));
-  if (liveSessions.length) await db.insert(schema.sessions).values(liveSessions).onConflictDoNothing();
-  for (const o of d.orders ?? []) {
-    const { userId, ...order } = o;
-    await db.insert(schema.orders).values(orderRow(order, userId && userIds.has(userId) ? userId : null)).onConflictDoNothing();
-  }
-  for (const c of d.giftCards ?? []) await db.insert(schema.giftCards).values(giftCardRow(c)).onConflictDoNothing();
-  if (d.restockAlerts?.length) await db.insert(schema.restockAlerts).values(d.restockAlerts).onConflictDoNothing();
-  if (d.festivals?.length) await db.insert(schema.festivals).values(d.festivals).onConflictDoNothing();
-  if (d.festivalsSeeded) await db.insert(schema.meta).values({ key: "festivals_seeded", value: "1" }).onConflictDoNothing();
 }
 
 // ---------- Row shapes shared by the data modules ----------
