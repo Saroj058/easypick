@@ -13,7 +13,7 @@ import { SaveButton } from "./saved";
 import { GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
 
-const POLL_MS = 30_000;
+const POLL_MS = 45_000;
 
 type Props = Pick<
   Product,

@@ -52,8 +52,9 @@ export function ProductCard({
               decorative
               sizes={sizes}
             />
+            {/* The back photo only exists where it can be seen (mouse hover); phones never download it. */}
             {back && (
-              <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-focus-visible:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
+              <div className="absolute inset-0 hidden opacity-0 transition-opacity duration-300 group-focus-visible:opacity-100 [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100">
                 <ProductImage
                   image={back}
                   category={product.category}

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { and, desc, eq, notInArray, or, sql } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 
 import { moveStock, StockShortError } from "./catalogue";
 import { getDb, orderRow, schema, type Tx } from "./db";
@@ -199,6 +200,8 @@ export async function createOrder(
       await writeOrder(tx, o, opts.userId ?? null, true);
       return o;
     });
+    // Stock went down: pages showing "2 left" refresh (createOrder only runs in server actions).
+    if (order.kind !== "gift_card") revalidateTag("catalogue", "max");
     return { ok: true, order };
   } catch (e) {
     if (e instanceof StockShortError) {

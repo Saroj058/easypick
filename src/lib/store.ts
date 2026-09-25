@@ -1,6 +1,8 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
 
 import { allDrops, loadProducts } from "./catalogue";
 import { getDb, schema } from "./db";
@@ -10,8 +12,11 @@ import type { Drop, LiveStock, Product, ProductStatus } from "./types";
 // (FastAPI). Without it, serves the local catalogue (seeded from mock-data.ts and
 // edited in the admin screen) so the site runs before the API exists.
 
-const localProducts = async () => loadProducts(await getDb());
-const localDrops = () => allDrops();
+// Cached for a minute across requests, and dropped at once when the admin changes the catalogue
+// or an order takes stock ("catalogue" tag). Checkout never trusts this copy: stock is checked
+// again in the database when the order is placed, and the product page polls live stock.
+const localProducts = cache(unstable_cache(async () => loadProducts(await getDb()), ["catalogue-products"], { tags: ["catalogue"], revalidate: 60 }));
+const localDrops = cache(unstable_cache(() => allDrops(), ["catalogue-drops"], { tags: ["catalogue"], revalidate: 60 }));
 //
 // The API key stays on the server; nothing here is imported by client components.
 
@@ -119,14 +124,14 @@ export async function getLiveStock(slug: string): Promise<LiveStock | null> {
   if (API_URL) {
     return api<LiveStock>(`/products/${encodeURIComponent(slug)}/stock`, { cache: "no-store" });
   }
+  // Only the variant rows: this is polled by every open product page.
   const db = await getDb();
-  const [exists] = await db.select({ slug: schema.products.slug }).from(schema.products).where(eq(schema.products.slug, slug));
-  if (!exists) return null;
-  const [p] = await loadProducts(db, [slug]);
+  const rows = await db.select().from(schema.variants).where(eq(schema.variants.productSlug, slug)).orderBy(asc(schema.variants.position));
+  if (!rows.length) return null;
   return {
     slug,
     updatedAt: new Date().toISOString(),
-    sizes: p.variants.map((v) => ({
+    sizes: rows.map((v) => ({
       size: v.size,
       colour: v.colour,
       stock: v.stock,

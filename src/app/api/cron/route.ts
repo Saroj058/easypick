@@ -1,3 +1,5 @@
+import { revalidateTag } from "next/cache";
+
 import { cleanup, reconcileRecent } from "@/lib/reconcile";
 
 export const dynamic = "force-dynamic";
@@ -12,5 +14,6 @@ export async function GET(req: Request) {
   if (secret && req.headers.get("authorization") !== `Bearer ${secret}`) return new Response("Unauthorized", { status: 401 });
   const reconciled = await reconcileRecent();
   const tidied = await cleanup();
+  revalidateTag("catalogue", "max"); // expired orders gave pieces back
   return Response.json({ ok: true, reconciled, tidied, at: new Date().toISOString() });
 }
