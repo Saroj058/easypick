@@ -27,7 +27,7 @@ export default async function DropsPage() {
           <section aria-labelledby="next-title" className="grid gap-8 bg-photo p-6 md:grid-cols-2 md:items-center md:p-10">
             <div>
               <h2 id="next-title" className="text-2xl font-semibold">
-                {next.name} arrives {formatDropTime(next.releaseAt)}.
+                {next.name} arrives {formatDropTime(next.releaseAt, { bs: true })}.
               </h2>
               <p className="mt-2 text-steel-dark">{next.story}</p>
             </div>
@@ -49,7 +49,7 @@ export default async function DropsPage() {
                   </div>
                   <h2 className="mt-5 text-2xl font-semibold group-hover:underline">{d.name}</h2>
                   <p className="mt-1 text-steel-dark">
-                    {released ? "Out now" : `Arrives ${formatDropTime(d.releaseAt)}`} · {items.length} pieces
+                    {released ? "Out now" : `Arrives ${formatDropTime(d.releaseAt, { bs: true })}`} · {items.length} pieces
                   </p>
                 </Link>
               </li>

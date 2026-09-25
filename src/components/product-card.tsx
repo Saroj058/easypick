@@ -5,6 +5,7 @@ import type { Product, Size } from "@/lib/types";
 import { MiniTag } from "./hang-tag";
 import { ProductImage } from "./product-image";
 import { QuickBuy } from "./quick-buy";
+import { SaveButton } from "./saved";
 
 const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL"];
 
@@ -126,10 +127,10 @@ export function ProductCard({
         </div>
       </Link>
       {/* Outside the link: a button can't sit inside one. */}
-      <QuickBuy
-        product={product}
-        className="absolute right-2 top-2 z-10 md:right-3 md:top-3"
-      />
+      <div className="absolute right-2 top-2 z-10 flex flex-col items-end md:right-3 md:top-3">
+        <QuickBuy product={product} />
+        <SaveButton slug={product.slug} name={product.name} variant="chip" />
+      </div>
     </div>
   );
 }

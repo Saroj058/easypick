@@ -29,7 +29,7 @@ export default async function DropPage({ params }: PageProps<"/drop/[slug]">) {
 
   return (
     <>
-      <PageIntro eyebrow={released ? "Out now" : `Arrives ${formatDropTime(drop.releaseAt)}`} title={drop.name} lead={drop.story} />
+      <PageIntro eyebrow={released ? "Out now" : `Arrives ${formatDropTime(drop.releaseAt, { bs: true })}`} title={drop.name} lead={drop.story} />
 
       <div className="container-ep pb-24">
         {!released && (

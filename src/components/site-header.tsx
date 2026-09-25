@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useBag } from "./bag-provider";
 import { BagIcon, BellIcon, DropIcon, GiftIcon, PinIcon, ShopIcon, UserIcon } from "./icons";
+import { SearchButton } from "./search";
 import { useMe } from "./session";
 import { AnimatedNavFramer, useScrollCollapse } from "./ui/navigation-menu";
 import { TwentyTwelveOne as SmoothDropdown, type SmoothDropdownItem } from "./ui/smooth-dropdown";
@@ -16,6 +17,7 @@ import { signOut } from "@/app/auth-actions";
 import {
   DashboardSquare01Icon,
   DeliveryTracking01Icon,
+  FavouriteIcon,
   HangerIcon,
   HelpCircleIcon,
   InformationCircleIcon,
@@ -35,6 +37,7 @@ const primary = [
 
 // Everything that isn't in the main links, shown in the dropdown once the header becomes pills.
 const menu: SmoothDropdownItem[] = [
+  { id: "/saved", href: "/saved", label: "Saved", icon: FavouriteIcon },
   { id: "/fit", href: "/fit", label: "Build a fit", icon: HangerIcon },
   { id: "/how-it-works", href: "/how-it-works", label: "How it works", icon: HelpCircleIcon },
   { id: "/size-guide", href: "/size-guide", label: "Your size in cm", icon: RulerIcon },
@@ -143,6 +146,7 @@ export function SiteHeader() {
             {/* Account, bag, menu: slides away while scrolling down */}
             <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} {...(!expanded && { inert: true })}>
               <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(atTop)} flex h-12 items-center rounded-full border px-1.5`}>
+                <SearchButton />
                 {account}
                 <Link href="/bag" className="relative flex h-10 w-10 items-center justify-center" aria-label={`Bag, ${ready ? count : 0} items`}>
                   <BagIcon className="h-5 w-5" />

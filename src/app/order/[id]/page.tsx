@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 
 import { CheckStatus } from "./check-status";
 import { ClearBag } from "./clear-bag";
+import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { ShareGiftLink } from "@/components/share-gift-link";
 import { Barcode } from "@/components/hang-tag";
 import { formatPrice } from "@/lib/format";
+import { formatBS } from "@/lib/nepali-date";
 import { findOrder, type Order } from "@/lib/orders";
 import { advanceOrderInTestMode, payInTestMode } from "@/app/actions";
 import { site } from "@/lib/site";
@@ -258,6 +260,7 @@ export default async function OrderPage({ params }: PageProps<"/order/[id]">) {
             <span>Date</span>
             <span>
               {new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, dateStyle: "medium", timeStyle: "short" }).format(new Date(order.createdAt))}
+              <span className="block text-right text-[11px] text-steel-dark">{formatBS(new Date(order.createdAt), true)}</span>
             </span>
           </p>
           <div className="my-4 border-t border-dashed border-steel" />
@@ -318,6 +321,7 @@ export default async function OrderPage({ params }: PageProps<"/order/[id]">) {
           Find us
         </Link>
       </div>
+      <AskWhatsApp className="mt-6" label="Need help with this order? WhatsApp us" text={`Hi Easypick, about my order ${order.number}: `} />
     </div>
   );
 }

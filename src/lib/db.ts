@@ -80,6 +80,8 @@ interface Data {
   drops: Drop[];
   restockAlerts: RestockAlert[];
   festivals: Festival[];
+  /** Set once the default festival dates were added, so deleting them all sticks. */
+  festivalsSeeded?: boolean;
 }
 
 const FILE = join(process.cwd(), ".data", "easypick.json");
@@ -98,7 +100,17 @@ function load(): Data {
   const d = g.__epDb;
   d.giftCards ??= [];
   d.restockAlerts ??= [];
+  // First run only: this year's Dashain and Tihar (Tika days per the official 2083 calendar).
+  // Staff can change or remove them in the admin screen.
   d.festivals ??= [];
+  if (!d.festivalsSeeded) {
+    if (d.festivals.length === 0)
+      d.festivals = [
+        { id: "dashain-2083", name: "Dashain (Vijaya Dashami)", date: "2026-10-21", orderBy: "2026-10-15" },
+        { id: "tihar-2083", name: "Tihar (Bhai Tika)", date: "2026-11-11", orderBy: "2026-11-06" },
+      ];
+    d.festivalsSeeded = true;
+  }
   if (!d.products?.length) d.products = structuredClone(seedProducts);
   if (!d.drops?.length) d.drops = structuredClone(seedDrops);
   return g.__epDb;

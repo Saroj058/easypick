@@ -1,4 +1,5 @@
 import { site } from "./site";
+import { formatBS } from "./nepali-date";
 
 const npr = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
 
@@ -8,13 +9,14 @@ export function formatPrice(amount: number) {
 }
 
 /** "Fri 2 Oct, 6 PM" in Kathmandu time. */
-export function formatDropTime(iso: string) {
+/** "Fri 2 Oct, 6 PM", or with `bs` "Fri 2 Oct (Asoj 16), 6 PM". */
+export function formatDropTime(iso: string, opts?: { bs?: boolean }) {
   const d = new Date(iso);
   const day = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, weekday: "short", day: "numeric", month: "short" }).format(d);
   const time = new Intl.DateTimeFormat("en-US", { timeZone: site.timezone, hour: "numeric", minute: "2-digit" })
     .format(d)
     .replace(":00", "");
-  return `${day}, ${time}`;
+  return opts?.bs ? `${day} (${formatBS(d)}), ${time}` : `${day}, ${time}`;
 }
 
 /** "11 AM" from "11:00". */

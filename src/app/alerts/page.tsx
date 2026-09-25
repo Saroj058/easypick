@@ -19,7 +19,7 @@ export default async function AlertsPage() {
     <>
       <PageIntro
         title="Hear first."
-        lead={`One message the day before each drop. Nothing else.${next ? ` Next up: ${next.name}, ${formatDropTime(next.releaseAt)}.` : ""}`}
+        lead={`One message the day before each drop. Nothing else.${next ? ` Next up: ${next.name}, ${formatDropTime(next.releaseAt, { bs: true })}.` : ""}`}
       />
       <div className="container-ep pb-24">
         <AlertSignup source="alerts" />

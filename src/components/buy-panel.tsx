@@ -6,7 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 import { describeMatch, hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import type { Colour, LiveStock, Product, Size } from "@/lib/types";
+import { AskWhatsApp } from "./ask-whatsapp";
 import { useAddToBag } from "./bag-gate";
+import { RestockForm } from "./restock-form";
+import { SaveButton } from "./saved";
 import { GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
 
@@ -79,15 +82,18 @@ export function BuyPanel(props: Props) {
 
   return (
     <div>
-      <p className="font-mono text-2xl">
-        {props.salePrice ? (
-          <>
-            {formatPrice(props.salePrice)} <s className="text-lg text-steel-dark">{formatPrice(props.price)}</s>
-          </>
-        ) : (
-          formatPrice(props.price)
-        )}
-      </p>
+      <div className="flex items-center justify-between gap-4">
+        <p className="font-mono text-2xl">
+          {props.salePrice ? (
+            <>
+              {formatPrice(props.salePrice)} <s className="text-lg text-steel-dark">{formatPrice(props.price)}</s>
+            </>
+          ) : (
+            formatPrice(props.price)
+          )}
+        </p>
+        <SaveButton slug={slug} name={name} />
+      </div>
       <p className="mt-1 text-[13px] text-steel-dark">Price shown. No DM needed. VAT included.</p>
 
       {colours.length > 1 && (
@@ -191,6 +197,13 @@ export function BuyPanel(props: Props) {
           <p className="mt-2 min-h-5 text-[12px] text-steel-dark" aria-live="polite">
             {error ? "Couldn't check stock. Retrying…" : ""}
           </p>
+          {stock && (
+            <RestockForm
+              key={colour.name}
+              slug={slug}
+              options={variants.filter((v) => v.colour === colour.name && sellableOf(v.size) <= 0 && !stockFor(v.size)?.inStoreOnly).map((v) => ({ sku: v.sku, size: v.size }))}
+            />
+          )}
         </fieldset>
       )}
 
@@ -223,6 +236,9 @@ export function BuyPanel(props: Props) {
           </>
         )}
       </div>
+      {status === "sold_out" && (
+        <RestockForm key={colour.name} slug={slug} options={variants.filter((v) => v.colour === colour.name).map((v) => ({ sku: v.sku, size: v.size }))} />
+      )}
       {status === "live" && !props.compact && (
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag is saved to your account.</p>
@@ -235,6 +251,7 @@ export function BuyPanel(props: Props) {
               Try in store
             </Link>
           </div>
+          <AskWhatsApp className="mt-3" text={`Hi Easypick, a question about ${name} (${colour.name}${size ? `, ${size}` : ""}): `} />
         </>
       )}
       <p className="sr-only" role="status">

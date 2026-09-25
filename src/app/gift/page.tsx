@@ -6,6 +6,7 @@ import { PageIntro } from "@/components/page-intro";
 import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
 import { getProducts } from "@/lib/store";
+import { FestivalNotice } from "@/components/festival-notice";
 
 export const revalidate = 300;
 
@@ -21,6 +22,7 @@ export default async function GiftPage() {
   return (
     <>
       <PageIntro title="Gift it." lead="Pick a piece. They pick the size. No guessing, no awkward exchanges." />
+      <FestivalNotice className="max-w-2xl" />
 
       <div className="container-ep space-y-20 pb-24">
         <section aria-label="Ways to gift" className="grid gap-4 md:grid-cols-2">

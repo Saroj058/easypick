@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { site } from "@/lib/site";
+import { AskWhatsApp } from "./ask-whatsapp";
 import { VisitCard } from "./visit-card";
 
 const cols = [
@@ -10,6 +11,7 @@ const cols = [
     links: [
       { href: "/drops", label: "Drops" },
       { href: "/shop", label: "Shop all" },
+      { href: "/saved", label: "Saved" },
       { href: "/gift", label: "Gifts and gift cards" },
       { href: "/fit", label: "Build a fit" },
       { href: "/size-guide", label: "Your size in cm" },
@@ -47,6 +49,7 @@ export function SiteFooter() {
           <div className="mt-8 max-w-sm">
             <VisitCard compact />
           </div>
+          <AskWhatsApp className="mt-4" text="Hi Easypick, " label="Questions? WhatsApp us" />
         </div>
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:col-span-7">
           {cols.map((c) => (

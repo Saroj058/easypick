@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { RecentlyViewed } from "@/components/local-lists";
 import { ProductGrid } from "@/components/product-card";
 import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import type { Category, Product } from "@/lib/types";
+import { FestivalNotice } from "@/components/festival-notice";
 
 export const metadata: Metadata = {
   title: "Shop all",
@@ -84,6 +86,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   return (
     <div className="container-ep pb-24 pt-10 md:pt-16">
       <h1 className="display text-[40px] md:text-[72px]">{f.category ? categoryLabels[f.category as Category] ?? "Shop all" : "Shop all"}</h1>
+      <FestivalNotice className="mt-4 max-w-2xl" />
 
       <div className="mt-8 space-y-3">
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
@@ -165,6 +168,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           <p className="py-24 text-center text-steel-dark">Nothing matches that yet. Try another size or colour.</p>
         )}
       </div>
+      <RecentlyViewed products={all} />
     </div>
   );
 }

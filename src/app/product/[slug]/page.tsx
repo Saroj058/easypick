@@ -5,12 +5,15 @@ import { notFound } from "next/navigation";
 import { BuyPanel } from "@/components/buy-panel";
 import { HangTag } from "@/components/hang-tag";
 import { ChevronIcon } from "@/components/icons";
+import { RecentlyViewed } from "@/components/local-lists";
 import { ProductGrid } from "@/components/product-card";
+import { RecordView } from "@/components/saved";
 import { ProductImage } from "@/components/product-image";
 import { formatDropTime } from "@/lib/format";
 import { categoryLabels, site } from "@/lib/site";
 import { getDrop, getProduct, getProducts } from "@/lib/store";
 import type { Size } from "@/lib/types";
+import { FestivalNotice } from "@/components/festival-notice";
 
 export const revalidate = 300;
 
@@ -137,7 +140,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             <div className="lg:sticky lg:top-24">
               {product.status === "scheduled" && drop && (
                 <span className="tag-volt mb-4">
-                  {drop.name} · {formatDropTime(drop.releaseAt)}
+                  {drop.name} · {formatDropTime(drop.releaseAt, { bs: true })}
                 </span>
               )}
               {/* On phones and tablets the tag hangs down beside the title, so the title leaves room. */}
@@ -145,6 +148,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                 <h1 className="display text-[40px] md:text-[56px]">{product.name}</h1>
                 <p className="mt-2 text-steel-dark">{product.shortDescription}</p>
               </div>
+              <FestivalNotice className="mt-4" />
 
               <div className="mt-6">
                 <BuyPanel
@@ -245,6 +249,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             </div>
           </section>
         )}
+        <RecordView slug={product.slug} />
+        <RecentlyViewed products={all} exclude={product.slug} title="You looked at" />
       </div>
     </>
   );

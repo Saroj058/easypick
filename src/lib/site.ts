@@ -21,7 +21,8 @@ export const site = {
     openDays: [0, 1, 2, 3, 4, 5, 6], // Sunday..Saturday
     // TODO: real numbers
     phone: null as string | null,
-    whatsapp: null as string | null, // digits only, e.g. "97798XXXXXXXX"
+    /** Digits with country code, e.g. "9779800000000". Set NEXT_PUBLIC_WHATSAPP_NUMBER. */
+    whatsapp: (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") || null) as string | null,
   },
 
   company: {

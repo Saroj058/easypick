@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { getProduct } from "@/lib/store";
+import { FestivalNotice } from "@/components/festival-notice";
 
 export const metadata: Metadata = { title: "Buy now", robots: { index: false } };
 
@@ -31,6 +32,7 @@ export default async function BuyNowPage({ params, searchParams }: PageProps<"/b
   return (
     <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">
       <h1 className="display text-[40px] md:text-[72px]">Buy now</h1>
+      <FestivalNotice className="mt-4" />
       <p className="mt-2 text-steel-dark">
         {product.name} · {variant.colour} · {variant.size === "ONE" ? "One size" : variant.size}.{" "}
         <Link href={`/product/${slug}`} className="underline underline-offset-2">

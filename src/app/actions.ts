@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser, updateUser } from "@/lib/auth";
+import { addRestockAlert } from "@/lib/catalogue";
+import { normaliseEmail } from "@/lib/email";
 import { checkGiftCard, spendGiftCard } from "@/lib/gift-cards";
 import { normaliseNepaliMobile } from "@/lib/format";
 import { findOrderByNumber, saveOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
@@ -190,4 +192,26 @@ export async function trackOrder(_prev: TrackState, form: FormData): Promise<Tra
   const order = findOrderByNumber(number, phone);
   if (!order) return fail("We couldn't find that order. Check the number on your receipt and the phone you ordered with.");
   redirect(`/order/${order.id}`);
+}
+
+// ---------- "Tell me when my size is back" ----------
+
+export type RestockState = { status: "idle" } | { status: "done"; message: string } | { status: "error"; message: string };
+
+export async function requestRestock(_prev: RestockState, form: FormData): Promise<RestockState> {
+  const slug = String(form.get("slug") ?? "");
+  const sku = String(form.get("sku") ?? "");
+  const contact = String(form.get("contact") ?? "").trim();
+  const product = (await getProducts()).find((p) => p.slug === slug);
+  const variant = product?.variants.find((v) => v.sku === sku);
+  if (!product || !variant) return { status: "error", message: "Pick the size you want." };
+  if (variant.stock > 0) return { status: "error", message: "Good news: that size is in stock right now." };
+
+  const email = contact.includes("@") ? normaliseEmail(contact) : null;
+  const phone = email ? null : normaliseNepaliMobile(contact);
+  if (!email && !phone) return { status: "error", message: "Enter your email or a 10-digit mobile number." };
+
+  addRestockAlert({ slug, sku, size: variant.size, colour: variant.colour, email, phone });
+  const what = variant.size === "ONE" ? variant.colour : `${variant.colour}, ${variant.size}`;
+  return { status: "done", message: `Done. We'll ${email ? "email" : "text"} you once when ${what} is back.` };
 }
