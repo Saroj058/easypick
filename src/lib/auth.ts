@@ -22,7 +22,7 @@ const CODE_TRIES = 3;
 const RESEND_AFTER_MS = 30_000;
 const MAX_SENDS_PER_HOUR = 5;
 
-function secret() {
+export function secret() {
   const s = process.env.SESSION_SECRET;
   if (s && s.length >= 32) return s;
   if (process.env.NODE_ENV === "production") throw new Error("SESSION_SECRET must be set (32+ chars) in production");

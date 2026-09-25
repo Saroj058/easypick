@@ -4,12 +4,13 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createProduct, findProduct, notifyRestocked, saveFestivals, setStock, updateProduct } from "@/lib/catalogue";
 import { notifySms } from "@/lib/notify";
 import { findOrder, updateOrder } from "@/lib/orders";
-import { requireStaff } from "@/lib/staff";
+import { checkAdminLogin, endAdminSession, requireStaff, startAdminSession } from "@/lib/staff";
 import type { Category, Colour, Fit, Gender, Measurements, Product, ProductStatus, Size } from "@/lib/types";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -17,6 +18,38 @@ const int = (f: FormData, k: string) => {
   const n = Number(str(f, k));
   return Number.isFinite(n) ? Math.round(n) : NaN;
 };
+
+// ---------- Staff login ----------
+
+export type LoginState = { status: "idle" } | { status: "error"; message: string; username: string };
+
+// Slows down guessing: 5 wrong tries per address, then a 15-minute wait.
+const tries = new Map<string, { n: number; since: number }>();
+const WINDOW = 15 * 60_000;
+
+export async function signInAdmin(_prev: LoginState, form: FormData): Promise<LoginState> {
+  const username = str(form, "username");
+  const password = String(form.get("password") ?? "");
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0].trim() || "local";
+
+  const t = tries.get(ip);
+  const cur = !t || Date.now() - t.since > WINDOW ? { n: 0, since: Date.now() } : t;
+  if (cur.n >= 5) return { status: "error", message: "Too many tries. Wait 15 minutes, then try again.", username };
+
+  if (!checkAdminLogin(username, password)) {
+    cur.n++;
+    tries.set(ip, cur);
+    return { status: "error", message: "That username and password don't match.", username };
+  }
+  tries.delete(ip);
+  await startAdminSession(username);
+  redirect("/admin");
+}
+
+export async function signOutAdmin() {
+  await endAdminSession();
+  redirect("/admin/login");
+}
 
 // ---------- Orders ----------
 

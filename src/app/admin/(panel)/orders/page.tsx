@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
 import type { Order } from "@/lib/orders";
 import { site } from "@/lib/site";
-import { setOrderStep } from "../actions";
+import { setOrderStep } from "@/app/admin/actions";
 
 export const metadata: Metadata = { title: "Orders" };
 export const dynamic = "force-dynamic";

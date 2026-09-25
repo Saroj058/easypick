@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
-import { isStaff } from "@/lib/staff";
+import { currentStaff } from "@/lib/staff";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +9,6 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const user = await getCurrentUser();
-  const body = user ? { user: { name: user.name, phone: user.phone ?? user.contactPhone ?? null, fit: user.fit, checkout: user.checkout ?? null, staff: isStaff(user) } } : { user: null };
+  const body = user ? { user: { name: user.name, phone: user.phone ?? user.contactPhone ?? null, fit: user.fit, checkout: user.checkout ?? null, staff: Boolean(await currentStaff()) } } : { user: null };
   return Response.json(body, { headers: { "Cache-Control": "private, no-store" } });
 }

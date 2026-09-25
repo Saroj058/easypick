@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import type { Product } from "@/lib/types";
-import { saveProduct, type SaveState } from "../../actions";
+import { saveProduct, type SaveState } from "@/app/admin/actions";
 
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 const statuses = [

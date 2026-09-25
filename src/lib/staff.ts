@@ -1,36 +1,69 @@
 import "server-only";
 
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getCurrentUser } from "./auth";
-import type { User } from "./db";
+import { secret } from "./auth";
 
-// Who can open the admin screen: phone numbers in ADMIN_PHONES (comma-separated,
-// e.g. "9800000001,9800000002"). Only a phone proven by a login code counts.
-// In development with ADMIN_PHONES unset, any logged-in account is staff, so the
-// screen can be tried out; production always needs the list.
+// Staff sign in to /admin with a username and password, separate from customer
+// accounts. Set ADMIN_USERNAME and ADMIN_PASSWORD in .env.local (never in code).
+// The login is a signed cookie that lasts 12 hours; signing out removes it.
 
-function staffPhones(): string[] {
-  return (process.env.ADMIN_PHONES ?? "")
-    .split(",")
-    .map((p) => p.replace(/\D/g, "").slice(-10))
-    .filter((p) => p.length === 10);
+export const ADMIN_COOKIE = "ep_admin";
+const TTL_MS = 12 * 60 * 60_000;
+
+export function adminConfigured() {
+  return Boolean(process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD);
 }
 
-export function staffOpenInDev() {
-  return process.env.NODE_ENV !== "production" && staffPhones().length === 0;
+const digest = (v: string) => createHash("sha256").update(v).digest();
+/** Same-time comparison, so a wrong guess can't be timed to learn the right one. */
+const same = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
+
+export function checkAdminLogin(username: string, password: string) {
+  if (!adminConfigured()) return false;
+  // Both are always compared, so the answer takes the same time either way.
+  const u = same(username.trim().toLowerCase(), process.env.ADMIN_USERNAME!.trim().toLowerCase());
+  const p = same(password, process.env.ADMIN_PASSWORD!);
+  return u && p;
 }
 
-export function isStaff(user: User | null | undefined): boolean {
-  if (!user) return false;
-  if (staffOpenInDev()) return true;
-  return Boolean(user.phone && staffPhones().includes(user.phone));
+// Changing the password signs everyone out: it is part of the signature.
+const sign = (payload: string) => createHmac("sha256", `${secret()}:${process.env.ADMIN_PASSWORD}`).update(payload).digest("base64url");
+
+export async function startAdminSession(username: string) {
+  const payload = `${username.trim().toLowerCase()}.${Date.now() + TTL_MS}`;
+  (await cookies()).set(ADMIN_COOKIE, `${payload}.${sign(payload)}`, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: TTL_MS / 1000,
+  });
 }
 
-/** For admin pages and actions: the staff member, or off to log in. */
-export async function requireStaff(): Promise<User> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/admin");
-  if (!isStaff(user)) redirect("/account");
-  return user;
+export async function endAdminSession() {
+  (await cookies()).delete(ADMIN_COOKIE);
+}
+
+/** The signed-in staff username, or null. */
+export async function currentStaff(): Promise<string | null> {
+  if (!adminConfigured()) return null;
+  const raw = (await cookies()).get(ADMIN_COOKIE)?.value;
+  if (!raw) return null;
+  const i = raw.lastIndexOf(".");
+  const payload = raw.slice(0, i);
+  const sig = raw.slice(i + 1);
+  if (!payload || !sig || !same(sig, sign(payload))) return null;
+  const [username, expires] = [payload.slice(0, payload.lastIndexOf(".")), Number(payload.slice(payload.lastIndexOf(".") + 1))];
+  if (!(expires > Date.now())) return null;
+  return username;
+}
+
+/** For admin pages and actions: the staff username, or off to the staff login. */
+export async function requireStaff(): Promise<string> {
+  const who = await currentStaff();
+  if (!who) redirect("/admin/login");
+  return who;
 }

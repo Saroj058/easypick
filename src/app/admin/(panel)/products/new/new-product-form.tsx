@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 
 import { categoryLabels } from "@/lib/site";
 import type { Colour, Size } from "@/lib/types";
-import { addProduct, type SaveState } from "../../actions";
+import { addProduct, type SaveState } from "@/app/admin/actions";
 
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 const label = "block text-sm font-semibold";

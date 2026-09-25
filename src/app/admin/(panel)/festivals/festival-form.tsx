@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 
 import type { Festival } from "@/lib/types";
 import { formatBS } from "@/lib/nepali-date";
-import { saveFestivalList, type SaveState } from "../actions";
+import { saveFestivalList, type SaveState } from "@/app/admin/actions";
 
 const input = "mt-1 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-3 text-base outline-none focus:border-ink";
 

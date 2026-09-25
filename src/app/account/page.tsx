@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { formatPrice } from "@/lib/format";
 import { ordersFor } from "@/lib/orders";
 import { site } from "@/lib/site";
-import { isStaff } from "@/lib/staff";
+import { currentStaff } from "@/lib/staff";
 
 export const metadata: Metadata = { title: "Account", robots: { index: false } };
 
@@ -48,7 +48,7 @@ export default async function AccountPage() {
           <h1 className="display display-h1">{first ? `Namaste, ${first}.` : "Your account."}</h1>
         </div>
         <div className="flex flex-wrap gap-3">
-          {isStaff(user) && (
+          {(await currentStaff()) && (
             <Link href="/admin" className="btn btn-ink">
               Admin
             </Link>
