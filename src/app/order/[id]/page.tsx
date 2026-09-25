@@ -102,7 +102,7 @@ function OrderTracker({ order }: { order: Order }) {
     { label: "Packed", note: "The helper has picked your pieces off the rack.", at: order.packedAt, done: Boolean(order.packedAt) || ready },
     pickup
       ? { label: "Ready at the counter", note: "Bring your order number. We hold it for 7 days.", at: order.readyAt, done: ready }
-      : { label: "On the way", note: "The rider calls before arriving.", at: order.readyAt, done: ready },
+      : { label: "On the way", note: order.rider ? `With ${order.rider.name}${order.rider.phone ? ` (${order.rider.phone})` : ""}. They call before arriving.` : "The rider calls before arriving.", at: order.readyAt, done: ready },
     { label: pickup ? "Collected" : "Delivered", at: order.completedAt, done },
   ];
   const current = steps.findIndex((s) => !s.done);
@@ -143,6 +143,9 @@ function OrderTracker({ order }: { order: Order }) {
           </button>
         </form>
       )}
+      <p lang="ne" className="mt-4 font-nepali text-[15px] text-steel-dark">
+        {pickup ? "पसलमा आउँदा यो अर्डर नम्बर देखाउनुहोस्।" : "राइडरले आउनुअघि फोन गर्नुहुन्छ।"} अर्डरको जानकारी SMS मा पनि आउँछ।
+      </p>
       <p className="mt-3 text-[13px] text-steel-dark">
         Come back any time: <Link href="/track" className="underline underline-offset-2">{site.url.replace(/^https?:\/\//, "")}/track</Link> with <span className="whitespace-nowrap">{order.number}</span> and your
         phone number.

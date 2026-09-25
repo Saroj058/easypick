@@ -124,7 +124,8 @@ export function SiteHeader() {
         <div className="pointer-events-none fixed inset-x-0 top-3 z-50 md:top-5">
           <div className="container-ep relative flex items-center justify-between gap-3">
             {/* Logo: slides away while scrolling down */}
-            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} {...(!expanded && { inert: true })}>
+            {/* Not inert while tucked away: tabbing to it brings it back (onFocus below). */}
+            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)}>
               <Link href="/" aria-label="Easypick home" className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(atTop)} flex h-12 items-center rounded-full border px-5`}>
                 <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
               </Link>
@@ -144,7 +145,7 @@ export function SiteHeader() {
             </div>
 
             {/* Account, bag, menu: slides away while scrolling down */}
-            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} {...(!expanded && { inert: true })}>
+            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)}>
               <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(atTop)} flex h-12 items-center rounded-full border px-1.5`}>
                 <SearchButton />
                 {account}

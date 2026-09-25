@@ -78,6 +78,8 @@ export function TwentyTwelveOne({
     };
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") close(true);
+      // Tab leaves a menu (the usual menu behaviour): close it and let focus move on.
+      if (event.key === "Tab") close();
     };
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKey);
@@ -102,7 +104,14 @@ export function TwentyTwelveOne({
 
   const openHeight = Math.max(40, Math.ceil(contentBounds.height));
   return (
-    <div ref={containerRef} className="relative h-10 w-10 not-prose">
+    <div
+      ref={containerRef}
+      className="relative h-10 w-10 not-prose"
+      onBlur={(e) => {
+        // Focus went somewhere outside the menu (e.g. a click elsewhere or a screen reader jump).
+        if (isOpen && !containerRef.current?.contains(e.relatedTarget as Node | null)) close();
+      }}
+    >
       <motion.div
         layout
         initial={false}

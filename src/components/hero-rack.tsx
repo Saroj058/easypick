@@ -64,7 +64,7 @@ export function HeroRack({ pieces, dropLabel }: { pieces: RackPiece[]; dropLabel
       <p className="index absolute left-4 top-4 z-20 text-paper/70 md:left-6 md:top-6">
         EP / {dropLabel} / {String(active + 1).padStart(2, "0")} of {String(pieces.length).padStart(2, "0")}
       </p>
-      <p className="index absolute right-4 top-4 z-20 hidden text-paper/60 md:right-6 md:top-6 md:block">Tap a piece</p>
+      <p className="index absolute right-4 top-4 z-20 hidden text-paper/75 md:right-6 md:top-6 md:block">Tap a piece</p>
 
       {/* The rail */}
       <div className="absolute inset-x-0 top-[15%] h-[3px] bg-paper/25" aria-hidden />
@@ -115,7 +115,7 @@ export function HeroRack({ pieces, dropLabel }: { pieces: RackPiece[]; dropLabel
         {sizes.length > 0 && (
           <p className="mt-4 flex gap-3 font-mono text-[13px] text-paper/80" aria-label="Sizes left">
             {sizes.map(([s, n]) => (
-              <span key={s} className={n === 0 ? "text-paper/40 line-through" : ""}>
+              <span key={s} className={n === 0 ? "text-paper/60 line-through" : ""}>
                 {s}
                 {n > 0 && n <= 3 && <sup className="ml-px text-[9px] text-volt">{n}</sup>}
               </span>

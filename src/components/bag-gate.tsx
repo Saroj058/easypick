@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import type { BagLine } from "@/lib/types";
 import { useBag } from "./bag-provider";
@@ -39,6 +39,45 @@ export function useAddToBag() {
   );
 }
 
+/** The piece waiting on a login, read once in the browser (null on the server). */
+function readPending(): Omit<BagLine, "qty">[] | null {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(PENDING) ?? "null");
+    return Array.isArray(v) && v.length ? v : null;
+  } catch {
+    return null;
+  }
+}
+// A string snapshot, so React sees the same value until the stored piece really changes.
+const pendingStore = {
+  subscribe: () => () => {},
+  get: () => JSON.stringify(readPending()),
+};
+
+/**
+ * On the login page after "Add to bag": offer to buy that one piece right away instead,
+ * with no account (Buy now goes straight to payment).
+ */
+export function BuyPendingNow() {
+  const raw = useSyncExternalStore(pendingStore.subscribe, pendingStore.get, () => null);
+  const items = raw ? (JSON.parse(raw) as Omit<BagLine, "qty">[] | null) : null;
+  if (!items || items.length !== 1) return null;
+  const l = items[0];
+  return (
+    <Link
+      href={`/buy/${l.slug}?sku=${encodeURIComponent(l.sku)}`}
+      onClick={() => {
+        try {
+          sessionStorage.removeItem(PENDING);
+        } catch {}
+      }}
+      className="btn btn-outline mt-6 w-full"
+    >
+      Buy {l.name} now, no account
+    </Link>
+  );
+}
+
 const TOAST_EVENT = "ep:bag-toast";
 const describe = (l: Omit<BagLine, "qty">) => `${l.name} (${l.colour}${l.size === "ONE" ? "" : `, ${l.size}`})`;
 
@@ -59,6 +98,7 @@ export function PendingBagAdd() {
   const me = useMe();
   const { add, ready } = useBag();
   const [message, setMessage] = useState<string | null>(null);
+  const [paused, setPaused] = useState(false);
 
   // Any "added" / "already in your bag" note from the page.
   useEffect(() => {
@@ -84,21 +124,31 @@ export function PendingBagAdd() {
     setMessage(lines.length === 1 ? addedMessage(lines[0]) : `${lines.length} pieces added to your bag.`);
   }, [me, ready, add]);
 
+  // Stays 8 seconds, and not while the pointer or keyboard focus is on it.
   useEffect(() => {
-    if (!message) return;
-    const t = setTimeout(() => setMessage(null), 4500);
+    if (!message || paused) return;
+    const t = setTimeout(() => setMessage(null), 8000);
     return () => clearTimeout(t);
-  }, [message]);
+  }, [message, paused]);
 
   return (
     <div role="status" className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 lg:bottom-8">
       {message && (
-        <p className="animate-fade-up pointer-events-auto flex max-w-md items-center gap-4 rounded-[2px] bg-ink px-5 py-3 text-[15px] text-paper shadow-lg">
-          <span>{message}</span>
-          <Link href="/bag" className="shrink-0 font-semibold text-volt underline underline-offset-2">
+        <div
+          onPointerEnter={() => setPaused(true)}
+          onPointerLeave={() => setPaused(false)}
+          onFocus={() => setPaused(true)}
+          onBlur={() => setPaused(false)}
+          className="animate-fade-up pointer-events-auto flex max-w-md items-center gap-4 rounded-[2px] bg-ink py-1 pl-5 pr-1 text-[15px] text-paper shadow-lg"
+        >
+          <p className="py-2">{message}</p>
+          <Link href="/bag" onClick={() => setMessage(null)} className="shrink-0 font-semibold text-volt underline underline-offset-2">
             View bag
           </Link>
-        </p>
+          <button type="button" onClick={() => setMessage(null)} aria-label="Close" className="grid min-h-11 min-w-11 shrink-0 place-items-center text-paper/70 hover:text-paper">
+            <span aria-hidden>✕</span>
+          </button>
+        </div>
       )}
     </div>
   );

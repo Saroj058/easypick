@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { describeMatch, hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
+import { site } from "@/lib/site";
 import type { Colour, LiveStock, Product, Size } from "@/lib/types";
 import { AskWhatsApp } from "./ask-whatsapp";
 import { useAddToBag } from "./bag-gate";
@@ -93,6 +94,9 @@ export function BuyPanel(props: Props) {
         <SaveButton slug={slug} name={name} />
       </div>
       <p className="mt-1 text-[13px] text-steel-dark">Price shown. No DM needed. VAT included.</p>
+      <p className="mt-1 text-[13px] text-steel-dark">
+        Free pickup at the store · Valley delivery {formatPrice(site.delivery.flatFee)}, free over {formatPrice(site.delivery.freeAbove)}
+      </p>
 
       {colours.length > 1 && (
         <fieldset className="mt-8">

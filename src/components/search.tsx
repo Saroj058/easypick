@@ -122,7 +122,8 @@ export function SearchButton() {
       </SheetTrigger>
       <SheetContent
         side="top"
-        className="max-h-[100dvh] overflow-y-auto border-mist bg-paper px-4 pb-8 pt-[calc(16px+env(safe-area-inset-top))] [&>button:last-child]:hidden"
+        hideClose
+        className="max-h-[100dvh] overflow-y-auto border-mist bg-paper px-4 pb-8 pt-[calc(16px+env(safe-area-inset-top))]"
         onOpenAutoFocus={(e) => {
           e.preventDefault();
           inputRef.current?.focus();
@@ -155,7 +156,7 @@ export function SearchButton() {
               placeholder="Hoodie, black tee, cargo…"
               autoComplete="off"
               enterKeyHint="search"
-              className="h-12 min-w-0 flex-1 bg-transparent text-[22px] outline-none placeholder:text-steel md:text-[28px] [&::-webkit-search-cancel-button]:appearance-none"
+              className="h-12 min-w-0 flex-1 bg-transparent text-[22px] outline-none placeholder:text-steel-dark md:text-[28px] [&::-webkit-search-cancel-button]:appearance-none"
             />
             <button type="button" onClick={() => setOpen(false)} className="flex h-11 w-11 shrink-0 items-center justify-center" aria-label="Close search">
               <X className="h-6 w-6" aria-hidden />

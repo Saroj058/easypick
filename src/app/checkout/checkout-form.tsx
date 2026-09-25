@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { placeOrder, type CheckoutState } from "@/app/actions";
 import { previewGiftCard } from "@/app/gift-actions";
@@ -35,6 +35,11 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   const me = useMe();
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, { status: "idle" });
+  // After a failed submit, put the cursor in the field that needs fixing.
+  useEffect(() => {
+    if (state.status !== "error" || !state.field) return;
+    document.getElementById(state.field === "giftCard" ? "co-card" : state.field)?.focus();
+  }, [state]);
   // Until they choose, use what they picked last time (saved to their account).
   const saved = me?.checkout ?? null;
   const [methodChoice, setMethod] = useState<FulfilmentMethod | null>(null);
@@ -75,6 +80,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
 
   const deliveryFee = method === "delivery" && subtotal < site.delivery.freeAbove ? site.delivery.flatFee : 0;
   const err = state.status === "error" ? state : null;
+  const describe = (field: string) => (err?.field === field ? { "aria-describedby": "co-error" } : {});
   const cardApplied = card ? Math.min(card.balance, subtotal + deliveryFee) : 0;
   const toPay = subtotal + deliveryFee - cardApplied;
 
@@ -101,12 +107,16 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
           required
           {...phoneField}
           aria-invalid={err?.field === "phone"}
+          {...describe("phone")}
           className={`${input} font-mono`}
         />
         <p className="mt-2 text-[13px] text-steel-dark">
           Order updates come by SMS.{" "}
           {me === null && buyNow && <>No account needed.</>}
           {me && <>This order will be saved to your account.</>}
+        </p>
+        <p lang="ne" className="mt-1 font-nepali text-[14px] text-steel-dark">
+          ९७ वा ९८ बाट सुरु हुने १० अंकको मोबाइल नम्बर। अर्डरको जानकारी SMS मा आउँछ।
         </p>
       </section>
 
@@ -140,6 +150,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
                 required
                 {...areaField}
                 aria-invalid={err?.field === "area"}
+                {...describe("area")}
                 className={input}
               />
             </div>
@@ -164,6 +175,9 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
           3. Pay
         </h2>
         <PayWith className="mt-4" value={provider} onChange={setProvider} />
+        <p lang="ne" className="mt-3 font-nepali text-[14px] text-steel-dark">
+          भुक्तानी eSewa मार्फत हुन्छ। पैसा तिरेपछि मात्र अर्डर पक्का हुन्छ, र सामान १५ मिनेटसम्म तपाईंका लागि राखिन्छ।
+        </p>
       </section>
 
       <section aria-label="Order summary" className="border-t border-mist pt-6">
@@ -232,7 +246,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
         </div>
         <p className="mt-1 text-[13px] text-steel-dark">VAT included.</p>
 
-        <p role="alert" className="mt-4 min-h-5 text-[14px] text-[#d70015]">
+        <p id="co-error" role="alert" className="mt-4 min-h-5 text-[14px] text-[#d70015]">
           {err?.message ?? ""}
         </p>
 

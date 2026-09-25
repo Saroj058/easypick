@@ -93,7 +93,16 @@ export default function BagPage() {
               <dt className="font-sans">Delivery in the Valley</dt>
               <dd>{subtotal >= site.delivery.freeAbove ? "Free" : formatPrice(site.delivery.flatFee)}</dd>
             </div>
+            <div className="flex justify-between border-t border-mist pt-2 text-[15px] font-semibold">
+              <dt className="font-sans">Total</dt>
+              <dd>
+                {subtotal >= site.delivery.freeAbove ? formatPrice(subtotal) : `${formatPrice(subtotal)} pickup · ${formatPrice(subtotal + site.delivery.flatFee)} delivered`}
+              </dd>
+            </div>
           </dl>
+          {subtotal < site.delivery.freeAbove && (
+            <p className="mt-2 text-[13px] text-steel-dark">Add {formatPrice(site.delivery.freeAbove - subtotal)} more for free delivery.</p>
+          )}
           <p className="mt-2 text-[13px] text-steel-dark">VAT included. Stock is checked again when you pay.</p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">

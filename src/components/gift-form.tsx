@@ -61,6 +61,14 @@ export function GiftForm({ product }: { product: Product }) {
   const [state, action, pending] = useActionState<GiftState, FormData>(placeGiftOrder, { status: "idle" });
   const [step, setStep] = useState(0);
   const [hint, setHint] = useState("");
+  const [hintField, setHintField] = useState<string | null>(null);
+  /** Show what's missing, and put the cursor in that field. */
+  const fail = (text: string, field?: string) => {
+    setHint(text);
+    setHintField(field ?? null);
+    if (field) requestAnimationFrame(() => document.getElementById(field)?.focus());
+  };
+  const invalid = (id: string) => (hintField === id ? { "aria-invalid": true, "aria-describedby": "g-hint" } : {});
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const oneSize = product.variants.every((v) => v.size === "ONE");
@@ -97,13 +105,14 @@ export function GiftForm({ product }: { product: Product }) {
 
   function next() {
     setHint("");
-    if (step === 0 && mode === "set" && !size) return setHint("Pick their size, or let them pick.");
+    setHintField(null);
+    if (step === 0 && mode === "set" && !size) return fail("Pick their size, or let them pick.");
     if (step === 2) {
-      if (!receiverName.trim()) return setHint("Add their name.");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(receiverEmail.trim())) return setHint("Add their email address so we can send them the gift link.");
-      if (receiverPhone.trim() && !normaliseNepaliMobile(receiverPhone)) return setHint("Their mobile number should be 10 digits, like 98XXXXXXXX, or leave it empty.");
-      if (mode === "set" && method === "delivery" && !normaliseNepaliMobile(receiverPhone)) return setHint("Add their mobile number so the rider can reach them.");
-      if (mode === "set" && method === "delivery" && (!area.trim() || !landmark.trim())) return setHint("Add their area and a nearby landmark.");
+      if (!receiverName.trim()) return fail("Add their name.", "g-rname");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(receiverEmail.trim())) return fail("Add their email address so we can send them the gift link.", "g-remail");
+      if (receiverPhone.trim() && !normaliseNepaliMobile(receiverPhone)) return fail("Their mobile number should be 10 digits, like 98XXXXXXXX, or leave it empty.", "g-rphone");
+      if (mode === "set" && method === "delivery" && !normaliseNepaliMobile(receiverPhone)) return fail("Add their mobile number so the rider can reach them.", "g-rphone");
+      if (mode === "set" && method === "delivery" && (!area.trim() || !landmark.trim())) return fail("Add their area and a nearby landmark.", area.trim() ? "g-landmark" : "g-area");
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
@@ -261,7 +270,7 @@ export function GiftForm({ product }: { product: Product }) {
           <label htmlFor="g-rname" className={label}>
             Their name
           </label>
-          <input id="g-rname" name="receiverName" value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className={input} />
+          <input id="g-rname" {...invalid("g-rname")} name="receiverName" value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className={input} />
         </div>
         <div>
           <label htmlFor="g-remail" className={label}>
@@ -269,6 +278,7 @@ export function GiftForm({ product }: { product: Product }) {
           </label>
           <input
             id="g-remail"
+            {...invalid("g-remail")}
             name="receiverEmail"
             type="email"
             inputMode="email"
@@ -289,6 +299,7 @@ export function GiftForm({ product }: { product: Product }) {
           </label>
           <input
             id="g-rphone"
+            {...invalid("g-rphone")}
             name="receiverPhone"
             type="tel"
             inputMode="numeric"
@@ -313,13 +324,13 @@ export function GiftForm({ product }: { product: Product }) {
                   <label htmlFor="g-area" className={label}>
                     Their area
                   </label>
-                  <input id="g-area" name="area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Baneshwor, Kathmandu" className={input} />
+                  <input id="g-area" {...invalid("g-area")} name="area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Baneshwor, Kathmandu" className={input} />
                 </div>
                 <div>
                   <label htmlFor="g-landmark" className={label}>
                     Nearby landmark
                   </label>
-                  <input id="g-landmark" name="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} className={input} />
+                  <input id="g-landmark" {...invalid("g-landmark")} name="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} className={input} />
                 </div>
                 <div>
                   <label htmlFor="g-details" className={label}>
@@ -393,7 +404,7 @@ export function GiftForm({ product }: { product: Product }) {
         </div>
       </section>
 
-      <p role="alert" className="mt-6 min-h-5 text-[14px] text-error-light">
+      <p id="g-hint" role="alert" className="mt-6 min-h-5 text-[14px] text-error-light">
         {hint || (state.status === "error" ? state.message : "")}
       </p>
       <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row">

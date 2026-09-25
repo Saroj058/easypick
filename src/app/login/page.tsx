@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { BuyPendingNow } from "@/components/bag-gate";
 import { LoginPanel } from "@/components/login-panel";
 import { codeChannels, getCurrentUser, safeNext } from "@/lib/auth";
 import { isConfigured } from "@/lib/oauth";
@@ -44,7 +45,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <h1 className="display display-h1">{forBag ? "Log in to use your bag." : signup ? "Join Easypick." : "Welcome back."}</h1>
       <p className="mt-3 text-lg text-steel-dark">
         {forBag
-          ? "Your bag is saved to your account. Just want one piece? Go back and tap Buy now. No account needed."
+          ? "Your bag is saved to your account. Just want this one piece? Buy it now, no account needed."
           : signup
             ? "One account for the website and the store."
             : "Log in to see your orders and saved size."}
@@ -57,6 +58,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </p>
         )}
         <LoginPanel next={next} channels={codeChannels()} providers={{ google: isConfigured("google"), facebook: isConfigured("facebook") }} />
+        {forBag && <BuyPendingNow />}
       </div>
 
       <p className="mt-8 text-[15px]">
