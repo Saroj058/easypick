@@ -21,6 +21,7 @@ const statusLabel = {
   out_for_delivery: "Out for delivery",
   completed: "Completed",
   expired: "Expired",
+  cancelled: "Cancelled",
 } as const;
 
 function Section({ id, index, title, children }: { id: string; index: string; title: string; children: React.ReactNode }) {

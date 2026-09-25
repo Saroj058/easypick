@@ -6,6 +6,7 @@ import { ProductImage } from "@/components/product-image";
 
 import type { Product } from "@/lib/types";
 import { saveProduct, type SaveState } from "@/app/admin/actions";
+import { shrinkPhotoInput } from "../../resize-photo";
 
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 const statuses = [
@@ -16,9 +17,8 @@ const statuses = [
   { value: "archived", label: "Archived", note: "Hidden, kept for records" },
 ];
 
-export function ProductForm({ product, demand }: { product: Product; demand: Record<string, number> }) {
+export function ProductForm({ product }: { product: Product }) {
   const [state, action, pending] = useActionState<SaveState, FormData>(saveProduct, { status: "idle" });
-  const sizes = Array.from(new Set(product.variants.map((v) => v.size)));
   const [preview, setPreview] = useState<string | null>(null);
   const front = product.images.find((i) => i.kind === "front") ?? product.images[0];
 
@@ -47,70 +47,13 @@ export function ProductForm({ product, demand }: { product: Product; demand: Rec
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="sr-only"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
+              onChange={async (e) => {
+                // Big phone photos are shrunk here so the upload stays under the hosting limit.
+                const f = await shrinkPhotoInput(e.target);
                 setPreview(f ? URL.createObjectURL(f) : null);
               }}
             />
           </label>
-        </div>
-      </section>
-
-      <section aria-labelledby="stock-h">
-        <h3 id="stock-h" className="text-lg font-semibold">
-          Stock
-        </h3>
-        <p className="mt-1 text-[14px] text-steel-dark">
-          Pieces tagged and on hand. Paid orders take stock off by themselves. When a size goes from 0 to more, everyone who asked is told
-          it&apos;s back.
-        </p>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[420px] text-left text-[15px]">
-            <thead className="text-[13px] text-steel-dark">
-              <tr className="border-b border-mist">
-                <th className="py-2 font-normal">Colour</th>
-                {sizes.map((s) => (
-                  <th key={s} className="px-1 py-2 text-center font-normal">
-                    {s === "ONE" ? "One size" : s}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {product.colours.map((c) => (
-                <tr key={c.name} className="border-b border-mist">
-                  <th scope="row" className="py-3 pr-3 font-normal">
-                    <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 shrink-0 rounded-full border border-black/10" style={{ background: c.hex }} aria-hidden />
-                      {c.name}
-                    </span>
-                  </th>
-                  {sizes.map((s) => {
-                    const v = product.variants.find((x) => x.size === s && x.colour === c.name);
-                    if (!v) return <td key={s} />;
-                    const asked = demand[v.sku] ?? 0;
-                    return (
-                      <td key={s} className="px-1 py-2 text-center align-top">
-                        <label className="sr-only" htmlFor={`st-${v.sku}`}>
-                          {c.name} {s} stock
-                        </label>
-                        <input
-                          id={`st-${v.sku}`}
-                          name={`stock:${v.sku}`}
-                          type="number"
-                          inputMode="numeric"
-                          min={0}
-                          defaultValue={v.stock}
-                          className="h-11 w-16 rounded-[2px] border border-mist text-center font-mono tabular-nums outline-none focus:border-ink"
-                        />
-                        {asked > 0 && <span className="mt-1 block text-[11px] text-steel-dark">{asked} asked</span>}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </section>
 

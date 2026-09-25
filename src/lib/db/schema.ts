@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, index, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, index, integer, jsonb, pgSequence, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 import type { FitProfile } from "../fit-profile";
 import type { GiftCard } from "../gift-cards";
@@ -33,13 +33,24 @@ export const users = pgTable("users", {
   lastLoginAt: ts("last_login_at").notNull(),
 });
 
-export const otps = pgTable("otps", {
-  phone: text("phone").primaryKey(),
-  hash: text("hash").notNull(),
-  expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
-  triesLeft: integer("tries_left").notNull(),
-  /** Recent send times (ms), for rate limiting. */
-  sentAt: jsonb("sent_at").$type<number[]>().notNull(),
+export const otps = pgTable(
+  "otps",
+  {
+    phone: text("phone").primaryKey(),
+    hash: text("hash").notNull(),
+    expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
+    triesLeft: integer("tries_left").notNull(),
+    /** Recent send times (ms), for rate limiting. */
+    sentAt: jsonb("sent_at").$type<number[]>().notNull(),
+  },
+  (t) => [index("otps_expires_idx").on(t.expiresAt)],
+);
+
+/** Attempt counters shared by every server instance (login codes, admin login, tracking, gift cards). */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  resetAt: ts("reset_at").notNull(),
 });
 
 export const sessions = pgTable(
@@ -52,20 +63,45 @@ export const sessions = pgTable(
     expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
     createdAt: bigint("created_at", { mode: "number" }).notNull(),
   },
-  (t) => [index("sessions_user_idx").on(t.userId)],
+  (t) => [index("sessions_user_idx").on(t.userId), index("sessions_expires_idx").on(t.expiresAt)],
 );
 
 // ---------- Staff (admin screen) ----------
 
-export const staff = pgTable("staff", {
-  id: text("id").primaryKey(),
-  /** As typed (e.g. "Saroj"); logins ignore upper/lower case. */
-  username: text("username").notNull().unique(),
-  /** scrypt, see lib/staff.ts. Never the password itself. */
-  passwordHash: text("password_hash").notNull(),
-  createdAt: ts("created_at").notNull(),
-  updatedAt: ts("updated_at").notNull(),
-});
+export type StaffRole = "owner" | "helper";
+
+export const staff = pgTable(
+  "staff",
+  {
+    id: text("id").primaryKey(),
+    /** As typed (e.g. "Saroj"); logins ignore upper/lower case. */
+    username: text("username").notNull().unique(),
+    /** scrypt, see lib/staff.ts. Never the password itself. */
+    passwordHash: text("password_hash").notNull(),
+    /** owner: everything. helper: orders, exchanges and stock counts. */
+    role: text("role").$type<StaffRole>().notNull().default("owner"),
+    /** Bumped on sign-out; logins signed with an older version stop working. */
+    sessionVersion: integer("session_version").notNull().default(1),
+    createdAt: ts("created_at").notNull(),
+    updatedAt: ts("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("staff_username_lower_idx").on(sql`lower(${t.username})`), check("staff_role_check", sql`${t.role} in ('owner','helper')`)],
+);
+
+/** Who did what in the admin: price and stock changes, refunds, exchanges, staff changes. */
+export const staffEvents = pgTable(
+  "staff_events",
+  {
+    id: serial("id").primaryKey(),
+    staffId: text("staff_id").references(() => staff.id, { onDelete: "set null" }),
+    staffName: text("staff_name").notNull(),
+    action: text("action").notNull(),
+    target: text("target"),
+    detail: jsonb("detail").$type<Record<string, unknown>>(),
+    at: ts("at").notNull().defaultNow(),
+  },
+  (t) => [index("staff_events_at_idx").on(t.at)],
+);
 
 // ---------- Catalogue ----------
 
@@ -98,6 +134,31 @@ export const variants = pgTable(
   (t) => [index("variants_product_idx").on(t.productSlug), check("variants_stock_nonneg", sql`${t.stock} >= 0`)],
 );
 
+/**
+ * Every stock change, with why and where it came from: one ledger for the website,
+ * the admin and (later) the kiosk and RFID counts.
+ */
+export const stockMovements = pgTable(
+  "stock_movements",
+  {
+    id: serial("id").primaryKey(),
+    sku: text("sku")
+      .notNull()
+      .references(() => variants.sku, { onDelete: "cascade", onUpdate: "cascade" }),
+    delta: integer("delta").notNull(),
+    /** order_hold, order_release, received, count, damaged, returned, exchange_in, exchange_out, gift_swap, refund_restock */
+    reason: text("reason").notNull(),
+    /** web, admin, kiosk, rfid */
+    source: text("source").notNull(),
+    /** Order number or other reference. */
+    ref: text("ref"),
+    actor: text("actor"),
+    stockAfter: integer("stock_after"),
+    at: ts("at").notNull().defaultNow(),
+  },
+  (t) => [index("stock_movements_sku_idx").on(t.sku, t.at)],
+);
+
 export const drops = pgTable("drops", {
   slug: text("slug").primaryKey(),
   name: text("name").notNull(),
@@ -107,6 +168,9 @@ export const drops = pgTable("drops", {
 });
 
 // ---------- Orders & gift cards ----------
+
+/** Order numbers: EP-1000001, EP-1000002… (no clashes, unlike random numbers). */
+export const orderNumberSeq = pgSequence("order_number_seq", { startWith: 1000001 });
 
 export const orders = pgTable(
   "orders",
@@ -124,7 +188,32 @@ export const orders = pgTable(
     /** The full order as the website uses it. */
     data: jsonb("data").$type<Order>().notNull(),
   },
-  (t) => [index("orders_user_idx").on(t.userId), index("orders_phone_idx").on(t.phone), index("orders_status_idx").on(t.status)],
+  (t) => [
+    index("orders_user_idx").on(t.userId),
+    index("orders_phone_idx").on(t.phone),
+    index("orders_status_created_idx").on(t.status, t.createdAt.desc()),
+    index("orders_created_idx").on(t.createdAt.desc()),
+    check(
+      "orders_status_check",
+      sql`${t.status} in ('awaiting_payment','paid','ready_for_pickup','out_for_delivery','completed','expired','cancelled')`,
+    ),
+  ],
+);
+
+/** One row per order line, kept in step with orders.data (for the kiosk, reports and the future Store API). */
+export const orderLines = pgTable(
+  "order_lines",
+  {
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    lineNo: integer("line_no").notNull(),
+    sku: text("sku").notNull(),
+    slug: text("slug").notNull(),
+    qty: integer("qty").notNull(),
+    unitPrice: integer("unit_price").notNull(),
+  },
+  (t) => [uniqueIndex("order_lines_pk").on(t.orderId, t.lineNo), index("order_lines_sku_idx").on(t.sku)],
 );
 
 export const giftCards = pgTable(
@@ -139,7 +228,10 @@ export const giftCards = pgTable(
     orderId: text("order_id"),
     data: jsonb("data").$type<GiftCard>().notNull(),
   },
-  (t) => [check("gift_cards_balance_nonneg", sql`${t.balance} >= 0`)],
+  (t) => [
+    check("gift_cards_balance_nonneg", sql`${t.balance} >= 0`),
+    check("gift_cards_status_check", sql`${t.status} in ('pending_payment','active','blocked')`),
+  ],
 );
 
 // ---------- Customers asking for things ----------
@@ -157,7 +249,7 @@ export const restockAlerts = pgTable(
     createdAt: ts("created_at").notNull(),
     notifiedAt: ts("notified_at"),
   },
-  (t) => [index("restock_sku_idx").on(t.sku)],
+  (t) => [index("restock_sku_idx").on(t.sku), index("restock_waiting_idx").on(t.sku).where(sql`${t.notifiedAt} is null`)],
 );
 
 export const festivals = pgTable("festivals", {

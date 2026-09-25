@@ -8,15 +8,18 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { secret } from "./auth";
-import { getDb, schema } from "./db";
+import { getDb, schema, type StaffRole } from "./db";
 
 // Staff sign in to /admin with a username and password, kept in the database
 // (password as a salted scrypt hash, never the password itself) and changeable
 // from Admin → Account. The very first account comes from ADMIN_USERNAME /
 // ADMIN_PASSWORD in .env.local when the staff table is empty.
 //
-// The login is a signed cookie tied to the account's password hash: changing
-// the password signs out every other device.
+// The login is a signed cookie tied to the account's password hash and a session
+// version: changing the password, or signing out, ends every existing login.
+//
+// Roles: "owner" does everything; "helper" handles orders, exchanges and stock counts
+// but can't change prices, products, refunds, festivals or staff.
 
 export const ADMIN_COOKIE = "ep_admin";
 const TTL_MS = 12 * 60 * 60_000;
@@ -45,6 +48,7 @@ let dummyHash: Promise<string> | null = null;
 export interface StaffMember {
   id: string;
   username: string;
+  role: StaffRole;
 }
 
 /** First run: create the first staff account from .env.local, if there are none yet. */
@@ -86,13 +90,14 @@ export async function checkAdminLogin(username: string, password: string): Promi
     await verifyPassword(password, await dummyHash);
     return null;
   }
-  return (await verifyPassword(password, row.passwordHash)) ? { id: row.id, username: row.username } : null;
+  return (await verifyPassword(password, row.passwordHash)) ? { id: row.id, username: row.username, role: row.role } : null;
 }
 
 // ---------- Session cookie ----------
 
 const fingerprint = (hash: string) => createHash("sha256").update(hash).digest("base64url");
-const sign = (payload: string, passwordHash: string) => createHmac("sha256", `${secret()}:${fingerprint(passwordHash)}`).update(payload).digest("base64url");
+const sign = (payload: string, passwordHash: string, version: number) =>
+  createHmac("sha256", `${secret()}:${fingerprint(passwordHash)}:${version}`).update(payload).digest("base64url");
 const same = (a: string, b: string) => {
   const x = createHash("sha256").update(a).digest();
   const y = createHash("sha256").update(b).digest();
@@ -104,7 +109,7 @@ export async function startAdminSession(staffId: string) {
   const [row] = await db.select().from(schema.staff).where(eq(schema.staff.id, staffId));
   if (!row) return;
   const payload = `${row.id}.${Date.now() + TTL_MS}`;
-  (await cookies()).set(ADMIN_COOKIE, `${payload}.${sign(payload, row.passwordHash)}`, {
+  (await cookies()).set(ADMIN_COOKIE, `${payload}.${sign(payload, row.passwordHash, row.sessionVersion)}`, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -113,7 +118,16 @@ export async function startAdminSession(staffId: string) {
   });
 }
 
+/** Signs this staff member out everywhere (the cookie alone isn't trusted after this). */
 export async function endAdminSession() {
+  const me = await currentStaff();
+  if (me) {
+    const db = await getDb();
+    await db
+      .update(schema.staff)
+      .set({ sessionVersion: sql`${schema.staff.sessionVersion} + 1` })
+      .where(eq(schema.staff.id, me.id));
+  }
   (await cookies()).delete(ADMIN_COOKIE);
 }
 
@@ -125,8 +139,8 @@ export const currentStaff = cache(async (): Promise<StaffMember | null> => {
   if (!id || !sig || !(Number(expires) > Date.now())) return null;
   const db = await getDb();
   const [row] = await db.select().from(schema.staff).where(eq(schema.staff.id, id));
-  if (!row || !same(sig, sign(`${id}.${expires}`, row.passwordHash))) return null;
-  return { id: row.id, username: row.username };
+  if (!row || !same(sig, sign(`${id}.${expires}`, row.passwordHash, row.sessionVersion))) return null;
+  return { id: row.id, username: row.username, role: row.role };
 });
 
 /** For admin pages and actions: the staff member, or off to the staff login. */
@@ -134,6 +148,45 @@ export async function requireStaff(): Promise<StaffMember> {
   const who = await currentStaff();
   if (!who) redirect("/admin/login");
   return who;
+}
+
+/** Owner-only pages and actions. Helpers are sent to Today. */
+export async function requireOwner(): Promise<StaffMember> {
+  const who = await requireStaff();
+  if (who.role !== "owner") redirect("/admin?denied=1");
+  return who;
+}
+
+/** Writes to the admin activity log. */
+export async function logStaff(who: StaffMember, action: string, target?: string | null, detail?: Record<string, unknown>) {
+  const db = await getDb();
+  await db.insert(schema.staffEvents).values({ staffId: who.id, staffName: who.username, action, target: target ?? null, detail: detail ?? null });
+}
+
+export async function staffList() {
+  const db = await getDb();
+  return db
+    .select({ id: schema.staff.id, username: schema.staff.username, role: schema.staff.role, createdAt: schema.staff.createdAt })
+    .from(schema.staff)
+    .orderBy(schema.staff.createdAt);
+}
+
+export type AddStaffResult = { ok: true } | { ok: false; message: string };
+
+export async function addStaff(username: string, password: string, role: StaffRole): Promise<AddStaffResult> {
+  const u = username.trim();
+  if (!/^[A-Za-z0-9._-]{3,32}$/.test(u)) return { ok: false, message: "Use 3 to 32 letters, numbers, dots, dashes or underscores." };
+  if (password.length < MIN_PASSWORD) return { ok: false, message: `Use at least ${MIN_PASSWORD} characters for the password.` };
+  if (await byUsername(u)) return { ok: false, message: "That username is taken." };
+  const db = await getDb();
+  const now = new Date().toISOString();
+  await db.insert(schema.staff).values({ id: randomUUID(), username: u, passwordHash: await hashPassword(password), role, createdAt: now, updatedAt: now });
+  return { ok: true };
+}
+
+export async function removeStaff(id: string) {
+  const db = await getDb();
+  await db.delete(schema.staff).where(eq(schema.staff.id, id));
 }
 
 // ---------- Changing your own details ----------

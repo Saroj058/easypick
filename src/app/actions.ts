@@ -6,9 +6,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, updateUser } from "@/lib/auth";
 import { addRestockAlert } from "@/lib/catalogue";
 import { normaliseEmail } from "@/lib/email";
-import { checkGiftCard, spendGiftCard } from "@/lib/gift-cards";
+import { checkGiftCard } from "@/lib/gift-cards";
+import { sellable } from "@/lib/inventory";
 import { normaliseNepaliMobile } from "@/lib/format";
-import { findOrderByNumber, saveOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
+import { createOrder, findOrderByNumber, updateOrder, type Order, type OrderLine } from "@/lib/orders";
+import { allow, clientIp, isBlocked, hit } from "@/lib/rate-limit";
 import { confirmPayment } from "@/lib/payments";
 import { site } from "@/lib/site";
 import { getProducts } from "@/lib/store";
@@ -79,9 +81,10 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
       return { status: "error", message: `${item.name} is no longer available. Remove it from your bag to continue.` };
     }
     const qty = Math.max(1, Math.min(Number(item.qty) || 1, 5));
-    const sellable = variant.lastPieceOnFloor ? variant.stock - 1 : variant.stock;
-    if (sellable < qty) {
-      return { status: "error", message: `Only ${Math.max(sellable, 0)} left of ${product.name} in ${variant.size}. Update your bag to continue.` };
+    const left = sellable(variant);
+    if (left < qty) {
+      const what = `${product.name} (${variant.size === "ONE" ? variant.colour : `${variant.colour}, ${variant.size}`})`;
+      return { status: "error", message: left > 0 ? `Only ${left} left of ${what}. Update your bag to continue.` : `${what} just sold out.` };
     }
     lines.push({
       sku: variant.sku,
@@ -97,39 +100,38 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
   const subtotal = lines.reduce((n, l) => n + l.unitPrice * l.qty, 0);
   const deliveryFee = method === "delivery" && subtotal < site.delivery.freeAbove ? site.delivery.flatFee : 0;
   const now = new Date();
-  const orderId = randomUUID();
 
-  // Optional Easypick gift card: re-checked here, never trusted from the browser.
-  let giftCard: Order["giftCard"];
+  // Optional Easypick gift card: re-checked here (limits are per visitor, not per typed phone).
   const cardInput = String(form.get("giftCard") ?? "").trim();
+  let giftCardCode: string | null = null;
   if (cardInput) {
-    const check = await checkGiftCard(cardInput, `checkout:${phone}`);
+    const check = await checkGiftCard(cardInput, await clientIp());
     if (!check.ok) return { status: "error", field: "giftCard", message: check.message };
-    const applied = await spendGiftCard(check.code, subtotal + deliveryFee, orderId);
-    if (applied > 0) giftCard = { code: check.code, applied };
+    giftCardCode = check.code;
   }
 
-  const order: Order = {
-    id: orderId,
-    number: `EP-${String(Math.floor(100000 + Math.random() * 900000))}`,
-    phone,
-    method,
-    address,
-    provider,
-    lines,
-    subtotal,
-    deliveryFee,
-    giftCard,
-    total: subtotal + deliveryFee - (giftCard?.applied ?? 0),
-    status: "awaiting_payment",
-    source: buyNow ? "buy_now" : "bag",
-    createdAt: now.toISOString(),
-    expiresAt: new Date(now.getTime() + 15 * 60_000).toISOString(),
-  };
-
-  // The order becomes "paid" only when the wallet confirms the payment server-to-server
-  // (see /api/pay/[provider]/return), never from the browser coming back.
-  await saveOrder(order, user?.id);
+  // One step: order number, pieces held for 15 minutes, gift card spent. All or nothing.
+  // It becomes "paid" only when the wallet confirms the payment server-to-server.
+  const created = await createOrder(
+    {
+      id: randomUUID(),
+      phone,
+      method,
+      address,
+      provider,
+      lines,
+      subtotal,
+      deliveryFee,
+      status: "awaiting_payment",
+      source: buyNow ? "buy_now" : "bag",
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 15 * 60_000).toISOString(),
+      kind: "goods",
+    },
+    { userId: user?.id, giftCardCode },
+  );
+  if (!created.ok) return { status: "error", message: created.message };
+  const order = created.order;
   // Fully covered by a gift card: nothing to pay, so it's confirmed now (stock, emails, all of it).
   if (order.total <= 0) await confirmPayment(order.id);
   // Remember how they like to get and pay for things, so next checkout is one tap.
@@ -172,25 +174,21 @@ export async function advanceOrderInTestMode(form: FormData) {
 
 export type TrackState = { status: "idle" } | { status: "error"; message: string; number: string; phone: string };
 
-const trackTries = new Map<string, { n: number; since: number }>();
-
 export async function trackOrder(_prev: TrackState, form: FormData): Promise<TrackState> {
   const typedPhone = String(form.get("phone") ?? "");
   const phone = normaliseNepaliMobile(typedPhone);
   const number = String(form.get("number") ?? "");
   const fail = (message: string): TrackState => ({ status: "error", message, number, phone: typedPhone });
-  if (!phone || !/\d{6}/.test(number)) return fail("Enter your order number (EP-123456) and the mobile number you used.");
+  if (!phone || !/\d{6}/.test(number)) return fail("Enter your order number (like EP-1000123) and the mobile number you used.");
 
-  // A few tries per number, so order numbers can't be guessed.
-  const t = trackTries.get(phone);
-  const fresh = !t || Date.now() - t.since > 10 * 60_000;
-  const tries = fresh ? { n: 0, since: Date.now() } : t;
-  if (tries.n >= 8) return fail("Too many tries. Please wait 10 minutes.");
-  tries.n++;
-  trackTries.set(phone, tries);
-
+  // A few wrong tries per visitor, so order numbers can't be guessed.
+  const key = `track:${await clientIp()}`;
+  if (await isBlocked(key, 8)) return fail("Too many tries. Please wait 10 minutes.");
   const order = await findOrderByNumber(number, phone);
-  if (!order) return fail("We couldn't find that order. Check the number on your receipt and the phone you ordered with.");
+  if (!order) {
+    await hit(key, 10 * 60_000);
+    return fail("We couldn't find that order. Check the number on your receipt and the phone you ordered with.");
+  }
   redirect(`/order/${order.id}`);
 }
 
@@ -210,6 +208,7 @@ export async function requestRestock(_prev: RestockState, form: FormData): Promi
   const email = contact.includes("@") ? normaliseEmail(contact) : null;
   const phone = email ? null : normaliseNepaliMobile(contact);
   if (!email && !phone) return { status: "error", message: "Enter your email or a 10-digit mobile number." };
+  if (!(await allow(`restock:${await clientIp()}`, 20, 60 * 60_000))) return { status: "error", message: "That's a lot of requests. Try again in an hour." };
 
   await addRestockAlert({ slug, sku, size: variant.size, colour: variant.colour, email, phone });
   const what = variant.size === "ONE" ? variant.colour : `${variant.colour}, ${variant.size}`;

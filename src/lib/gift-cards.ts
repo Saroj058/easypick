@@ -4,7 +4,8 @@ import { randomInt } from "node:crypto";
 
 import { eq } from "drizzle-orm";
 
-import { getDb, giftCardRow, schema } from "./db";
+import { getDb, giftCardRow, schema, type Exec } from "./db";
+import { hit, isBlocked } from "./rate-limit";
 
 // Digital gift cards, per the Gifting doc: 12-character codes (EP-XXXX-XXXX),
 // usable online (and at the kiosk later), leftover balance kept, valid 12 months.
@@ -50,10 +51,14 @@ export function normaliseCode(input: string): string | null {
   return `EP-${raw.slice(0, 4)}-${raw.slice(4)}`;
 }
 
-export async function issueGiftCard(input: Omit<GiftCard, "code" | "balance" | "createdAt" | "expiresAt" | "uses">, validDays = 365): Promise<GiftCard> {
+export async function issueGiftCard(
+  input: Omit<GiftCard, "code" | "balance" | "createdAt" | "expiresAt" | "uses">,
+  validDays = 365,
+  exec?: Exec,
+): Promise<GiftCard> {
   const now = new Date();
   const expires = new Date(now.getTime() + validDays * 86_400_000);
-  const db = await getDb();
+  const db = exec ?? (await getDb());
   for (;;) {
     const card: GiftCard = { ...input, code: newCode(), balance: input.value, createdAt: now.toISOString(), expiresAt: expires.toISOString(), uses: [] };
     // A clash on the code (very unlikely) just tries another one.
@@ -68,8 +73,8 @@ export async function findGiftCard(code: string): Promise<GiftCard | null> {
   return row?.data ?? null;
 }
 
-export async function activateGiftCard(code: string) {
-  const db = await getDb();
+export async function activateGiftCard(code: string, exec?: Exec) {
+  const db = exec ?? (await getDb());
   await db.transaction(async (tx) => {
     const [c] = await tx.select().from(schema.giftCards).where(eq(schema.giftCards.code, code)).for("update");
     if (c && c.status === "pending_payment") await tx.update(schema.giftCards).set(giftCardRow({ ...c.data, status: "active" })).where(eq(schema.giftCards.code, code));
@@ -78,30 +83,28 @@ export async function activateGiftCard(code: string) {
 
 export type CardCheck = { ok: true; code: string; balance: number; expiresAt: string } | { ok: false; message: string };
 
-// Simple guard against guessing: a few tries per key (IP or session) per 10 minutes.
-const g = globalThis as unknown as { __epCardTries?: Map<string, number[]> };
-const tries: Map<string, number[]> = (g.__epCardTries ??= new Map());
-
+// Guard against guessing codes: 8 wrong tries per visitor per 10 minutes (kept in the
+// database, so it holds across server instances).
 export async function checkGiftCard(input: string, who: string): Promise<CardCheck> {
-  const now = Date.now();
-  const recent = (tries.get(who) ?? []).filter((t) => now - t < 10 * 60_000);
-  if (recent.length >= 8) return { ok: false, message: "Too many tries. Wait 10 minutes and try again." };
-  tries.set(who, [...recent, now]);
-
+  const key = `giftcard:${who}`;
+  if (await isBlocked(key, 8)) return { ok: false, message: "Too many tries. Wait 10 minutes and try again." };
   const code = normaliseCode(input);
   const card = code ? await findGiftCard(code) : null;
-  if (!card) return { ok: false, message: "We couldn't find that gift card. Check the code and try again." };
-  if (card.status === "pending_payment") return { ok: false, message: "This gift card isn't active yet." };
-  if (card.status === "blocked") return { ok: false, message: "This gift card has been blocked. Contact us for help." };
-  if (Date.parse(card.expiresAt) < now) return { ok: false, message: "This gift card has expired." };
-  if (card.balance <= 0) return { ok: false, message: "This gift card has no balance left." };
-  tries.set(who, recent); // a valid code doesn't count against the limit
+  const fail = async (message: string): Promise<CardCheck> => {
+    await hit(key, 10 * 60_000);
+    return { ok: false, message };
+  };
+  if (!card) return fail("We couldn't find that gift card. Check the code and try again.");
+  if (card.status === "pending_payment") return fail("This gift card isn't active yet.");
+  if (card.status === "blocked") return fail("This gift card has been blocked. Contact us for help.");
+  if (Date.parse(card.expiresAt) < Date.now()) return fail("This gift card has expired.");
+  if (card.balance <= 0) return fail("This gift card has no balance left.");
   return { ok: true, code: card.code, balance: card.balance, expiresAt: card.expiresAt };
 }
 
 /** Takes up to `amount` from the card for an order. Returns what was actually applied. */
-export async function spendGiftCard(code: string, amount: number, orderId: string): Promise<number> {
-  const db = await getDb();
+export async function spendGiftCard(code: string, amount: number, orderId: string, exec?: Exec): Promise<number> {
+  const db = exec ?? (await getDb());
   return db.transaction(async (tx) => {
     // Locked while spending, so two checkouts can't both use the same balance.
     const [row] = await tx.select().from(schema.giftCards).where(eq(schema.giftCards.code, code)).for("update");
@@ -112,5 +115,31 @@ export async function spendGiftCard(code: string, amount: number, orderId: strin
     const next: GiftCard = { ...c, balance: c.balance - applied, uses: [...c.uses, { orderId, amount: applied, at: new Date().toISOString() }] };
     await tx.update(schema.giftCards).set(giftCardRow(next)).where(eq(schema.giftCards.code, code));
     return applied;
+  });
+}
+
+/** Puts money back on a card: an unpaid order expired, or an order paid by card was refunded. */
+export async function creditGiftCard(code: string, amount: number, orderId: string, exec?: Exec) {
+  if (amount <= 0) return;
+  const db = exec ?? (await getDb());
+  await db.transaction(async (tx) => {
+    const [row] = await tx.select().from(schema.giftCards).where(eq(schema.giftCards.code, code)).for("update");
+    if (!row) return;
+    const c = row.data;
+    const next: GiftCard = {
+      ...c,
+      balance: c.balance + amount,
+      uses: c.uses.map((u) => (u.orderId === orderId && !u.refunded ? { ...u, refunded: true } : u)),
+    };
+    await tx.update(schema.giftCards).set(giftCardRow(next)).where(eq(schema.giftCards.code, code));
+  });
+}
+
+/** Staff: stop a card being used (lost, fraud). */
+export async function blockGiftCard(code: string) {
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    const [row] = await tx.select().from(schema.giftCards).where(eq(schema.giftCards.code, code)).for("update");
+    if (row) await tx.update(schema.giftCards).set(giftCardRow({ ...row.data, status: "blocked" })).where(eq(schema.giftCards.code, code));
   });
 }

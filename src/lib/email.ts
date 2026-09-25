@@ -35,6 +35,10 @@ function gmailTransport() {
   g.__epMailer ??= nodemailer.createTransport({
     service: "gmail",
     auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, "") },
+    // Never let a slow mail server hold up a customer's page.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
   });
   return g.__epMailer;
 }
@@ -80,7 +84,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     }
     return;
   }
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch("https://api.resend.com/emails", { signal: AbortSignal.timeout(10_000),
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, html, text }),

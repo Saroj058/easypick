@@ -19,7 +19,7 @@ const API_URL = process.env.STORE_API_URL;
 const API_KEY = process.env.STORE_API_KEY;
 
 async function api<T>(path: string, init?: RequestInit & { next?: { revalidate?: number | false; tags?: string[] } }): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, { signal: AbortSignal.timeout(10_000),
     ...init,
     headers: { Accept: "application/json", ...(API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {}), ...init?.headers },
   });

@@ -1,11 +1,11 @@
 "use server";
 
 import { randomBytes, randomUUID } from "node:crypto";
-import { headers } from "next/headers";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/lib/auth";
-import { adjustStock } from "@/lib/catalogue";
+import { moveStock, StockShortError } from "@/lib/catalogue";
 import { normaliseNepaliMobile } from "@/lib/format";
 import {
   GIFT_CARD_MAX,
@@ -14,7 +14,10 @@ import {
   issueGiftCard,
   type CardCheck,
 } from "@/lib/gift-cards";
-import { findOrderByGiftToken, saveOrder, updateOrder, type GiftInfo, type Order } from "@/lib/orders";
+import { createOrder, event, findOrderByGiftToken, lockOrder, type GiftInfo, type Order } from "@/lib/orders";
+import { sellable } from "@/lib/inventory";
+import { clientIp } from "@/lib/rate-limit";
+import { formatPrice } from "@/lib/format";
 import { site } from "@/lib/site";
 import { giftEmailHtml, normaliseEmail } from "@/lib/email";
 import { notifyEmail, notifySms as notify } from "@/lib/notify";
@@ -24,7 +27,6 @@ import type { PaymentProvider, Size } from "@/lib/types";
 const PROVIDERS: PaymentProvider[] = site.payments.enabled;
 
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
-const orderNumber = () => `EP-${String(Math.floor(100000 + Math.random() * 900000))}`;
 const in15min = () => new Date(Date.now() + 15 * 60_000).toISOString();
 
 /** yyyy-mm-dd between today and 60 days out, or null for "as soon as possible". */
@@ -46,7 +48,7 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
 
   const mode = str(form, "mode") === "set" ? "set" : "pick";
   const colour = product.colours.find((c) => c.name === str(form, "colour"))?.name ?? product.colours[0].name;
-  const inStock = product.variants.filter((v) => v.colour === colour && v.stock - (v.lastPieceOnFloor ? 1 : 0) > 0);
+  const inStock = product.variants.filter((v) => v.colour === colour && sellable(v) > 0);
   if (inStock.length === 0) return { status: "error", message: `${product.name} is sold out in ${colour}. Try another colour.` };
 
   // "set": the buyer's size must be in stock. "pick": hold the buyer's best guess (or any size) until the receiver chooses.
@@ -107,25 +109,27 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
     status: "sent",
   };
 
-  const order: Order = {
-    id: randomUUID(),
-    number: orderNumber(),
-    phone: buyerPhone,
-    method: setPickup ? "pickup" : "delivery",
-    address,
-    provider,
-    lines: [{ sku: variant.sku, slug: product.slug, name: product.name, size: variant.size, colour, unitPrice: price, qty: 1 }],
-    subtotal: price,
-    deliveryFee,
-    wrapFee,
-    total: price + deliveryFee + wrapFee,
-    status: "awaiting_payment",
-    createdAt: new Date().toISOString(),
-    expiresAt: in15min(),
-    gift,
-    kind: "goods",
-  };
-  await saveOrder(order, (await getCurrentUser())?.id);
+  const created = await createOrder(
+    {
+      id: randomUUID(),
+      phone: buyerPhone,
+      method: setPickup ? "pickup" : "delivery",
+      address,
+      provider,
+      lines: [{ sku: variant.sku, slug: product.slug, name: product.name, size: variant.size, colour, unitPrice: price, qty: 1 }],
+      subtotal: price,
+      deliveryFee,
+      wrapFee,
+      status: "awaiting_payment",
+      createdAt: new Date().toISOString(),
+      expiresAt: in15min(),
+      gift,
+      kind: "goods",
+    },
+    { userId: (await getCurrentUser())?.id },
+  );
+  if (!created.ok) return { status: "error", message: created.message };
+  const order = created.order;
 
   // The receiver is emailed the link once payment is confirmed (lib/payments.ts).
   redirect(`/pay/${order.id}`);
@@ -156,37 +160,27 @@ export async function buyGiftCard(_prev: GiftState, form: FormData): Promise<Gif
 
   const anonymous = form.get("anonymous") === "on";
   const senderName = anonymous ? null : str(form, "senderName", 40) || null;
-  const orderId = randomUUID();
-  const card = await issueGiftCard({
-    value,
-    status: "pending_payment",
-    purchaserPhone: buyerPhone,
-    recipientName,
-    recipientPhone,
-    recipientEmail,
-    message: str(form, "message", 200),
-    senderName,
-    sendOn,
-    orderId,
-  });
-
-  const order: Order = {
-    id: orderId,
-    number: orderNumber(),
-    phone: buyerPhone,
-    method: "pickup",
-    provider,
-    lines: [{ sku: `GIFTCARD-${value}`, slug: "gift-card", name: "Easypick gift card", size: "ONE", colour: "Digital", unitPrice: value, qty: 1 }],
-    subtotal: value,
-    deliveryFee: 0,
-    total: value,
-    status: "awaiting_payment",
-    createdAt: new Date().toISOString(),
-    expiresAt: in15min(),
-    kind: "gift_card",
-    issuedCardCode: card.code,
-  };
-  await saveOrder(order, (await getCurrentUser())?.id);
+  const created = await createOrder(
+    {
+      id: randomUUID(),
+      phone: buyerPhone,
+      method: "pickup",
+      provider,
+      lines: [{ sku: `GIFTCARD-${value}`, slug: "gift-card", name: "Easypick gift card", size: "ONE", colour: "Digital", unitPrice: value, qty: 1 }],
+      subtotal: value,
+      deliveryFee: 0,
+      status: "awaiting_payment",
+      createdAt: new Date().toISOString(),
+      expiresAt: in15min(),
+      kind: "gift_card",
+    },
+    {
+      userId: (await getCurrentUser())?.id,
+      issueCard: { value, status: "pending_payment", purchaserPhone: buyerPhone, recipientName, recipientPhone, recipientEmail, message: str(form, "message", 200), senderName, sendOn },
+    },
+  );
+  if (!created.ok) return { status: "error", message: created.message };
+  const order = created.order;
 
   // The card is switched on and sent to them once payment is confirmed (lib/payments.ts).
   redirect(`/pay/${order.id}`);
@@ -194,42 +188,40 @@ export async function buyGiftCard(_prev: GiftState, form: FormData): Promise<Gif
 
 // ---------- Using a card at checkout ----------
 
-async function who() {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
-}
-
 export async function previewGiftCard(code: string): Promise<CardCheck> {
-  return await checkGiftCard(code, await who());
+  return await checkGiftCard(code, await clientIp());
 }
 
 // ---------- The receiver's gift page (/g/<token>) ----------
+// Each action re-checks the gift inside the order lock, so a double tap (or many requests
+// at once) can't pick twice, mint two cards or issue two welcome credits.
+
+/** Gifts can be opened and chosen only once they're paid (and not cancelled). */
+const livePaid = (o: Order) => o.status === "paid" || o.status === "ready_for_pickup" || o.status === "out_for_delivery" || o.status === "completed";
 
 export async function openGift(token: string) {
-  const order = await findOrderByGiftToken(token);
-  if (!order?.gift || order.gift.status !== "sent") return;
-  await updateOrder(order.id, (o) => {
-    o.gift!.status = "opened";
-    o.gift!.openedAt = new Date().toISOString();
+  const found = await findOrderByGiftToken(token);
+  if (!found?.gift || found.gift.status !== "sent") return;
+  const opened = await lockOrder(found.id, async (o) => {
+    if (!o.gift || o.gift.status !== "sent" || !livePaid(o)) return { save: false, result: false };
+    o.gift.status = "opened";
+    o.gift.openedAt = new Date().toISOString();
+    return { save: true, result: true };
   });
-  await notify(order.phone, `Your Easypick gift to ${order.gift.receiverName} was just opened.`);
+  if (opened) after(() => notify(found.phone, `Your Easypick gift to ${found.gift!.receiverName} was just opened.`));
 }
 
 export type ChooseState = { status: "idle" } | { status: "error"; message: string } | { status: "done"; welcomeCode?: string };
 
 export async function chooseGift(_prev: ChooseState, form: FormData): Promise<ChooseState> {
-  const order = await findOrderByGiftToken(str(form, "token", 64));
-  const gift = order?.gift;
-  if (!order || !gift || gift.mode !== "pick") return { status: "error", message: "This gift link isn't valid." };
-  if (gift.status === "chosen" || gift.status === "converted") return { status: "done" };
+  const found = await findOrderByGiftToken(str(form, "token", 64));
+  if (!found?.gift || found.gift.mode !== "pick" || !livePaid(found)) return { status: "error", message: "This gift link isn't valid." };
 
-  const product = (await getProducts()).find((p) => p.slug === order.lines[0].slug);
+  const product = (await getProducts()).find((p) => p.slug === found.lines[0].slug);
   if (!product) return { status: "error", message: "This piece isn't available any more. You can turn the gift into a gift card." };
-  const colour = gift.colourChoice ? (product.colours.find((c) => c.name === str(form, "colour"))?.name ?? order.lines[0].colour) : order.lines[0].colour;
+  const colour = found.gift.colourChoice ? (product.colours.find((c) => c.name === str(form, "colour"))?.name ?? found.lines[0].colour) : found.lines[0].colour;
   const variant = product.variants.find((v) => v.colour === colour && v.size === (str(form, "size") as Size));
   if (!variant) return { status: "error", message: "Pick your size." };
-  const held = variant.sku === order.lines[0].sku; // the buyer's guess is already held for this gift
-  if (!held && variant.stock - (variant.lastPieceOnFloor ? 1 : 0) <= 0) return { status: "error", message: "That size just sold out. Pick another, or turn the gift into a gift card." };
 
   const method = str(form, "method") === "pickup" ? "pickup" : "delivery";
   let address: { area: string; landmark: string; details: string } | undefined;
@@ -241,40 +233,51 @@ export async function chooseGift(_prev: ChooseState, form: FormData): Promise<Ch
   }
   const slot = ["morning", "afternoon", "evening"].includes(str(form, "slot")) ? str(form, "slot") : undefined;
 
-  // Welcome credit for the receiver's own first order (once per gift).
-  const welcome = gift.welcomeCode
-    ? null
-    : await issueGiftCard(
-        {
-          value: site.gifting.welcomeCredit,
-          status: "active",
-          purchaserPhone: order.phone,
-          recipientName: gift.receiverName,
-          recipientPhone: gift.receiverPhone,
-          recipientEmail: gift.receiverEmail ?? null,
-          message: "Welcome to Easypick",
-          senderName: null,
-          sendOn: null,
-          orderId: null,
-        },
-        site.gifting.welcomeCreditDays,
-      );
+  try {
+    const result = await lockOrder(found.id, async (o, tx): Promise<{ save: boolean; result: ChooseState }> => {
+      const g = o.gift;
+      if (!g || g.mode !== "pick" || !livePaid(o)) return { save: false, result: { status: "error", message: "This gift link isn't valid." } };
+      if (g.status === "chosen" || g.status === "converted" || g.status === "delivered") return { save: false, result: { status: "done", welcomeCode: g.welcomeCode } };
 
-  // The buyer's guess was taken off stock when they paid; swap it for the size actually chosen.
-  if (!held && order.status !== "awaiting_payment") {
-    await adjustStock([{ sku: order.lines[0].sku, qty: 1 }], 1);
-    await adjustStock([{ sku: variant.sku, qty: 1 }], -1);
+      // The buyer's guess is held for this gift; swap it for the size actually chosen.
+      if (variant.sku !== o.lines[0].sku) {
+        await moveStock(tx, [{ sku: variant.sku, delta: -1 }], { reason: "gift_swap", source: "web", ref: o.number }, { online: true });
+        await moveStock(tx, [{ sku: o.lines[0].sku, delta: 1 }], { reason: "gift_swap", source: "web", ref: o.number });
+      }
+      // Welcome credit for the receiver's own first order (once per gift).
+      if (!g.welcomeCode) {
+        const welcome = await issueGiftCard(
+          {
+            value: site.gifting.welcomeCredit,
+            status: "active",
+            purchaserPhone: o.phone,
+            recipientName: g.receiverName,
+            recipientPhone: g.receiverPhone,
+            recipientEmail: g.receiverEmail ?? null,
+            message: "Welcome to Easypick",
+            senderName: null,
+            sendOn: null,
+            orderId: null,
+          },
+          site.gifting.welcomeCreditDays,
+          tx,
+        );
+        g.welcomeCode = welcome.code;
+      }
+      o.lines[0] = { ...o.lines[0], sku: variant.sku, size: variant.size, colour };
+      o.method = method;
+      g.receiver = { method, address, slot };
+      g.status = "chosen";
+      g.chosenAt = new Date().toISOString();
+      o.events = [...(o.events ?? []), event("receiver", `Chose ${colour}, ${variant.size}, ${method}`)];
+      return { save: true, result: { status: "done", welcomeCode: g.welcomeCode } };
+    });
+    if (result?.status === "done") after(() => notify(found.phone, `${found.gift!.receiverName.split(" ")[0]} picked their size. We're packing your gift now.`));
+    return result ?? { status: "error", message: "This gift link isn't valid." };
+  } catch (e) {
+    if (e instanceof StockShortError) return { status: "error", message: "That size just sold out. Pick another, or turn the gift into a gift card." };
+    throw e;
   }
-  await updateOrder(order.id, (o) => {
-    o.lines[0] = { ...o.lines[0], sku: variant.sku, size: variant.size, colour };
-    o.method = method;
-    o.gift!.receiver = { method, address, slot };
-    o.gift!.status = "chosen";
-    o.gift!.chosenAt = new Date().toISOString();
-    if (welcome) o.gift!.welcomeCode = welcome.code;
-  });
-  await notify(order.phone, `${gift.receiverName.split(" ")[0]} picked their size. We're packing your gift now.`);
-  return { status: "done", welcomeCode: welcome?.code ?? gift.welcomeCode };
 }
 
 // ---------- Thank-you note back to the buyer ----------
@@ -282,82 +285,112 @@ export async function chooseGift(_prev: ChooseState, form: FormData): Promise<Ch
 export type ThanksState = { status: "idle" } | { status: "error"; message: string } | { status: "sent" };
 
 export async function sendThanks(_prev: ThanksState, form: FormData): Promise<ThanksState> {
-  const order = await findOrderByGiftToken(str(form, "token", 64));
-  const gift = order?.gift;
-  if (!order || !gift) return { status: "error", message: "This gift link isn't valid." };
-  if (gift.thanks) return { status: "sent" };
+  const found = await findOrderByGiftToken(str(form, "token", 64));
+  if (!found?.gift || !livePaid(found)) return { status: "error", message: "This gift link isn't valid." };
   const text = str(form, "thanks", 200);
   if (!text) return { status: "error", message: "Write a few words first." };
-  await updateOrder(order.id, (o) => {
-    o.gift!.thanks = { text, at: new Date().toISOString() };
+  const sent = await lockOrder(found.id, async (o) => {
+    if (!o.gift || o.gift.thanks) return { save: false, result: false };
+    o.gift.thanks = { text, at: new Date().toISOString() };
+    return { save: true, result: true };
   });
-  await notify(order.phone, `${gift.receiverName.split(" ")[0]} says thank you: "${text}"`);
+  if (sent) after(() => notify(found.phone, `${found.gift!.receiverName.split(" ")[0]} says thank you: "${text}"`));
   return { status: "sent" };
 }
 
 /** Receiver's size is sold out (or they'd rather choose later): swap the gift for a card of the same value. */
 export async function giftToCard(token: string): Promise<{ ok: boolean; code?: string }> {
-  const order = await findOrderByGiftToken(token);
-  const gift = order?.gift;
-  if (!order || !gift || gift.mode !== "pick" || gift.status === "chosen" || gift.status === "converted") return { ok: false };
-  const line = order.lines[0];
-  const card = await issueGiftCard({
-    value: line.unitPrice * line.qty,
-    status: "active",
-    purchaserPhone: order.phone,
-    recipientName: gift.receiverName,
-    recipientPhone: gift.receiverPhone,
-    recipientEmail: gift.receiverEmail ?? null,
-    message: gift.message,
-    senderName: gift.senderName,
-    sendOn: null,
-    orderId: null,
+  const found = await findOrderByGiftToken(token);
+  if (!found?.gift || found.gift.mode !== "pick" || !livePaid(found)) return { ok: false };
+  const card = await lockOrder(found.id, async (o, tx) => {
+    const g = o.gift;
+    if (!g || g.mode !== "pick" || !livePaid(o)) return { save: false, result: null };
+    if (g.status === "converted") return { save: false, result: { code: g.convertedCardCode!, value: o.lines[0].unitPrice * o.lines[0].qty, fresh: false } };
+    if (g.status === "chosen" || g.status === "delivered") return { save: false, result: null };
+    const line = o.lines[0];
+    // The held piece goes back on the rack.
+    if (o.stockHeld) {
+      await moveStock(tx, [{ sku: line.sku, delta: line.qty }], { reason: "order_release", source: "web", ref: o.number, actor: "receiver" });
+      o.stockHeld = false;
+    }
+    const issued = await issueGiftCard(
+      {
+        value: line.unitPrice * line.qty,
+        status: "active",
+        purchaserPhone: o.phone,
+        recipientName: g.receiverName,
+        recipientPhone: g.receiverPhone,
+        recipientEmail: g.receiverEmail ?? null,
+        message: g.message,
+        senderName: g.senderName,
+        sendOn: null,
+        orderId: null,
+      },
+      365,
+      tx,
+    );
+    g.status = "converted";
+    g.convertedCardCode = issued.code;
+    o.events = [...(o.events ?? []), event("receiver", `Turned into gift card ${issued.code}`)];
+    return { save: true, result: { code: issued.code, value: issued.value, fresh: true } };
   });
-  await updateOrder(order.id, (o) => {
-    o.gift!.status = "converted";
-    o.gift!.convertedCardCode = card.code;
-  });
-  await notify(gift.receiverPhone, `Your Easypick gift is now a gift card worth Rs ${card.value.toLocaleString("en-IN")}. Code: ${card.code}.`);
-  await notifyEmail(
-    gift.receiverEmail,
-    "Your Easypick gift is now a gift card",
-    giftEmailHtml({
-      heading: `Rs ${card.value.toLocaleString("en-IN")} to spend on anything you like.`,
-      intro: "Your gift is now an Easypick gift card of the same value. Use it online or in store.",
-      extra: `<div style="margin:0 0 24px;background:#0a0a0a;color:#ffffff;padding:18px 22px;font-family:ui-monospace,Menlo,monospace;font-size:24px;font-weight:700;letter-spacing:0.1em">${card.code}</div>`,
-      button: { label: "Start shopping", url: `${site.url}/shop` },
-      small: "Valid for 12 months. Any balance you don't use stays on the card.",
-    }),
-    `Your Easypick gift is now a gift card worth Rs ${card.value.toLocaleString("en-IN")}. Code: ${card.code}`,
-  );
+  if (!card) return { ok: false };
+  if (card.fresh) {
+    const g = found.gift;
+    const amount = formatPrice(card.value);
+    after(async () => {
+      await notify(g.receiverPhone, `Your Easypick gift is now a gift card worth ${amount}. Code: ${card.code}.`);
+      await notifyEmail(
+        g.receiverEmail,
+        "Your Easypick gift is now a gift card",
+        giftEmailHtml({
+          heading: `${amount} to spend on anything you like.`,
+          intro: "Your gift is now an Easypick gift card of the same value. Use it online or in store.",
+          extra: `<div style="margin:0 0 24px;background:#0a0a0a;color:#ffffff;padding:18px 22px;font-family:ui-monospace,Menlo,monospace;font-size:24px;font-weight:700;letter-spacing:0.1em">${card.code}</div>`,
+          button: { label: "Start shopping", url: `${site.url}/shop` },
+          small: "Valid for 12 months. Any balance you don't use stays on the card.",
+        }),
+        `Your Easypick gift is now a gift card worth ${amount}. Code: ${card.code}`,
+      );
+    });
+  }
   return { ok: true, code: card.code };
 }
 
 /** Receiver would rather try sizes on in the store. The held piece waits at the counter under their gift code. */
 export async function tryGiftInStore(token: string): Promise<{ ok: boolean; code?: string }> {
-  const order = await findOrderByGiftToken(token);
-  const gift = order?.gift;
-  if (!order || !gift || gift.mode !== "pick") return { ok: false };
-  if (gift.status === "chosen" || gift.status === "converted") return { ok: gift.receiver?.tryInStore === true, code: order.number };
-  await updateOrder(order.id, (o) => {
+  const found = await findOrderByGiftToken(token);
+  if (!found?.gift || found.gift.mode !== "pick" || !livePaid(found)) return { ok: false };
+  const res = await lockOrder(found.id, async (o) => {
+    const g = o.gift;
+    if (!g || g.mode !== "pick") return { save: false, result: { ok: false, fresh: false } };
+    if (g.status === "chosen" || g.status === "converted" || g.status === "delivered") return { save: false, result: { ok: g.receiver?.tryInStore === true, fresh: false } };
     o.method = "pickup";
-    o.gift!.receiver = { method: "pickup", tryInStore: true };
-    o.gift!.status = "chosen";
-    o.gift!.chosenAt = new Date().toISOString();
+    g.receiver = { method: "pickup", tryInStore: true };
+    g.status = "chosen";
+    g.chosenAt = new Date().toISOString();
+    o.events = [...(o.events ?? []), event("receiver", "Will try it on in the store")];
+    return { save: true, result: { ok: true, fresh: true } };
   });
-  await notify(gift.receiverPhone, `Your Easypick gift is waiting for you. Show code ${order.number} at the counter to try it on.`);
-  await notifyEmail(
-    gift.receiverEmail,
-    "Your Easypick gift is waiting in the store",
-    giftEmailHtml({
-      heading: "It's waiting for you in the store.",
-      intro: `Show this code at the counter. We'll bring it in your sizes to try on, and you take the one that fits. We hold it for 14 days.`,
-      extra: `<div style="margin:0 0 24px;background:#0a0a0a;color:#ffffff;padding:18px 22px;font-family:ui-monospace,Menlo,monospace;font-size:24px;font-weight:700;letter-spacing:0.1em">${order.number}</div>`,
-      button: { label: "Directions", url: `${site.url}/visit` },
-      small: `Open every day, ${site.store.hours.open} to ${site.store.hours.close}.`,
-    }),
-    `Your Easypick gift is waiting in the store. Show code ${order.number} at the counter. Directions: ${site.url}/visit`,
-  );
-  await notify(order.phone, `${gift.receiverName.split(" ")[0]} will try your gift on in the store.`);
-  return { ok: true, code: order.number };
+  if (!res?.ok) return { ok: false };
+  if (res.fresh) {
+    const g = found.gift;
+    after(async () => {
+      await notify(g.receiverPhone, `Your Easypick gift is waiting for you. Show code ${found.number} at the counter to try it on.`);
+      await notifyEmail(
+        g.receiverEmail,
+        "Your Easypick gift is waiting in the store",
+        giftEmailHtml({
+          heading: "It's waiting for you in the store.",
+          intro: `Show this code at the counter. We'll bring it in your sizes to try on, and you take the one that fits. We hold it for 14 days.`,
+          extra: `<div style="margin:0 0 24px;background:#0a0a0a;color:#ffffff;padding:18px 22px;font-family:ui-monospace,Menlo,monospace;font-size:24px;font-weight:700;letter-spacing:0.1em">${found.number}</div>`,
+          button: { label: "Directions", url: `${site.url}/visit` },
+          small: `Open every day, ${site.store.hours.open} to ${site.store.hours.close}.`,
+        }),
+        `Your Easypick gift is waiting in the store. Show code ${found.number} at the counter. Directions: ${site.url}/visit`,
+      );
+      await notify(found.phone, `${g.receiverName.split(" ")[0]} will try your gift on in the store.`);
+    });
+  }
+  return { ok: true, code: found.number };
 }

@@ -7,8 +7,11 @@ import { ClearBag } from "./clear-bag";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { ShareGiftLink } from "@/components/share-gift-link";
 import { Barcode } from "@/components/hang-tag";
-import { formatPrice } from "@/lib/format";
+import { formatHour, formatPrice } from "@/lib/format";
 import { gatewayReady, paymentsLive } from "@/lib/gateways";
+import { payMessage } from "@/lib/pay-messages";
+import { reconcileOrder } from "@/lib/reconcile";
+import { TryAgain } from "./try-again";
 import { formatBS } from "@/lib/nepali-date";
 import { findOrder, type Order } from "@/lib/orders";
 import { advanceOrderInTestMode, payInTestMode } from "@/app/actions";
@@ -16,6 +19,8 @@ import { site } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Your order", robots: { index: false } };
 export const dynamic = "force-dynamic";
+
+const clock = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, hour: "numeric", minute: "2-digit" });
 
 const providerLabel = { esewa: "eSewa", khalti: "Khalti", fonepay: "Fonepay" } as const;
 
@@ -146,17 +151,17 @@ function OrderTracker({ order }: { order: Order }) {
   );
 }
 
-const payHelp: Record<string, string> = {
-  unavailable: "That wallet isn't connected yet. Pick another one below.",
-};
-
 export default async function OrderPage({ params, searchParams }: PageProps<"/order/[id]">) {
   const { id } = await params;
   const sp = await searchParams;
-  const payProblem =
-    sp.pay === "failed" ? (typeof sp.why === "string" ? sp.why : "The payment didn't go through.") : typeof sp.pay === "string" ? payHelp[sp.pay] : undefined;
-  const order = await findOrder(id);
+  // Only fixed messages (see lib/pay-messages.ts), never text from the link.
+  const payProblem = sp.pay === "failed" ? payMessage(sp.why) : undefined;
+  let order = await findOrder(id);
   if (!order) notFound();
+  // Paid but never came back (closed the tab)? Ask the wallet before showing "unpaid".
+  if ((order.status === "awaiting_payment" || order.status === "expired") && (order.payments?.length || order.payment) && (await reconcileOrder(order))) {
+    order = (await findOrder(id))!;
+  }
 
   const awaiting = order.status === "awaiting_payment";
   const paid = !awaiting && order.status !== "expired";
@@ -191,7 +196,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
             </p>
           )}
           <p className="text-[15px] text-steel-dark">
-            We hold your {order.lines.length === 1 ? "piece" : "pieces"} for 15 minutes while you pay. The order is confirmed as soon as{" "}
+            {order.kind === "gift_card" ? "Pay within 15 minutes" : `Your ${order.lines.length === 1 ? "piece is" : "pieces are"} held`} until{" "}
+            <span className="font-semibold text-ink">{clock.format(new Date(order.expiresAt))}</span>. The order is confirmed as soon as{" "}
             {providerLabel[order.provider]} confirms the payment with us.
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -235,11 +241,42 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
         </div>
       )}
       {order.status === "expired" && (
-        <p className="mt-6 text-steel-dark">Payment wasn&apos;t completed within 15 minutes, so the items went back on the rack.</p>
+        <div className="mt-6">
+          <p className="text-steel-dark">Payment wasn&apos;t completed within 15 minutes, so the {order.kind === "gift_card" ? "order was closed" : "pieces went back on the rack"}.</p>
+          {order.kind !== "gift_card" && <TryAgain lines={order.lines} gift={Boolean(order.gift)} />}
+        </div>
       )}
+      {order.status === "cancelled" && <p className="mt-6 text-steel-dark">This order was cancelled{order.refunds?.length ? " and refunded" : ""}.</p>}
 
       {order.gift && paid && <GiftProgress order={order} />}
-      {!order.gift && order.kind !== "gift_card" && paid && <OrderTracker order={order} />}
+      {!order.gift && order.kind !== "gift_card" && paid && order.status !== "cancelled" && <OrderTracker order={order} />}
+      {!order.gift && order.kind !== "gift_card" && paid && order.method === "pickup" && order.status !== "completed" && order.status !== "cancelled" && (
+        <section aria-labelledby="pickup-h" className="mt-6 border border-mist p-5">
+          <h2 id="pickup-h" className="text-lg font-semibold">
+            Picking it up
+          </h2>
+          <dl className="mt-3 grid gap-3 text-[15px] sm:grid-cols-2">
+            <div>
+              <dt className="text-steel-dark">Where</dt>
+              <dd>{site.store.address ?? `Easypick, ${site.store.area}. We'll text you the exact address before we open.`}</dd>
+              {site.store.mapUrl && (
+                <dd>
+                  <a href={site.store.mapUrl} className="underline underline-offset-2">
+                    Open in maps
+                  </a>
+                </dd>
+              )}
+            </div>
+            <div>
+              <dt className="text-steel-dark">When</dt>
+              <dd>
+                Every day, {formatHour(site.store.hours.open)} to {formatHour(site.store.hours.close)}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-[14px] text-steel-dark">Show the barcode at the bottom of this page at the counter (a screenshot works). We hold it for 7 days.</p>
+        </section>
+      )}
 
       {order.kind === "gift_card" && order.issuedCardCode && (
         <section aria-label="Gift card" className="mt-10 bg-photo p-5 md:p-6">

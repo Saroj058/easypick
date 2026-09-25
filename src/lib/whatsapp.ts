@@ -16,7 +16,7 @@ export function whatsappConfigured() {
 
 /** Sends a login code to a 10-digit Nepali mobile via WhatsApp. Throws if Meta refuses it. */
 export async function sendWhatsAppCode(phone: string, code: string): Promise<void> {
-  const res = await fetch(`https://graph.facebook.com/${VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+  const res = await fetch(`https://graph.facebook.com/${VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`, { signal: AbortSignal.timeout(10_000),
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify({

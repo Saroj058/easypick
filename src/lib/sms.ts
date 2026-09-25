@@ -17,7 +17,7 @@ export function smsProvider(): SmsProvider | null {
 }
 
 async function sparrow(to: string, text: string) {
-  const res = await fetch("https://api.sparrowsms.com/v2/sms/", {
+  const res = await fetch("https://api.sparrowsms.com/v2/sms/", { signal: AbortSignal.timeout(10_000),
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ token: process.env.SMS_TOKEN!, from: process.env.SMS_FROM ?? "", to, text }),
@@ -28,7 +28,7 @@ async function sparrow(to: string, text: string) {
 }
 
 async function aakash(to: string, text: string) {
-  const res = await fetch("https://sms.aakashsms.com/sms/v3/send", {
+  const res = await fetch("https://sms.aakashsms.com/sms/v3/send", { signal: AbortSignal.timeout(10_000),
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ auth_token: process.env.SMS_TOKEN!, to, text }),

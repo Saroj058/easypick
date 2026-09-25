@@ -66,7 +66,7 @@ export function authorizeUrl(p: Provider, state: string, challenge: string) {
 /** Swap the callback code for the user's profile. Throws on any failure. */
 export async function fetchProfile(p: Provider, code: string, verifier: string): Promise<ProviderProfile> {
   if (p === "google") {
-    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", { signal: AbortSignal.timeout(10_000),
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -80,7 +80,7 @@ export async function fetchProfile(p: Provider, code: string, verifier: string):
     });
     if (!tokenRes.ok) throw new Error(`google token ${tokenRes.status}`);
     const { access_token } = (await tokenRes.json()) as { access_token: string };
-    const infoRes = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { headers: { Authorization: `Bearer ${access_token}` } });
+    const infoRes = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { signal: AbortSignal.timeout(10_000), headers: { Authorization: `Bearer ${access_token}` } });
     if (!infoRes.ok) throw new Error(`google userinfo ${infoRes.status}`);
     const info = (await infoRes.json()) as { sub: string; email?: string; email_verified?: boolean; name?: string };
     return { provider: "google", id: info.sub, email: info.email ?? null, emailVerified: Boolean(info.email_verified), name: info.name ?? null };
@@ -92,10 +92,10 @@ export async function fetchProfile(p: Provider, code: string, verifier: string):
     redirect_uri: redirectUri(p),
     code,
   });
-  const tokenRes = await fetch(`https://graph.facebook.com/${FB_VERSION}/oauth/access_token?${tq}`);
+  const tokenRes = await fetch(`https://graph.facebook.com/${FB_VERSION}/oauth/access_token?${tq}`, { signal: AbortSignal.timeout(10_000) });
   if (!tokenRes.ok) throw new Error(`facebook token ${tokenRes.status}`);
   const { access_token } = (await tokenRes.json()) as { access_token: string };
-  const meRes = await fetch(`https://graph.facebook.com/${FB_VERSION}/me?${new URLSearchParams({ fields: "id,name,email", access_token })}`);
+  const meRes = await fetch(`https://graph.facebook.com/${FB_VERSION}/me?${new URLSearchParams({ fields: "id,name,email", access_token })}`, { signal: AbortSignal.timeout(10_000) });
   if (!meRes.ok) throw new Error(`facebook me ${meRes.status}`);
   const me = (await meRes.json()) as { id: string; name?: string; email?: string };
   // Facebook only returns an email the person has confirmed with Facebook.

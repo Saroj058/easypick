@@ -28,14 +28,17 @@ export async function GET(req: Request, ctx: RouteContext<"/pay/[id]">) {
       o.provider = via;
     }))!;
   }
-  if (!gatewayReady(order.provider)) return back(`?pay=unavailable`);
+  if (!gatewayReady(order.provider)) return back(`?pay=failed&why=unavailable`);
 
   const user = await getCurrentUser();
   const start = await startPayment(order, { name: user?.name ?? null, email: user?.email ?? null });
-  if (start.kind === "error") return back(`?pay=failed&why=${encodeURIComponent(start.message)}`);
+  if (start.kind === "error") return back(`?pay=failed&why=${start.code}`);
 
+  // Every attempt is kept: paying in an older tab still matches the order.
   await updateOrder(id, (o) => {
-    o.payment = { provider: o.provider, ref: start.ref, startedAt: new Date().toISOString() };
+    const attempt = { provider: o.provider, ref: start.ref, startedAt: new Date().toISOString() };
+    o.payments = [...(o.payments ?? (o.payment ? [o.payment] : [])), attempt].slice(-10);
+    o.payment = attempt;
   });
 
   if (start.kind === "redirect") return NextResponse.redirect(start.url);

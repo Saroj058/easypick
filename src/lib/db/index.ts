@@ -22,7 +22,11 @@ import * as schema from "./schema";
 // once and is kept only as a backup.)
 
 export type DB = PgDatabase<PgQueryResultHKT, typeof schema>;
+/** A transaction; everything that takes a DB also takes one of these. */
+export type Tx = Parameters<Parameters<DB["transaction"]>[0]>[0];
+export type Exec = DB | Tx;
 export { schema };
+export type { StaffRole } from "./schema";
 
 export interface User {
   id: string;
@@ -77,8 +81,11 @@ async function connect(): Promise<DB> {
   const { default: postgres } = await import("postgres");
   const { drizzle } = await import("drizzle-orm/postgres-js");
   // prepare: false keeps it working through Supabase's connection pooler (transaction mode).
-  const client = postgres(url, { max: 5, prepare: false, onnotice: () => {} });
+  // Serverless functions each hold their own pool, so keep it small in production.
+  const max = Number(process.env.DB_POOL_MAX ?? (process.env.NODE_ENV === "production" ? 2 : 5));
+  const client = postgres(url, { max, prepare: false, idle_timeout: 20, connect_timeout: 10, onnotice: () => {} });
   const db = drizzle(client, { schema }) as unknown as DB;
+  // In production, run `npm run db:migrate` as a release step and set DB_AUTO_MIGRATE=false.
   if (process.env.DB_AUTO_MIGRATE !== "false") {
     const { migrate } = await import("drizzle-orm/postgres-js/migrator");
     await migrate(db as never, { migrationsFolder });
@@ -118,7 +125,9 @@ async function insertCatalogue(db: DB, list: Product[], dropList: Drop[]) {
 async function seed(db: DB) {
   // An empty database starts with the sample catalogue and drops (edit them in the admin screen).
   const [{ n }] = await db.select({ n: count() }).from(schema.products);
-  if (n === 0) await insertCatalogue(db, structuredClone(seedProducts), structuredClone(seedDrops));
+  // The sample catalogue is for development only: a live shop must never sell it by accident.
+  const sampleOk = process.env.NODE_ENV !== "production" || process.env.SEED_SAMPLE === "1";
+  if (n === 0 && sampleOk) await insertCatalogue(db, structuredClone(seedProducts), structuredClone(seedDrops));
 
   // This year's Dashain and Tihar (Tika days per the official 2083 calendar), added once.
   // Staff can change or remove them in the admin screen.
@@ -129,7 +138,7 @@ async function seed(db: DB) {
       await db.insert(schema.festivals).values([
         { id: "dashain-2083", name: "Dashain (Vijaya Dashami)", date: "2026-10-21", orderBy: "2026-10-15" },
         { id: "tihar-2083", name: "Tihar (Bhai Tika)", date: "2026-11-11", orderBy: "2026-11-06" },
-      ]);
+      ]).onConflictDoNothing();
     await db.insert(schema.meta).values({ key: "festivals_seeded", value: "1" }).onConflictDoNothing();
   }
 }

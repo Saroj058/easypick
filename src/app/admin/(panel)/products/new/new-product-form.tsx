@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { categoryLabels } from "@/lib/site";
 import type { Colour, Size } from "@/lib/types";
 import { addProduct, type SaveState } from "@/app/admin/actions";
+import { shrinkPhotoInput } from "../../resize-photo";
 
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 const label = "block text-sm font-semibold";
@@ -127,8 +128,9 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
             name="photo"
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
+            onChange={async (e) => {
+              // Big phone photos are shrunk here so the upload stays under the hosting limit.
+                const f = await shrinkPhotoInput(e.target);
               setPreview(f ? URL.createObjectURL(f) : null);
             }}
             className="text-[14px] file:mr-3 file:h-11 file:rounded-[2px] file:border file:border-ink file:bg-paper file:px-4 file:font-semibold"

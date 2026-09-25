@@ -26,14 +26,14 @@ export type PhotoResult = { ok: true; src: string } | { ok: false; message: stri
 export async function saveProductPhoto(slug: string, file: File): Promise<PhotoResult> {
   const ext = TYPES[file.type];
   if (!ext) return { ok: false, message: "The photo must be a JPG, PNG or WebP." };
-  if (file.size > MAX_PHOTO_BYTES) return { ok: false, message: "The photo must be under 8 MB." };
+  if (file.size > MAX_PHOTO_BYTES) return { ok: false, message: "The photo is too big. Pick one under 4 MB." };
   const name = `front-${Date.now().toString(36)}.${ext}`;
   const bytes = Buffer.from(await file.arrayBuffer());
 
   const s = storage();
   if (s) {
     const path = `${slug}/${name}`;
-    const res = await fetch(`${s.url}/storage/v1/object/${BUCKET}/${path}`, {
+    const res = await fetch(`${s.url}/storage/v1/object/${BUCKET}/${path}`, { signal: AbortSignal.timeout(20_000),
       method: "POST",
       headers: {
         apikey: s.key,

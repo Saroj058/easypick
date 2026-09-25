@@ -7,6 +7,7 @@ import { cache } from "react";
 import { and, eq, gt, lt, ne } from "drizzle-orm";
 
 import { getDb, schema, type User } from "./db";
+import { allow, clientIp } from "./rate-limit";
 import { sendSms, smsProvider } from "./sms";
 import { sendWhatsAppCode, whatsappConfigured } from "./whatsapp";
 
@@ -56,7 +57,7 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
   const channels = codeChannels();
   const via = channel && channels.includes(channel) ? channel : channels[0];
   if (!via && process.env.NODE_ENV === "production") {
-    return { ok: false, message: "Phone sign-in isn't available right now. Use Google or Facebook." };
+    return { ok: false, message: "Phone sign-in isn't available right now. Use Google instead." };
   }
 
   const db = await getDb();
@@ -68,6 +69,12 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
   }
   if (recent.length >= MAX_SENDS_PER_HOUR) {
     return { ok: false, message: "Too many codes for this number. Try again in an hour." };
+  }
+  // Stop anyone running up the SMS bill: per visitor, and a daily ceiling for the whole site.
+  const ip = await clientIp();
+  if (!(await allow(`code-ip:${ip}`, 10, 3600_000))) return { ok: false, message: "Too many codes from this device. Try again in an hour." };
+  if (!(await allow("code-daily", Number(process.env.CODE_DAILY_CAP ?? 1000), 86_400_000))) {
+    return { ok: false, message: "Phone sign-in is busy right now. Try Google, or try again later." };
   }
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
