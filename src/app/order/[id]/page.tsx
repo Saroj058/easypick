@@ -8,6 +8,7 @@ import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { ShareGiftLink } from "@/components/share-gift-link";
 import { Barcode } from "@/components/hang-tag";
 import { formatPrice } from "@/lib/format";
+import { gatewayReady, paymentsLive } from "@/lib/gateways";
 import { formatBS } from "@/lib/nepali-date";
 import { findOrder, type Order } from "@/lib/orders";
 import { advanceOrderInTestMode, payInTestMode } from "@/app/actions";
@@ -145,8 +146,15 @@ function OrderTracker({ order }: { order: Order }) {
   );
 }
 
-export default async function OrderPage({ params }: PageProps<"/order/[id]">) {
+const payHelp: Record<string, string> = {
+  unavailable: "That wallet isn't connected yet. Pick another one below.",
+};
+
+export default async function OrderPage({ params, searchParams }: PageProps<"/order/[id]">) {
   const { id } = await params;
+  const sp = await searchParams;
+  const payProblem =
+    sp.pay === "failed" ? (typeof sp.why === "string" ? sp.why : "The payment didn't go through.") : typeof sp.pay === "string" ? payHelp[sp.pay] : undefined;
   const order = await findOrder(id);
   if (!order) notFound();
 
@@ -177,18 +185,50 @@ export default async function OrderPage({ params }: PageProps<"/order/[id]">) {
               it appears here for you to share too.
             </p>
           )}
-          <p className="font-semibold">Test mode: {providerLabel[order.provider]} isn&apos;t connected yet.</p>
-          <p className="mt-1 text-[15px] text-steel-dark">
-            Once merchant accounts are live, this step sends you to {providerLabel[order.provider]} to pay. Your order is confirmed when the
-            payment is verified server-to-server, and we hold your sizes for 15 minutes until then.
+          {payProblem && (
+            <p role="alert" className="mb-3 text-[15px] font-semibold text-[#d70015]">
+              {payProblem}
+            </p>
+          )}
+          <p className="text-[15px] text-steel-dark">
+            We hold your {order.lines.length === 1 ? "piece" : "pieces"} for 15 minutes while you pay. The order is confirmed as soon as{" "}
+            {providerLabel[order.provider]} confirms the payment with us.
           </p>
-          {process.env.NODE_ENV !== "production" && (
-            <form action={payInTestMode} className="mt-4">
-              <input type="hidden" name="orderId" value={order.id} />
-              <button type="submit" className="btn btn-ink">
-                Pay now (test)
-              </button>
-            </form>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            {gatewayReady(order.provider) && (
+              <a href={`/pay/${order.id}`} className="btn btn-volt">
+                Pay {formatPrice(order.total)} with {providerLabel[order.provider]}
+              </a>
+            )}
+            <p className="text-[14px] text-steel-dark">
+              {gatewayReady(order.provider) ? "Or pay with " : "Pay with "}
+              {(["esewa", "khalti", "fonepay"] as const)
+                .filter((p) => p !== order.provider && gatewayReady(p))
+                .map((p, i, all) => (
+                  <span key={p}>
+                    <a href={`/pay/${order.id}?via=${p}`} className="font-semibold text-ink underline underline-offset-2">
+                      {providerLabel[p]}
+                    </a>
+                    {i < all.length - 1 ? " or " : ""}
+                  </span>
+                ))}
+            </p>
+          </div>
+          {!paymentsLive() && (
+            <div className="mt-4 text-[13px] text-steel-dark">
+              Test mode: sandbox wallets, no real money.
+              {process.env.NODE_ENV !== "production" && (
+                <>
+                  {" "}
+                  <form action={payInTestMode} className="inline">
+                    <input type="hidden" name="orderId" value={order.id} />
+                    <button type="submit" className="underline underline-offset-2">
+                      Skip payment (development)
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -305,6 +345,7 @@ export default async function OrderPage({ params }: PageProps<"/order/[id]">) {
           </p>
           <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-steel-dark">
             VAT incl. · {order.status === "awaiting_payment" ? `Awaiting ${providerLabel[order.provider]}` : order.status === "expired" ? "Expired" : `Paid by ${providerLabel[order.provider]}`}
+            {order.payment?.gatewayRef && <span className="block">Ref {order.payment.gatewayRef}</span>}
           </p>
           <p className="display mt-6 text-center text-[26px] leading-none">Pick it. Pay it. Wear it.</p>
           <Barcode value={order.number} className="mx-auto mt-4 h-8 w-44 text-ink" />

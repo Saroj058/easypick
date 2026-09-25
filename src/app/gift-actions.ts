@@ -128,7 +128,7 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
   await saveOrder(order, (await getCurrentUser())?.id);
 
   // The receiver is emailed the link once payment is confirmed (lib/payments.ts).
-  redirect(`/order/${order.id}`);
+  redirect(`/pay/${order.id}`);
 }
 
 // ---------- Buy a gift card ----------
@@ -189,7 +189,7 @@ export async function buyGiftCard(_prev: GiftState, form: FormData): Promise<Gif
   await saveOrder(order, (await getCurrentUser())?.id);
 
   // The card is switched on and sent to them once payment is confirmed (lib/payments.ts).
-  redirect(`/order/${order.id}`);
+  redirect(`/pay/${order.id}`);
 }
 
 // ---------- Using a card at checkout ----------

@@ -88,6 +88,8 @@ export interface Order {
   gift?: GiftInfo;
   /** "gift_card" orders buy a digital gift card instead of clothes. */
   kind?: "goods" | "gift_card";
+  /** The latest payment attempt, and what the provider confirmed. */
+  payment?: { provider: PaymentProvider; ref: string; startedAt: string; gatewayRef?: string; verifiedAt?: string; amount?: number };
   /** When each step of the order happened, for the tracker. */
   paidAt?: string;
   packedAt?: string;
@@ -133,6 +135,16 @@ export async function findOrder(id: string): Promise<Order | null> {
     const [row] = await tx.select().from(schema.orders).where(eq(schema.orders.id, id)).for("update");
     return row ? expireIfLate(tx, row.data) : null;
   });
+}
+
+/** For payment replies: eSewa and Fonepay references start with the order number (EP-123456-…). */
+export async function findOrderByPaymentRef(ref: string): Promise<Order | null> {
+  const number = ref.slice(0, ref.lastIndexOf("-"));
+  if (!/^EP-\d{6}$/.test(number)) return null;
+  const db = await getDb();
+  const [row] = await db.select({ id: schema.orders.id }).from(schema.orders).where(eq(schema.orders.number, number));
+  const order = row ? await findOrder(row.id) : null;
+  return order?.payment?.ref === ref ? order : null;
 }
 
 /** For /track: the order number and the phone it was placed with must both match. */

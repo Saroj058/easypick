@@ -121,20 +121,20 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
     deliveryFee,
     giftCard,
     total: subtotal + deliveryFee - (giftCard?.applied ?? 0),
-    status: giftCard && giftCard.applied >= subtotal + deliveryFee ? "paid" : "awaiting_payment",
+    status: "awaiting_payment",
     source: buyNow ? "buy_now" : "bag",
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + 15 * 60_000).toISOString(),
   };
 
-  // TODO: with the Store API, create the order there (it holds stock for 15 min),
-  // then create the payment with the provider and redirect to its checkout URL.
-  // The order becomes "paid" only after the API verifies the payment server-to-server,
-  // never from the provider's browser redirect.
+  // The order becomes "paid" only when the wallet confirms the payment server-to-server
+  // (see /api/pay/[provider]/return), never from the browser coming back.
   await saveOrder(order, user?.id);
+  // Fully covered by a gift card: nothing to pay, so it's confirmed now (stock, emails, all of it).
+  if (order.total <= 0) await confirmPayment(order.id);
   // Remember how they like to get and pay for things, so next checkout is one tap.
   if (user) await updateUser(user.id, { checkout: { method, provider, address: address ?? user.checkout?.address } });
-  redirect(`/order/${order.id}`);
+  redirect(`/pay/${order.id}`); // straight to eSewa / Khalti / Fonepay
 }
 
 // ---------- Test-mode payment ----------
