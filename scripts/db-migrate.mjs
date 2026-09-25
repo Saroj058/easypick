@@ -6,7 +6,7 @@ import postgres from "postgres";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
-  console.error("Set DATABASE_URL first. (Locally, PGlite migrates itself when the site starts.)");
+  console.error("Set DATABASE_URL first (in .env.local, or run through `npm run db:migrate`).");
   process.exit(1);
 }
 const client = postgres(url, { max: 1, prepare: false });

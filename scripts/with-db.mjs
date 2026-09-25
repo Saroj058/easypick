@@ -35,7 +35,8 @@ function run(env) {
 
 const configured = local ? undefined : process.env.DATABASE_URL || fromEnvFile("DATABASE_URL");
 if (configured) {
-  run({}).on("exit", (code) => process.exit(code ?? 0));
+  // Passed on explicitly: Next reads .env.local itself, but plain scripts (db:migrate) don't.
+  run({ DATABASE_URL: configured }).on("exit", (code) => process.exit(code ?? 0));
 } else {
   const { default: EmbeddedPostgres } = await import("embedded-postgres");
   // LOCAL_PG_DIR / LOCAL_PG_PORT let the browser tests run their own database beside the dev one.
