@@ -4,30 +4,53 @@ import Link from "next/link";
 import { useState } from "react";
 
 import type { Product } from "@/lib/types";
+import { useBag } from "./bag-provider";
 import { BuyPanel } from "./buy-panel";
 import { BagIcon } from "./icons";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
 
-/** "Add to bag" button on a product card: pick colour and size, then Buy now or Add to bag, without leaving the page. */
-export function QuickBuy({ product, className = "" }: { product: Product; className?: string }) {
+const Heart = ({ filled, className }: { filled: boolean; className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round">
+    <path d="M12 20.5s-7.5-4.6-9.2-9.1C1.6 8.2 3.6 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.6 0 5.6 3.7 4.4 6.9-1.7 4.5-9.2 9.1-9.2 9.1Z" />
+  </svg>
+);
+
+/**
+ * Buttons on a product card that open a sheet to pick colour and size without leaving the page.
+ *   "buy": Quick buy (top right of the photo), Buy now leads.
+ *   "bag": the heart (bottom left), Add to bag leads; it turns red once the piece is in the bag.
+ */
+export function QuickBuy({ product, mode = "buy", className = "" }: { product: Product; mode?: "buy" | "bag"; className?: string }) {
   const [open, setOpen] = useState(false);
+  const { lines } = useBag();
   if (product.status !== "live") return null;
+  const inBag = lines.some((l) => l.slug === product.slug);
+  const glass =
+    "bg-paper/80 text-ink ring-1 ring-ink/10 backdrop-blur-md transition-colors duration-200 [button:focus-visible_&]:outline [button:focus-visible_&]:outline-2 [button:focus-visible_&]:outline-offset-2 [button:focus-visible_&]:outline-ink";
+  // Hidden until hover on hover screens (unless the heart is already red); always shown on phones.
+  const reveal = "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100";
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        {/* 44px tap area around a quieter 36px glass chip. On hover screens it only shows on hover
-            (or keyboard focus) and opens out to say "Add to bag". */}
-        <button
-          type="button"
-          aria-label={`Add to bag: ${product.name}`}
-          className={`peer/qb flex h-11 min-w-11 items-center justify-end outline-none transition-opacity duration-200 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100 ${className}`}
-        >
-          <span className="flex h-9 items-center gap-1.5 rounded-full bg-paper/80 px-2.5 text-ink ring-1 ring-ink/10 backdrop-blur-md transition-colors duration-200 hover:bg-ink hover:text-paper [button:focus-visible_&]:outline [button:focus-visible_&]:outline-2 [button:focus-visible_&]:outline-offset-2 [button:focus-visible_&]:outline-ink">
-            <BagIcon className="h-4 w-4" />
-            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] [@media(hover:hover)]:inline">Add to bag</span>
-          </span>
-        </button>
+        {mode === "buy" ? (
+          <button type="button" aria-label={`Quick buy: ${product.name}`} className={`flex h-11 min-w-11 items-center justify-end outline-none transition-opacity duration-200 ${reveal} ${className}`}>
+            <span className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 hover:bg-ink hover:text-paper ${glass}`}>
+              <BagIcon className="h-4 w-4" />
+              <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] [@media(hover:hover)]:inline">Quick buy</span>
+            </span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label={inBag ? `${product.name} is in your bag. Add another` : `Add to bag: ${product.name}`}
+            className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${inBag ? "" : reveal} ${className}`}
+          >
+            <span className={`grid h-9 w-9 place-items-center rounded-full ${glass}`}>
+              <Heart filled={inBag} className={`h-4 w-4 ${inBag ? "text-[#d70015]" : ""}`} />
+            </span>
+          </button>
+        )}
       </SheetTrigger>
       <SheetContent
         side="bottom"
@@ -45,6 +68,7 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
           <div className="mt-5">
             <BuyPanel
               compact
+              lead={mode}
               slug={product.slug}
               name={product.name}
               price={product.price}
