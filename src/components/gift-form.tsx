@@ -70,7 +70,8 @@ export function GiftForm({ product }: { product: Product }) {
   const [sender, setSender] = useState<string | null>(null);
   const [anonymous, setAnonymous] = useState(false);
   const [wrap, setWrap] = useState<"standard" | "premium">("standard");
-  const [showPrice, setShowPrice] = useState(false);
+  // The price shows unless the gifter ticks "Hide the price".
+  const [showPrice, setShowPrice] = useState(true);
   const [receiverName, setReceiverName] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
   const [receiverEmail, setReceiverEmail] = useState("");
@@ -423,11 +424,11 @@ export function GiftForm({ product }: { product: Product }) {
           </button>
         )}
       </div>
-      {/* Price visibility: unticked = they never see what it cost. */}
+      {/* Price visibility: shown by default; ticked = they never see what it cost. */}
       <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 text-[14px]">
-        <input type="checkbox" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#0a0a0a]" />
+        <input type="checkbox" checked={!showPrice} onChange={(e) => setShowPrice(!e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#0a0a0a]" />
         <span>
-          Show the price to them <span className="text-steel-dark">(on their gift page and receipt)</span>
+          Hide the price from them <span className="text-steel-dark">(they won&apos;t see what it cost)</span>
         </span>
       </label>
     </form>
