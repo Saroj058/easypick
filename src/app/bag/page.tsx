@@ -13,7 +13,6 @@ export default function BagPage() {
 
   return (
     <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">
-      <title>Bag | Easypick</title>
       <h1 className="display text-[40px] md:text-[72px]">Bag</h1>
 
       {!ready || me === undefined ? (

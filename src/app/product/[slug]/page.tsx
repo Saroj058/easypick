@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps<"/product/[slug]">)
     title,
     description: `${p.shortDescription} Rs ${p.salePrice ?? p.price}. Try it in store in Kathmandu or order online.`,
     alternates: { canonical: `/product/${p.slug}` },
-    openGraph: { title: `${title} | ${site.name}`, description: p.shortDescription },
+    openGraph: { title: `${title} | ${site.name}`, description: p.shortDescription, type: "website" },
   };
 }
 
@@ -57,6 +57,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
         name: product.name,
         description: product.shortDescription,
         sku: product.variants[0]?.sku,
+        image: product.images.filter((i) => i.src).map((i) => (i.src!.startsWith("/") ? `${site.url}${i.src}` : i.src)),
         brand: { "@type": "Brand", name: site.name },
         color: product.colours.map((c) => c.name).join(", "),
         offers: {

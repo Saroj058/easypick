@@ -10,7 +10,7 @@ cp .env.example .env.local   # then fill in what you need
 npm run dev                  # http://localhost:3000
 ```
 
-`npm run dev` also starts a local PostgreSQL (from the `embedded-postgres` package, nothing else to install), stored in `.data/postgres` on `127.0.0.1:5433`. Stop the site with Ctrl+C so the database shuts down cleanly.
+`npm run dev` uses `DATABASE_URL` from `.env.local` when it's set. Without it, or with `npm run dev:offline`, it starts a local PostgreSQL (from the `embedded-postgres` package, nothing else to install), stored in `.data/postgres` on `127.0.0.1:5433` (database `easypick`, UTF-8). Stop the site with Ctrl+C so the database shuts down cleanly.
 
 ## Database
 
@@ -32,10 +32,22 @@ For the live site set `DATABASE_URL` to a hosted PostgreSQL (e.g. Supabase, Mumb
 | `src/lib/store.ts` | Catalogue reads for the website. Swaps to the Store API when `STORE_API_URL` is set. |
 | `src/lib/orders.ts`, `gift-cards.ts`, `auth.ts` | Orders, gift cards, accounts and sessions. |
 | `src/lib/site.ts` | Store address, hours, contacts, company details, delivery fees (several TODOs). |
-| `src/app/admin` | Staff screen; login with `ADMIN_USERNAME` / `ADMIN_PASSWORD`. |
+| `src/lib/reconcile.ts` | Late payment checks and data clean-up, run by `/api/cron`. |
+| `src/lib/staff.ts` | Staff logins, roles (owner / helper) and the activity log. |
+| `src/app/admin` | Staff screen: orders, refunds, exchanges, stock, drops, reports. The first login comes from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. |
+
+## Going live (Vercel + Supabase)
+
+1. **Database.** Create the Supabase project in Mumbai (`ap-south-1`). On Vercel, set `DATABASE_URL` to the *Transaction pooler* string (port 6543, user `postgres.<project-ref>`).
+2. **Migrations.** Set `DB_AUTO_MIGRATE=false` on Vercel and run `npm run db:migrate` against the live database before each deploy that adds a file to `/drizzle`. Several servers starting at once shouldn't all migrate.
+3. **Secrets.** Set `SESSION_SECRET`, `CRON_SECRET`, `ADMIN_USERNAME` / `ADMIN_PASSWORD` (first login only), `SUPABASE_URL` / `SUPABASE_SECRET_KEY` (photos), email and SMS keys, and `NEXT_PUBLIC_SITE_URL` (the real domain). Copy from `.env.example`.
+4. **Payments.** Leave `PAYMENTS_MODE=test` for a trial run. For real money set `PAYMENTS_MODE=live`, `ESEWA_PRODUCT_CODE` and `ESEWA_SECRET_KEY` from the eSewa merchant account.
+5. **Cron.** `vercel.json` calls `/api/cron` every 5 minutes. The Hobby plan only allows one run a day; on Hobby, use a free external pinger (e.g. cron-job.org) sending `Authorization: Bearer <CRON_SECRET>` every 5 minutes instead. The order page also checks eSewa itself when a customer opens it, so this is a safety net, not the only path.
+6. **Analytics.** Turn on Web Analytics in the Vercel project. It's cookie-free and skips private pages (gift links, orders, admin).
+7. **After the first deploy.** Sign in at `/admin`, change the password in Account, and add each helper under Staff with their own login.
 
 ## Not wired up yet
 
-- Payments: orders show a test-mode "Pay now" until eSewa / Khalti / Fonepay merchant accounts exist. Only a server-to-server confirmation may mark an order paid.
+- eSewa live merchant account (the sandbox works now). Khalti and Fonepay are built but switched off in `site.payments.enabled`.
 - SMS gateway for order texts and login codes (codes show on screen in development).
-- Hosting, domain, and image storage for product photos uploaded in the admin.
+- Domain, store address, phone and PAN/VAT in `src/lib/site.ts`.

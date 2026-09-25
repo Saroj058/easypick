@@ -4,6 +4,7 @@ import { Barlow_Condensed, Inter, JetBrains_Mono, Mukta } from "next/font/google
 import { PendingBagAdd } from "@/components/bag-gate";
 import { BagProvider } from "@/components/bag-provider";
 import { ShopChrome } from "@/components/shop-chrome";
+import { SiteAnalytics } from "@/components/site-analytics";
 import { SiteFooter } from "@/components/site-footer";
 import { MobileTabBar, SiteHeader } from "@/components/site-header";
 import { site } from "@/lib/site";
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
   },
   description: "Self-checkout streetwear and everyday basics in Kathmandu. Fair fixed prices, new drops every other Friday. Pay with eSewa.",
   openGraph: { siteName: site.name, locale: "en_NP", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
@@ -45,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <MobileTabBar />
           </ShopChrome>
           <PendingBagAdd />
+          <SiteAnalytics />
         </BagProvider>
       </body>
     </html>

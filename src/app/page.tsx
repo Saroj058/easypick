@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AlertSignup } from "@/components/alert-signup";
@@ -60,6 +61,25 @@ function timeNpt(iso: string) {
   return new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
 
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
+const orgLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${site.url}/#org`,
+      name: site.name,
+      legalName: site.company.legalName,
+      url: site.url,
+      logo: `${site.url}/brand/logo.png`,
+      slogan: site.tagline,
+      sameAs: [site.social.instagram, site.social.tiktok],
+    },
+    { "@type": "WebSite", name: site.name, url: site.url, publisher: { "@id": `${site.url}/#org` } },
+  ],
+};
+
 export default async function HomePage() {
   const [products, { current, next }] = await Promise.all([getProducts(), getDropTimeline()]);
   const drop = current ?? next;
@@ -92,6 +112,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd).replace(/</g, "\\u003c") }} />
       {/* 01 — Hero: the rail, a tag, and the drop's numbers */}
       <section aria-labelledby="hero-title" className="on-dark bg-ink text-paper">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">

@@ -7,7 +7,10 @@ import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
 import { getProduct } from "@/lib/store";
 
-export const metadata: Metadata = { title: "Send as gift", robots: { index: false } };
+export async function generateMetadata({ params }: PageProps<"/gift/[slug]">): Promise<Metadata> {
+  const product = await getProduct((await params).slug);
+  return { title: product ? `Send ${product.name} as a gift` : "Send as a gift", robots: { index: false } };
+}
 
 export default async function SendGiftPage({ params }: PageProps<"/gift/[slug]">) {
   const product = await getProduct((await params).slug);

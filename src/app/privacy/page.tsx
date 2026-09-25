@@ -21,7 +21,10 @@ export default function PrivacyPage() {
         </li>
         <li>Your delivery address and landmark, if you choose delivery.</li>
         <li>What you bought and when, online and in store.</li>
-        <li>Basic, privacy-friendly website analytics (pages viewed, not who you are).</li>
+        <li>
+          Page counts from Vercel Web Analytics: which pages are viewed and roughly from which country. It uses no cookies and can&apos;t tell
+          who you are. Gift links, order pages and your account are never counted.
+        </li>
       </ul>
       <h2>Why</h2>
       <ul>
@@ -31,15 +34,26 @@ export default function PrivacyPage() {
         <li>To handle exchanges and refunds.</li>
       </ul>
       <p>We never sell your information.</p>
-      <h2>Advertising pixels</h2>
-      <p>Meta and TikTok pixels load only if you accept them in the cookie banner. You can say no and the site works the same.</p>
+      <h2>Advertising</h2>
+      <p>We don&apos;t use advertising pixels or tracking cookies. If that ever changes, we&apos;ll ask you first.</p>
+      <h2>Who helps us</h2>
+      <ul>
+        <li>eSewa, to take payments. We never see your wallet PIN or password.</li>
+        <li>An SMS provider and email (Gmail or Resend), to send codes, order updates and gift links.</li>
+        <li>Vercel (website hosting) and Supabase (database and photos, stored in Mumbai, India).</li>
+        <li>Google, only if you choose to sign in with Google.</li>
+      </ul>
       <h2>CCTV in the store</h2>
       <p>
         The store uses CCTV for safety and to prevent theft. There are no cameras in or facing the fitting rooms. Footage is kept for a
         limited time and then deleted, and is only shared with the police when required.
       </p>
       <h2>How long we keep it</h2>
-      <p>Order and billing records are kept as long as tax law requires. Alert sign-ups are deleted when you unsubscribe.</p>
+      <ul>
+        <li>Order and billing records: as long as tax law requires. After 18 months we remove the name, phone, address and gift message from an order and keep only what the accounts need.</li>
+        <li>Login codes: deleted once they expire (5 minutes). Sign-in sessions: deleted when they end.</li>
+        <li>Restock alerts: deleted 90 days after we message you. Alert sign-ups are deleted when you unsubscribe.</li>
+      </ul>
       <h2>Sign-in</h2>
       <p>
         Signing in keeps a secure cookie on your device for up to 30 days. Signing out removes it and ends the session on our side too.

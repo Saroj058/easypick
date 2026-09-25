@@ -24,7 +24,7 @@ export default async function LinksPage() {
   return (
     <section className="on-dark min-h-[calc(100dvh-56px)] bg-ink py-14 text-paper">
       <div className="container-ep max-w-md">
-        <p className="display text-center text-5xl">{site.name}</p>
+        <h1 className="display text-center text-5xl">{site.name}</h1>
         <p className="mt-2 text-center text-paper/70">{site.tagline}</p>
         <ul className="mt-10 space-y-3">
           {links.map((l) => (
