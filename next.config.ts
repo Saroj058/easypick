@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [75],
-    // Add the image storage host once chosen (open decision), e.g.
-    // remotePatterns: [new URL("https://images.easypick.com.np/**")],
+    // Product photos uploaded in the admin live in Supabase Storage.
+    remotePatterns: process.env.SUPABASE_URL ? [new URL(`${process.env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/**`)] : [],
   },
   experimental: {
     // Product photos are uploaded from the admin screen through a Server Action.

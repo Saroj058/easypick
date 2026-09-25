@@ -1,8 +1,6 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -10,6 +8,7 @@ import { redirect } from "next/navigation";
 import { createProduct, findProduct, notifyRestocked, saveFestivals, setStock, updateProduct } from "@/lib/catalogue";
 import { notifySms } from "@/lib/notify";
 import { findOrder, updateOrder } from "@/lib/orders";
+import { saveProductPhoto } from "@/lib/photos";
 import { checkAdminLogin, endAdminSession, requireStaff, startAdminSession } from "@/lib/staff";
 import type { Category, Colour, Fit, Gender, Measurements, Product, ProductStatus, Size } from "@/lib/types";
 
@@ -114,6 +113,15 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
   if (salePrice !== undefined && !(salePrice > 0 && salePrice < price)) return { status: "error", message: "Sale price must be lower than the price." };
   if (!STATUSES.includes(status)) return { status: "error", message: "Choose a status." };
 
+  // A new front photo, if one was picked.
+  let photoSrc: string | null = null;
+  const photo = form.get("photo");
+  if (photo instanceof File && photo.size > 0) {
+    const saved = await saveProductPhoto(slug, photo);
+    if (!saved.ok) return { status: "error", message: saved.message };
+    photoSrc = saved.src;
+  }
+
   const counts: Record<string, number> = {};
   for (const v of product.variants) {
     const n = int(form, `stock:${v.sku}`);
@@ -126,6 +134,12 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     p.salePrice = salePrice;
     p.status = status;
     p.shortDescription = str(form, "shortDescription") || p.shortDescription;
+    if (photoSrc) {
+      const front = { src: photoSrc, alt: `${p.name}, front`, kind: "front" as const };
+      const i = p.images.findIndex((img) => img.kind === "front");
+      if (i >= 0) p.images[i] = front;
+      else p.images.unshift(front);
+    }
   });
   const restocked = await setStock(slug, counts);
   const told = await notifyRestocked(restocked);
@@ -188,18 +202,13 @@ export async function addProduct(_prev: SaveState, form: FormData): Promise<Save
     }),
   );
 
-  // Photo: saved next to the others in /public/products/<slug>/front.jpg.
-  // Fine for the pilot on one machine; moves to image storage with the Store API.
+  // Photo: Supabase Storage when configured, otherwise this computer (see lib/photos.ts).
   const images: Product["images"] = [];
   const photo = form.get("photo");
   if (photo instanceof File && photo.size > 0) {
-    if (!/^image\/(jpeg|png|webp)$/.test(photo.type)) return { status: "error", message: "The photo must be a JPG, PNG or WebP." };
-    if (photo.size > 8 * 1024 * 1024) return { status: "error", message: "The photo must be under 8 MB." };
-    const ext = photo.type === "image/png" ? "png" : photo.type === "image/webp" ? "webp" : "jpg";
-    const dir = join(process.cwd(), "public", "products", slug);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `front.${ext}`), Buffer.from(await photo.arrayBuffer()));
-    images.push({ src: `/products/${slug}/front.${ext}`, alt: `${name}, front`, kind: "front" });
+    const saved = await saveProductPhoto(slug, photo);
+    if (!saved.ok) return { status: "error", message: saved.message };
+    images.push({ src: saved.src, alt: `${name}, front`, kind: "front" });
   } else {
     images.push({ src: null, alt: `${name}, front`, kind: "front" });
   }

@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+
+import { ProductImage } from "@/components/product-image";
 
 import type { Product } from "@/lib/types";
 import { saveProduct, type SaveState } from "@/app/admin/actions";
@@ -17,10 +19,42 @@ const statuses = [
 export function ProductForm({ product, demand }: { product: Product; demand: Record<string, number> }) {
   const [state, action, pending] = useActionState<SaveState, FormData>(saveProduct, { status: "idle" });
   const sizes = Array.from(new Set(product.variants.map((v) => v.size)));
+  const [preview, setPreview] = useState<string | null>(null);
+  const front = product.images.find((i) => i.kind === "front") ?? product.images[0];
 
   return (
     <form action={action} className="mt-8 space-y-10">
       <input type="hidden" name="slug" value={product.slug} />
+
+      <section aria-labelledby="photo-h" className="flex items-start gap-5">
+        <div className="w-28 shrink-0">
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element -- local preview of a picked file
+            <img src={preview} alt="New photo preview" className="aspect-[4/5] w-full bg-photo object-cover" />
+          ) : (
+            <ProductImage image={front} category={product.category} colourHex={product.colours[0]?.hex ?? "#ccc"} decorative sizes="112px" />
+          )}
+        </div>
+        <div>
+          <h3 id="photo-h" className="text-lg font-semibold">
+            Photo
+          </h3>
+          <p className="mt-1 text-[14px] text-steel-dark">Flat-lay on a plain light background. JPG, PNG or WebP, under 8 MB. Saved when you press Save.</p>
+          <label className="btn btn-outline mt-3 cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink">
+            {preview ? "Pick a different photo" : "Change photo"}
+            <input
+              name="photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                setPreview(f ? URL.createObjectURL(f) : null);
+              }}
+            />
+          </label>
+        </div>
+      </section>
 
       <section aria-labelledby="stock-h">
         <h3 id="stock-h" className="text-lg font-semibold">
