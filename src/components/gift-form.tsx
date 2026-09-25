@@ -133,13 +133,6 @@ export function GiftForm({ product }: { product: Product }) {
 
       {/* 1. The piece */}
       <section hidden={step !== 0} className="space-y-8">
-        <fieldset>
-          <legend className={label}>The price</legend>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
-            <Choice name="priceUi" value="hide" checked={!showPrice} onChange={() => setShowPrice(false)} title="Don't show the price" note="They never see what it cost." />
-            <Choice name="priceUi" value="show" checked={showPrice} onChange={() => setShowPrice(true)} title="Show the price" note="On their gift page and gift receipt." />
-          </div>
-        </fieldset>
         {!oneSize && (
           <div className="grid gap-3 sm:grid-cols-2">
             <Choice name="modeUi" value="pick" checked={mode === "pick"} onChange={() => setMode("pick")} title="Let them pick the size" note="Recommended. They choose before we send it." />
@@ -214,7 +207,7 @@ export function GiftForm({ product }: { product: Product }) {
               </li>
               <li>
                 <span className="font-semibold">3. We hold one for them meanwhile.</span>{" "}
-                <span className="text-steel-dark">You choose whether they see the price.</span>
+                <span className="text-steel-dark">You choose whether they see the price (tick box below).</span>
               </li>
             </ol>
           </div>
@@ -430,6 +423,13 @@ export function GiftForm({ product }: { product: Product }) {
           </button>
         )}
       </div>
+      {/* Price visibility: unticked = they never see what it cost. */}
+      <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 text-[14px]">
+        <input type="checkbox" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#0a0a0a]" />
+        <span>
+          Show the price to them <span className="text-steel-dark">(on their gift page and receipt)</span>
+        </span>
+      </label>
     </form>
   );
 }
