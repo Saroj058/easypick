@@ -5,12 +5,15 @@
 //             (binaries come with `npm install`, nothing else to install), stored in
 //             .data/postgres, on 127.0.0.1:5433, and points the command at it.
 //
-// Usage: node scripts/with-db.mjs next dev
+//   --local → always the local PostgreSQL, even when DATABASE_URL is set (offline work).
+//
+// Usage: node scripts/with-db.mjs [--local] next dev
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const cmd = process.argv.slice(2);
+const local = process.argv[2] === "--local";
+const cmd = process.argv.slice(local ? 3 : 2);
 if (!cmd.length) {
   console.error("Usage: node scripts/with-db.mjs <command…>");
   process.exit(1);
@@ -30,7 +33,7 @@ function run(env) {
   return spawn(cmd.join(" "), { stdio: "inherit", shell: true, env: { ...process.env, ...env } });
 }
 
-const configured = process.env.DATABASE_URL || fromEnvFile("DATABASE_URL");
+const configured = local ? undefined : process.env.DATABASE_URL || fromEnvFile("DATABASE_URL");
 if (configured) {
   run({}).on("exit", (code) => process.exit(code ?? 0));
 } else {
