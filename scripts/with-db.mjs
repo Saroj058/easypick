@@ -8,7 +8,7 @@
 //   --local → always the local PostgreSQL, even when DATABASE_URL is set (offline work).
 //
 // Usage: node scripts/with-db.mjs [--local] next dev
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -38,7 +38,8 @@ if (configured) {
   run({}).on("exit", (code) => process.exit(code ?? 0));
 } else {
   const { default: EmbeddedPostgres } = await import("embedded-postgres");
-  const databaseDir = join(process.cwd(), ".data", "postgres");
+  // LOCAL_PG_DIR / LOCAL_PG_PORT let the browser tests run their own database beside the dev one.
+  const databaseDir = join(process.cwd(), process.env.LOCAL_PG_DIR ?? join(".data", "postgres"));
   const port = Number(process.env.LOCAL_PG_PORT ?? 5433);
   // Local-only credentials: the server listens on 127.0.0.1 and is never exposed.
   // UTF-8 always (Windows would otherwise pick its own code page, which can't store Nepali or arrows).
@@ -52,7 +53,23 @@ if (configured) {
     onLog: () => {},
   });
   if (!existsSync(join(databaseDir, "PG_VERSION"))) await pg.initialise();
-  await pg.start();
+  try {
+    await pg.start();
+  } catch (e) {
+    // Left running by a run that was killed (e.g. the browser tests on Windows): stop it cleanly, start again.
+    const bin = await import(`@embedded-postgres/${process.platform === "win32" ? "windows" : process.platform}-${process.arch}`);
+    if (existsSync(join(databaseDir, "postmaster.pid"))) execFileSync(bin.pg_ctl, ["stop", "-D", databaseDir, "-m", "fast"], { stdio: "ignore" });
+    else if (process.platform === "win32") {
+      // Windows can leave a worker of a killed server holding the port. End only our own
+      // postgres.exe processes whose parent server is gone.
+      // (ExecutablePath is often empty for these; the command line has the binary's path with forward slashes.)
+      const exe = bin.postgres.split(String.fromCharCode(92)).join("/").replace(/'/g, "''");
+      const script = `Get-CimInstance Win32_Process -Filter "Name='postgres.exe'" | Where-Object { $_.CommandLine -like '*${exe}*forkchild*' -and -not (Get-Process -Id $_.ParentProcessId -ErrorAction SilentlyContinue) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`;
+      execFileSync("powershell", ["-NoProfile", "-EncodedCommand", Buffer.from(script, "utf16le").toString("base64")], { stdio: "ignore" });
+      await new Promise((r) => setTimeout(r, 1000)); // let Windows free the port
+    } else throw e;
+    await pg.start();
+  }
   // The site's data lives in its own "easypick" database, created as UTF-8 even in an older data folder.
   const admin = pg.getPgClient();
   await admin.connect();
@@ -60,7 +77,7 @@ if (configured) {
   if (!rowCount) await admin.query("create database easypick encoding 'UTF8' template template0 lc_collate 'C' lc_ctype 'C'");
   await admin.end();
   const url = `postgres://postgres:easypick-local@127.0.0.1:${port}/easypick`;
-  console.log(`▲ Local database (PostgreSQL): 127.0.0.1:${port}  ·  data in .data/postgres`);
+  console.log(`▲ Local database (PostgreSQL): 127.0.0.1:${port}  ·  data in ${databaseDir}`);
 
   const child = run({ DATABASE_URL: url });
   let stopping = false;

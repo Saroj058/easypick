@@ -9,7 +9,7 @@ import type { Product, Size, Variant } from "@/lib/types";
 import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
 import { useBag } from "./bag-provider";
 import { useFitProfile } from "./fit-finder";
-import { BagIcon } from "./icons";
+import { BagIcon, HeartIcon } from "./icons";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
 
 // The two buttons on a product card. Both start from the person's saved size when it's in
@@ -170,12 +170,6 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
   );
 }
 
-const Heart = ({ filled, className }: { filled: boolean; className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} aria-hidden fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round">
-    <path d="M12 20.5s-7.5-4.6-9.2-9.1C1.6 8.2 3.6 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.6 0 5.6 3.7 4.4 6.9-1.7 4.5-9.2 9.1-9.2 9.1Z" />
-  </svg>
-);
-
 /**
  * The heart (bottom left of the photo): one tap adds it to the bag, another tap takes it out.
  * Logged out → log in first, then it's added.
@@ -206,7 +200,7 @@ export function HeartAdd({ product, className = "" }: { product: Product; classN
       className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${inBag ? "" : reveal} ${className}`}
     >
       <span className={`grid h-9 w-9 place-items-center rounded-full ${glass}`}>
-        <Heart filled={inBag} className={`h-4 w-4 ${inBag ? "text-[#d70015]" : ""}`} />
+        <HeartIcon filled={inBag} className={`h-4 w-4 ${inBag ? "text-[#d70015]" : ""}`} />
       </span>
     </button>
   );

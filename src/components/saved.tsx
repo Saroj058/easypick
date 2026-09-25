@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { HeartIcon } from "./icons";
 
 // Saved pieces and recently viewed, kept in this browser (no account needed).
 // Every hook on the page stays in sync, and other tabs catch up through "storage" events.
@@ -71,12 +72,6 @@ function recordView(slug: string) {
   write("recent", [slug, ...read("recent").filter((s) => s !== slug)].slice(0, RECENT_MAX));
 }
 
-const Heart = ({ filled, className }: { filled: boolean; className?: string }) => (
-  <svg viewBox="0 0 24 24" className={className} aria-hidden fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round">
-    <path d="M12 20.5s-7.5-4.6-9.2-9.1C1.6 8.2 3.6 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.6 0 5.6 3.7 4.4 6.9-1.7 4.5-9.2 9.1-9.2 9.1Z" />
-  </svg>
-);
-
 /**
  * Save for later. "chip" sits on a product photo (hover-only on desktop unless saved);
  * "inline" sits next to the price.
@@ -94,7 +89,7 @@ export function SaveButton({ slug, name, variant = "inline", className = "" }: {
         className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${saved ? "" : "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100"} ${className}`}
       >
         <span className="grid h-9 w-9 place-items-center rounded-full bg-paper/80 text-ink ring-1 ring-ink/10 backdrop-blur-md [button:focus-visible_&]:outline [button:focus-visible_&]:outline-2 [button:focus-visible_&]:outline-offset-2 [button:focus-visible_&]:outline-ink">
-          <Heart filled={saved} className={`h-4 w-4 ${saved ? "text-[#d70015]" : ""}`} />
+          <HeartIcon filled={saved} className={`h-4 w-4 ${saved ? "text-[#d70015]" : ""}`} />
         </span>
       </button>
     );
@@ -107,7 +102,7 @@ export function SaveButton({ slug, name, variant = "inline", className = "" }: {
       aria-label={label}
       className={`inline-flex min-h-11 items-center gap-2 text-[14px] font-semibold ${className}`}
     >
-      <Heart filled={saved} className={`h-5 w-5 ${saved ? "text-[#d70015]" : ""}`} />
+      <HeartIcon filled={saved} className={`h-5 w-5 ${saved ? "text-[#d70015]" : ""}`} />
       {saved ? "Saved" : "Save"}
     </button>
   );

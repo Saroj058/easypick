@@ -12,6 +12,15 @@ npm run dev                  # http://localhost:3000
 
 `npm run dev` uses `DATABASE_URL` from `.env.local` when it's set. Without it, or with `npm run dev:offline`, it starts a local PostgreSQL (from the `embedded-postgres` package, nothing else to install), stored in `.data/postgres` on `127.0.0.1:5433` (database `easypick`, UTF-8). Stop the site with Ctrl+C so the database shuts down cleanly.
 
+## Tests
+
+| Command | What |
+| --- | --- |
+| `npm test` | Unit tests and database tests (stock holds, the last piece sold once, payment counted once, late payments, eSewa signatures). Starts its own throwaway PostgreSQL. |
+| `npm run test:e2e` | Browser tests (shop, Buy now, login, tracking, admin). Runs a second dev server on port 3100 with its own database in `.data/postgres-e2e`. First time: `npx playwright install chromium`. |
+
+GitHub Actions runs lint, types, both test suites and a production build on every push (`.github/workflows/ci.yml`).
+
 ## Database
 
 | Command | What |
