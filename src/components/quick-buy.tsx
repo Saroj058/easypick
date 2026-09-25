@@ -59,17 +59,21 @@ const Heart = ({ filled, className }: { filled: boolean; className?: string }) =
   </svg>
 );
 
-/** The heart (bottom left of the photo): one tap adds it to the bag. Logged out → log in first, then it's added. */
+/**
+ * The heart (bottom left of the photo): one tap adds it to the bag, another tap takes it out.
+ * Logged out → log in first, then it's added.
+ */
 export function HeartAdd({ product, className = "" }: { product: Product; className?: string }) {
   const variant = useCardVariant(product);
-  const { lines } = useBag();
+  const { lines, remove } = useBag();
   const addToBag = useAddToBag();
   if (product.status !== "live" || !variant) return null;
   const inBag = lines.some((l) => l.slug === product.slug);
 
   function onTap() {
     if (inBag) {
-      showBagToast(`${product.name} is already in your bag.`);
+      lines.filter((l) => l.slug === product.slug).forEach((l) => remove(l.sku));
+      showBagToast(`Removed ${product.name} from your bag.`);
       return;
     }
     const line = { slug: product.slug, sku: variant!.sku, name: product.name, size: variant!.size, colour: variant!.colour, price: product.salePrice ?? product.price };
@@ -81,7 +85,7 @@ export function HeartAdd({ product, className = "" }: { product: Product; classN
       type="button"
       onClick={onTap}
       aria-pressed={inBag}
-      aria-label={inBag ? `${product.name} is in your bag` : `Add ${product.name} to bag`}
+      aria-label={inBag ? `Remove ${product.name} from bag` : `Add ${product.name} to bag`}
       className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${inBag ? "" : reveal} ${className}`}
     >
       <span className={`grid h-9 w-9 place-items-center rounded-full ${glass}`}>
