@@ -3,14 +3,15 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { gatewayReady, startPayment } from "@/lib/gateways";
 import { findOrder, updateOrder } from "@/lib/orders";
+import { site } from "@/lib/site";
 import type { PaymentProvider } from "@/lib/types";
 
-const PROVIDERS: PaymentProvider[] = ["esewa", "khalti", "fonepay"];
+const PROVIDERS: PaymentProvider[] = site.payments.enabled;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
 /**
- * Sends the customer to pay for an order: eSewa (a form it needs POSTed), Khalti or Fonepay
- * (redirects). ?via=khalti switches wallet first. Orders already paid go to their order page.
+ * Sends the customer to pay for an order with a wallet from site.payments.enabled: eSewa (a form it
+ * needs POSTed), or Khalti / Fonepay when switched on. ?via= switches wallet. Paid orders go to their page.
  */
 export async function GET(req: Request, ctx: RouteContext<"/pay/[id]">) {
   const { id } = await ctx.params;

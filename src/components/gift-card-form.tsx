@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { buyGiftCard, type GiftState } from "@/app/gift-actions";
 import { formatPrice } from "@/lib/format";
 import { useMe, usePrefilled } from "./session";
+import { PayWith } from "./pay-with";
 
 const VALUES = [1000, 2000, 3000, 5000];
 const input = "mt-2 h-14 w-full rounded-[2px] border border-steel-dark bg-paper px-4 text-base";
@@ -132,20 +133,7 @@ export function GiftCardForm() {
         </div>
         <fieldset>
           <legend className={label}>Pay with</legend>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {[
-              ["esewa", "eSewa"],
-              ["khalti", "Khalti"],
-              ["fonepay", "Fonepay"],
-            ].map(([v, l], i) => (
-              <label key={v} className="relative">
-                <input type="radio" name="provider" value={v} defaultChecked={i === 0} className="peer sr-only" />
-                <span className="flex h-12 items-center justify-center rounded-[2px] border border-mist font-semibold peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink">
-                  {l}
-                </span>
-              </label>
-            ))}
-          </div>
+          <PayWith className="mt-2" />
         </fieldset>
       </section>
 

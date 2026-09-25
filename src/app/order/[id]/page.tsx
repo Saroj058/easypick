@@ -200,19 +200,21 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
                 Pay {formatPrice(order.total)} with {providerLabel[order.provider]}
               </a>
             )}
-            <p className="text-[14px] text-steel-dark">
-              {gatewayReady(order.provider) ? "Or pay with " : "Pay with "}
-              {(["esewa", "khalti", "fonepay"] as const)
-                .filter((p) => p !== order.provider && gatewayReady(p))
-                .map((p, i, all) => (
-                  <span key={p}>
-                    <a href={`/pay/${order.id}?via=${p}`} className="font-semibold text-ink underline underline-offset-2">
-                      {providerLabel[p]}
-                    </a>
-                    {i < all.length - 1 ? " or " : ""}
-                  </span>
-                ))}
-            </p>
+            {site.payments.enabled.some((p) => p !== order.provider && gatewayReady(p)) && (
+              <p className="text-[14px] text-steel-dark">
+                {gatewayReady(order.provider) ? "Or pay with " : "Pay with "}
+                {site.payments.enabled
+                  .filter((p) => p !== order.provider && gatewayReady(p))
+                  .map((p, i, all) => (
+                    <span key={p}>
+                      <a href={`/pay/${order.id}?via=${p}`} className="font-semibold text-ink underline underline-offset-2">
+                        {providerLabel[p]}
+                      </a>
+                      {i < all.length - 1 ? " or " : ""}
+                    </span>
+                  ))}
+              </p>
+            )}
           </div>
           {!paymentsLive() && (
             <div className="mt-4 text-[13px] text-steel-dark">

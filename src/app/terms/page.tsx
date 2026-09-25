@@ -24,7 +24,7 @@ export default function TermsPage() {
       </p>
       <h2>Payment</h2>
       <p>
-        Your order is confirmed only once eSewa, Khalti or Fonepay confirms the payment directly with us. A screenshot or redirect page
+        Your order is confirmed only once eSewa confirms the payment directly with us. A screenshot or redirect page
         is not a confirmation.
       </p>
       <h2>Cancellations</h2>

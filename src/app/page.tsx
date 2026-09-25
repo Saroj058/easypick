@@ -83,7 +83,7 @@ export default async function HomePage() {
 
   const ticker = [
     `Open daily ${formatHour(site.store.hours.open)} – ${formatHour(site.store.hours.close)}`,
-    "Pay by QR · eSewa · Khalti · Fonepay",
+    "Pay by QR · eSewa",
     ...stats.lowSizes.map((l) => `${l.stock} left · ${l.name} · ${l.colour} ${l.size}`),
     "Fixed prices. Same for everyone.",
     "Measurements in cm on every tag",
@@ -423,7 +423,7 @@ export default async function HomePage() {
           <p className="max-w-[70ch] font-mono text-[13px] leading-relaxed text-steel-dark lg:col-span-7 lg:col-start-6">
             Easypick is a self-checkout clothing store in Kathmandu for streetwear and everyday basics: oversized tees, hoodies, joggers,
             relaxed jeans and co-ords. Every tag shows the price and the garment&apos;s measurements in cm, so you can pick your size without
-            asking. Try things on, pay at the kiosk with eSewa, Khalti or Fonepay, and walk out. Prices are fixed and fair, with no
+            asking. Try things on, pay at the kiosk with eSewa, and walk out. Prices are fixed and fair, with no
             bargaining. New drops land every other Friday. Prefer to shop from home? Order online for store pickup or delivery inside the
             Kathmandu Valley.
           </p>

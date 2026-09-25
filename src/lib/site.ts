@@ -1,3 +1,5 @@
+import type { PaymentProvider } from "./types";
+
 // Store facts shown across the site. Values marked TODO are still open decisions
 // in the business plan (location, domain, company registration).
 
@@ -42,6 +44,12 @@ export const site = {
     freeAbove: 3000,
   },
 
+  payments: {
+    // Wallets customers can pay with. Khalti and Fonepay are built (lib/gateways.ts) but switched off;
+    // add "khalti" or "fonepay" here to offer them again.
+    enabled: ["esewa"] as PaymentProvider[],
+  },
+
   gifting: {
     // From the Gifting doc; rough, confirm with the printer.
     premiumWrapFee: 250,
@@ -60,3 +68,11 @@ export const categoryLabels = {
   "co-ords": "Co-ords",
   accessories: "Accessories",
 } as const;
+
+export const walletLabels: Record<PaymentProvider, string> = { esewa: "eSewa", khalti: "Khalti", fonepay: "Fonepay" };
+
+/** "eSewa", "eSewa or Khalti", "eSewa, Khalti or Fonepay": the wallets offered, for sentences. */
+export function walletList() {
+  const names = site.payments.enabled.map((p) => walletLabels[p]);
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : (names[0] ?? "");
+}

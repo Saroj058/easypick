@@ -27,7 +27,7 @@ export default function DeliveryPage() {
       <p>We need your area, a nearby landmark and a working phone number so the rider can find you.</p>
       <h2>Payment</h2>
       <p>
-        Orders are paid online with eSewa, Khalti or Fonepay. An order is confirmed only after the payment provider confirms the payment
+        Orders are paid online with eSewa. An order is confirmed only after the payment provider confirms the payment
         with us. Cash on delivery isn&apos;t available yet.
       </p>
       <h2>Outside the Valley</h2>

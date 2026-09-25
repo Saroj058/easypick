@@ -14,7 +14,7 @@ import { site } from "./site";
  *   - a bought gift card is switched on and sent to its receiver
  *
  * Call this only from a verified source: the payment provider's server-to-server
- * confirmation (eSewa / Khalti / Fonepay webhook), or the test-mode "Pay now" button.
+ * confirmation (the wallet's server-to-server check), or the test-mode "Pay now" button.
  * Never from the browser redirect after paying. Safe to call twice.
  */
 export async function confirmPayment(orderId: string) {

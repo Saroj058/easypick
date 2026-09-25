@@ -32,7 +32,7 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
       opens: store.hours.open,
       closes: store.hours.close,
     },
-    paymentAccepted: "eSewa, Khalti, Fonepay",
+    paymentAccepted: "eSewa",
     priceRange: "Rs 999 – Rs 3,499",
   };
 
@@ -67,7 +67,7 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
           </div>
           <div>
             <h2 className="text-sm font-semibold text-steel-dark">What to bring</h2>
-            <p className="mt-2">Your phone with eSewa, Khalti or Fonepay. That&apos;s all you need to pay.</p>
+            <p className="mt-2">Your phone with eSewa. That&apos;s all you need to pay.</p>
           </div>
           <div>
             <h2 className="text-sm font-semibold text-steel-dark">Picking up an online order?</h2>

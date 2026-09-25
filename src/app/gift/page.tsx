@@ -53,7 +53,7 @@ export default async function GiftPage() {
           <ol className="mt-6 grid gap-8 md:grid-cols-3">
             <li>
               <p className="font-semibold">You choose the piece.</p>
-              <p className="mt-1 text-steel-dark">Add a message and wrap. Pay with eSewa, Khalti or Fonepay.</p>
+              <p className="mt-1 text-steel-dark">Add a message and wrap. Pay with eSewa.</p>
             </li>
             <li>
               <p className="font-semibold">They choose their size.</p>

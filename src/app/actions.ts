@@ -34,7 +34,7 @@ export async function signUpForAlerts(_prev: AlertState, form: FormData): Promis
 
 export type CheckoutState = { status: "idle" } | { status: "error"; message: string; field?: string };
 
-const PROVIDERS: PaymentProvider[] = ["esewa", "khalti", "fonepay"];
+const PROVIDERS: PaymentProvider[] = site.payments.enabled;
 
 export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<CheckoutState> {
   const phone = normaliseNepaliMobile(String(form.get("phone") ?? ""));
@@ -134,13 +134,13 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
   if (order.total <= 0) await confirmPayment(order.id);
   // Remember how they like to get and pay for things, so next checkout is one tap.
   if (user) await updateUser(user.id, { checkout: { method, provider, address: address ?? user.checkout?.address } });
-  redirect(`/pay/${order.id}`); // straight to eSewa / Khalti / Fonepay
+  redirect(`/pay/${order.id}`); // straight to the wallet (eSewa)
 }
 
 // ---------- Test-mode payment ----------
 
 /**
- * Stands in for eSewa / Khalti / Fonepay while merchant accounts aren't live:
+ * Skips the wallet in development (no real or sandbox payment needed):
  * runs exactly what a verified payment runs. Disabled in production.
  */
 export async function payInTestMode(form: FormData) {

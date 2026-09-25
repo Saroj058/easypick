@@ -15,7 +15,7 @@ export default function ReturnsPage() {
         <li>If the size you want is out, you can take store credit or a refund.</li>
       </ul>
       <h2>Refunds</h2>
-      <p>Refunds go back to the wallet you paid with (eSewa, Khalti or Fonepay), usually within 3 working days.</p>
+      <p>Refunds go back to your eSewa wallet, usually within 3 working days.</p>
       <h2>What we can&apos;t take back</h2>
       <ul>
         <li>Items bought on sale.</li>

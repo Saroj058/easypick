@@ -78,8 +78,6 @@ export function SiteFooter() {
           <p className="flex items-center gap-3">
             <span>Pay with</span>
             <span className="font-semibold text-ink">eSewa</span>
-            <span className="font-semibold text-ink">Khalti</span>
-            <span className="font-semibold text-ink">Fonepay</span>
           </p>
         </div>
       </div>

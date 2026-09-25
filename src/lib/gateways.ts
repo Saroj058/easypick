@@ -46,6 +46,7 @@ function fonepay() {
 }
 
 export function gatewayReady(p: PaymentProvider) {
+  if (!site.payments.enabled.includes(p)) return false;
   return Boolean(p === "esewa" ? esewa() : p === "khalti" ? khalti() : fonepay());
 }
 

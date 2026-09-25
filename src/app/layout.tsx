@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     default: `${site.name} — ${site.tagline}`,
     template: `%s | ${site.name} Kathmandu`,
   },
-  description: "Self-checkout streetwear and everyday basics in Kathmandu. Fair fixed prices, new drops every other Friday. Pay with eSewa, Khalti or Fonepay.",
+  description: "Self-checkout streetwear and everyday basics in Kathmandu. Fair fixed prices, new drops every other Friday. Pay with eSewa.",
   openGraph: { siteName: site.name, locale: "en_NP", type: "website" },
 };
 

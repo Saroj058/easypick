@@ -6,7 +6,7 @@ import { PageIntro } from "@/components/page-intro";
 
 export const metadata: Metadata = {
   title: "How it works",
-  description: "Pick, try, pay by QR with eSewa, Khalti or Fonepay, and walk out. How Easypick's self-checkout store in Kathmandu works.",
+  description: "Pick, try, pay by QR with eSewa, and walk out. How Easypick's self-checkout store in Kathmandu works.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -14,14 +14,14 @@ const steps = [
   { n: "01", t: "Walk in.", d: "Say hi to the greeter. There's a three-step picture guide by the door if you want it." },
   { n: "02", t: "Pick.", d: "Every tag shows the price and the garment's measurements in cm. Take your time. Nobody follows you around." },
   { n: "03", t: "Try.", d: "The helper gives you a numbered token for the items you take into the fitting room, and counts them out again." },
-  { n: "04", t: "Pay.", d: "Drop your pieces in the tray at the kiosk. It lists them. Scan the QR with eSewa, Khalti or Fonepay." },
+  { n: "04", t: "Pay.", d: "Drop your pieces in the tray at the kiosk. It lists them. Scan the QR with eSewa." },
   { n: "05", t: "Wear.", d: "Your bill comes by SMS or print. Walk out. That's it." },
 ];
 
 const faqs = [
   {
     q: "Do I need an app?",
-    a: "No. Just the eSewa, Khalti or Fonepay app you already use. The kiosk shows a QR; you scan and pay.",
+    a: "No. Just the eSewa app you already use. The kiosk shows a QR; you scan and pay.",
   },
   {
     q: "What if I need help with sizing?",

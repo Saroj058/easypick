@@ -21,7 +21,7 @@ import { notifyEmail, notifySms as notify } from "@/lib/notify";
 import { getProducts } from "@/lib/store";
 import type { PaymentProvider, Size } from "@/lib/types";
 
-const PROVIDERS: PaymentProvider[] = ["esewa", "khalti", "fonepay"];
+const PROVIDERS: PaymentProvider[] = site.payments.enabled;
 
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
 const orderNumber = () => `EP-${String(Math.floor(100000 + Math.random() * 900000))}`;

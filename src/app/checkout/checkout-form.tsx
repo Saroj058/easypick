@@ -8,14 +8,9 @@ import { previewGiftCard } from "@/app/gift-actions";
 import { useBag } from "@/components/bag-provider";
 import { useMe, usePrefilled } from "@/components/session";
 import { formatPrice } from "@/lib/format";
-import { site } from "@/lib/site";
-import type { BagLine, FulfilmentMethod } from "@/lib/types";
-
-const providers = [
-  { value: "esewa", label: "eSewa" },
-  { value: "khalti", label: "Khalti" },
-  { value: "fonepay", label: "Fonepay" },
-];
+import { site, walletLabels } from "@/lib/site";
+import { PayWith } from "@/components/pay-with";
+import type { BagLine, FulfilmentMethod, PaymentProvider } from "@/lib/types";
 
 function Option({ name, value, checked, onChange, title, note }: { name: string; value: string; checked: boolean; onChange: () => void; title: string; note?: string }) {
   return (
@@ -43,9 +38,10 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   // Until they choose, use what they picked last time (saved to their account).
   const saved = me?.checkout ?? null;
   const [methodChoice, setMethod] = useState<FulfilmentMethod | null>(null);
-  const [providerChoice, setProvider] = useState<string | null>(null);
+  const [providerChoice, setProvider] = useState<PaymentProvider | null>(null);
   const method = methodChoice ?? saved?.method ?? "pickup";
-  const provider = providerChoice ?? saved?.provider ?? "esewa";
+  const offered = (p: PaymentProvider | null | undefined) => (p && site.payments.enabled.includes(p) ? p : null);
+  const provider = offered(providerChoice) ?? offered(saved?.provider) ?? site.payments.enabled[0];
   const areaField = usePrefilled(saved?.address?.area);
   const landmarkField = usePrefilled(saved?.address?.landmark);
   const detailsField = usePrefilled(saved?.address?.details);
@@ -167,11 +163,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
         <h2 id="co-pay" className="display text-[28px]">
           3. Pay
         </h2>
-        <div className="mt-4 grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="co-pay">
-          {providers.map((p) => (
-            <Option key={p.value} name="provider" value={p.value} checked={provider === p.value} onChange={() => setProvider(p.value)} title={p.label} />
-          ))}
-        </div>
+        <PayWith className="mt-4" value={provider} onChange={setProvider} />
       </section>
 
       <section aria-label="Order summary" className="border-t border-mist pt-6">
@@ -248,7 +240,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
           {pending ? "Placing order…" : toPay > 0 ? `Pay ${formatPrice(toPay)}` : "Place order"}
         </button>
         <p className="mt-3 text-[13px] text-steel-dark">
-          Your order is confirmed only after {providers.find((p) => p.value === provider)?.label} confirms the payment with us. By paying you
+          Your order is confirmed only after {walletLabels[provider]} confirms the payment with us. By paying you
           agree to our{" "}
           <Link href="/terms" className="underline">
             terms of sale
