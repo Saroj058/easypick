@@ -41,10 +41,25 @@ if (configured) {
   const databaseDir = join(process.cwd(), ".data", "postgres");
   const port = Number(process.env.LOCAL_PG_PORT ?? 5433);
   // Local-only credentials: the server listens on 127.0.0.1 and is never exposed.
-  const pg = new EmbeddedPostgres({ databaseDir, user: "postgres", password: "easypick-local", port, persistent: true, onLog: () => {} });
+  // UTF-8 always (Windows would otherwise pick its own code page, which can't store Nepali or arrows).
+  const pg = new EmbeddedPostgres({
+    databaseDir,
+    user: "postgres",
+    password: "easypick-local",
+    port,
+    persistent: true,
+    initdbFlags: ["--encoding=UTF8", "--locale=C"],
+    onLog: () => {},
+  });
   if (!existsSync(join(databaseDir, "PG_VERSION"))) await pg.initialise();
   await pg.start();
-  const url = `postgres://postgres:easypick-local@127.0.0.1:${port}/postgres`;
+  // The site's data lives in its own "easypick" database, created as UTF-8 even in an older data folder.
+  const admin = pg.getPgClient();
+  await admin.connect();
+  const { rowCount } = await admin.query("select 1 from pg_database where datname = 'easypick'");
+  if (!rowCount) await admin.query("create database easypick encoding 'UTF8' template template0 lc_collate 'C' lc_ctype 'C'");
+  await admin.end();
+  const url = `postgres://postgres:easypick-local@127.0.0.1:${port}/easypick`;
   console.log(`▲ Local database (PostgreSQL): 127.0.0.1:${port}  ·  data in .data/postgres`);
 
   const child = run({ DATABASE_URL: url });

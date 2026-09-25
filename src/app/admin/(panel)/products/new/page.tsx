@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 
 import { allDrops } from "@/lib/catalogue";
+import { requireOwner } from "@/lib/staff";
 import { NewProductForm } from "./new-product-form";
 
 export const metadata: Metadata = { title: "Add product" };
 export const dynamic = "force-dynamic";
 
 export default async function NewProduct() {
+  await requireOwner();
   const drops = (await allDrops()).map((x) => ({ slug: x.slug, name: x.name }));
   return (
     <div className="max-w-3xl">

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 
 import { festivals } from "@/lib/catalogue";
+import { requireOwner } from "@/lib/staff";
 import { FestivalForm } from "./festival-form";
 
 export const metadata: Metadata = { title: "Festivals" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminFestivals() {
+  await requireOwner();
   return (
     <div className="max-w-3xl">
       <p className="text-steel-dark">

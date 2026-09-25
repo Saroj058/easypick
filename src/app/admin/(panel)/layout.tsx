@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signOutAdmin } from "@/app/admin/actions";
 import { requireStaff } from "@/lib/staff";
 import { AdminNav } from "./admin-nav";
+import { LiveOrders } from "./live-orders";
 
 export const metadata: Metadata = { title: { default: "Admin", template: "%s | Easypick admin" }, robots: { index: false, follow: false } };
 
@@ -34,9 +35,10 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
           </div>
         </div>
         <div className="container-ep">
-          <AdminNav />
+          <AdminNav role={who.role} />
         </div>
       </header>
+      <LiveOrders />
       <div className="container-ep pb-16 pt-8">{children}</div>
     </div>
   );

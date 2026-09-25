@@ -32,3 +32,6 @@ export function normaliseNepaliMobile(input: string): string | null {
   const digits = input.replace(/[^\d]/g, "").replace(/^977/, "");
   return /^9[678]\d{8}$/.test(digits) ? digits : null;
 }
+
+/** The time of this request, for server components (they render once per request). */
+export const requestTime = () => Date.now();

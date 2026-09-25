@@ -321,3 +321,28 @@ export async function paidOrders(): Promise<Order[]> {
   return rows.map((r) => r.data);
 }
 
+
+/** Staff search: order number, customer or receiver phone, or a gift card code used or bought. */
+export async function searchOrders(q: string): Promise<Order[]> {
+  const term = q.trim();
+  if (!term) return [];
+  const db = await getDb();
+  const digits = term.replace(/\D/g, "");
+  const upper = term.toUpperCase();
+  const conds = [
+    sql`${schema.orders.number} ilike ${`%${upper.replace(/^(EP-?)?/, "")}%`}`,
+    sql`${schema.orders.data}->'giftCard'->>'code' = ${upper}`,
+    sql`${schema.orders.data}->>'issuedCardCode' = ${upper}`,
+  ];
+  if (digits.length >= 6) {
+    conds.push(sql`${schema.orders.phone} like ${`%${digits.slice(-10)}%`}`);
+    conds.push(sql`${schema.orders.data}->'gift'->>'receiverPhone' like ${`%${digits.slice(-10)}%`}`);
+  }
+  const rows = await db
+    .select({ data: schema.orders.data })
+    .from(schema.orders)
+    .where(or(...conds))
+    .orderBy(desc(schema.orders.createdAt))
+    .limit(30);
+  return rows.map((r) => r.data);
+}

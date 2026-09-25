@@ -4,17 +4,21 @@ import { allProducts, restockDemand } from "@/lib/catalogue";
 import { paidOrders } from "@/lib/orders";
 import { formatPrice } from "@/lib/format";
 import { site } from "@/lib/site";
+import { uncollected } from "./orders/order-bits";
 
 export const dynamic = "force-dynamic";
 
 const day = new Intl.DateTimeFormat("en-CA", { timeZone: site.timezone });
 
-export default async function AdminToday() {
+export default async function AdminToday({ searchParams }: PageProps<"/admin">) {
+  const { denied } = await searchParams;
   const orders = await paidOrders();
   const today = day.format(new Date());
   const todays = orders.filter((o) => day.format(new Date(o.paidAt ?? o.createdAt)) === today);
   const toPack = orders.filter((o) => o.status === "paid" && !o.packedAt && o.kind !== "gift_card" && !(o.gift?.mode === "pick" && o.gift.status !== "chosen" && o.gift.status !== "delivered"));
   const toHandOver = orders.filter((o) => o.status === "paid" && o.packedAt);
+  const attention = orders.filter((o) => o.attention);
+  const late = orders.filter(uncollected);
   const waitingGifts = orders.filter((o) => o.gift?.mode === "pick" && (o.gift.status === "sent" || o.gift.status === "opened"));
   const demand = await restockDemand();
   const products = await allProducts();
@@ -26,18 +30,21 @@ export default async function AdminToday() {
     .slice(0, 12);
 
   const tiles = [
+    ...(attention.length ? [{ label: "Needs you", value: attention.length, href: "/admin/orders?view=attention", alert: true }] : []),
     { label: "To pack", value: toPack.length, href: "/admin/orders?view=pack" },
     { label: "Packed, to hand over", value: toHandOver.length, href: "/admin/orders?view=handover" },
     { label: "Gifts waiting on a size", value: waitingGifts.length, href: "/admin/orders?view=gifts" },
+    ...(late.length ? [{ label: "Not collected, 5+ days", value: late.length, href: "/admin/orders?view=late", alert: true }] : []),
     { label: "Sales today", value: formatPrice(todays.reduce((n, o) => n + o.total, 0)), note: `${todays.length} orders`, href: "/admin/orders?view=all" },
   ];
 
   return (
     <div className="space-y-12">
+      {denied && <p role="alert" className="bg-photo px-4 py-3 text-[15px]">That page is for the owner. Ask them if you need something changed there.</p>}
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((t) => (
           <li key={t.label}>
-            <Link href={t.href} className="block h-full bg-photo p-5 hover:bg-mist">
+            <Link href={t.href} className={`block h-full p-5 ${"alert" in t && t.alert ? "bg-[#fdecee] text-[#9b0010] hover:bg-[#fbd9dd]" : "bg-photo hover:bg-mist"}`}>
               <p className="text-[13px] text-steel-dark">{t.label}</p>
               <p className="mt-2 font-mono text-[32px] font-semibold leading-none tabular-nums">{t.value}</p>
               {t.note && <p className="mt-1 text-[13px] text-steel-dark">{t.note}</p>}

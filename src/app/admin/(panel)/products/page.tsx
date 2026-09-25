@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ProductImage } from "@/components/product-image";
 import { allProducts, restockDemand } from "@/lib/catalogue";
 import { formatPrice } from "@/lib/format";
+import { requireStaff } from "@/lib/staff";
 
 export const metadata: Metadata = { title: "Products" };
 export const dynamic = "force-dynamic";
@@ -13,13 +14,16 @@ const statusLabel = { draft: "Draft", in_review: "In review", scheduled: "Schedu
 export default async function AdminProducts() {
   const products = await allProducts();
   const demand = await restockDemand();
+  const me = await requireStaff();
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-steel-dark">{products.length} products. Tap one to change its price, status or stock.</p>
-        <Link href="/admin/products/new" className="btn btn-volt">
-          Add product
-        </Link>
+        {me.role === "owner" && (
+          <Link href="/admin/products/new" className="btn btn-volt">
+            Add product
+          </Link>
+        )}
       </div>
       <ul className="mt-6 divide-y divide-mist border-y border-mist">
         {products.map((p) => {
