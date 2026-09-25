@@ -103,7 +103,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
 
         <div className="grid gap-10 lg:grid-cols-12">
           {/* Gallery: swipe on phones, grid on desktop */}
-          <div className="-mx-4 lg:col-span-7 lg:mx-0">
+          <div className="relative -mx-4 lg:col-span-7 lg:mx-0 lg:pb-[250px]">
             <ul
               className={`flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 lg:grid lg:gap-3 lg:overflow-visible lg:px-0 ${
                 product.images.length > 1 ? "lg:grid-cols-2" : "lg:grid-cols-1"
@@ -111,19 +111,6 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             >
               {product.images.map((img, i) => (
                 <li key={i} className={`relative shrink-0 snap-center lg:w-auto ${product.images.length > 1 ? "w-[86%]" : "w-full"}`}>
-                  {i === 0 && (
-                    // The same tag that hangs on the piece in the store: price, cm, RFID.
-                    <div className="absolute right-7 top-0 z-10 origin-top-right scale-[0.6] md:right-10 md:scale-[0.8] xl:scale-90">
-                      <div className="tag-hang flex flex-col items-center">
-                        <span className="h-8 w-px bg-ink/50" aria-hidden />
-                        <HangTag
-                          product={product}
-                          size={sizes.includes("M") ? "M" : sizes[0]}
-                          className="shadow-[0_4px_14px_rgba(0,0,0,0.14)] [--hole:var(--color-photo)]"
-                        />
-                      </div>
-                    </div>
-                  )}
                   <ProductImage
                     image={img}
                     category={product.category}
@@ -134,6 +121,16 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                 </li>
               ))}
             </ul>
+            {/* The same tag that hangs on the piece in the store (price, cm, RFID), pinned at the
+                bottom of the photo and hanging below it. The shadow is on the wrapper because the
+                tag's cut corners would clip it. */}
+            <div className="pointer-events-none absolute right-10 top-full z-10 -mt-3 origin-top-right scale-[0.6] md:right-10 md:scale-[0.8] lg:top-[calc(100%-250px)] lg:right-8 xl:scale-90">
+              <div className="tag-hang flex flex-col items-center [filter:drop-shadow(0_0_0.6px_rgba(0,0,0,0.45))_drop-shadow(0_8px_14px_rgba(0,0,0,0.14))]" aria-hidden>
+                <span className="h-3.5 w-3.5 rounded-full border-2 border-ink/60 bg-paper" />
+                <span className="h-9 w-px bg-ink/60" />
+                <HangTag product={product} size={sizes.includes("M") ? "M" : sizes[0]} className="[--hole:var(--color-mist)]" />
+              </div>
+            </div>
           </div>
 
           <div className="lg:col-span-5">
@@ -143,8 +140,11 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                   {drop.name} · {formatDropTime(drop.releaseAt)}
                 </span>
               )}
-              <h1 className="display text-[40px] md:text-[56px]">{product.name}</h1>
-              <p className="mt-2 text-steel-dark">{product.shortDescription}</p>
+              {/* On phones and tablets the tag hangs down beside the title, so the title leaves room. */}
+              <div className="pr-[128px] md:pr-[196px] lg:pr-0">
+                <h1 className="display text-[40px] md:text-[56px]">{product.name}</h1>
+                <p className="mt-2 text-steel-dark">{product.shortDescription}</p>
+              </div>
 
               <div className="mt-6">
                 <BuyPanel
