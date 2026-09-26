@@ -1,5 +1,7 @@
 import { setOrderStep } from "@/app/admin/actions";
-import type { Order } from "@/lib/orders";
+import { ktmDay } from "@/lib/ktm-day";
+import { formatBS } from "@/lib/nepali-date";
+import { refundedQty, type Order } from "@/lib/orders";
 import { site } from "@/lib/site";
 
 export const time = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
@@ -9,6 +11,46 @@ export const giftCardOnly = (o: Order) => o.kind === "gift_card" || o.gift?.stat
 
 /** Ready at the counter / out for delivery for 5+ days without being collected. */
 export const uncollected = (o: Order) => (o.status === "ready_for_pickup" || o.status === "out_for_delivery") && Date.now() - Date.parse(o.readyAt ?? o.paidAt ?? o.createdAt) > 5 * 86_400_000;
+
+/** The owner's order lists (tabs on /admin/orders, tiles on Today). */
+export const views = {
+  attention: "Needs you",
+  pack: "To pack",
+  handover: "To hand over",
+  gifts: "Gifts waiting",
+  late: "Not collected",
+  done: "Done",
+  all: "All",
+} as const;
+export type View = keyof typeof views;
+
+/** Whether a paid order belongs in a list. Today's tiles and the Orders tabs both use this. */
+export function inView(o: Order, view: View) {
+  if (view === "all") return true;
+  if (view === "attention") return Boolean(o.attention);
+  if (view === "done") return o.status === "completed" || o.status === "cancelled";
+  if (view === "gifts") return o.status === "paid" && waitingOnReceiver(o);
+  if (view === "late") return uncollected(o);
+  if (giftCardOnly(o) || waitingOnReceiver(o)) return false;
+  if (view === "pack") return o.status === "paid" && !o.packedAt;
+  return (o.status === "paid" && Boolean(o.packedAt)) || o.status === "ready_for_pickup" || o.status === "out_for_delivery";
+}
+
+/** Each line with what's left after refunds (`qty`); `gone` when every piece was refunded. */
+export function linesLeft(o: Order) {
+  const done = refundedQty(o);
+  return o.lines.map((line, i) => ({ line, i, qty: Math.max(0, line.qty - done[i]), refunded: done[i], gone: done[i] >= line.qty }));
+}
+
+const deliverDay = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, weekday: "short", day: "numeric", month: "short" });
+
+/** "Deliver on Sat 3 Oct (Asoj 17)" for a gift with a date, and whether that day is still ahead. */
+export function deliverOn(o: Order): { text: string; future: boolean } | null {
+  const d = o.gift?.deliverOn;
+  if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  const at = new Date(`${d}T12:00:00+05:45`);
+  return { text: `Deliver on ${deliverDay.format(at)} (${formatBS(at)})`, future: d > ktmDay() };
+}
 
 const small = "h-11 w-full rounded-[2px] border border-mist bg-paper px-3 text-[15px] outline-none focus:border-ink sm:w-40";
 

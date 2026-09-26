@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { signOut } from "@/app/auth-actions";
+import { signOut, signOutEverywhere } from "@/app/auth-actions";
 import { FitFinder } from "@/components/fit-finder";
 import { ProfileForm } from "@/components/profile-form";
 import { getCurrentUser } from "@/lib/auth";
@@ -58,6 +58,11 @@ export default async function AccountPage() {
           <form action={signOut}>
             <button type="submit" className="btn btn-outline">
               Sign out
+            </button>
+          </form>
+          <form action={signOutEverywhere}>
+            <button type="submit" className="min-h-11 text-sm underline underline-offset-2">
+              Sign out everywhere
             </button>
           </form>
         </div>

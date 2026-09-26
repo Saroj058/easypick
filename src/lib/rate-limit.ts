@@ -49,13 +49,45 @@ export async function pruneLimits() {
 }
 
 /**
- * The visitor's IP. On Vercel `x-real-ip` is set by the platform (a visitor can't fake it);
- * elsewhere fall back to the last hop of x-forwarded-for, then "local".
+ * The visitor's IP, as a rate-limit key. Only trusted on Vercel, where the platform sets
+ * x-real-ip / x-forwarded-for itself (a visitor can't fake them). Anywhere else those
+ * headers could be typed by the visitor, so everyone counts as "local".
  */
 export async function clientIp(): Promise<string> {
-  const h = await headers();
-  const real = h.get("x-real-ip");
-  if (real) return real.trim();
-  const fwd = h.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean);
-  return fwd?.length ? fwd[fwd.length - 1] : "local";
+  return ipFromHeaders(await headers(), Boolean(process.env.VERCEL));
+}
+
+/** The pure part of clientIp, for tests. */
+export function ipFromHeaders(h: { get(name: string): string | null }, trusted: boolean): string {
+  if (!trusted) return "local";
+  const real = h.get("x-real-ip")?.trim();
+  const first = h.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = real || first;
+  return ip ? ipKey(ip) : "local";
+}
+
+/**
+ * One key per visitor. IPv4 as is; IPv6 by its /64 network, because one phone or
+ * home connection gets a whole /64 and could otherwise use a new address per try.
+ */
+export function ipKey(raw: string): string {
+  let ip = raw.trim().toLowerCase();
+  if (ip.startsWith("[")) ip = ip.slice(1, ip.includes("]") ? ip.indexOf("]") : undefined); // [v6]:port
+  if (ip.includes("%")) ip = ip.slice(0, ip.indexOf("%")); // zone id
+  const colons = (ip.match(/:/g) ?? []).length;
+  if (colons === 0) return ip;
+  if (colons === 1) return ip.split(":")[0]; // IPv4 with a port
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(ip);
+  if (mapped) return mapped[1];
+
+  const halves = ip.split("::");
+  if (halves.length > 2) return ip;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const groups = halves.length === 2 ? [...head, ...Array<string>(Math.max(0, 8 - head.length - tail.length)).fill("0"), ...tail] : head;
+  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return ip;
+  return `${groups
+    .slice(0, 4)
+    .map((g) => g.replace(/^0+(?=.)/, ""))
+    .join(":")}::/64`;
 }

@@ -11,6 +11,8 @@ export const PAY_MESSAGES = {
   unavailable: "That wallet isn't available right now.",
   unreachable: "We couldn't reach the wallet to confirm. If you paid, it will show here within a few minutes.",
   start_failed: "The wallet didn't start the payment. Try again in a moment.",
+  too_many: "This order has had too many payment tries. If money left your account, contact us with your order number; otherwise place the order again.",
+  time_up: "The hold on this order is about to end, so there isn't time to pay safely. Wait a minute for it to end, then place the order again.",
 } as const;
 
 export type PayCode = keyof typeof PAY_MESSAGES;

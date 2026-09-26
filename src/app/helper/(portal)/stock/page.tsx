@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ProductImage } from "@/components/product-image";
 import { allProducts, restockDemand } from "@/lib/catalogue";
 import { bySize } from "@/lib/inventory";
+import { requireStaff } from "@/lib/staff";
 
 export const metadata: Metadata = { title: "Stock" };
 export const dynamic = "force-dynamic";
 
 /** Every piece with its sizes left; tap one to add or take off stock. */
 export default async function HelperStock({ searchParams }: PageProps<"/helper/stock">) {
+  await requireStaff("/helper/login");
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim().toLowerCase().slice(0, 40) : "";
   const [products, demand] = await Promise.all([allProducts(), restockDemand()]);

@@ -25,7 +25,7 @@ export default async function AdminReports({ searchParams }: PageProps<"/admin/r
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="display text-[32px] md:text-[40px]">Reports</h2>
-          <p className="mt-1 text-[14px] text-steel-dark">Sales are what was bought, less refunds. Gift card purchases are counted when the card is spent.</p>
+          <p className="mt-1 text-[14px] text-steel-dark">Sales are what was bought, less refunds, by Kathmandu day of payment. Gift card purchases (and gifts turned into a card) are counted when the card is spent.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {PERIODS.map((p) => (

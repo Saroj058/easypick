@@ -14,18 +14,19 @@ export function DropForm({ initial, products, isNew }: { initial: DropFormValue;
   const [state, action, pending] = useActionState<SaveState, FormData>(saveDropAction, { status: "idle" });
   return (
     <form action={action} className="space-y-5">
+      <input type="hidden" name="mode" value={isNew ? "new" : "edit"} />
       <div className="grid gap-4 sm:grid-cols-[120px_1fr]">
         <div>
           <label htmlFor="d-slug" className={label}>
             Number
           </label>
-          <input id="d-slug" name="slug" defaultValue={initial.slug} readOnly={!isNew} required placeholder="08" className={`${input} ${isNew ? "" : "bg-photo"}`} />
+          <input id="d-slug" name="slug" defaultValue={initial.slug} readOnly={!isNew} required maxLength={20} placeholder="08" className={`${input} ${isNew ? "" : "bg-photo"}`} />
         </div>
         <div>
           <label htmlFor="d-name" className={label}>
             Name
           </label>
-          <input id="d-name" name="name" defaultValue={initial.name} required placeholder="Drop 08" className={input} />
+          <input id="d-name" name="name" defaultValue={initial.name} required maxLength={60} placeholder="Drop 08" className={input} />
         </div>
       </div>
       <div>
@@ -44,20 +45,32 @@ export function DropForm({ initial, products, isNew }: { initial: DropFormValue;
       <fieldset>
         <legend className={label}>Pieces in this drop</legend>
         <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-          {products.map((p) => (
-            <li key={p.slug}>
-              <label className="flex min-h-11 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="products" value={p.slug} defaultChecked={initial.products.includes(p.slug)} className="h-5 w-5 accent-ink" />
-                <span>
-                  {p.name}{" "}
-                  <span className="text-[13px] text-steel-dark">
-                    · {p.status}
-                    {p.dropSlug && p.dropSlug !== initial.slug ? ` · in drop ${p.dropSlug}` : ""}
+          {products.map((p) => {
+            // An archived piece already in the drop stays in it: shown ticked, sent as a hidden field.
+            const locked = p.status === "archived";
+            return (
+              <li key={p.slug}>
+                {locked && <input type="hidden" name="products" value={p.slug} />}
+                <label className="flex min-h-11 items-center gap-3 text-[15px]">
+                  <input
+                    type="checkbox"
+                    name={locked ? undefined : "products"}
+                    value={p.slug}
+                    defaultChecked={locked || initial.products.includes(p.slug)}
+                    disabled={locked}
+                    className="h-5 w-5 accent-ink"
+                  />
+                  <span>
+                    {p.name}{" "}
+                    <span className="text-[13px] text-steel-dark">
+                      · {p.status}
+                      {p.dropSlug && p.dropSlug !== initial.slug ? ` · in drop ${p.dropSlug}` : ""}
+                    </span>
                   </span>
-                </span>
-              </label>
-            </li>
-          ))}
+                </label>
+              </li>
+            );
+          })}
         </ul>
       </fieldset>
       <p role={state.status === "error" ? "alert" : "status"} className={`min-h-5 text-[14px] ${state.status === "error" ? "text-[#d70015]" : "text-steel-dark"}`}>

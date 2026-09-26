@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { buyGiftCard, type GiftState } from "@/app/gift-actions";
 import { formatPrice } from "@/lib/format";
+import { kathmanduToday } from "@/lib/kathmandu-date";
 import { useMe, usePrefilled } from "./session";
 import { PayWith } from "./pay-with";
 
@@ -20,7 +21,7 @@ export function GiftCardForm() {
   const [custom, setCustom] = useState("");
   const [anonymous, setAnonymous] = useState(false);
   const amount = value === "custom" ? Number(custom) || 0 : value;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = kathmanduToday(); // the shop's calendar day, wherever the buyer is
 
   return (
     <form action={action} className="space-y-12" noValidate>

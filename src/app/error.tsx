@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { startTransition, useEffect } from "react";
+
+import { AskWhatsApp } from "@/components/ask-whatsapp";
+import { site } from "@/lib/site";
 
 /** Something broke while loading a page (e.g. the database didn't answer). */
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const router = useRouter();
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -16,13 +21,30 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
         We couldn&apos;t load this page. Your bag and any payment are safe. Try again, and if it keeps happening, message us.
       </p>
       <div className="mt-8 flex flex-wrap gap-3">
-        <button type="button" onClick={() => reset()} className="btn btn-volt">
+        <button
+          type="button"
+          // Refetch the page from the server too, not just re-render what already failed.
+          onClick={() =>
+            startTransition(() => {
+              router.refresh();
+              reset();
+            })
+          }
+          className="btn btn-volt"
+        >
           Try again
         </button>
         <Link href="/" className="btn btn-outline">
           Home
         </Link>
       </div>
+      {site.store.whatsapp && (
+        <AskWhatsApp
+          className="mt-4"
+          label="Message us on WhatsApp"
+          text={`Hi Easypick, a page didn't load for me${error.digest ? ` (ref ${error.digest})` : ""}: `}
+        />
+      )}
       {error.digest && <p className="mt-6 font-mono text-[12px] text-steel-dark">Ref {error.digest}</p>}
     </div>
   );

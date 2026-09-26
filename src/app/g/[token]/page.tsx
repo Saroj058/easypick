@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { GiftReveal, type RevealData } from "@/components/gift-reveal";
+import { maskCode } from "@/lib/gift-cards";
 import { findOrderByGiftToken } from "@/lib/orders";
 import { getProducts } from "@/lib/store";
 
@@ -26,6 +27,15 @@ export default async function GiftRevealPage({ params }: PageProps<"/g/[token]">
     );
   }
 
+  if (order.status === "cancelled") {
+    return (
+      <section className="container-ep max-w-xl py-24 text-center md:py-32">
+        <h1 className="display display-h1">This gift was cancelled.</h1>
+        <p className="mt-4 text-lg text-steel-dark">There&apos;s nothing to choose here any more. If you think this is a mistake, ask the person who sent it.</p>
+      </section>
+    );
+  }
+
   const line = order.lines[0];
   const product = (await getProducts()).find((p) => p.slug === line.slug);
   const g = order.gift;
@@ -40,13 +50,14 @@ export default async function GiftRevealPage({ params }: PageProps<"/g/[token]">
     deliverOn: g.deliverOn,
     wrap: g.wrap,
     colourChoice: g.colourChoice,
-    chosen: g.receiver
-      ? { method: g.receiver.method, slot: g.receiver.slot ?? null, area: g.receiver.address?.area ?? null, tryInStore: g.receiver.tryInStore === true }
-      : null,
+    // Never the address: anyone holding this link (the buyer too) would see it.
+    chosen: g.receiver ? { method: g.receiver.method, slot: g.receiver.slot ?? null, tryInStore: g.receiver.tryInStore === true } : null,
     // The pickup code is only needed (and shown) when they chose to try it on in the store.
     storeCode: g.receiver?.tryInStore ? order.number : null,
-    cardCode: g.convertedCardCode ?? null,
-    welcomeCode: g.welcomeCode ?? null,
+    // Card codes are shown in full only once, right after they're made; here they're masked.
+    cardCode: g.convertedCardCode ? maskCode(g.convertedCardCode) : null,
+    welcomeCode: g.welcomeCode ? maskCode(g.welcomeCode) : null,
+    sentTo: g.receiverEmail && g.receiverPhone ? "your email and phone" : g.receiverPhone ? "your phone" : "your email",
     thanked: Boolean(g.thanks),
     // Only sent to the page when the buyer chose to show it.
     price: g.showPrice ? line.unitPrice * line.qty : null,

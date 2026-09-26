@@ -57,17 +57,16 @@ export function LoginPanel({
     >
       <Mark />
       {label}
-      {!providers[p] && <span className="sr-only"> (not set up yet)</span>}
     </a>
   );
 
   return (
     <div className="space-y-6">
-      {!phoneOnly && (
+      {!phoneOnly && (providers.google || providers.facebook) && (
         <>
           <div className="space-y-3">
-            {social("google", "Continue with Google", GoogleMark)}
-            {/* Shown only once Facebook sign-in is set up (FACEBOOK_APP_ID / SECRET). */}
+            {/* Each shown only once that sign-in is set up (GOOGLE_* / FACEBOOK_* env vars). */}
+            {providers.google && social("google", "Continue with Google", GoogleMark)}
             {providers.facebook && social("facebook", "Continue with Facebook", FacebookMark)}
           </div>
 
@@ -81,6 +80,7 @@ export function LoginPanel({
 
       <form action={action} noValidate className="space-y-4">
         <input type="hidden" name="next" value={next} />
+        {phoneOnly && <input type="hidden" name="add" value="phone" />}
 
         {state.step === "phone" ? (
           <>

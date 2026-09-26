@@ -54,14 +54,23 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   const [cardCode, setCardCode] = useState("");
   const [card, setCard] = useState<{ code: string; balance: number } | null>(null);
   const [cardMsg, setCardMsg] = useState("");
+  const [applying, setApplying] = useState(false);
 
   async function applyCard() {
+    if (applying || !cardCode.trim()) return;
     setCardMsg("");
-    const res = await previewGiftCard(cardCode);
-    if (res.ok) setCard({ code: res.code, balance: res.balance });
-    else {
-      setCard(null);
-      setCardMsg(res.message);
+    setApplying(true);
+    try {
+      const res = await previewGiftCard(cardCode);
+      if (res.ok) setCard({ code: res.code, balance: res.balance });
+      else {
+        setCard(null);
+        setCardMsg(res.message);
+      }
+    } catch {
+      setCardMsg("Couldn't check the card. Try again.");
+    } finally {
+      setApplying(false);
     }
   }
 
@@ -230,12 +239,20 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
                   id="co-card"
                   value={cardCode}
                   onChange={(e) => setCardCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter / Go applies the card; it must not place the order without it.
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      applyCard();
+                    }
+                  }}
+                  enterKeyHint="go"
                   placeholder="EP-XXXX-XXXX"
                   autoCapitalize="characters"
                   className="h-[52px] min-w-0 flex-1 rounded-[2px] border border-steel-dark bg-paper px-4 font-mono uppercase"
                 />
-                <button type="button" onClick={applyCard} className="btn btn-ink shrink-0">
-                  Apply
+                <button type="button" onClick={applyCard} disabled={applying} aria-busy={applying} className="btn btn-ink shrink-0">
+                  {applying ? "Checking…" : "Apply"}
                 </button>
               </div>
               <p role="alert" className="mt-1 min-h-5 text-[13px] text-error-light">

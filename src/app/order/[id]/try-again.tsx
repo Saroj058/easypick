@@ -8,7 +8,7 @@ import type { OrderLine } from "@/lib/orders";
 
 /** After an expired payment: one piece goes back to Buy now; several go back into the bag. */
 export function TryAgain({ lines, gift }: { lines: OrderLine[]; gift: boolean }) {
-  const { add } = useBag();
+  const { add, lines: bag } = useBag();
   const router = useRouter();
   if (gift) {
     return (
@@ -29,7 +29,8 @@ export function TryAgain({ lines, gift }: { lines: OrderLine[]; gift: boolean })
       type="button"
       className="btn btn-volt mt-4"
       onClick={() => {
-        for (const l of lines) for (let i = 0; i < l.qty; i++) add({ slug: l.slug, sku: l.sku, name: l.name, size: l.size, colour: l.colour, price: l.unitPrice });
+        // The bag is only emptied once an order is paid, so these may still be in it: top up, don't double.
+        for (const l of lines) for (let i = bag.find((b) => b.sku === l.sku)?.qty ?? 0; i < l.qty; i++) add({ slug: l.slug, sku: l.sku, name: l.name, size: l.size, colour: l.colour, price: l.unitPrice });
         router.push("/bag");
       }}
     >

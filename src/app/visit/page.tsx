@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PageIntro } from "@/components/page-intro";
 import { VisitCard } from "@/components/visit-card";
 import { formatHour } from "@/lib/format";
+import { jsonLd } from "@/lib/json-ld";
 import { site } from "@/lib/site";
 import { getProduct } from "@/lib/store";
 
@@ -38,7 +39,7 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(storeLd)} />
       <PageIntro title="Aaunus." lead="Just looking is fine too. Need a hand? Our helper's around." />
 
       <div className="container-ep grid gap-12 pb-24 pt-6 lg:grid-cols-2">

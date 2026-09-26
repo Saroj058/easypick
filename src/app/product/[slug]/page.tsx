@@ -11,6 +11,7 @@ import { RecordView } from "@/components/saved";
 import { ProductImage } from "@/components/product-image";
 import { formatDropTime } from "@/lib/format";
 import { categoryLabels, site } from "@/lib/site";
+import { jsonLd as toJsonLd } from "@/lib/json-ld";
 import { getDrop, getProduct, getProducts } from "@/lib/store";
 import type { Size } from "@/lib/types";
 import { FestivalNotice } from "@/components/festival-notice";
@@ -86,7 +87,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={toJsonLd(jsonLd)} />
 
       <div className="container-ep pb-24 pt-6 md:pt-10">
         <nav aria-label="Breadcrumb" className="mb-6 text-[13px] text-steel-dark">

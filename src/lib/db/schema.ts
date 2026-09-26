@@ -193,6 +193,8 @@ export const orders = pgTable(
     index("orders_phone_idx").on(t.phone),
     index("orders_status_created_idx").on(t.status, t.createdAt.desc()),
     index("orders_created_idx").on(t.createdAt.desc()),
+    // Paid orders, newest payment first (reports, the new-order watcher, Done/All lists).
+    index("orders_paid_at_idx").on(t.paidAt.desc()).where(sql`${t.paidAt} is not null`),
     check(
       "orders_status_check",
       sql`${t.status} in ('awaiting_payment','paid','ready_for_pickup','out_for_delivery','completed','expired','cancelled')`,

@@ -59,6 +59,8 @@ export function authorizeUrl(p: Provider, state: string, challenge: string) {
     response_type: "code",
     scope: "email,public_profile",
     state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
   });
   return `https://www.facebook.com/${FB_VERSION}/dialog/oauth?${q}`;
 }
@@ -91,6 +93,7 @@ export async function fetchProfile(p: Provider, code: string, verifier: string):
     client_secret: config.facebook.secret!,
     redirect_uri: redirectUri(p),
     code,
+    code_verifier: verifier,
   });
   const tokenRes = await fetch(`https://graph.facebook.com/${FB_VERSION}/oauth/access_token?${tq}`, { signal: AbortSignal.timeout(10_000) });
   if (!tokenRes.ok) throw new Error(`facebook token ${tokenRes.status}`);
@@ -98,6 +101,7 @@ export async function fetchProfile(p: Provider, code: string, verifier: string):
   const meRes = await fetch(`https://graph.facebook.com/${FB_VERSION}/me?${new URLSearchParams({ fields: "id,name,email", access_token })}`, { signal: AbortSignal.timeout(10_000) });
   if (!meRes.ok) throw new Error(`facebook me ${meRes.status}`);
   const me = (await meRes.json()) as { id: string; name?: string; email?: string };
-  // Facebook only returns an email the person has confirmed with Facebook.
-  return { provider: "facebook", id: me.id, email: me.email ?? null, emailVerified: Boolean(me.email), name: me.name ?? null };
+  // Facebook doesn't promise its emails are confirmed, so they never link to an existing
+  // account; the email is only kept as contact info on a new one.
+  return { provider: "facebook", id: me.id, email: me.email ?? null, emailVerified: false, name: me.name ?? null };
 }

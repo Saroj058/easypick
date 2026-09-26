@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { staffActivity } from "@/lib/admin-data";
 import { site } from "@/lib/site";
 import { requireOwner, staffList } from "@/lib/staff";
+import { activityFor } from "@/lib/staff-activity";
 
 export const metadata: Metadata = { title: "Activity" };
 export const dynamic = "force-dynamic";
@@ -26,20 +26,21 @@ function describe(detail: Record<string, unknown> | null) {
 export default async function AdminActivity({ searchParams }: PageProps<"/admin/activity">) {
   await requireOwner();
   const sp = await searchParams;
-  const who = typeof sp.who === "string" ? sp.who : undefined;
-  const [rows, staff] = await Promise.all([staffActivity(200, who), staffList()]);
+  // ?who= is a staff account id (names can change).
+  const who = typeof sp.who === "string" ? sp.who.slice(0, 64) : undefined;
+  const [rows, staff] = await Promise.all([activityFor(200, who), staffList()]);
 
   return (
     <div className="max-w-4xl">
       <h2 className="display text-[32px] md:text-[40px]">Activity</h2>
       <p className="mt-2 text-steel-dark">Who changed what in the admin: sign-ins, prices, stock, refunds, exchanges. The latest 200.</p>
       <ul className="mt-6 flex flex-wrap gap-2" aria-label="Show">
-        {[{ username: undefined as string | undefined, label: "Everyone" }, ...staff.map((s) => ({ username: s.username as string | undefined, label: s.username }))].map((s) => (
-          <li key={s.label}>
+        {[{ id: undefined as string | undefined, label: "Everyone" }, ...staff.map((s) => ({ id: s.id as string | undefined, label: s.username }))].map((s) => (
+          <li key={s.id ?? ""}>
             <Link
-              href={s.username ? `/admin/activity?who=${encodeURIComponent(s.username)}` : "/admin/activity"}
-              aria-current={who === s.username ? "page" : undefined}
-              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-[14px] ${who === s.username ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}
+              href={s.id ? `/admin/activity?who=${encodeURIComponent(s.id)}` : "/admin/activity"}
+              aria-current={who === s.id ? "page" : undefined}
+              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-[14px] ${who === s.id ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}
             >
               {s.label}
             </Link>

@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 
-import { paidOrders } from "@/lib/orders";
+import { helperQueue } from "@/lib/helper-counts";
+import { requireStaff } from "@/lib/staff";
 import { atCounter, onTheWay, Section, toHandOver, toPack } from "./queue";
 
 export const metadata: Metadata = { title: "Orders" };
 export const dynamic = "force-dynamic";
 
-const oldestFirst = (a: { paidAt?: string; createdAt: string }, b: { paidAt?: string; createdAt: string }) =>
-  Date.parse(a.paidAt ?? a.createdAt) - Date.parse(b.paidAt ?? b.createdAt);
-
 export default async function HelperOrders() {
-  const orders = (await paidOrders()).sort(oldestFirst);
+  await requireStaff("/helper/login");
+  // Only orders still being handled, oldest first.
+  const orders = await helperQueue();
   const giftsWaiting = orders.filter((o) => o.status === "paid" && o.gift?.mode === "pick" && (o.gift.status === "sent" || o.gift.status === "opened")).length;
 
   return (

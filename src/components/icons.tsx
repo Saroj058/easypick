@@ -78,9 +78,16 @@ export const GiftIcon = ({ className }: P) => (
   </svg>
 );
 
-/** Filled when on (saved / in the bag). */
+/** Filled when the piece is in the bag (cards). */
 export const HeartIcon = ({ filled, className }: P & { filled: boolean }) => (
   <svg viewBox="0 0 24 24" className={className} aria-hidden fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round">
     <path d="M12 20.5s-7.5-4.6-9.2-9.1C1.6 8.2 3.6 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.6 0 5.6 3.7 4.4 6.9-1.7 4.5-9.2 9.1-9.2 9.1Z" />
+  </svg>
+);
+
+/** Save for later. Filled when saved. */
+export const BookmarkIcon = ({ filled, className }: P & { filled: boolean }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round">
+    <path d="M6 3.5h12v17l-6-4.5-6 4.5v-17Z" />
   </svg>
 );

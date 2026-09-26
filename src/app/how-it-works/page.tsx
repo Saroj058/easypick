@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ChevronIcon } from "@/components/icons";
 import { PageIntro } from "@/components/page-intro";
+import { jsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -54,7 +55,7 @@ export default function HowItWorksPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(faqLd)} />
       <PageIntro dark eyebrow="How it works" title="Pick. Pay. Wear." lead="A clothing store without the queue or the pressure. Here's what a visit looks like." />
 
       <section className="section">

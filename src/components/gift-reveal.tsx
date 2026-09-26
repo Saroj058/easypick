@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import {
   chooseGift,
@@ -37,12 +37,14 @@ export interface RevealData {
   chosen: {
     method: "pickup" | "delivery";
     slot: string | null;
-    area: string | null;
     tryInStore: boolean;
   } | null;
   storeCode: string | null;
+  /** Masked (EP-••••-2QXD): full codes are only shown right after they're made. */
   cardCode: string | null;
   welcomeCode: string | null;
+  /** Where codes were sent, e.g. "your email and phone". */
+  sentTo: string;
   thanked: boolean;
   /** Null unless the buyer chose to show the price. */
   price: number | null;
@@ -70,16 +72,20 @@ function niceDate(d: string) {
   }).format(new Date(`${d}T12:00:00+05:45`));
 }
 
+type Code = { code: string; fresh: boolean };
+
 /** Say thanks to the sender, then show the receiver's own welcome credit. */
 function AfterGift({
   token,
   from,
-  welcomeCode,
+  welcome,
+  sentTo,
   thanked,
 }: {
   token: string;
   from: string | null;
-  welcomeCode: string | null;
+  welcome: Code | null;
+  sentTo: string;
   thanked: boolean;
 }) {
   const [state, action, pending] = useActionState<ThanksState, FormData>(
@@ -129,7 +135,7 @@ function AfterGift({
           </form>
         )}
       </section>
-      {welcomeCode && (
+      {welcome && (
         <section aria-labelledby="welcome-title" className="text-center">
           <h2 id="welcome-title" className="text-xl font-semibold">
             {formatPrice(site.gifting.welcomeCredit)} off your first order.
@@ -139,7 +145,12 @@ function AfterGift({
             {site.gifting.welcomeCreditDays} days, online or in store.
           </p>
           <p className="mt-4 inline-block bg-ink px-5 py-3 font-mono text-xl font-semibold tracking-[0.1em] text-paper">
-            {welcomeCode}
+            {welcome.code}
+          </p>
+          <p className="mt-3 text-[13px] text-steel-dark">
+            {welcome.fresh
+              ? `Note it down. We've also sent it to ${sentTo}.`
+              : `We sent the full code to ${sentTo}.`}
           </p>
         </section>
       )}
@@ -187,7 +198,10 @@ export function GiftReveal({ data }: { data: RevealData }) {
     chooseGift,
     { status: "idle" },
   );
-  const [card, setCard] = useState<string | null>(data.cardCode);
+  const [card, setCard] = useState<Code | null>(
+    data.cardCode ? { code: data.cardCode, fresh: false } : null,
+  );
+  const [cardError, setCardError] = useState(false);
   const [converting, setConverting] = useState(false);
 
   const profile = useFitProfile();
@@ -212,18 +226,35 @@ export function GiftReveal({ data }: { data: RevealData }) {
     data.status === "chosen" ||
     data.status === "delivered";
 
+  // After "Open it", keyboard and screen-reader users land on the opened gift's heading.
+  const openedHeading = useRef<HTMLHeadingElement>(null);
+  const openedByTap = useRef(false);
+  useEffect(() => {
+    if (opened && openedByTap.current) openedHeading.current?.focus();
+  }, [opened]);
+
   function open() {
     setUnwrapping(true);
+    openedByTap.current = true;
     void openGift(data.token);
     setTimeout(() => setOpened(true), 900);
   }
 
   async function toCard() {
     setConverting(true);
+    setCardError(false);
     const res = await giftToCard(data.token);
     setConverting(false);
-    if (res.ok && res.code) setCard(res.code);
+    if (res.ok && res.code) setCard({ code: res.code, fresh: res.fresh === true });
+    else setCardError(true);
   }
+
+  const welcome: Code | null =
+    state.status === "done" && state.welcome
+      ? state.welcome
+      : data.welcomeCode
+        ? { code: data.welcomeCode, fresh: false }
+        : null;
 
   // ---------- Closed box ----------
   if (!opened) {
@@ -274,6 +305,11 @@ export function GiftReveal({ data }: { data: RevealData }) {
 
   return (
     <div className="container-ep max-w-2xl animate-fade-up pb-24 pt-10 md:pt-16">
+      {!p && (
+        <h1 ref={openedHeading} tabIndex={-1} className="sr-only">
+          Your gift
+        </h1>
+      )}
       {data.message && (
         <figure className="bg-photo px-6 py-8 text-center md:px-10">
           <blockquote className="text-xl leading-relaxed md:text-2xl">
@@ -297,7 +333,13 @@ export function GiftReveal({ data }: { data: RevealData }) {
             sizes="160px"
           />
           <div>
-            <h1 className="text-2xl font-semibold">{p.name}</h1>
+            <h1
+              ref={openedHeading}
+              tabIndex={-1}
+              className="text-2xl font-semibold focus:outline-none"
+            >
+              {p.name}
+            </h1>
             <p className="mt-1 text-steel-dark">
               {colour}
               {data.wrap === "premium" ? " · in the black gift box" : ""}
@@ -316,10 +358,12 @@ export function GiftReveal({ data }: { data: RevealData }) {
             months.
           </p>
           <p className="mt-6 inline-block bg-ink px-6 py-4 font-mono text-2xl font-semibold tracking-[0.1em] text-paper">
-            {card}
+            {card.code}
           </p>
           <p className="mt-3 text-[13px] text-steel-dark">
-            We&apos;ve also sent it to you by SMS.
+            {card.fresh
+              ? `Note it down. We've also sent it to ${data.sentTo}.`
+              : `We sent the full code to ${data.sentTo}.`}
           </p>
         </section>
       ) : storeCode ? (
@@ -328,7 +372,8 @@ export function GiftReveal({ data }: { data: RevealData }) {
           <AfterGift
             token={data.token}
             from={data.from}
-            welcomeCode={data.welcomeCode}
+            welcome={welcome}
+            sentTo={data.sentTo}
             thanked={data.thanked}
           />
         </>
@@ -350,11 +395,8 @@ export function GiftReveal({ data }: { data: RevealData }) {
           <AfterGift
             token={data.token}
             from={data.from}
-            welcomeCode={
-              state.status === "done"
-                ? (state.welcomeCode ?? data.welcomeCode)
-                : data.welcomeCode
-            }
+            welcome={welcome}
+            sentTo={data.sentTo}
             thanked={data.thanked}
           />
         </section>
@@ -372,7 +414,8 @@ export function GiftReveal({ data }: { data: RevealData }) {
           <AfterGift
             token={data.token}
             from={data.from}
-            welcomeCode={null}
+            welcome={null}
+            sentTo={data.sentTo}
             thanked={data.thanked}
           />
         </section>
@@ -642,6 +685,11 @@ export function GiftReveal({ data }: { data: RevealData }) {
                     Turn it into a gift card
                   </button>
                 </p>
+                {cardError && (
+                  <p role="alert" className="mt-2 text-center text-[14px] text-error-light">
+                    We couldn&apos;t change this gift. Refresh the page and try again.
+                  </p>
+                )}
               </div>
             </form>
           )}

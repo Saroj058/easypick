@@ -7,6 +7,8 @@ import type { FitProfile } from "@/lib/fit-profile";
 import type { SavedCheckout } from "@/lib/types";
 
 export interface Me {
+  /** Account id; the bag in this browser is kept per account. */
+  id: string;
   name: string | null;
   phone: string | null;
   fit: FitProfile | null;

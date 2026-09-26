@@ -2,38 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { formatPrice } from "@/lib/format";
-import { paidOrders, searchOrders, type Order } from "@/lib/orders";
-import { giftCardOnly, NextStep, statusLabel, time, uncollected, waitingOnReceiver } from "./order-bits";
+import { activeOrders, paidOrderCounts, recentDoneOrders, recentPaidOrders, searchOrders, type Order } from "@/lib/orders";
+import { deliverOn, giftCardOnly, inView, linesLeft, NextStep, statusLabel, time, views, waitingOnReceiver, type View } from "./order-bits";
+import { requireOwner } from "@/lib/staff";
 
 export const metadata: Metadata = { title: "Orders" };
 export const dynamic = "force-dynamic";
 
-const views = {
-  attention: "Needs you",
-  pack: "To pack",
-  handover: "To hand over",
-  gifts: "Gifts waiting",
-  late: "Not collected",
-  done: "Done",
-  all: "All",
-} as const;
-type View = keyof typeof views;
-
-function inView(o: Order, view: View) {
-  if (view === "all") return true;
-  if (view === "attention") return Boolean(o.attention);
-  if (view === "done") return o.status === "completed" || o.status === "cancelled";
-  if (view === "gifts") return o.status === "paid" && waitingOnReceiver(o);
-  if (view === "late") return uncollected(o);
-  if (giftCardOnly(o) || waitingOnReceiver(o)) return false;
-  if (view === "pack") return o.status === "paid" && !o.packedAt;
-  return (o.status === "paid" && Boolean(o.packedAt)) || o.status === "ready_for_pickup" || o.status === "out_for_delivery";
-}
+/** Done and All show the latest this many; older orders are found with the search. */
+const RECENT = 200;
 
 function OrderCard({ o }: { o: Order }) {
   const g = o.gift;
   const address = g?.receiver?.address ?? o.address;
   const method = g?.receiver?.method ?? o.method;
+  const when = deliverOn(o);
   return (
     <li className={`border p-5 ${o.attention ? "border-[#d70015]" : "border-mist"}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -51,14 +34,17 @@ function OrderCard({ o }: { o: Order }) {
       )}
 
       <ul className="mt-3 space-y-1 text-[15px]">
-        {o.lines.map((l, i) => (
+        {linesLeft(o).map(({ line: l, i, qty, refunded, gone }) => (
           <li key={i}>
-            <span className="font-semibold">{l.name}</span>{" "}
-            <span className="text-steel-dark">
-              · {l.colour} · {waitingOnReceiver(o) ? "size not chosen yet" : l.size === "ONE" ? "One size" : l.size}
-              {l.qty > 1 ? ` × ${l.qty}` : ""}
-            </span>{" "}
-            <span className="font-mono text-[12px] text-steel-dark">{l.sku}</span>
+            <span className={gone ? "text-steel-dark line-through" : ""}>
+              <span className="font-semibold">{l.name}</span>{" "}
+              <span className="text-steel-dark">
+                · {l.colour} · {waitingOnReceiver(o) ? "size not chosen yet" : l.size === "ONE" ? "One size" : l.size}
+                {!gone && qty > 1 ? ` × ${qty}` : ""}
+              </span>{" "}
+              <span className="font-mono text-[12px] text-steel-dark">{l.sku}</span>
+            </span>
+            {refunded > 0 && <span className="text-[13px] text-steel-dark"> · {gone ? "refunded" : `${refunded} refunded`}</span>}
           </li>
         ))}
       </ul>
@@ -94,6 +80,7 @@ function OrderCard({ o }: { o: Order }) {
         </div>
       </dl>
 
+      {when && <p className={`mt-3 text-[14px] ${when.future ? "font-semibold text-[#7a3e00]" : "text-steel-dark"}`}>{when.text}</p>}
       {g && (
         <p className="mt-3 text-[14px] text-steel-dark">
           {g.wrap === "premium" ? "Premium black box" : "Standard bag + tissue"} · {g.showPrice ? "price may be shown" : "no price inside"}
@@ -117,19 +104,23 @@ function OrderCard({ o }: { o: Order }) {
 }
 
 export default async function AdminOrders({ searchParams }: PageProps<"/admin/orders">) {
+  await requireOwner();
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.slice(0, 40) : "";
-  const paid = await paidOrders();
-  const counts = Object.fromEntries((Object.keys(views) as View[]).map((v) => [v, paid.filter((o) => inView(o, v)).length])) as Record<View, number>;
+  // Only what's still moving is loaded in full; Done and All are counted, then the latest few loaded.
+  const [active, totals] = await Promise.all([activeOrders(), paidOrderCounts()]);
+  const counts = Object.fromEntries((Object.keys(views) as View[]).map((v) => [v, active.filter((o) => inView(o, v)).length])) as Record<View, number>;
+  counts.done = totals.done;
+  counts.all = totals.all;
   const fallback: View = counts.attention > 0 ? "attention" : "pack";
   const view: View = typeof sp.view === "string" && sp.view in views ? (sp.view as View) : fallback;
 
   let list: Order[];
   if (q) list = await searchOrders(q);
-  else {
-    list = paid.filter((o) => inView(o, view)).sort((a, b) => Date.parse(a.paidAt ?? a.createdAt) - Date.parse(b.paidAt ?? b.createdAt));
-    if (view === "done" || view === "all") list.reverse();
-  }
+  else if (view === "done") list = await recentDoneOrders(RECENT);
+  else if (view === "all") list = await recentPaidOrders(RECENT);
+  else list = active.filter((o) => inView(o, view)).sort((a, b) => Date.parse(a.paidAt ?? a.createdAt) - Date.parse(b.paidAt ?? b.createdAt));
+  const more = !q && (view === "done" || view === "all") && counts[view] > list.length;
 
   return (
     <div>
@@ -177,7 +168,9 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
       )}
 
       {list.length === 0 ? (
-        <p className="mt-10 text-steel-dark">{q ? "No orders match. Try the last digits of the phone number." : "Nothing here right now."}</p>
+        <p className="mt-10 text-steel-dark">
+          {q ? (q.trim().length < 3 ? "Type at least 3 characters (4 digits for a phone number)." : "No orders match. Try the last digits of the phone number.") : "Nothing here right now."}
+        </p>
       ) : (
         <ul className="mt-8 space-y-4">
           {list.map((o) => (
@@ -185,6 +178,7 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
           ))}
         </ul>
       )}
+      {more && <p className="mt-6 text-[14px] text-steel-dark">Showing the latest {list.length}. Search to find an older order.</p>}
     </div>
   );
 }

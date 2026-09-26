@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CountForm } from "@/app/admin/(panel)/stock/count-form";
+import { requireStaff } from "@/lib/staff";
 
 export const metadata: Metadata = { title: "Stock count" };
 
-export default function HelperCount() {
+export default async function HelperCount() {
+  await requireStaff("/helper/login");
   return (
     <div className="mx-auto max-w-2xl">
       <Link href="/helper/stock" className="text-[14px] text-steel-dark underline underline-offset-2">

@@ -8,7 +8,13 @@ export const site = {
   tagline: "Pick it. Pay it. Wear it.",
   subline: "Self-checkout fashion. Fair prices. Zero pressure.",
   // TODO: pick domain (easypick.com.np vs easypick.com)
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  // Vercel preview deployments without their own NEXT_PUBLIC_SITE_URL use their *.vercel.app address.
+  // (NEXT_PUBLIC_* values are fixed at build time; VERCEL_URL is only seen on the server.)
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL}`
+      : "http://localhost:3000"),
   timezone: "Asia/Kathmandu",
 
   store: {

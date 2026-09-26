@@ -2,34 +2,60 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { BagLine } from "@/lib/types";
 import { useBag } from "./bag-provider";
 import { useMe } from "./session";
 
-// The bag needs an account (it's saved to you). Buying one piece with "Buy now" doesn't.
-// If a logged-out person taps Add to bag, we remember what they picked, send them to
-// log in, and add it once they're back.
+// The bag needs an account (it's kept per account on this phone). Buying one piece with
+// "Buy now" doesn't. If a logged-out person taps Add to bag, we remember what they picked,
+// send them to log in, and add it once they're back.
 
 const PENDING = "ep-bag-pending";
 
-/** Add to bag, or send the person to log in first. Returns true when it was added now. */
+function sendToLogin(items: Omit<BagLine, "qty">[], router: ReturnType<typeof useRouter>) {
+  try {
+    sessionStorage.setItem(PENDING, JSON.stringify(items));
+  } catch {
+    // storage blocked: they'll just pick again after logging in
+  }
+  const here = window.location.pathname + window.location.search;
+  router.push(`/login?reason=bag&next=${encodeURIComponent(here)}`);
+}
+
+const addedNote = (items: Omit<BagLine, "qty">[]) =>
+  items.length === 1 ? addedMessage(items[0]) : `${items.length} pieces added to your bag.`;
+
+/**
+ * Add to bag, or send the person to log in first. Returns true when it was added now.
+ * A tap before we know who's signed in waits for that answer, then finishes (with the
+ * bag note) or goes to log in, so a signed-out person is never treated as signed in.
+ */
 export function useAddToBag() {
   const { add } = useBag();
   const me = useMe();
   const router = useRouter();
+  const waiting = useRef<Omit<BagLine, "qty">[] | null>(null);
+
+  useEffect(() => {
+    if (me === undefined || !waiting.current) return;
+    const items = waiting.current;
+    waiting.current = null;
+    // Signed in: the bag already took the add (it holds changes until the session is known).
+    if (me) showBagToast(addedNote(items));
+    else sendToLogin(items, router);
+  }, [me, router]);
 
   return useCallback(
     (items: Omit<BagLine, "qty">[]) => {
+      if (me === undefined) {
+        items.forEach(add); // the bag keeps these only if they turn out to be signed in
+        waiting.current = items;
+        return false;
+      }
       if (me === null) {
-        try {
-          sessionStorage.setItem(PENDING, JSON.stringify(items));
-        } catch {
-          // storage blocked: they'll just pick again after logging in
-        }
-        const here = window.location.pathname + window.location.search;
-        router.push(`/login?reason=bag&next=${encodeURIComponent(here)}`);
+        sendToLogin(items, router);
         return false;
       }
       items.forEach(add);
@@ -121,7 +147,7 @@ export function PendingBagAdd() {
     const lines = items as Omit<BagLine, "qty">[];
     lines.forEach(add);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-off note after login
-    setMessage(lines.length === 1 ? addedMessage(lines[0]) : `${lines.length} pieces added to your bag.`);
+    setMessage(addedNote(lines));
   }, [me, ready, add]);
 
   // Stays 8 seconds, and not while the pointer or keyboard focus is on it.

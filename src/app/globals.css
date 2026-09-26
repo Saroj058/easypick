@@ -304,15 +304,20 @@
     transform: translateY(-5px);
   }
 
-  /* Store ticker: one line, scrolls slowly, static under reduced motion. */
+  /* Store ticker: one line, scrolls slowly, static under reduced motion.
+     Paused by the pause button / a tap (data-paused), or while a mouse hovers it. */
   .ticker-track {
     display: flex;
     width: max-content;
     animation: ticker 48s linear infinite;
   }
-  .ticker:hover .ticker-track,
-  .ticker:focus-within .ticker-track {
+  .ticker[data-paused] .ticker-track {
     animation-play-state: paused;
+  }
+  @media (hover: hover) {
+    .ticker:hover .ticker-track {
+      animation-play-state: paused;
+    }
   }
   @keyframes ticker {
     to {
@@ -373,7 +378,8 @@
     width: auto;
     flex-wrap: wrap;
   }
-  .ticker-dup {
+  .ticker-dup,
+  .ticker-pause {
     display: none;
   }
 }

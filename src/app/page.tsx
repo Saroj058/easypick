@@ -9,8 +9,10 @@ import { ArrowIcon } from "@/components/icons";
 import { ProductCard } from "@/components/product-card";
 import { GarmentSvg } from "@/components/product-image";
 import { RevealRoot } from "@/components/reveal-root";
+import { Ticker } from "@/components/ticker";
 import { VisitCard } from "@/components/visit-card";
 import { formatDropTime, formatHour, formatPrice } from "@/lib/format";
+import { jsonLd } from "@/lib/json-ld";
 import { categoryLabels, site } from "@/lib/site";
 import { getDropTimeline, getHomeStats, getProducts } from "@/lib/store";
 import type { Category, Product } from "@/lib/types";
@@ -112,7 +114,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(orgLd)} />
       {/* 01 — Hero: the rail, a tag, and the drop's numbers */}
       <section aria-labelledby="hero-title" className="on-dark bg-ink text-paper">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
@@ -200,20 +202,7 @@ export default async function HomePage() {
       </section>
 
       {/* Ticker */}
-      <section aria-label="Store updates" className="ticker overflow-hidden border-y border-paper/10 bg-graphite py-3 text-paper">
-        <div className="ticker-track">
-          {[0, 1].map((copy) => (
-            <ul key={copy} aria-hidden={copy === 1 || undefined} className={`flex shrink-0 ${copy === 1 ? "ticker-dup" : ""}`}>
-              {ticker.map((t) => (
-                <li key={t} className="index flex items-center gap-6 whitespace-nowrap pr-6 text-paper/80">
-                  {t}
-                  <span className="h-1 w-1 bg-volt" aria-hidden />
-                </li>
-              ))}
-            </ul>
-          ))}
-        </div>
-      </section>
+      <Ticker items={ticker} />
 
       {/* 02 — The drop */}
       {current && featured.length > 0 && (

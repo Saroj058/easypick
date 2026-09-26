@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { findProduct, restockDemand, stockHistory } from "@/lib/catalogue";
-import { requireStaff } from "@/lib/staff";
+import { currentStaff, requireOwner, requireStaff } from "@/lib/staff";
 import { ProductForm } from "./product-form";
 import { StockForm } from "./stock-form";
 import { StockHistory } from "./stock-history";
@@ -12,11 +12,13 @@ export const dynamic = "force-dynamic";
 
 
 export async function generateMetadata({ params }: PageProps<"/admin/products/[slug]">): Promise<Metadata> {
+  if (!(await currentStaff())) return { title: "Product" };
   const { slug } = await params;
   return { title: (await findProduct(slug))?.name ?? "Product" };
 }
 
 export default async function AdminProduct({ params, searchParams }: PageProps<"/admin/products/[slug]">) {
+  await requireOwner();
   const { slug } = await params;
   const { added } = await searchParams;
   const product = await findProduct(slug);
@@ -34,7 +36,13 @@ export default async function AdminProduct({ params, searchParams }: PageProps<"
           See it on the site
         </Link>
       </div>
-      {added && <p className="mt-4 bg-photo px-4 py-3 text-[14px]">Added. Add its stock below, then set it to Live when it&apos;s ready.</p>}
+      {added === "scheduled" ? (
+        <p className="mt-4 bg-photo px-4 py-3 text-[14px]">
+          Added as scheduled, not live: its drop hasn&apos;t started yet, so it goes on sale when the drop is released.
+        </p>
+      ) : (
+        added && <p className="mt-4 bg-photo px-4 py-3 text-[14px]">Added. Add its stock below, then set it to Live when it&apos;s ready.</p>
+      )}
 
       <div className="mt-8 space-y-14">
         <StockForm product={product} demand={demand} />

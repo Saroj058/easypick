@@ -17,6 +17,8 @@ import type { PaymentProvider } from "./types";
 // merchant where one exists. PAYMENTS_MODE=live uses production and needs real keys.
 
 export const paymentsLive = () => process.env.PAYMENTS_MODE === "live";
+/** Recorded on every payment attempt, so a sandbox "payment" can never pass for real money. */
+export const paymentMode = (): "test" | "live" => (paymentsLive() ? "live" : "test");
 /**
  * Sandbox wallets on the live site would let anyone "pay" with a public test account.
  * In production they're refused unless PAYMENTS_MODE=test is set on purpose (a staging site).
@@ -34,8 +36,9 @@ function esewa() {
     ? {
         code,
         secret,
-        form: live ? "https://epay.esewa.com.np/api/epay/main/v2/form" : "https://rc-epay.esewa.com.np/api/epay/main/v2/form",
-        status: live ? "https://esewa.com.np/api/epay/transaction/status/" : "https://rc.esewa.com.np/api/epay/transaction/status/",
+        // As published on developer.esewa.com.np (ePay v2). Overridable in case eSewa moves them.
+        form: live ? (env("ESEWA_FORM_URL") ?? "https://epay.esewa.com.np/api/epay/main/v2/form") : "https://rc-epay.esewa.com.np/api/epay/main/v2/form",
+        status: live ? (env("ESEWA_STATUS_URL") ?? "https://esewa.com.np/api/epay/transaction/status/") : "https://rc.esewa.com.np/api/epay/transaction/status/",
       }
     : null;
 }
@@ -91,7 +94,8 @@ export async function startPayment(order: Order, customer: { name: string | null
         product_service_charge: "0",
         product_delivery_charge: "0",
         success_url: returnUrl("esewa"),
-        failure_url: `${returnUrl("esewa")}?failed=${encodeURIComponent(order.id)}`,
+        // The attempt reference, not the order id: the id is the key to the order page and shouldn't travel to eSewa.
+        failure_url: `${returnUrl("esewa")}?failed=${encodeURIComponent(ref)}`,
         signed_field_names: "total_amount,transaction_uuid,product_code",
         signature,
       },
@@ -133,7 +137,8 @@ export async function startPayment(order: Order, customer: { name: string | null
   return { kind: "redirect", url: `${c.base}?${new URLSearchParams({ ...p, DV })}`, ref };
 }
 
-export type VerifyResult = { ok: true; ref: string; amount: number; gatewayRef: string } | { ok: false; ref?: string; code: PayCode };
+/** `status` is the wallet's own word for an unfinished payment (eSewa: PENDING, NOT_FOUND, CANCELED…). */
+export type VerifyResult = { ok: true; ref: string; amount: number; gatewayRef: string } | { ok: false; ref?: string; code: PayCode; status?: string };
 
 /** eSewa sends back ?data=<base64 JSON>, signed; then we ask eSewa's status API. */
 export async function verifyEsewa(data: string, expectedTotal: (ref: string) => Promise<number | null>): Promise<VerifyResult> {
@@ -161,13 +166,14 @@ export async function verifyEsewa(data: string, expectedTotal: (ref: string) => 
 }
 
 /** Asks eSewa directly whether a payment attempt completed (for customers who closed the tab). */
-export async function esewaStatus(ref: string, total: number): Promise<VerifyResult> {
+export async function esewaStatus(ref: string, total: number, timeoutMs = 10_000): Promise<VerifyResult> {
   const c = esewa();
   if (!c) return { ok: false, code: "unavailable" };
   const q = new URLSearchParams({ product_code: c.code, total_amount: String(total), transaction_uuid: ref });
-  const res = await fetch(`${c.status}?${q}`, { signal: AbortSignal.timeout(10_000), cache: "no-store" });
+  const res = await fetch(`${c.status}?${q}`, { signal: AbortSignal.timeout(timeoutMs), cache: "no-store" });
   const s = (await res.json().catch(() => ({}))) as { status?: string; ref_id?: string; total_amount?: unknown };
-  if (s.status !== "COMPLETE") return { ok: false, ref, code: s.status === "CANCELED" || s.status === "NOT_FOUND" ? "cancelled" : "not_complete" };
+  if (s.status !== "COMPLETE")
+    return { ok: false, ref, code: s.status === "CANCELED" || s.status === "NOT_FOUND" ? "cancelled" : "not_complete", status: s.status ?? `HTTP ${res.status}` };
   return { ok: true, ref, amount: money(s.total_amount ?? total), gatewayRef: s.ref_id ?? ref };
 }
 

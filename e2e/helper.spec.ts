@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { randomPhone } from "./helpers";
+
 test.describe.configure({ mode: "serial" });
 
 const HELPER = { username: "e2e-helper", password: "e2e-helper-pass-1" };
@@ -35,7 +37,7 @@ test("a helper works in the helper portal, not the admin @phone", async ({ page 
 
   // Find
   await page.getByRole("navigation", { name: "Helper sections" }).getByRole("link", { name: "Find" }).last().click();
-  await page.getByLabel(/Order number, phone/).fill("9812000000");
+  await page.getByLabel(/Order number, phone/).fill(randomPhone());
   await page.getByRole("button", { name: "Find" }).click();
   await expect(page.getByText(/orders? for/)).toBeVisible();
 
@@ -51,7 +53,7 @@ test("a helper works in the helper portal, not the admin @phone", async ({ page 
 
   // Me → sign out lands on the helper login.
   await page.goto("/helper/me");
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/helper\/login/);
 });
 

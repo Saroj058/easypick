@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 
-import { endSession, getCurrentUser, requestCode, safeNext, updateUser, verifyCode, type CodeChannel } from "@/lib/auth";
+import { endAllSessions, endSession, getCurrentUser, requestCode, safeNext, updateUser, verifyCode, type CodeChannel } from "@/lib/auth";
 import type { FitProfile } from "@/lib/fit-profile";
 import { normaliseNepaliMobile } from "@/lib/format";
 
@@ -35,7 +35,8 @@ export async function phoneStep(prev: PhoneState, form: FormData): Promise<Phone
   if (intent === "verify" && prev.step === "code") {
     const code = String(form.get("code") ?? "").replace(/\D/g, "");
     if (code.length !== 6) return { ...prev, error: "Enter the 6-digit code we sent you." };
-    const res = await verifyCode(prev.phone, code);
+    // Only the "Add your phone" screen attaches the number to the signed-in account.
+    const res = await verifyCode(prev.phone, code, { addToAccount: form.get("add") === "phone" });
     if (!res.ok) return { ...prev, error: res.message };
     redirect(res.isNew || !res.user.name ? `/login/welcome?next=${encodeURIComponent(next)}` : next);
   }
@@ -50,7 +51,8 @@ export type ProfileState = { status: "idle" } | { status: "saved" } | { status: 
 function readProfile(form: FormData) {
   const name = String(form.get("name") ?? "").trim().slice(0, 60);
   const emailRaw = String(form.get("email") ?? "").trim().toLowerCase();
-  const email = emailRaw ? emailRaw : null;
+  // Longer than any real address can be (254): kept as typed so the format check rejects it.
+  const email = emailRaw ? (emailRaw.length > 254 ? "invalid" : emailRaw) : null;
   const phoneRaw = String(form.get("phone") ?? "").trim();
   const phone = phoneRaw ? normaliseNepaliMobile(phoneRaw) : null;
   return { name, email, alerts: form.get("alerts") === "on", phoneRaw, phone };
@@ -81,6 +83,14 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
 
 export async function signOut() {
   await endSession();
+  redirect("/");
+}
+
+/** Ends every session of this account (a lost phone, a shared computer). */
+export async function signOutEverywhere() {
+  const user = await getCurrentUser();
+  if (user) await endAllSessions(user.id);
+  else await endSession();
   redirect("/");
 }
 

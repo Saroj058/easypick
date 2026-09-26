@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 
 import { removeStaffAction } from "@/app/admin/actions";
+import { signOutStaffAction } from "@/app/admin/staff-actions";
 import { MIN_PASSWORD, requireOwner, staffList } from "@/lib/staff";
 import { site } from "@/lib/site";
 import { AddStaffForm } from "./add-staff-form";
+import { ResetPasswordForm } from "./staff-tools";
 
 export const metadata: Metadata = { title: "Staff" };
 export const dynamic = "force-dynamic";
@@ -26,7 +28,7 @@ export default async function AdminStaff() {
           {list.map((s) => {
             const lastOwner = s.role === "owner" && owners <= 1;
             return (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <li key={s.id} className="flex flex-wrap items-start justify-between gap-3 py-4">
                 <div>
                   <p className="font-semibold">
                     {s.username}
@@ -35,14 +37,25 @@ export default async function AdminStaff() {
                   <p className="text-[14px] text-steel-dark">
                     {s.role === "owner" ? "Owner" : "Helper"} · added {day.format(new Date(s.createdAt))}
                   </p>
+                  {s.id !== me.id && <ResetPasswordForm id={s.id} username={s.username} min={MIN_PASSWORD} />}
                 </div>
-                {s.id !== me.id && !lastOwner && (
-                  <form action={removeStaffAction}>
-                    <input type="hidden" name="id" value={s.id} />
-                    <button type="submit" className="min-h-11 text-[14px] text-[#d70015] underline underline-offset-2">
-                      Remove {s.username}
-                    </button>
-                  </form>
+                {s.id !== me.id && (
+                  <div className="flex flex-col items-end">
+                    <form action={signOutStaffAction}>
+                      <input type="hidden" name="id" value={s.id} />
+                      <button type="submit" className="min-h-11 text-[14px] underline underline-offset-2">
+                        Sign out all their devices
+                      </button>
+                    </form>
+                    {!lastOwner && (
+                      <form action={removeStaffAction}>
+                        <input type="hidden" name="id" value={s.id} />
+                        <button type="submit" className="min-h-11 text-[14px] text-[#d70015] underline underline-offset-2">
+                          Remove {s.username}
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 )}
               </li>
             );

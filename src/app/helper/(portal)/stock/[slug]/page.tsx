@@ -5,14 +5,17 @@ import { notFound } from "next/navigation";
 import { StockForm } from "@/app/admin/(panel)/products/[slug]/stock-form";
 import { StockHistory } from "@/app/admin/(panel)/products/[slug]/stock-history";
 import { findProduct, restockDemand, stockHistory } from "@/lib/catalogue";
+import { currentStaff, requireStaff } from "@/lib/staff";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/helper/stock/[slug]">): Promise<Metadata> {
+  if (!(await currentStaff())) return { title: "Stock" };
   return { title: (await findProduct((await params).slug))?.name ?? "Stock" };
 }
 
 export default async function HelperProductStock({ params }: PageProps<"/helper/stock/[slug]">) {
+  await requireStaff("/helper/login");
   const { slug } = await params;
   const product = await findProduct(slug);
   if (!product) notFound();

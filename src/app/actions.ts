@@ -1,10 +1,13 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
+import { and, eq, sql, type SQL } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
-import { getCurrentUser, updateUser } from "@/lib/auth";
+import { getCurrentUser, secret, updateUser } from "@/lib/auth";
+import { mergeBag } from "@/lib/bag-rules";
 import { addRestockAlert } from "@/lib/catalogue";
+import { getDb, schema } from "@/lib/db";
 import { normaliseEmail } from "@/lib/email";
 import { checkGiftCard } from "@/lib/gift-cards";
 import { sellable } from "@/lib/inventory";
@@ -14,7 +17,7 @@ import { allow, clientIp, isBlocked, hit } from "@/lib/rate-limit";
 import { confirmPayment } from "@/lib/payments";
 import { site } from "@/lib/site";
 import { getProducts } from "@/lib/store";
-import type { BagLine, FulfilmentMethod, PaymentProvider } from "@/lib/types";
+import type { FulfilmentMethod, PaymentProvider } from "@/lib/types";
 
 // ---------- Drop alerts ----------
 
@@ -38,6 +41,16 @@ export type CheckoutState = { status: "idle" } | { status: "error"; message: str
 
 const PROVIDERS: PaymentProvider[] = site.payments.enabled;
 
+/** Unpaid orders still holding stock that match `where`. */
+async function openOrders(where: SQL) {
+  const db = await getDb();
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.orders)
+    .where(and(eq(schema.orders.status, "awaiting_payment"), sql`${schema.orders.data}->>'expiresAt' > ${new Date().toISOString()}`, where));
+  return row?.n ?? 0;
+}
+
 export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<CheckoutState> {
   const phone = normaliseNepaliMobile(String(form.get("phone") ?? ""));
   if (!phone) return { status: "error", field: "phone", message: "Enter a 10-digit Nepali mobile number." };
@@ -54,38 +67,47 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
     const landmark = String(form.get("landmark") ?? "").trim();
     const details = String(form.get("details") ?? "").trim();
     if (!area || !landmark) return { status: "error", field: "area", message: "Add your area and a nearby landmark so the rider can find you." };
+    if (area.length > 80 || landmark.length > 80 || details.length > 120) {
+      return { status: "error", field: "area", message: "Keep the address short: area and landmark under 80 letters, directions under 120." };
+    }
     address = { area, landmark, details };
-  }
-
-  let bag: BagLine[];
-  try {
-    bag = JSON.parse(String(form.get("bag") ?? "[]"));
-    if (!Array.isArray(bag) || bag.length === 0) throw new Error();
-  } catch {
-    return { status: "error", message: "Your bag is empty." };
   }
 
   // The bag is for account holders. "Buy now" is one piece and needs no account.
   const buyNow = form.get("mode") === "buy_now";
+  let rawBag: unknown;
+  try {
+    const text = String(form.get("bag") ?? "[]");
+    rawBag = text.length > 20_000 ? null : JSON.parse(text);
+  } catch {
+    rawBag = null;
+  }
+  const bag = mergeBag(rawBag, { buyNow });
+  if (!bag.ok) return { status: "error", message: bag.message };
   const user = await getCurrentUser();
-  if (buyNow) bag = [{ ...bag[0], qty: 1 }];
-  else if (!user) return { status: "error", message: "Log in to check out your bag, or use Buy now on a single piece." };
+  if (!buyNow && !user) return { status: "error", message: "Log in to check out your bag, or use Buy now on a single piece." };
 
-  // Never trust prices or stock from the browser: rebuild every line from the catalogue.
+  // Unpaid orders hold stock for 15 minutes, so nobody may hold the whole shop:
+  // a few tries per visitor and number, and only a couple of unpaid orders open at once.
+  const ip = await clientIp();
+  const busy: CheckoutState = { status: "error", message: "Too many orders at once. Pay for or wait out your open order, then try again in a few minutes." };
+  if (!(await allow(`order:${ip}`, 6, 10 * 60_000)) || !(await allow(`order-phone:${phone}`, 6, 10 * 60_000))) return busy;
+  const placedFrom = createHmac("sha256", secret()).update(ip).digest("hex").slice(0, 24);
+  if ((await openOrders(sql`${schema.orders.phone} = ${phone}`)) >= 2) return busy;
+  if ((await openOrders(sql`${schema.orders.data}->>'placedFrom' = ${placedFrom}`)) >= 3) return busy;
+
+  // Never trust prices from the browser: rebuild every line from the catalogue.
+  // Stock isn't judged from the (cached) catalogue: createOrder takes the pieces from the
+  // live stock and says so when a size just sold out.
   const catalogue = await getProducts();
   const lines: OrderLine[] = [];
-  for (const item of bag) {
+  for (const item of bag.lines) {
     const product = catalogue.find((p) => p.slug === item.slug);
     const variant = product?.variants.find((v) => v.sku === item.sku);
     if (!product || !variant || product.status !== "live") {
-      return { status: "error", message: `${item.name} is no longer available. Remove it from your bag to continue.` };
+      return { status: "error", message: `${product?.name ?? item.name} is no longer available. Remove it from your bag to continue.` };
     }
-    const qty = Math.max(1, Math.min(Number(item.qty) || 1, 5));
-    const left = sellable(variant);
-    if (left < qty) {
-      const what = `${product.name} (${variant.size === "ONE" ? variant.colour : `${variant.colour}, ${variant.size}`})`;
-      return { status: "error", message: left > 0 ? `Only ${left} left of ${what}. Update your bag to continue.` : `${what} just sold out.` };
-    }
+    const qty = item.qty;
     lines.push({
       sku: variant.sku,
       slug: product.slug,
@@ -124,6 +146,7 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
       deliveryFee,
       status: "awaiting_payment",
       source: buyNow ? "buy_now" : "bag",
+      placedFrom,
       createdAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 15 * 60_000).toISOString(),
       kind: "goods",
@@ -203,7 +226,7 @@ export async function requestRestock(_prev: RestockState, form: FormData): Promi
   const product = (await getProducts()).find((p) => p.slug === slug);
   const variant = product?.variants.find((v) => v.sku === sku);
   if (!product || !variant) return { status: "error", message: "Pick the size you want." };
-  if (variant.stock > 0) return { status: "error", message: "Good news: that size is in stock right now." };
+  if (sellable(variant) > 0) return { status: "error", message: "Good news: that size is in stock right now." };
 
   const email = contact.includes("@") ? normaliseEmail(contact) : null;
   const phone = email ? null : normaliseNepaliMobile(contact);

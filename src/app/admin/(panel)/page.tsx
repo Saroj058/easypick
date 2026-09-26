@@ -1,29 +1,38 @@
 import Link from "next/link";
 
-import { allProducts, restockDemand } from "@/lib/catalogue";
-import { paidOrders } from "@/lib/orders";
+import { allDrops, allProducts, festivals, restockDemand } from "@/lib/catalogue";
 import { formatPrice } from "@/lib/format";
-import { site } from "@/lib/site";
-import { uncollected } from "./orders/order-bits";
+import { ktmDay, ktmMidnight } from "@/lib/ktm-day";
+import { activeOrders, ordersWithPaymentAttempts, paidOrdersBetween } from "@/lib/orders";
+import { countsAsOrder, netSales } from "@/lib/reports";
+import { effectiveStatus } from "@/lib/store";
+import { inView, statusLabel, time } from "./orders/order-bits";
+import { requireOwner } from "@/lib/staff";
 
 export const dynamic = "force-dynamic";
 
-const day = new Intl.DateTimeFormat("en-CA", { timeZone: site.timezone });
-
 export default async function AdminToday({ searchParams }: PageProps<"/admin">) {
+  await requireOwner();
   const { denied } = await searchParams;
-  const orders = await paidOrders();
-  const today = day.format(new Date());
-  const todays = orders.filter((o) => day.format(new Date(o.paidAt ?? o.createdAt)) === today);
-  const toPack = orders.filter((o) => o.status === "paid" && !o.packedAt && o.kind !== "gift_card" && !(o.gift?.mode === "pick" && o.gift.status !== "chosen" && o.gift.status !== "delivered"));
-  const toHandOver = orders.filter((o) => o.status === "paid" && o.packedAt);
-  const attention = orders.filter((o) => o.attention);
-  const late = orders.filter(uncollected);
-  const waitingGifts = orders.filter((o) => o.gift?.mode === "pick" && (o.gift.status === "sent" || o.gift.status === "opened"));
-  const demand = await restockDemand();
-  const products = await allProducts();
+  const today = ktmDay();
+  const [orders, todays, toCheck, demand, products, drops, fests] = await Promise.all([
+    activeOrders(),
+    paidOrdersBetween(ktmMidnight(today)),
+    ordersWithPaymentAttempts(7),
+    restockDemand(),
+    allProducts(),
+    allDrops(),
+    festivals(),
+  ]);
+  // The same lists the tiles link to.
+  const toPack = orders.filter((o) => inView(o, "pack"));
+  const toHandOver = orders.filter((o) => inView(o, "handover"));
+  const attention = orders.filter((o) => inView(o, "attention"));
+  const late = orders.filter((o) => inView(o, "late"));
+  const waitingGifts = orders.filter((o) => inView(o, "gifts"));
+  const noFestival = !fests.some((f) => f.date > today);
   const low = products
-    .filter((p) => p.status === "live")
+    .filter((p) => effectiveStatus(p, drops) === "live")
     .flatMap((p) => p.variants.map((v) => ({ p, v })))
     .filter(({ v }) => v.stock <= 2)
     .sort((a, b) => a.v.stock - b.v.stock || (demand[b.v.sku] ?? 0) - (demand[a.v.sku] ?? 0))
@@ -35,12 +44,20 @@ export default async function AdminToday({ searchParams }: PageProps<"/admin">) 
     { label: "Packed, to hand over", value: toHandOver.length, href: "/admin/orders?view=handover" },
     { label: "Gifts waiting on a size", value: waitingGifts.length, href: "/admin/orders?view=gifts" },
     ...(late.length ? [{ label: "Not collected, 5+ days", value: late.length, href: "/admin/orders?view=late", alert: true }] : []),
-    { label: "Sales today", value: formatPrice(todays.reduce((n, o) => n + o.total, 0)), note: `${todays.length} orders`, href: "/admin/orders?view=all" },
+    { label: "Sales today", value: formatPrice(todays.reduce((n, o) => n + netSales(o), 0)), note: `${todays.filter(countsAsOrder).length} orders`, href: "/admin/orders?view=all" },
   ];
 
   return (
     <div className="space-y-12">
       {denied && <p role="alert" className="bg-photo px-4 py-3 text-[15px]">That page is for the owner. Ask them if you need something changed there.</p>}
+      {noFestival && (
+        <p className="bg-[#fff1e0] px-4 py-3 text-[15px] text-[#7a3e00]">
+          No festival is dated after today, so customers see no upcoming festival or &ldquo;order by&rdquo; date.{" "}
+          <Link href="/admin/festivals" className="font-semibold underline underline-offset-2">
+            Add the next festivals
+          </Link>
+        </p>
+      )}
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((t) => (
           <li key={t.label}>
@@ -89,6 +106,32 @@ export default async function AdminToday({ searchParams }: PageProps<"/admin">) 
           </table>
         )}
       </section>
+
+      {toCheck.length > 0 && (
+        <section aria-labelledby="pay-check">
+          <h2 id="pay-check" className="text-lg font-semibold">
+            Payments to check
+          </h2>
+          <p className="mt-1 text-[14px] text-steel-dark">
+            Not paid in time or cancelled, but the customer opened the payment page in the last 7 days. Check the eSewa merchant portal in case money arrived.
+          </p>
+          <ul className="mt-4 divide-y divide-mist border-y border-mist text-[15px]">
+            {toCheck.map((o) => {
+              const tries = o.payments ?? (o.payment ? [o.payment] : []);
+              return (
+                <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+                  <Link href={`/admin/orders/${o.id}`} className="font-mono font-semibold hover:underline">
+                    {o.number}
+                  </Link>
+                  <span className="text-[14px] text-steel-dark">
+                    {statusLabel(o)} · {formatPrice(o.total)} · {tries.length} {tries.length === 1 ? "try" : "tries"} · placed {time.format(new Date(o.createdAt))}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

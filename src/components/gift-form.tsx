@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 
 import { placeGiftOrder, type GiftState } from "@/app/gift-actions";
 import { formatPrice, normaliseNepaliMobile } from "@/lib/format";
+import { kathmanduToday } from "@/lib/kathmandu-date";
 import { site } from "@/lib/site";
 import type { Product, Size } from "@/lib/types";
 import { useMe, usePrefilled } from "./session";
@@ -94,7 +95,7 @@ export function GiftForm({ product }: { product: Product }) {
   const deliveryFee = (mode === "set" && method === "pickup") || price >= site.delivery.freeAbove ? 0 : site.delivery.flatFee;
   const wrapFee = wrap === "premium" ? site.gifting.premiumWrapFee : 0;
   const total = price + deliveryFee + wrapFee;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = kathmanduToday(); // the shop's calendar day, wherever the buyer is
 
   // Move focus to the step heading so keyboard and screen-reader users land in the right place.
   const moved = useRef(false);

@@ -18,14 +18,37 @@ function Status({ state }: { state: SaveState }) {
 
 export type RefundLine = { i: number; name: string; detail: string; unitPrice: number; left: number };
 
-/** Owner: refund some or all pieces. Gift card money goes back to the card first; the rest is refunded by hand in eSewa. */
-export function RefundForm({ orderId, lines, deliveryFee, cardLeft }: { orderId: string; lines: RefundLine[]; deliveryFee: number; cardLeft: number }) {
+/**
+ * Owner: refund some or all pieces. Gift card money goes back to the card first; the rest is refunded by hand in eSewa.
+ * Delivery and the gift box can each be refunded once (a fee of 0 means it already was, or there wasn't one).
+ * `giftCard` is the card this order's goods became (a bought card, or a gift turned into one): refunding takes the money off it.
+ */
+export function RefundForm({
+  orderId,
+  lines,
+  deliveryFee,
+  wrapFee,
+  cardLeft,
+  restockable,
+  giftCard,
+}: {
+  orderId: string;
+  lines: RefundLine[];
+  deliveryFee: number;
+  wrapFee: number;
+  cardLeft: number;
+  restockable: boolean;
+  giftCard: { code: string; left: number; blocked: boolean } | null;
+}) {
   const [state, action, pending] = useActionState<SaveState, FormData>(refundOrder, { status: "idle" });
   const [qty, setQty] = useState<Record<number, number>>({});
   const [delivery, setDelivery] = useState(false);
-  const value = lines.reduce((n, l) => n + (qty[l.i] ?? 0) * l.unitPrice, 0) + (delivery ? deliveryFee : 0);
+  const [wrap, setWrap] = useState(false);
+  const goods = lines.reduce((n, l) => n + (qty[l.i] ?? 0) * l.unitPrice, 0);
+  const value = goods + (delivery ? deliveryFee : 0) + (wrap ? wrapFee : 0);
   const toCard = Math.min(value, cardLeft);
   const toWallet = value - toCard;
+  const cardShort = Boolean(giftCard) && goods > (giftCard?.left ?? 0);
 
   return (
     <form action={action} className="space-y-5" aria-labelledby="refund-h">
@@ -61,15 +84,36 @@ export function RefundForm({ orderId, lines, deliveryFee, cardLeft }: { orderId:
           Also refund delivery ({formatPrice(deliveryFee)})
         </label>
       )}
-      <label className="flex min-h-11 items-center gap-3 text-[15px]">
-        <input type="checkbox" name="restock" defaultChecked className="h-5 w-5 accent-ink" />
-        Put the pieces back in stock
-      </label>
+      {wrapFee > 0 && (
+        <label className="flex min-h-11 items-center gap-3 text-[15px]">
+          <input type="checkbox" name="includeWrap" checked={wrap} onChange={(e) => setWrap(e.target.checked)} className="h-5 w-5 accent-ink" />
+          Also refund the gift box ({formatPrice(wrapFee)})
+        </label>
+      )}
+      {restockable ? (
+        <label className="flex min-h-11 items-center gap-3 text-[15px]">
+          <input type="checkbox" name="restock" defaultChecked className="h-5 w-5 accent-ink" />
+          Put the pieces back in stock
+        </label>
+      ) : (
+        !giftCard && <p className="text-[14px] text-steel-dark">This order isn&apos;t holding any pieces, so nothing goes back in stock.</p>
+      )}
+      {giftCard && (
+        <p className="text-[14px] text-steel-dark">
+          This order is gift card <span className="font-mono">{giftCard.code}</span> ({formatPrice(giftCard.left)} left{giftCard.blocked ? ", blocked" : ""}). Refunding takes the money off the
+          card, and the card is blocked once nothing is left. If they&apos;ve already spent some, you can refund at most what&apos;s left.
+        </p>
+      )}
       <p className="bg-photo px-4 py-3 text-[14px]">
         Refund {formatPrice(value)}
         {toCard > 0 ? ` · ${formatPrice(toCard)} goes back to their gift card by itself` : ""}
         {toWallet > 0 ? ` · refund ${formatPrice(toWallet)} in the eSewa merchant portal first` : ""}
       </p>
+      {cardShort && (
+        <p role="alert" className="text-[14px] text-[#d70015]">
+          Only {formatPrice(giftCard!.left)} is left on the card. Refund less.
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="r-ref" className={label}>
@@ -85,7 +129,7 @@ export function RefundForm({ orderId, lines, deliveryFee, cardLeft }: { orderId:
         </div>
       </div>
       <Status state={state} />
-      <button type="submit" disabled={pending || value === 0} className="btn btn-ink">
+      <button type="submit" disabled={pending || value === 0 || cardShort} className="btn btn-ink">
         {pending ? "Refunding…" : value ? `Refund ${formatPrice(value)}` : "Refund"}
       </button>
     </form>
@@ -95,7 +139,20 @@ export function RefundForm({ orderId, lines, deliveryFee, cardLeft }: { orderId:
 export type ExchangeLine = { i: number; name: string; current: string; options: { sku: string; label: string; stock: number }[] };
 
 /** Any staff: swap one piece for another size or colour. */
-export function ExchangeForm({ orderId, lines, windowDays, pastWindow }: { orderId: string; lines: ExchangeLine[]; windowDays: number; pastWindow: boolean }) {
+export function ExchangeForm({
+  orderId,
+  lines,
+  windowDays,
+  pastWindow,
+  canOverride = false,
+}: {
+  orderId: string;
+  lines: ExchangeLine[];
+  windowDays: number;
+  pastWindow: boolean;
+  /** Only an owner can allow an exchange after the window. */
+  canOverride?: boolean;
+}) {
   const [state, action, pending] = useActionState<SaveState, FormData>(exchangeLine, { status: "idle" });
   const [line, setLine] = useState(lines[0]?.i ?? 0);
   const current = lines.find((l) => l.i === line) ?? lines[0];
@@ -107,7 +164,7 @@ export function ExchangeForm({ orderId, lines, windowDays, pastWindow }: { order
         <h3 id="ex-h" className="text-lg font-semibold">
           Exchange a size or colour
         </h3>
-        <p className="mt-1 text-[14px] text-steel-dark">Within {windowDays} days. The old piece goes back in stock and the new one comes off.</p>
+        <p className="mt-1 text-[14px] text-steel-dark">Within {windowDays} days. One piece is swapped at a time: the old piece goes back in stock and the new one comes off.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -135,7 +192,8 @@ export function ExchangeForm({ orderId, lines, windowDays, pastWindow }: { order
           </select>
         </div>
       </div>
-      {pastWindow && (
+      {pastWindow && !canOverride && <p className="text-[14px] text-[#9b0010]">It&apos;s past {windowDays} days. Only the owner can allow this exchange now.</p>}
+      {pastWindow && canOverride && (
         <label className="flex min-h-11 items-center gap-3 text-[15px]">
           <input type="checkbox" name="override" className="h-5 w-5 accent-ink" />
           It&apos;s past {windowDays} days. Allow anyway

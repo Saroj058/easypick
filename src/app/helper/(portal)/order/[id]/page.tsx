@@ -6,12 +6,15 @@ import { NextStep, statusLabel, time } from "@/app/admin/(panel)/orders/order-bi
 import { ExchangeForm, type ExchangeLine } from "@/app/admin/(panel)/orders/[id]/order-tools";
 import { findProduct } from "@/lib/catalogue";
 import { requestTime } from "@/lib/format";
+import { helperEvents } from "@/lib/helper-view";
 import { findOrder, refundedQty } from "@/lib/orders";
+import { currentStaff, requireStaff } from "@/lib/staff";
 import { HelperOrderCard } from "../../queue";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/helper/order/[id]">): Promise<Metadata> {
+  if (!(await currentStaff())) return { title: "Order" };
   return { title: (await findOrder((await params).id))?.number ?? "Order" };
 }
 
@@ -19,6 +22,7 @@ const sizeText = (s: string) => (s === "ONE" ? "One size" : s);
 
 /** One order for a helper: what to do next, a size exchange, and what's happened so far. */
 export default async function HelperOrder({ params }: PageProps<"/helper/order/[id]">) {
+  await requireStaff("/helper/login");
   const o = await findOrder((await params).id);
   if (!o) notFound();
   const done = refundedQty(o);
@@ -70,7 +74,8 @@ export default async function HelperOrder({ params }: PageProps<"/helper/order/[
           What&apos;s happened
         </h2>
         <ol className="mt-3 space-y-2 text-[14px]">
-          {[...(o.events ?? [])].reverse().map((e, i) => (
+          {/* Fulfilment only: refunds and payment details are for the owner. */}
+          {[...helperEvents(o.events)].reverse().map((e, i) => (
             <li key={i} className="flex gap-3">
               <span className="w-28 shrink-0 text-steel-dark">{time.format(new Date(e.at))}</span>
               <span>

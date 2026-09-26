@@ -19,7 +19,8 @@ export default defineConfig({
     { name: "phone", use: { ...devices["Pixel 7"] }, grep: /@phone/, dependencies: ["desktop"] },
   ],
   webServer: {
-    command: `node scripts/with-db.mjs --local next dev --port ${PORT}`,
+    // A fresh test database every run, so orders from earlier runs never use up the stock.
+    command: `node -e "require('fs').rmSync('.data/postgres-e2e',{recursive:true,force:true})" && node scripts/with-db.mjs --local next dev --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     timeout: 180_000,
     reuseExistingServer: !process.env.CI,

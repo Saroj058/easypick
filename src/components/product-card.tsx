@@ -111,7 +111,7 @@ export function ProductCard({
                   key={r.size}
                   aria-hidden
                   className={
-                    r.stock === 0 ? "text-steel line-through" : "text-ink"
+                    r.stock === 0 ? "text-steel-dark line-through" : "text-ink"
                   }
                 >
                   {r.size}

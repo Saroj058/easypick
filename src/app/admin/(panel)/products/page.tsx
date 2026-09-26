@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ProductImage } from "@/components/product-image";
 import { allProducts, restockDemand } from "@/lib/catalogue";
 import { formatPrice } from "@/lib/format";
-import { requireStaff } from "@/lib/staff";
+import { requireOwner, requireStaff } from "@/lib/staff";
 
 export const metadata: Metadata = { title: "Products" };
 export const dynamic = "force-dynamic";
@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 const statusLabel = { draft: "Draft", in_review: "In review", scheduled: "Scheduled", live: "Live", sold_out: "Sold out", archived: "Archived" } as const;
 
 export default async function AdminProducts() {
+  await requireOwner();
   const products = await allProducts();
   const demand = await restockDemand();
   const me = await requireStaff();

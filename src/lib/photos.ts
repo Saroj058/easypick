@@ -13,7 +13,17 @@ import { join } from "node:path";
 
 const BUCKET = "products";
 const TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+// Uploads go through a Server Action, whose body limit (next.config.ts) is 4 MB too.
+export const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
+
+/** The real image type from the file's first bytes (the browser's file.type is only a claim). */
+export function sniffImage(b: Uint8Array): "image/jpeg" | "image/png" | "image/webp" | null {
+  const at = (i: number, bytes: number[]) => bytes.every((v, j) => b[i + j] === v);
+  if (at(0, [0xff, 0xd8, 0xff])) return "image/jpeg";
+  if (at(0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
+  if (at(0, [0x52, 0x49, 0x46, 0x46]) && at(8, [0x57, 0x45, 0x42, 0x50])) return "image/webp"; // RIFF....WEBP
+  return null;
+}
 
 function storage() {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, "");
@@ -24,11 +34,12 @@ function storage() {
 export type PhotoResult = { ok: true; src: string } | { ok: false; message: string };
 
 export async function saveProductPhoto(slug: string, file: File): Promise<PhotoResult> {
-  const ext = TYPES[file.type];
-  if (!ext) return { ok: false, message: "The photo must be a JPG, PNG or WebP." };
+  if (!TYPES[file.type]) return { ok: false, message: "The photo must be a JPG, PNG or WebP." };
   if (file.size > MAX_PHOTO_BYTES) return { ok: false, message: "The photo is too big. Pick one under 4 MB." };
-  const name = `front-${Date.now().toString(36)}.${ext}`;
   const bytes = Buffer.from(await file.arrayBuffer());
+  const type = sniffImage(bytes);
+  if (!type) return { ok: false, message: "The photo must be a JPG, PNG or WebP." };
+  const name = `front-${Date.now().toString(36)}.${TYPES[type]}`;
 
   const s = storage();
   if (s) {
@@ -38,7 +49,7 @@ export async function saveProductPhoto(slug: string, file: File): Promise<PhotoR
       headers: {
         apikey: s.key,
         Authorization: `Bearer ${s.key}`,
-        "Content-Type": file.type,
+        "Content-Type": type,
         "Cache-Control": "max-age=31536000", // the name never changes content
         "x-upsert": "true",
       },

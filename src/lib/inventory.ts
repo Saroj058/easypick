@@ -14,3 +14,11 @@ export const bySize = (a: { size: Size }, b: { size: Size }) => SIZE_ORDER.index
 export function sellable(v: Pick<Variant, "stock" | "lastPieceOnFloor">) {
   return Math.max(0, v.stock - (v.lastPieceOnFloor ? 1 : 0));
 }
+
+/**
+ * "Back in stock" for restock alerts: nothing could be bought online before, and now
+ * something can. A piece only on the shop floor doesn't count.
+ */
+export function cameBackInStock(before: Pick<Variant, "stock" | "lastPieceOnFloor">, after: Pick<Variant, "stock" | "lastPieceOnFloor">) {
+  return sellable(before) === 0 && sellable(after) > 0;
+}

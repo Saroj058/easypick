@@ -19,7 +19,7 @@ export default function BagPage() {
         <div className="mt-10 h-40" aria-hidden />
       ) : me === null ? (
         <div className="mt-10">
-          <p className="text-lg">Your bag is saved to your account.</p>
+          <p className="text-lg">The bag needs an account. It&apos;s kept for your account on this phone.</p>
           <p className="mt-2 text-steel-dark">Log in to add pieces and check out. Want just one piece? Tap Buy now on it. No account needed.</p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/login?reason=bag&next=/bag" className="btn btn-volt">

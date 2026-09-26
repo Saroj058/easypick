@@ -32,8 +32,9 @@ export async function GET(req: Request, ctx: RouteContext<"/api/pay/[provider]/r
   try {
     if (provider === "esewa") {
       // eSewa's failure_url: they cancelled or it didn't go through.
-      const failedId = q.get("failed");
-      if (failedId) return failed(await findOrder(failedId), "cancelled");
+      // It carries the attempt reference (older attempts carried the order id).
+      const failedRef = q.get("failed");
+      if (failedRef) return failed(/^EP-/.test(failedRef) ? await findOrderByPaymentRef(failedRef) : await findOrder(failedRef), "cancelled");
       const data = q.get("data");
       if (!data) return to("/");
       result = await verifyEsewa(data, byRef);

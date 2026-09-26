@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
+import { sellable } from "@/lib/inventory";
 import { getProduct } from "@/lib/store";
 import { FestivalNotice } from "@/components/festival-notice";
 
@@ -15,9 +16,8 @@ export default async function BuyNowPage({ params, searchParams }: PageProps<"/b
   const product = await getProduct(slug);
   if (!product) notFound();
   const variant = product.variants.find((v) => v.sku === sku);
-  const sellable = variant ? variant.stock - (variant.lastPieceOnFloor ? 1 : 0) : 0;
 
-  if (!variant || product.status !== "live" || sellable <= 0) {
+  if (!variant || product.status !== "live" || sellable(variant) <= 0) {
     return (
       <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">
         <h1 className="display text-[40px] md:text-[72px]">Not available</h1>

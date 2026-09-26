@@ -1,7 +1,8 @@
 import "server-only";
 
-import { and, desc, eq, notInArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
+import { cache } from "react";
 
 import { moveStock, StockShortError } from "./catalogue";
 import { getDb, orderRow, schema, type Tx } from "./db";
@@ -28,6 +29,14 @@ export interface PaymentAttempt {
   gatewayRef?: string;
   verifiedAt?: string;
   amount?: number;
+  /** Sandbox ("test") or real money ("live"), from the settings when the attempt started. */
+  mode?: "test" | "live";
+  /** Reconciliation: when the wallet was last asked, what it said, and when staff were told it's stuck. */
+  lastCheckedAt?: string;
+  lastStatus?: string;
+  alertedAt?: string;
+  /** This attempt gave the hold its one extra 10 minutes. */
+  extendedHold?: boolean;
 }
 
 export interface OrderLine {
@@ -61,7 +70,7 @@ export interface GiftInfo {
   wrap: GiftWrap;
   /** yyyy-mm-dd, or null for as soon as possible. */
   deliverOn: string | null;
-  /** Buyer chose to let the receiver see what it cost (default: hidden). */
+  /** The receiver sees what it cost (default: shown; the buyer can tick "Hide the price from them"). */
   showPrice?: boolean;
   /** Receiver may also change the colour (pick mode only). */
   colourChoice: boolean;
@@ -121,6 +130,9 @@ export interface Order {
   events?: OrderEvent[];
   /** Money given back (to the wallet by staff, or to a gift card). */
   refunds?: { at: string; by: string; amount: number; toGiftCard: number; walletRef?: string; note?: string; skus: string[]; lines?: { i: number; qty: number }[] }[];
+  /** The delivery fee / gift box fee has been refunded (each can only be refunded once). */
+  deliveryRefunded?: boolean;
+  wrapRefunded?: boolean;
   /** Delivery rider, set when it goes out. */
   rider?: { name: string; phone: string };
   /** When each step of the order happened, for the tracker. */
@@ -130,6 +142,8 @@ export interface Order {
   completedAt?: string;
   /** Where a goods order came from; a Buy now order leaves the bag alone. */
   source?: "bag" | "buy_now";
+  /** Keyed hash of the visitor's IP, only to limit unpaid orders per visitor (never shown). */
+  placedFrom?: string;
   /** For gift_card orders: the card that was issued. */
   issuedCardCode?: string;
   /** For gift_card orders: where the card was emailed and whether it went out. */
@@ -145,11 +159,18 @@ export function refundedQty(o: Order): number[] {
 
 // ---------- Writing ----------
 
-/** Saves an order row and its order_lines (always together). */
-export async function writeOrder(tx: Tx, order: Order, userId: string | null, insert = false) {
+const sameLines = (a: OrderLine[], b: OrderLine[]) =>
+  a.length === b.length && a.every((l, i) => l.sku === b[i].sku && l.slug === b[i].slug && l.qty === b[i].qty && l.unitPrice === b[i].unitPrice);
+
+/**
+ * Saves an order row and keeps its order_lines in step. Pass `before` (the lines as they are
+ * stored now) to skip rewriting order_lines when nothing about them changed.
+ */
+export async function writeOrder(tx: Tx, order: Order, userId: string | null, insert = false, before?: OrderLine[]) {
   if (insert) await tx.insert(schema.orders).values(orderRow(order, userId));
   else await tx.update(schema.orders).set(orderRow(order, userId)).where(eq(schema.orders.id, order.id));
-  await tx.delete(schema.orderLines).where(eq(schema.orderLines.orderId, order.id));
+  if (!insert && before && sameLines(before, order.lines)) return;
+  if (!insert) await tx.delete(schema.orderLines).where(eq(schema.orderLines.orderId, order.id));
   if (order.lines.length)
     await tx.insert(schema.orderLines).values(order.lines.map((l, i) => ({ orderId: order.id, lineNo: i, sku: l.sku, slug: l.slug, qty: l.qty, unitPrice: l.unitPrice })));
 }
@@ -236,7 +257,7 @@ async function expireIfLate(tx: Tx, o: Order, userId: string | null) {
   await releaseHolds(tx, order, "order_release", "system");
   order.status = "expired";
   order.events = [...(order.events ?? []), event("system", "Expired: not paid within 15 minutes")];
-  await writeOrder(tx, order, userId);
+  await writeOrder(tx, order, userId, false, o.lines);
   return order;
 }
 
@@ -252,7 +273,7 @@ export async function lockOrder<T>(id: string, fn: (o: Order, tx: Tx) => Promise
     const current = await expireIfLate(tx, row.data, row.userId);
     const order = structuredClone(current);
     const { save, result } = await fn(order, tx);
-    if (save) await writeOrder(tx, order, row.userId);
+    if (save) await writeOrder(tx, order, row.userId, false, current.lines);
     return result;
   });
 }
@@ -302,50 +323,142 @@ export async function findOrderByGiftToken(token: string): Promise<Order | null>
   return row ? findOrder(row.id) : null;
 }
 
-/** Orders for an account: placed while signed in, or with the same phone number. */
+const ord = schema.orders;
+
+/**
+ * Orders for an account: placed while signed in, or placed without an account using the
+ * same phone number. Another account's orders never show, even with the same phone.
+ */
 export async function ordersFor(userId: string, phone: string | null): Promise<Order[]> {
   const db = await getDb();
   const rows = await db
-    .select({ data: schema.orders.data })
-    .from(schema.orders)
-    .where(phone ? or(eq(schema.orders.userId, userId), eq(schema.orders.phone, phone)) : eq(schema.orders.userId, userId))
-    .orderBy(desc(schema.orders.createdAt));
+    .select({ data: ord.data })
+    .from(ord)
+    .where(phone ? or(eq(ord.userId, userId), and(isNull(ord.userId), eq(ord.phone, phone))) : eq(ord.userId, userId))
+    .orderBy(desc(ord.createdAt));
   return rows.map((r) => r.data);
 }
 
-/** Paid orders (anything past "awaiting payment"), for the admin screen. */
-export async function paidOrders(): Promise<Order[]> {
+// ---------- Staff lists ----------
+// "Paid" means money actually arrived: paid_at is set. An order cancelled before payment
+// never counts, whatever its status.
+
+const isPaid = isNotNull(ord.paidAt);
+/** Something needs the owner, whatever the order's status. */
+const hasAttention = sql`coalesce(${ord.data}->>'attention', '') <> ''`;
+/** Paid, not packed, has clothes, and not a pick-your-size gift still waiting on the receiver. */
+const toPackSql = sql`${ord.status} = 'paid' and ${ord.data}->>'packedAt' is null and ${ord.kind} = 'goods'
+  and coalesce(${ord.data}->'gift'->>'status', '') <> 'converted'
+  and not (coalesce(${ord.data}->'gift'->>'mode', '') = 'pick' and coalesce(${ord.data}->'gift'->>'status', '') in ('sent', 'opened'))`;
+const ACTIVE: Order["status"][] = ["paid", "ready_for_pickup", "out_for_delivery"];
+
+const pick = async (where: SQL | undefined, limit?: number) => {
   const db = await getDb();
+  const q = db.select({ data: ord.data }).from(ord).where(where).orderBy(desc(ord.paidAt), desc(ord.createdAt));
+  return (await (limit ? q.limit(limit) : q)).map((r) => r.data);
+};
+
+/** Every paid order, newest payment first. Heavy: prefer the focused lists below. Cached per request. */
+export const paidOrders = cache(async (): Promise<Order[]> => pick(isPaid));
+
+/** Paid orders whose payment arrived in [since, until). For reports. */
+export async function paidOrdersBetween(since: Date, until?: Date): Promise<Order[]> {
+  return pick(and(isPaid, gte(ord.paidAt, since.toISOString()), until ? lt(ord.paidAt, until.toISOString()) : undefined));
+}
+
+/** The staff queues: paid and not finished, plus anything that needs attention. Cached per request. */
+export const activeOrders = cache(async (): Promise<Order[]> => pick(or(and(isPaid, inArray(ord.status, ACTIVE)), hasAttention)));
+
+/** Finished paid orders (collected, delivered or cancelled), newest payment first. */
+export async function recentDoneOrders(limit = 200): Promise<Order[]> {
+  return pick(and(isPaid, inArray(ord.status, ["completed", "cancelled"])), limit);
+}
+
+/** The latest paid orders of any status. */
+export async function recentPaidOrders(limit = 200): Promise<Order[]> {
+  return pick(isPaid, limit);
+}
+
+/** How many paid orders are done / exist at all (for the tabs, without loading them). */
+export async function paidOrderCounts(): Promise<{ done: number; all: number }> {
+  const db = await getDb();
+  const [row] = await db
+    .select({
+      done: sql<number>`count(*) filter (where ${ord.status} in ('completed', 'cancelled'))::int`,
+      all: sql<number>`count(*)::int`,
+    })
+    .from(ord)
+    .where(isPaid);
+  return row;
+}
+
+/** Badge numbers for staff screens, counted in the database. */
+export const staffQueueCounts = cache(async (): Promise<{ toPack: number; attention: number }> => {
+  const db = await getDb();
+  const [row] = await db
+    .select({
+      toPack: sql<number>`count(*) filter (where ${toPackSql})::int`,
+      attention: sql<number>`count(*) filter (where ${hasAttention})::int`,
+    })
+    .from(ord)
+    .where(or(and(isPaid, eq(ord.status, "paid")), hasAttention));
+  return row;
+});
+
+/** The newest payment, for the new-order watcher. */
+export async function latestPaid(): Promise<{ number: string; paidAt: string } | null> {
+  const db = await getDb();
+  const [row] = await db.select({ number: ord.number, paidAt: ord.paidAt }).from(ord).where(isPaid).orderBy(desc(ord.paidAt)).limit(1);
+  return row ? { number: row.number, paidAt: new Date(row.paidAt!).toISOString() } : null;
+}
+
+/**
+ * Unpaid orders that expired or were cancelled although the customer opened a payment page
+ * in the last `days` days. Money may have left their wallet: worth a check in the eSewa portal.
+ */
+export async function ordersWithPaymentAttempts(days = 7, limit = 50): Promise<Order[]> {
+  const db = await getDb();
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const rows = await db
-    .select({ data: schema.orders.data })
-    .from(schema.orders)
-    .where(notInArray(schema.orders.status, ["awaiting_payment", "expired"]))
-    .orderBy(desc(schema.orders.createdAt));
+    .select({ data: ord.data })
+    .from(ord)
+    .where(
+      and(
+        inArray(ord.status, ["expired", "cancelled"]),
+        isNull(ord.paidAt),
+        gte(ord.createdAt, since),
+        sql`(jsonb_array_length(coalesce(${ord.data}->'payments', '[]'::jsonb)) > 0 or ${ord.data} ? 'payment')`,
+      ),
+    )
+    .orderBy(desc(ord.createdAt))
+    .limit(limit);
   return rows.map((r) => r.data);
 }
 
+/** For LIKE patterns: % _ and \ match themselves. */
+const likeEscape = (s: string) => s.replace(/[\\%_]/g, "\\$&");
 
 /** Staff search: order number, customer or receiver phone, or a gift card code used or bought. */
 export async function searchOrders(q: string): Promise<Order[]> {
   const term = q.trim();
-  if (!term) return [];
+  // Too short to mean anything (and "%" or "1" would list everything).
+  if (term.length < 3) return [];
   const db = await getDb();
   const digits = term.replace(/\D/g, "");
   const upper = term.toUpperCase();
-  const conds = [
-    sql`${schema.orders.number} ilike ${`%${upper.replace(/^(EP-?)?/, "")}%`}`,
-    sql`${schema.orders.data}->'giftCard'->>'code' = ${upper}`,
-    sql`${schema.orders.data}->>'issuedCardCode' = ${upper}`,
-  ];
-  if (digits.length >= 6) {
-    conds.push(sql`${schema.orders.phone} like ${`%${digits.slice(-10)}%`}`);
-    conds.push(sql`${schema.orders.data}->'gift'->>'receiverPhone' like ${`%${digits.slice(-10)}%`}`);
+  const numberPart = upper.replace(/^(EP-?)?/, "");
+  const conds = [sql`${ord.data}->'giftCard'->>'code' = ${upper}`, sql`${ord.data}->>'issuedCardCode' = ${upper}`];
+  if (numberPart.length >= 3) conds.push(sql`${ord.number} ilike ${`%${likeEscape(numberPart)}%`}`);
+  if (digits.length >= 4) {
+    const phone = `%${likeEscape(digits.slice(-10))}%`;
+    conds.push(sql`${ord.phone} like ${phone}`);
+    conds.push(sql`${ord.data}->'gift'->>'receiverPhone' like ${phone}`);
   }
   const rows = await db
-    .select({ data: schema.orders.data })
-    .from(schema.orders)
+    .select({ data: ord.data })
+    .from(ord)
     .where(or(...conds))
-    .orderBy(desc(schema.orders.createdAt))
+    .orderBy(desc(ord.createdAt))
     .limit(30);
   return rows.map((r) => r.data);
 }

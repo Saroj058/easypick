@@ -23,7 +23,8 @@ export default async function AdminDrops({ searchParams }: PageProps<"/admin/dro
   const initial = editing
     ? { slug: editing.slug, name: editing.name, story: editing.story, releaseAt: toLocal(editing.releaseAt), products: products.filter((p) => p.dropSlug === editing.slug).map((p) => p.slug) }
     : { slug: nextNumber, name: `Drop ${nextNumber}`, story: "", releaseAt: "", products: [] };
-  const choices = products.filter((p) => p.status !== "archived").map((p) => ({ slug: p.slug, name: p.name, status: p.status, dropSlug: p.dropSlug }));
+  // Archived pieces can't be added, but ones already in this drop are listed (and kept) so saving doesn't drop them.
+  const choices = products.filter((p) => p.status !== "archived" || (editing && p.dropSlug === editing.slug)).map((p) => ({ slug: p.slug, name: p.name, status: p.status, dropSlug: p.dropSlug }));
 
   return (
     <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr]">

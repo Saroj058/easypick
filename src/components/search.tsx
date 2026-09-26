@@ -17,13 +17,18 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 const RECENT_KEY = "ep-search-recent-v1";
 const UNDER = 1500;
 
-let catalogue: Promise<Product[]> | null = null;
+// The whole catalogue, fetched once per visit. A failed fetch resolves to null and
+// isn't kept, so the next try asks again instead of showing "Nothing for …".
+let catalogue: Promise<Product[] | null> | null = null;
 function loadCatalogue() {
   catalogue ??= fetch("/api/products")
-    .then((r) => (r.ok ? (r.json() as Promise<Product[]>) : []))
+    .then((r) => {
+      if (!r.ok) throw new Error(`catalogue ${r.status}`);
+      return r.json() as Promise<Product[]>;
+    })
     .catch(() => {
       catalogue = null; // try again next time
-      return [];
+      return null;
     });
   return catalogue;
 }
@@ -84,17 +89,24 @@ export function SearchButton() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const [failed, setFailed] = useState(false);
+
+  function load() {
+    setFailed(false);
+    loadCatalogue().then((list) => (list ? setProducts(list) : setFailed(true)));
+  }
+
   function onOpenChange(next: boolean) {
     setOpen(next);
     if (next) {
-      loadCatalogue().then(setProducts);
+      load();
       setRecent(readRecent());
     }
   }
   // Opened with "/": load too.
   useEffect(() => {
-    if (open && products === null) loadCatalogue().then(setProducts);
-  }, [open, products]);
+    if (open && products === null && !failed) loadCatalogue().then((list) => (list ? setProducts(list) : setFailed(true)));
+  }, [open, products, failed]);
 
   const results = useMemo(() => {
     let list = searchProducts(products ?? [], q);
@@ -206,8 +218,13 @@ export function SearchButton() {
           {filtering && (
             <div className="mt-6">
               <p role="status" className="text-[13px] text-steel-dark">
-                {products === null ? "Loading…" : results.length === 0 ? `Nothing for “${q.trim() || "that"}”.` : `${results.length} ${results.length === 1 ? "piece" : "pieces"}`}
+                {products === null ? (failed ? "Couldn't load the pieces." : "Loading…") : results.length === 0 ? `Nothing for “${q.trim() || "that"}”.` : `${results.length} ${results.length === 1 ? "piece" : "pieces"}`}
               </p>
+              {products === null && failed && (
+                <button type="button" onClick={load} className="btn btn-outline mt-3">
+                  Retry
+                </button>
+              )}
               {products !== null && results.length === 0 && (
                 <p className="mt-2 text-[15px]">
                   Try a simpler word, like <button type="button" className="underline" onClick={() => setQ("hoodie")}>hoodie</button> or{" "}

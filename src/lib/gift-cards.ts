@@ -5,7 +5,7 @@ import { randomInt } from "node:crypto";
 import { eq } from "drizzle-orm";
 
 import { getDb, giftCardRow, schema, type Exec } from "./db";
-import { hit, isBlocked } from "./rate-limit";
+import { allow } from "./rate-limit";
 
 // Digital gift cards, per the Gifting doc: 12-character codes (EP-XXXX-XXXX),
 // usable online (and at the kiosk later), leftover balance kept, valid 12 months.
@@ -29,6 +29,12 @@ export interface GiftCard {
   /** Order that paid for it (null when issued from a sold-out gift). */
   orderId: string | null;
   uses: { orderId: string; amount: number; at: string; refunded?: boolean }[];
+  /** "welcome": the receiver's first-order credit from a gift. */
+  kind?: "welcome";
+  /** A bought card waiting for its send date; lib/gift-card-delivery.ts sends it. */
+  pendingSend?: boolean;
+  /** When the card was texted/emailed to its recipient. */
+  sentAt?: string;
 }
 
 export const GIFT_CARD_VALUES = [1000, 2000, 3000, 5000];
@@ -73,32 +79,58 @@ export async function findGiftCard(code: string): Promise<GiftCard | null> {
   return row?.data ?? null;
 }
 
-export async function activateGiftCard(code: string, exec?: Exec) {
+/** Switches a paid-for card on. Its 12 months start now, not when the order was placed. */
+export async function activateGiftCard(code: string, exec?: Exec, validDays = 365) {
   const db = exec ?? (await getDb());
   await db.transaction(async (tx) => {
     const [c] = await tx.select().from(schema.giftCards).where(eq(schema.giftCards.code, code)).for("update");
-    if (c && c.status === "pending_payment") await tx.update(schema.giftCards).set(giftCardRow({ ...c.data, status: "active" })).where(eq(schema.giftCards.code, code));
+    if (c && c.status === "pending_payment") {
+      const expiresAt = new Date(Date.now() + validDays * 86_400_000).toISOString();
+      await tx.update(schema.giftCards).set(giftCardRow({ ...c.data, status: "active", expiresAt })).where(eq(schema.giftCards.code, code));
+    }
   });
+}
+
+/** Records that a card reached its recipient (so the send-date job doesn't send it again). */
+export async function markGiftCardSent(code: string, exec?: Exec) {
+  const db = exec ?? (await getDb());
+  await db.transaction(async (tx) => {
+    const [row] = await tx.select().from(schema.giftCards).where(eq(schema.giftCards.code, code)).for("update");
+    if (row) await tx.update(schema.giftCards).set(giftCardRow({ ...row.data, pendingSend: false, sentAt: new Date().toISOString() })).where(eq(schema.giftCards.code, code));
+  });
+}
+
+/** "EP-7K4M-2QXD" → "EP-••••-2QXD": enough to recognise a card without being able to use it. */
+export function maskCode(code: string): string {
+  return code.replace(/^EP-[A-Z0-9]{4}-/, "EP-••••-");
 }
 
 export type CardCheck = { ok: true; code: string; balance: number; expiresAt: string } | { ok: false; message: string };
 
-// Guard against guessing codes: 8 wrong tries per visitor per 10 minutes (kept in the
-// database, so it holds across server instances).
+export const CARD_CHECK_FAILED = "That code can't be used. Check it and try again.";
+export const CARD_CHECKS_PER_10_MIN = 10;
+
+/** IPv6 visitors can use a whole /64, so count them per /64. */
+export function visitorKey(ip: string) {
+  if (!ip.includes(":")) return ip;
+  const full = ip.split("%")[0].toLowerCase();
+  const [head, tail = ""] = full.split("::");
+  const a = head ? head.split(":") : [];
+  const b = tail ? tail.split(":") : [];
+  const groups = full.includes("::") ? [...a, ...Array<string>(Math.max(0, 8 - a.length - b.length)).fill("0"), ...b] : a;
+  return `${groups.slice(0, 4).map((g) => g || "0").join(":")}::/64`;
+}
+
+// Guard against guessing codes: every check is counted first (one atomic step in the
+// database, so parallel tries can't slip past), 10 per visitor per 10 minutes. Every
+// failure gets the same message, so a guess never learns whether a code exists.
 export async function checkGiftCard(input: string, who: string): Promise<CardCheck> {
-  const key = `giftcard:${who}`;
-  if (await isBlocked(key, 8)) return { ok: false, message: "Too many tries. Wait 10 minutes and try again." };
+  if (!(await allow(`giftcard:${visitorKey(who)}`, CARD_CHECKS_PER_10_MIN, 10 * 60_000))) {
+    return { ok: false, message: "Too many tries. Wait 10 minutes and try again." };
+  }
   const code = normaliseCode(input);
   const card = code ? await findGiftCard(code) : null;
-  const fail = async (message: string): Promise<CardCheck> => {
-    await hit(key, 10 * 60_000);
-    return { ok: false, message };
-  };
-  if (!card) return fail("We couldn't find that gift card. Check the code and try again.");
-  if (card.status === "pending_payment") return fail("This gift card isn't active yet.");
-  if (card.status === "blocked") return fail("This gift card has been blocked. Contact us for help.");
-  if (Date.parse(card.expiresAt) < Date.now()) return fail("This gift card has expired.");
-  if (card.balance <= 0) return fail("This gift card has no balance left.");
+  if (!card || card.status !== "active" || Date.parse(card.expiresAt) < Date.now() || card.balance <= 0) return { ok: false, message: CARD_CHECK_FAILED };
   return { ok: true, code: card.code, balance: card.balance, expiresAt: card.expiresAt };
 }
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { searchOrders } from "@/lib/orders";
+import { requireStaff } from "@/lib/staff";
 import { HelperOrderCard } from "../queue";
 
 export const metadata: Metadata = { title: "Find an order" };
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** A customer at the counter: find their order by number, phone or gift card code. */
 export default async function HelperFind({ searchParams }: PageProps<"/helper/find">) {
+  await requireStaff("/helper/login");
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.slice(0, 40) : "";
   const found = q ? await searchOrders(q) : [];

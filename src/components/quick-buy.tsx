@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
+import { sellable } from "@/lib/inventory";
 import type { Product, Size, Variant } from "@/lib/types";
 import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
 import { useBag } from "./bag-provider";
@@ -17,11 +18,11 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 //   Quick buy -> a small picker with that choice made, then the Buy now checkout.
 //   Heart     -> straight into the bag (tap again to take it out).
 
-const sellable = (v: Variant) => v.stock - (v.lastPieceOnFloor ? 1 : 0) > 0;
+const canBuy = (v: Variant) => sellable(v) > 0;
 
 function useCardVariant(product: Product): Variant | null {
   const profile = useFitProfile();
-  const inStock = product.variants.filter(sellable);
+  const inStock = product.variants.filter(canBuy);
   if (!inStock.length) return null;
   const firstColour = product.colours[0]?.name;
   const fit = matchSize(product.category, product.measurements, profile)?.size;
@@ -56,7 +57,7 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
   const variantsOf = (c: string) => product.variants.filter((v) => v.colour === c).sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
   const sizes = variantsOf(chosenColour);
   const wanted = size ?? suggested.size;
-  const chosen = sizes.find((v) => v.size === wanted && sellable(v)) ?? sizes.find(sellable) ?? null;
+  const chosen = sizes.find((v) => v.size === wanted && canBuy(v)) ?? sizes.find(canBuy) ?? null;
   const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
   const colourHex = (c: string) => product.colours.find((x) => x.name === c)?.hex ?? "#ccc";
 
@@ -94,7 +95,7 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
               </legend>
               <div className="mt-3 flex gap-3">
                 {product.colours.map((c) => {
-                  const any = variantsOf(c.name).some(sellable);
+                  const any = variantsOf(c.name).some(canBuy);
                   return (
                     <label key={c.name} className={`relative ${any ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}>
                       <input
@@ -125,7 +126,7 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
               <legend className="text-sm font-semibold">Size</legend>
               <div className="mt-3 grid grid-cols-4 gap-2">
                 {sizes.map((v) => {
-                  const left = v.stock - (v.lastPieceOnFloor ? 1 : 0);
+                  const left = sellable(v);
                   const out = left <= 0;
                   return (
                     <label key={v.sku} className={out ? "cursor-not-allowed" : "cursor-pointer"}>

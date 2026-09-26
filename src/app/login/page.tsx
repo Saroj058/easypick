@@ -45,7 +45,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <h1 className="display display-h1">{forBag ? "Log in to use your bag." : signup ? "Join Easypick." : "Welcome back."}</h1>
       <p className="mt-3 text-lg text-steel-dark">
         {forBag
-          ? "Your bag is saved to your account. Just want this one piece? Buy it now, no account needed."
+          ? "The bag needs an account. It's kept for your account on this phone. Just want this one piece? Buy it now, no account needed."
           : signup
             ? "One account for the website and the store."
             : "Log in to see your orders and saved size."}

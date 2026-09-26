@@ -3,10 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { LiveOrders } from "@/app/admin/(panel)/live-orders";
-import { paidOrders } from "@/lib/orders";
+import { helperQueueCounts } from "@/lib/helper-counts";
 import { requireStaff } from "@/lib/staff";
 import { HelperNav } from "./helper-nav";
-import { toPack } from "./queue";
 
 export const metadata: Metadata = { title: { default: "Helper", template: "%s | Easypick helper" }, robots: { index: false, follow: false } };
 
@@ -16,7 +15,8 @@ export const metadata: Metadata = { title: { default: "Helper", template: "%s | 
  */
 export default async function HelperLayout({ children }: LayoutProps<"/helper">) {
   const who = await requireStaff("/helper/login");
-  const waiting = (await paidOrders()).filter((o) => toPack(o) || o.attention).length;
+  // A small SQL count, not every order.
+  const { waiting } = await helperQueueCounts();
   return (
     <div className="min-h-dvh bg-paper pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-0">
       <header className="sticky top-0 z-40 border-b border-mist bg-paper/95 pt-[env(safe-area-inset-top)] backdrop-blur">
@@ -43,7 +43,7 @@ export default async function HelperLayout({ children }: LayoutProps<"/helper">)
       <div className="md:hidden">
         <HelperNav waiting={waiting} />
       </div>
-      <LiveOrders href="/helper" />
+      <LiveOrders href="/helper" login="/helper/login" />
       <div className="container-ep pb-10 pt-6 md:pt-8">{children}</div>
     </div>
   );

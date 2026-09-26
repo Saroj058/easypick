@@ -27,7 +27,7 @@ export function FestivalForm({ initial }: { initial: Festival[] }) {
               <label htmlFor={`fn-${r.key}`} className="text-sm font-semibold">
                 Festival
               </label>
-              <input id={`fn-${r.key}`} name="name" value={r.name} onChange={(e) => set(r.key, { name: e.target.value })} placeholder="Dashain (Tika)" className={input} />
+              <input id={`fn-${r.key}`} name="name" maxLength={60} value={r.name} onChange={(e) => set(r.key, { name: e.target.value })} placeholder="Dashain (Tika)" className={input} />
             </div>
             <div>
               <label htmlFor={`fd-${r.key}`} className="text-sm font-semibold">

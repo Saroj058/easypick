@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { HeartIcon } from "./icons";
+import { BookmarkIcon } from "./icons";
 
 // Saved pieces and recently viewed, kept in this browser (no account needed).
 // Every hook on the page stays in sync, and other tabs catch up through "storage" events.
@@ -89,7 +89,7 @@ export function SaveButton({ slug, name, variant = "inline", className = "" }: {
         className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${saved ? "" : "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100"} ${className}`}
       >
         <span className="grid h-9 w-9 place-items-center rounded-full bg-paper/80 text-ink ring-1 ring-ink/10 backdrop-blur-md [button:focus-visible_&]:outline [button:focus-visible_&]:outline-2 [button:focus-visible_&]:outline-offset-2 [button:focus-visible_&]:outline-ink">
-          <HeartIcon filled={saved} className={`h-4 w-4 ${saved ? "text-[#d70015]" : ""}`} />
+          <BookmarkIcon filled={saved} className="h-4 w-4" />
         </span>
       </button>
     );
@@ -102,7 +102,7 @@ export function SaveButton({ slug, name, variant = "inline", className = "" }: {
       aria-label={label}
       className={`inline-flex min-h-11 items-center gap-2 text-[14px] font-semibold ${className}`}
     >
-      <HeartIcon filled={saved} className={`h-5 w-5 ${saved ? "text-[#d70015]" : ""}`} />
+      <BookmarkIcon filled={saved} className="h-5 w-5" />
       {saved ? "Saved" : "Save"}
     </button>
   );

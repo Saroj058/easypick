@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { formatPrice } from "@/lib/format";
+import { deliverOnText, packLines } from "@/lib/helper-view";
 import { findOrder } from "@/lib/orders";
 import { site } from "@/lib/site";
 import { requireStaff } from "@/lib/staff";
@@ -25,6 +26,12 @@ export default async function PackingSlip({ params }: PageProps<"/admin/slip/[id
   const prices = !g || g.showPrice;
   const method = g?.receiver?.method ?? o.method;
   const address = g?.receiver?.address ?? o.address;
+  // Refunded pieces stay out of the bag (and off the slip).
+  const lines = packLines(o);
+  const refunded = (o.refunds ?? []).reduce((n, x) => n + x.amount, 0);
+  const deliverOn = deliverOnText(o);
+  const unpaid = !o.paidAt || o.status === "awaiting_payment" || o.status === "expired";
+  const stop = o.status === "cancelled" ? "CANCELLED – do not pack" : unpaid ? "NOT PAID – do not pack" : null;
 
   return (
     <main className="mx-auto max-w-[680px] bg-paper px-8 py-10 text-ink print:p-0">
@@ -32,6 +39,12 @@ export default async function PackingSlip({ params }: PageProps<"/admin/slip/[id
         <p className="text-[14px] text-steel-dark">A4 or receipt printer. Only the slip prints.</p>
         <PrintButton />
       </div>
+
+      {stop && (
+        <p role="alert" className="mb-6 border-4 border-[#d70015] px-4 py-3 text-center text-[22px] font-bold uppercase tracking-[0.04em] text-[#d70015]">
+          {stop}
+        </p>
+      )}
 
       <header className="flex items-start justify-between border-b-2 border-ink pb-4">
         <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} className="h-7 w-auto" priority />
@@ -59,6 +72,7 @@ export default async function PackingSlip({ params }: PageProps<"/admin/slip/[id
                   : "Address to come"}
           </p>
           {g?.receiver?.slot && <p>{g.receiver.slot}</p>}
+          {deliverOn && <p className="font-semibold">{deliverOn.text}</p>}
         </div>
       </section>
 
@@ -73,7 +87,7 @@ export default async function PackingSlip({ params }: PageProps<"/admin/slip/[id
           </tr>
         </thead>
         <tbody>
-          {o.lines.map((l, i) => (
+          {lines.map((l, i) => (
             <tr key={i} className="border-b border-mist">
               <td className="py-3">
                 <span className="font-semibold">{l.name}</span>
@@ -82,8 +96,8 @@ export default async function PackingSlip({ params }: PageProps<"/admin/slip/[id
               <td className="py-3">
                 {l.colour} · {l.size === "ONE" ? "One size" : l.size}
               </td>
-              <td className="py-3 text-right font-mono">{l.qty}</td>
-              {prices && <td className="py-3 text-right font-mono">{formatPrice(l.unitPrice * l.qty)}</td>}
+              <td className="py-3 text-right font-mono">{l.toPack}</td>
+              {prices && <td className="py-3 text-right font-mono">{formatPrice(l.unitPrice * l.toPack)}</td>}
               <td className="py-3 pl-3 text-center">
                 <span className="inline-block h-4 w-4 border border-ink" aria-hidden />
               </td>
@@ -100,6 +114,12 @@ export default async function PackingSlip({ params }: PageProps<"/admin/slip/[id
               <dd className="font-mono">{formatPrice(o.deliveryFee)}</dd>
             </div>
           )}
+          {(o.wrapFee ?? 0) > 0 && (
+            <div className="flex justify-between">
+              <dt>Gift box</dt>
+              <dd className="font-mono">{formatPrice(o.wrapFee ?? 0)}</dd>
+            </div>
+          )}
           {o.giftCard && (
             <div className="flex justify-between">
               <dt>Gift card</dt>
@@ -107,9 +127,21 @@ export default async function PackingSlip({ params }: PageProps<"/admin/slip/[id
             </div>
           )}
           <div className="flex justify-between border-t border-ink pt-1 font-semibold">
-            <dt>Paid</dt>
+            <dt>{unpaid ? "To pay" : "Paid"}</dt>
             <dd className="font-mono">{formatPrice(o.total)}</dd>
           </div>
+          {refunded > 0 && (
+            <>
+              <div className="flex justify-between">
+                <dt>Refunded</dt>
+                <dd className="font-mono">−{formatPrice(refunded)}</dd>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <dt>Kept</dt>
+                <dd className="font-mono">{formatPrice(Math.max(0, o.total - refunded))}</dd>
+              </div>
+            </>
+          )}
         </dl>
       )}
 

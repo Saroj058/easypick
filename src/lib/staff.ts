@@ -58,6 +58,11 @@ async function ensureFirstStaff() {
   const username = process.env.ADMIN_USERNAME?.trim();
   const password = process.env.ADMIN_PASSWORD;
   if (n > 0 || !username || !password) return;
+  if (password.length < MIN_PASSWORD) {
+    // Never seed a guessable first owner (e.g. a leftover "admin123").
+    console.error(`[staff] ADMIN_PASSWORD must be at least ${MIN_PASSWORD} characters; the first staff account was not created.`);
+    return;
+  }
   const now = new Date().toISOString();
   await db
     .insert(schema.staff)
@@ -112,7 +117,8 @@ export async function startAdminSession(staffId: string) {
   (await cookies()).set(ADMIN_COOKIE, `${payload}.${sign(payload, row.passwordHash, row.sessionVersion)}`, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    // Strict: the staff login is never sent on a request started from another site.
+    sameSite: "strict",
     path: "/",
     maxAge: TTL_MS / 1000,
   });
@@ -174,22 +180,86 @@ export async function staffList() {
     .orderBy(schema.staff.createdAt);
 }
 
+/**
+ * Names staff can't take: they'd look like the website itself, the customer or the receiver
+ * in order histories and the activity log ("system: Refunded ...").
+ */
+const RESERVED = new Set(["system", "owner", "admin", "customer", "receiver", "staff", "easypick"]);
+export const reservedUsername = (u: string) => RESERVED.has(u.trim().toLowerCase());
+const USERNAME_RULE = "Use 3 to 32 letters, numbers, dots, dashes or underscores.";
+const RESERVED_MESSAGE = "That name is kept for the website itself. Pick another.";
+
 export type AddStaffResult = { ok: true } | { ok: false; message: string };
 
 export async function addStaff(username: string, password: string, role: StaffRole): Promise<AddStaffResult> {
   const u = username.trim();
-  if (!/^[A-Za-z0-9._-]{3,32}$/.test(u)) return { ok: false, message: "Use 3 to 32 letters, numbers, dots, dashes or underscores." };
+  if (!/^[A-Za-z0-9._-]{3,32}$/.test(u)) return { ok: false, message: USERNAME_RULE };
+  if (reservedUsername(u)) return { ok: false, message: RESERVED_MESSAGE };
   if (password.length < MIN_PASSWORD) return { ok: false, message: `Use at least ${MIN_PASSWORD} characters for the password.` };
   if (await byUsername(u)) return { ok: false, message: "That username is taken." };
   const db = await getDb();
   const now = new Date().toISOString();
-  await db.insert(schema.staff).values({ id: randomUUID(), username: u, passwordHash: await hashPassword(password), role, createdAt: now, updatedAt: now });
+  const inserted = await db
+    .insert(schema.staff)
+    .values({ id: randomUUID(), username: u, passwordHash: await hashPassword(password), role, createdAt: now, updatedAt: now })
+    .onConflictDoNothing()
+    .returning({ id: schema.staff.id });
+  // Someone added the same name a moment ago.
+  if (!inserted.length) return { ok: false, message: "That username is taken." };
   return { ok: true };
 }
 
-export async function removeStaff(id: string) {
+export type RemoveStaffResult = { ok: true; username: string } | { ok: false; message: string };
+
+/**
+ * Removes a staff account (their logins stop working straight away). Never yourself, and
+ * never the last owner: the owner rows are locked first, so two owners removing each other
+ * at the same moment can't leave the shop with none.
+ */
+export async function removeStaff(id: string, byId: string): Promise<RemoveStaffResult> {
+  if (id === byId) return { ok: false, message: "You can't remove yourself." };
   const db = await getDb();
-  await db.delete(schema.staff).where(eq(schema.staff.id, id));
+  return db.transaction(async (tx) => {
+    const owners = await tx.select({ id: schema.staff.id }).from(schema.staff).where(eq(schema.staff.role, "owner")).orderBy(schema.staff.id).for("update");
+    const [target] = await tx.select().from(schema.staff).where(eq(schema.staff.id, id)).for("update");
+    if (!target) return { ok: false as const, message: "They've already been removed." };
+    if (target.role === "owner" && owners.filter((o) => o.id !== id).length === 0) return { ok: false as const, message: "Keep at least one owner." };
+    await tx.delete(schema.staff).where(eq(schema.staff.id, id));
+    return { ok: true as const, username: target.username };
+  });
+}
+
+// ---------- Owner tools for someone else's login ----------
+
+export type StaffUpdateResult = { ok: true; username: string } | { ok: false; message: string };
+
+/**
+ * An owner sets a new password for another staff member (they forgot it, or it leaked).
+ * Every device they're signed in on is signed out.
+ */
+export async function resetStaffPassword(id: string, byId: string, password: string): Promise<StaffUpdateResult> {
+  if (id === byId) return { ok: false, message: "Change your own password under Account." };
+  if (password.length < MIN_PASSWORD) return { ok: false, message: `Use at least ${MIN_PASSWORD} characters for the password.` };
+  if (password.length > 256) return { ok: false, message: "That password is too long." };
+  const db = await getDb();
+  const [row] = await db
+    .update(schema.staff)
+    .set({ passwordHash: await hashPassword(password), sessionVersion: sql`${schema.staff.sessionVersion} + 1`, updatedAt: new Date().toISOString() })
+    .where(eq(schema.staff.id, id))
+    .returning({ username: schema.staff.username });
+  return row ? { ok: true, username: row.username } : { ok: false, message: "They've been removed." };
+}
+
+/** Signs another staff member out on every phone and computer (e.g. a lost phone). */
+export async function signOutStaffEverywhere(id: string, byId: string): Promise<StaffUpdateResult> {
+  if (id === byId) return { ok: false, message: "Use Sign out for yourself." };
+  const db = await getDb();
+  const [row] = await db
+    .update(schema.staff)
+    .set({ sessionVersion: sql`${schema.staff.sessionVersion} + 1` })
+    .where(eq(schema.staff.id, id))
+    .returning({ username: schema.staff.username });
+  return row ? { ok: true, username: row.username } : { ok: false, message: "They've been removed." };
 }
 
 // ---------- Changing your own details ----------
@@ -204,7 +274,9 @@ export async function changeStaffLogin(staffId: string, currentPassword: string,
   const set: Partial<typeof schema.staff.$inferInsert> = { updatedAt: new Date().toISOString() };
   if (next.username !== undefined) {
     const u = next.username.trim();
-    if (!/^[A-Za-z0-9._-]{3,32}$/.test(u)) return { ok: false, field: "username", message: "Use 3 to 32 letters, numbers, dots, dashes or underscores." };
+    if (!/^[A-Za-z0-9._-]{3,32}$/.test(u)) return { ok: false, field: "username", message: USERNAME_RULE };
+    // Keeping an existing reserved name (e.g. the first owner seeded as "admin") is fine.
+    if (reservedUsername(u) && u.toLowerCase() !== row.username.toLowerCase()) return { ok: false, field: "username", message: RESERVED_MESSAGE };
     const taken = await byUsername(u);
     if (taken && taken.id !== staffId) return { ok: false, field: "username", message: "That username is taken." };
     set.username = u;

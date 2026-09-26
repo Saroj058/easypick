@@ -39,7 +39,7 @@ export function ProductForm({ product }: { product: Product }) {
           <h3 id="photo-h" className="text-lg font-semibold">
             Photo
           </h3>
-          <p className="mt-1 text-[14px] text-steel-dark">Flat-lay on a plain light background. JPG, PNG or WebP, under 8 MB. Saved when you press Save.</p>
+          <p className="mt-1 text-[14px] text-steel-dark">Flat-lay on a plain light background. JPG, PNG or WebP, under 4 MB (big phone photos are shrunk for you). Saved when you press Save.</p>
           <label className="btn btn-outline mt-3 cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink">
             {preview ? "Pick a different photo" : "Change photo"}
             <input
@@ -94,7 +94,7 @@ export function ProductForm({ product }: { product: Product }) {
         <label htmlFor="shortDescription" className="block text-lg font-semibold">
           One-line description
         </label>
-        <input id="shortDescription" name="shortDescription" defaultValue={product.shortDescription} className={input} />
+        <input id="shortDescription" name="shortDescription" maxLength={300} defaultValue={product.shortDescription} className={input} />
       </div>
 
       <div className="sticky bottom-0 flex items-center gap-4 border-t border-mist bg-paper py-3 pb-[max(12px,env(safe-area-inset-bottom))]">

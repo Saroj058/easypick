@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { describeMatch, hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { site } from "@/lib/site";
+import { stockFromVariants } from "@/lib/live-stock";
 import type { Colour, LiveStock, Product, Size } from "@/lib/types";
 import { AskWhatsApp } from "./ask-whatsapp";
 import { useAddToBag } from "./bag-gate";
@@ -15,6 +16,7 @@ import { GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
 
 const POLL_MS = 45_000;
+const RETRY_MS = 5_000;
 
 type Props = Pick<
   Product,
@@ -34,33 +36,51 @@ export function BuyPanel(props: Props) {
 
   const [colour, setColour] = useState<Colour>(colours[0]);
   const [picked, setSize] = useState<Size | null>(oneSize ? "ONE" : null);
-  const [stock, setStock] = useState<LiveStock | null>(null);
+  // Start from the stock the page was rendered with so sizes can be picked straight away;
+  // the live check replaces it within a moment.
+  const [stock, setStock] = useState<LiveStock>(() => stockFromVariants(slug, variants));
+  const [checked, setChecked] = useState(false);
   const [error, setError] = useState(false);
   const [added, setAdded] = useState(false);
   const [fitOpen, setFitOpen] = useState(false);
   const profile = useFitProfile();
   const match = matchSize(props.category, props.measurements, profile);
 
+  /** One live check; true when it worked. */
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/stock/${slug}`, { cache: "no-store" });
       if (!res.ok) throw new Error();
       setStock(await res.json());
       setError(false);
+      return true;
     } catch {
       setError(true);
+      return false;
+    } finally {
+      setChecked(true);
     }
   }, [slug]);
 
   useEffect(() => {
     if (status !== "live") return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- first fetch, then poll
-    load();
-    const id = setInterval(() => document.visibilityState === "visible" && load(), POLL_MS);
-    return () => clearInterval(id);
+    // Check now, then every 45 s while the tab is visible; after a failure, try again in 5 s.
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let first = true;
+    const tick = async () => {
+      const ok = first || document.visibilityState === "visible" ? await load() : true;
+      first = false;
+      if (!stopped) timer = setTimeout(tick, ok ? POLL_MS : RETRY_MS);
+    };
+    tick();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, [load, status]);
 
-  const stockFor = (s: Size) => stock?.sizes.find((x) => x.size === s && x.colour === colour.name);
+  const stockFor = (s: Size) => stock.sizes.find((x) => x.size === s && x.colour === colour.name);
   const sellableOf = (s: Size) => {
     const st = stockFor(s);
     return st ? st.stock - (st.inStoreOnly ? 1 : 0) : 0;
@@ -197,15 +217,13 @@ export function BuyPanel(props: Props) {
             })}
           </div>
           <p className="mt-2 min-h-5 text-[12px] text-steel-dark" aria-live="polite">
-            {error ? "Couldn't check stock. Retrying…" : ""}
+            {error ? "Couldn't check stock. Retrying…" : checked ? "" : "Checking stock…"}
           </p>
-          {stock && (
-            <RestockForm
-              key={colour.name}
-              slug={slug}
-              options={variants.filter((v) => v.colour === colour.name && sellableOf(v.size) <= 0 && !stockFor(v.size)?.inStoreOnly).map((v) => ({ sku: v.sku, size: v.size }))}
-            />
-          )}
+          <RestockForm
+            key={colour.name}
+            slug={slug}
+            options={variants.filter((v) => v.colour === colour.name && sellableOf(v.size) <= 0 && !stockFor(v.size)?.inStoreOnly).map((v) => ({ sku: v.sku, size: v.size }))}
+          />
         </fieldset>
       )}
 
@@ -243,7 +261,7 @@ export function BuyPanel(props: Props) {
       )}
       {status === "live" && (
         <>
-          <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag is saved to your account.</p>
+          <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
             <Link href={`/gift/${slug}`} className="btn btn-outline flex-1">
               <GiftIcon className="h-5 w-5" />

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { MIN_PASSWORD, requireStaff } from "@/lib/staff";
+import { MIN_PASSWORD, requireOwner } from "@/lib/staff";
 import { PasswordForm, UsernameForm } from "./account-forms";
 
 export const metadata: Metadata = { title: "Account" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminAccount() {
-  const me = await requireStaff();
+  const me = await requireOwner();
   return (
     <div className="max-w-xl space-y-14">
       <div>

@@ -27,10 +27,13 @@ function chime(ctx: AudioContext) {
 /**
  * Checks for new paid orders every 30 seconds while the admin is open: plays a chime,
  * shows a bar, refreshes the page, and puts the waiting count in the tab title.
+ * The first check only remembers the latest order (no chime for orders already there).
+ * If the login has ended (401), it stops checking and says so.
  */
-export function LiveOrders({ href = "/admin/orders?view=pack" }: { href?: string }) {
+export function LiveOrders({ href = "/admin/orders?view=pack", login = "/admin/login" }: { href?: string; login?: string }) {
   const router = useRouter();
   const [fresh, setFresh] = useState<string | null>(null);
+  const [signedOut, setSignedOut] = useState(false);
   const seen = useRef<string | null | undefined>(undefined);
   const audio = useRef<AudioContext | null>(null);
 
@@ -48,6 +51,13 @@ export function LiveOrders({ href = "/admin/orders?view=pack" }: { href?: string
       if (stopped || document.visibilityState === "hidden") return;
       try {
         const res = await fetch("/admin/live", { cache: "no-store" });
+        if (res.status === 401) {
+          // Signed out (elsewhere, or the login expired): stop asking every 30 seconds.
+          stopped = true;
+          clearInterval(timer);
+          setSignedOut(true);
+          return;
+        }
         if (!res.ok) return;
         const live = (await res.json()) as Live;
         const waiting = live.toPack + live.attention;
@@ -63,8 +73,8 @@ export function LiveOrders({ href = "/admin/orders?view=pack" }: { href?: string
         // Offline for a moment; try again next time.
       }
     }
-    void check();
     const timer = setInterval(check, EVERY_MS);
+    void check();
     const onShow = () => void check();
     document.addEventListener("visibilitychange", onShow);
     return () => {
@@ -76,6 +86,17 @@ export function LiveOrders({ href = "/admin/orders?view=pack" }: { href?: string
     };
   }, [router]);
 
+  if (signedOut)
+    return (
+      <div role="status" aria-live="polite" className="bg-[#fdecee]">
+        <div className="container-ep flex min-h-12 items-center justify-between gap-4 text-[15px] font-semibold text-[#9b0010]">
+          <span>Signed out. New orders won&apos;t show until you sign in again.</span>
+          <a href={login} className="min-h-11 content-center underline underline-offset-2">
+            Sign in again
+          </a>
+        </div>
+      </div>
+    );
   if (!fresh) return <p role="status" aria-live="polite" className="sr-only" />;
   return (
     <div role="status" aria-live="polite" className="bg-volt">

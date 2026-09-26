@@ -9,6 +9,7 @@ import type { GiftCard } from "../gift-cards";
 import { drops as seedDrops, products as seedProducts } from "../mock-data";
 import type { Order } from "../orders";
 import type { Drop, Festival, Product, SavedCheckout, Size } from "../types";
+import { databaseHost, isLocalDatabaseUrl, shouldAutoMigrate, shouldSeedSample } from "../env-check";
 import * as schema from "./schema";
 
 // The database: PostgreSQL at DATABASE_URL.
@@ -17,9 +18,10 @@ import * as schema from "./schema";
 //   This laptop → `npm run dev` starts a real PostgreSQL (embedded-postgres, stored in .data/postgres)
 //                 and sets DATABASE_URL for you (scripts/with-db.mjs). Nothing to install by hand.
 //
-// Migrations in /drizzle run on first use. An empty database starts with the sample
-// catalogue. (The old .data/easypick.json file store was imported into the local database
-// once and is kept only as a backup.)
+// Migrations in /drizzle run on first use only against a local database in development
+// (or when DB_AUTO_MIGRATE=true). The live database is migrated with `npm run db:migrate`.
+// An empty local database starts with the sample catalogue. (The old .data/easypick.json
+// file store was imported into the local database once and is kept only as a backup.)
 
 export type DB = PgDatabase<PgQueryResultHKT, typeof schema>;
 /** A transaction; everything that takes a DB also takes one of these. */
@@ -81,12 +83,21 @@ async function connect(): Promise<DB> {
   const { default: postgres } = await import("postgres");
   const { drizzle } = await import("drizzle-orm/postgres-js");
   // prepare: false keeps it working through Supabase's connection pooler (transaction mode).
-  // Serverless functions each hold their own pool, so keep it small in production.
-  const max = Number(process.env.DB_POOL_MAX ?? (process.env.NODE_ENV === "production" ? 2 : 5));
+  // Serverless functions each hold their own pool; 5 per instance leaves room for a page's
+  // parallel queries while staying well inside the pooler's limit. DB_POOL_MAX overrides.
+  const max = Number(process.env.DB_POOL_MAX || 5);
   const client = postgres(url, { max, prepare: false, idle_timeout: 20, connect_timeout: 10, onnotice: () => {} });
   const db = drizzle(client, { schema }) as unknown as DB;
-  // In production, run `npm run db:migrate` as a release step and set DB_AUTO_MIGRATE=false.
-  if (process.env.DB_AUTO_MIGRATE !== "false") {
+  if (process.env.NODE_ENV !== "production" && !isLocalDatabaseUrl(url)) {
+    // `npm run dev` against the live database: say so loudly, and leave its tables and data alone.
+    console.warn(
+      `\n  ⚠  Using the LIVE database (${databaseHost(url) ?? "remote host"}). Orders, stock and accounts here are real.\n` +
+        "     Migrations and sample data are not applied from here: run `npm run db:migrate` on purpose. `npm run dev:offline` uses a local copy.\n",
+    );
+  }
+  // Several servers starting at once (a deploy, a build's workers) must not all migrate:
+  // production runs `npm run db:migrate` (which takes a lock) as a release step instead.
+  if (shouldAutoMigrate(process.env)) {
     const { migrate } = await import("drizzle-orm/postgres-js/migrator");
     await migrate(db as never, { migrationsFolder });
   }
@@ -123,14 +134,15 @@ async function insertCatalogue(db: DB, list: Product[], dropList: Drop[]) {
 }
 
 async function seed(db: DB) {
-  // An empty database starts with the sample catalogue and drops (edit them in the admin screen).
-  const [{ n }] = await db.select({ n: count() }).from(schema.products);
+  // An empty local database starts with the sample catalogue and drops (edit them in the admin screen).
   // The sample catalogue is for development only: a live shop must never sell it by accident.
-  const sampleOk = process.env.NODE_ENV !== "production" || process.env.SEED_SAMPLE === "1";
-  if (n === 0 && sampleOk) await insertCatalogue(db, structuredClone(seedProducts), structuredClone(seedDrops));
+  if (shouldSeedSample(process.env)) {
+    const [{ n }] = await db.select({ n: count() }).from(schema.products);
+    if (n === 0) await insertCatalogue(db, structuredClone(seedProducts), structuredClone(seedDrops));
+  }
 
   // This year's Dashain and Tihar (Tika days per the official 2083 calendar), added once.
-  // Staff can change or remove them in the admin screen.
+  // Staff can change or remove them in the admin screen. After the first time this is one small read.
   const flag = await db.select().from(schema.meta).where(eq(schema.meta.key, "festivals_seeded"));
   if (!flag.length) {
     const [{ f }] = await db.select({ f: count() }).from(schema.festivals);

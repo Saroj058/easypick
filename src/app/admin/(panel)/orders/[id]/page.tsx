@@ -5,14 +5,17 @@ import { notFound } from "next/navigation";
 import { cancelUnpaid, clearAttention } from "@/app/admin/actions";
 import { findProduct } from "@/lib/catalogue";
 import { formatPrice, requestTime } from "@/lib/format";
+import { findGiftCard } from "@/lib/gift-cards";
+import { cardBehindOrder, piecesOnHold } from "@/lib/order-admin";
 import { findOrder, refundedQty } from "@/lib/orders";
-import { requireStaff } from "@/lib/staff";
-import { giftCardOnly, NextStep, statusLabel, time } from "../order-bits";
+import { currentStaff, requireOwner, requireStaff } from "@/lib/staff";
+import { giftCardOnly, NextStep, statusLabel, time, waitingOnReceiver } from "../order-bits";
 import { ExchangeForm, RefundForm, type ExchangeLine, type RefundLine } from "./order-tools";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/admin/orders/[id]">): Promise<Metadata> {
+  if (!(await currentStaff())) return { title: "Order" };
   const o = await findOrder((await params).id);
   return { title: o?.number ?? "Order" };
 }
@@ -20,6 +23,7 @@ export async function generateMetadata({ params }: PageProps<"/admin/orders/[id]
 const sizeText = (size: string) => (size === "ONE" ? "One size" : size);
 
 export default async function AdminOrder({ params }: PageProps<"/admin/orders/[id]">) {
+  await requireOwner();
   const { id } = await params;
   const [o, me] = await Promise.all([findOrder(id), requireStaff()]);
   if (!o) notFound();
@@ -35,11 +39,17 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
     .map((l, i) => ({ i, name: l.name, detail: `${l.colour} ${sizeText(l.size)}`, unitPrice: l.unitPrice, left: l.qty - done[i] }))
     .filter((l) => l.left > 0);
   const cardLeft = Math.max(0, (o.giftCard?.applied ?? 0) - (o.refunds ?? []).reduce((n, r) => n + r.toGiftCard, 0));
+  // Fees still refundable (each only once), and the gift card this order's goods became, if any.
+  const deliveryLeft = o.deliveryRefunded ? 0 : o.deliveryFee;
+  const wrapLeft = o.wrapRefunded ? 0 : (o.wrapFee ?? 0);
+  const behindCode = cardBehindOrder(o);
+  const behind = behindCode ? await findGiftCard(behindCode) : null;
+  const canRefund = owner && Boolean(o.paidAt) && (live || o.status === "cancelled") && (refundLines.length > 0 || deliveryLeft > 0 || wrapLeft > 0);
 
   const products = await Promise.all([...new Set(o.lines.map((l) => l.slug))].map(findProduct));
   const exchangeLines: ExchangeLine[] = o.lines.flatMap((l, i) => {
     const p = products.find((x) => x?.slug === l.slug);
-    if (!p || done[i] >= l.qty) return [];
+    if (!p || done[i] >= l.qty || waitingOnReceiver(o)) return [];
     const options = p.variants.filter((v) => v.sku !== l.sku).map((v) => ({ sku: v.sku, label: `${v.colour} ${sizeText(v.size)}`, stock: v.stock }));
     return options.length ? [{ i, name: l.name, current: `${l.colour} ${sizeText(l.size)}`, options }] : [];
   });
@@ -72,12 +82,14 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
       {o.attention && (
         <div role="alert" className="mt-6 flex flex-wrap items-center justify-between gap-3 bg-[#fdecee] px-4 py-3 text-[15px] text-[#9b0010]">
           <p>{o.attention}</p>
-          <form action={clearAttention}>
-            <input type="hidden" name="orderId" value={o.id} />
-            <button type="submit" className="min-h-11 font-semibold underline underline-offset-2">
-              Mark as sorted
-            </button>
-          </form>
+          {owner && (
+            <form action={clearAttention}>
+              <input type="hidden" name="orderId" value={o.id} />
+              <button type="submit" className="min-h-11 font-semibold underline underline-offset-2">
+                Mark as sorted
+              </button>
+            </form>
+          )}
         </div>
       )}
 
@@ -185,13 +197,22 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
 
       {live && goods && exchangeLines.length > 0 && (
         <div className="mt-10 border-t border-mist pt-8">
-          <ExchangeForm key={(o.events ?? []).length} orderId={o.id} lines={exchangeLines} windowDays={windowDays} pastWindow={pastWindow} />
+          <ExchangeForm key={(o.events ?? []).length} orderId={o.id} lines={exchangeLines} windowDays={windowDays} pastWindow={pastWindow} canOverride={owner} />
         </div>
       )}
 
-      {owner && live && (refundLines.length > 0 || o.deliveryFee > 0) && (
+      {canRefund && (
         <div className="mt-10 border-t border-mist pt-8">
-          <RefundForm key={(o.refunds ?? []).length} orderId={o.id} lines={refundLines} deliveryFee={o.deliveryFee} cardLeft={cardLeft} />
+          <RefundForm
+            key={(o.refunds ?? []).length}
+            orderId={o.id}
+            lines={refundLines}
+            deliveryFee={deliveryLeft}
+            wrapFee={wrapLeft}
+            cardLeft={cardLeft}
+            restockable={piecesOnHold(o)}
+            giftCard={behindCode ? { code: behindCode, left: behind?.balance ?? 0, blocked: behind?.status === "blocked" } : null}
+          />
         </div>
       )}
 

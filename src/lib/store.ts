@@ -6,7 +6,8 @@ import { cache } from "react";
 
 import { allDrops, loadProducts } from "./catalogue";
 import { getDb, schema } from "./db";
-import type { Drop, LiveStock, Product, ProductStatus } from "./types";
+import { effectiveStatus, isPublicStatus } from "./product-status";
+import type { Drop, LiveStock, Product } from "./types";
 
 // Data access for the website. With STORE_API_URL set, reads from the Store API
 // (FastAPI). Without it, serves the local catalogue (seeded from mock-data.ts and
@@ -34,21 +35,8 @@ async function api<T>(path: string, init?: RequestInit & { next?: { revalidate?:
 
 const CATALOGUE = { next: { revalidate: 300, tags: ["catalogue"] } };
 
-/**
- * A scheduled product goes live by itself once its drop time passes, so the site
- * never shows "coming soon" for something already on the rack.
- */
-export function effectiveStatus(p: Product, dropList: Drop[], now = Date.now()): ProductStatus {
-  if (p.status !== "scheduled") return p.status;
-  const drop = dropList.find((d) => d.slug === p.dropSlug);
-  if (drop && Date.parse(drop.releaseAt) <= now) {
-    return p.variants.some((v) => v.stock > 0) ? "live" : "sold_out";
-  }
-  return "scheduled";
-}
-
-/** Statuses the public website can show. Draft, in review and archived stay hidden. */
-const PUBLIC: ProductStatus[] = ["live", "sold_out", "scheduled"];
+// Lives in product-status.ts so the catalogue (restock alerts, drops) can use it too.
+export { effectiveStatus };
 
 export async function getDrops(): Promise<Drop[]> {
   const list = API_URL ? await api<Drop[]>("/drops", CATALOGUE) : await localDrops();
@@ -79,7 +67,7 @@ export async function getProducts(): Promise<Product[]> {
   return list
     .filter((p) => p.showOn.website)
     .map((p) => ({ ...p, status: effectiveStatus(p, dropList) }))
-    .filter((p) => PUBLIC.includes(p.status));
+    .filter((p) => isPublicStatus(p.status));
 }
 
 export async function getProduct(slug: string): Promise<Product | null> {
@@ -119,15 +107,20 @@ export function getHomeStats(dropProducts: Product[], pieceCount: number | null)
   };
 }
 
-/** Live stock by size. Never cached in page HTML; polled by the product page. */
+/** Live stock by size. Never cached in page HTML; polled by the product page. Null for products the public can't see. */
 export async function getLiveStock(slug: string): Promise<LiveStock | null> {
   if (API_URL) {
     return api<LiveStock>(`/products/${encodeURIComponent(slug)}/stock`, { cache: "no-store" });
   }
-  // Only the variant rows: this is polled by every open product page.
+  // Only this product's rows: this is polled by every open product page.
   const db = await getDb();
+  const [product] = await db.select({ status: schema.products.status, data: schema.products.data }).from(schema.products).where(eq(schema.products.slug, slug));
+  if (!product?.data.showOn?.website) return null;
   const rows = await db.select().from(schema.variants).where(eq(schema.variants.productSlug, slug)).orderBy(asc(schema.variants.position));
   if (!rows.length) return null;
+  // Same filter as getProducts: drafts, in-review, archived and hidden products don't exist to the public.
+  const drops = product.status === "scheduled" ? await localDrops() : [];
+  if (!isPublicStatus(effectiveStatus({ status: product.status, dropSlug: product.data.dropSlug, variants: rows }, drops))) return null;
   return {
     slug,
     updatedAt: new Date().toISOString(),
@@ -135,7 +128,8 @@ export async function getLiveStock(slug: string): Promise<LiveStock | null> {
       size: v.size,
       colour: v.colour,
       stock: v.stock,
-      inStoreOnly: Boolean(v.lastPieceOnFloor),
+      // Only while there is a piece: at 0 it's simply sold out.
+      inStoreOnly: Boolean(v.lastPieceOnFloor) && v.stock > 0,
     })),
   };
 }

@@ -44,7 +44,7 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
           <label htmlFor="name" className={label}>
             Name
           </label>
-          <input id="name" name="name" required placeholder="e.g. Boxy Pocket Tee" className={input} />
+          <input id="name" name="name" required maxLength={80} placeholder="e.g. Boxy Pocket Tee" className={input} />
         </div>
         <div>
           <label htmlFor="category" className={label}>
@@ -101,7 +101,7 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
           <label htmlFor="shortDescription" className={label}>
             One-line description
           </label>
-          <input id="shortDescription" name="shortDescription" placeholder="Heavy cotton, boxy cut, one chest pocket." className={input} />
+          <input id="shortDescription" name="shortDescription" maxLength={300} placeholder="Heavy cotton, boxy cut, one chest pocket." className={input} />
         </div>
         <div className="sm:col-span-2">
           <label htmlFor="details" className={label}>
@@ -111,6 +111,7 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
             id="details"
             name="details"
             rows={4}
+            maxLength={4000}
             placeholder={"100% cotton, 240 GSM\nDropped shoulder\nWash cold, inside out"}
             className="mt-2 w-full rounded-[2px] border border-mist bg-paper px-4 py-3 text-base outline-none focus:border-ink"
           />
@@ -121,7 +122,7 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
         <h3 id="photo-h" className="text-lg font-semibold">
           Photo
         </h3>
-        <p className="mt-1 text-[14px] text-steel-dark">A flat-lay on a plain light background, like the others. JPG, PNG or WebP, under 8 MB.</p>
+        <p className="mt-1 text-[14px] text-steel-dark">A flat-lay on a plain light background, like the others. JPG, PNG or WebP, under 4 MB (big phone photos are shrunk for you).</p>
         <div className="mt-3 flex items-start gap-4">
           <input
             id="photo"
@@ -130,7 +131,7 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
             accept="image/jpeg,image/png,image/webp"
             onChange={async (e) => {
               // Big phone photos are shrunk here so the upload stays under the hosting limit.
-                const f = await shrinkPhotoInput(e.target);
+              const f = await shrinkPhotoInput(e.target);
               setPreview(f ? URL.createObjectURL(f) : null);
             }}
             className="text-[14px] file:mr-3 file:h-11 file:rounded-[2px] file:border file:border-ink file:bg-paper file:px-4 file:font-semibold"
@@ -152,7 +153,7 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
               <label className="sr-only" htmlFor={`cn-${i}`}>
                 Colour {i + 1} name
               </label>
-              <input id={`cn-${i}`} value={c.name} onChange={(e) => setColour(i, { name: e.target.value })} placeholder="Colour name" className={`${input} mt-0 flex-1`} />
+              <input id={`cn-${i}`} value={c.name} onChange={(e) => setColour(i, { name: e.target.value })} maxLength={30} placeholder="Colour name" className={`${input} mt-0 flex-1`} />
               <label className="sr-only" htmlFor={`ch-${i}`}>
                 Colour {i + 1} swatch
               </label>
@@ -165,7 +166,12 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
             </li>
           ))}
         </ul>
-        <button type="button" onClick={() => setColours((cs) => [...cs, { name: "", hex: "#888888" }])} className="btn btn-outline mt-3">
+        <button
+          type="button"
+          disabled={colours.length >= 20}
+          onClick={() => setColours((cs) => [...cs, { name: "", hex: "#888888" }])}
+          className="btn btn-outline mt-3"
+        >
           Add a colour
         </button>
       </section>
@@ -283,7 +289,7 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
       <label className="flex min-h-11 cursor-pointer items-center gap-3">
         <input type="checkbox" name="publish" className="h-5 w-5 accent-[#0a0a0a]" />
         <span>
-          <span className="font-semibold">Put it live now</span> <span className="text-steel-dark">(otherwise it&apos;s saved as a hidden draft)</span>
+          <span className="font-semibold">Put it live now</span> <span className="text-steel-dark">(otherwise it&apos;s saved as a hidden draft; in a drop that hasn&apos;t started yet, it waits for the drop)</span>
         </span>
       </label>
 

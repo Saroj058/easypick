@@ -10,7 +10,7 @@ import { Barcode } from "@/components/hang-tag";
 import { formatHour, formatPrice } from "@/lib/format";
 import { gatewayReady, paymentsLive } from "@/lib/gateways";
 import { payMessage } from "@/lib/pay-messages";
-import { reconcileOrder } from "@/lib/reconcile";
+import { mayStillBePaid, reconcileOrder } from "@/lib/reconcile";
 import { TryAgain } from "./try-again";
 import { formatBS } from "@/lib/nepali-date";
 import { findOrder, type Order } from "@/lib/orders";
@@ -161,18 +161,27 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
   const payProblem = sp.pay === "failed" ? payMessage(sp.why) : undefined;
   let order = await findOrder(id);
   if (!order) notFound();
-  // Paid but never came back (closed the tab)? Ask the wallet before showing "unpaid".
-  if ((order.status === "awaiting_payment" || order.status === "expired") && (order.payments?.length || order.payment) && (await reconcileOrder(order))) {
-    order = (await findOrder(id))!;
+  // Paid but never came back (closed the tab)? Ask the wallet before showing "unpaid": only the
+  // newest attempt or two, briefly, and at most every 30 seconds (the cron covers the rest).
+  if (mayStillBePaid(order) && (order.payments?.length || order.payment)) {
+    const paidNow = await reconcileOrder(order, { limit: 2, timeoutMs: 3000, minGapMs: 30_000 }).catch((e) => {
+      console.error("[order page] payment check failed", order?.number, e);
+      return false;
+    });
+    if (paidNow) order = (await findOrder(id))!;
   }
 
   const awaiting = order.status === "awaiting_payment";
-  const paid = !awaiting && order.status !== "expired";
+  const cancelled = order.status === "cancelled";
+  // Cancelled orders are neither: no tracker, gift link or card code.
+  const paid = !awaiting && order.status !== "expired" && !cancelled;
   const heading = awaiting
     ? "Almost there."
     : order.status === "expired"
       ? "Order expired."
-      : order.gift
+      : cancelled
+        ? "Order cancelled."
+        : order.gift
         ? "Your gift is ready."
         : order.kind === "gift_card"
           ? "Gift card sent."
@@ -181,7 +190,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
 
   return (
     <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">
-      {order.source === "bag" && <ClearBag />}
+      {order.source === "bag" && paid && <ClearBag orderId={order.id} skus={order.lines.map((l) => l.sku)} />}
       <p className="text-sm font-semibold text-steel-dark">Order {order.number}</p>
       <h1 className="display mt-3 text-[40px] md:text-[72px]">{heading}</h1>
 
@@ -249,11 +258,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
           {order.kind !== "gift_card" && <TryAgain lines={order.lines} gift={Boolean(order.gift)} />}
         </div>
       )}
-      {order.status === "cancelled" && <p className="mt-6 text-steel-dark">This order was cancelled{order.refunds?.length ? " and refunded" : ""}.</p>}
+      {cancelled && <p className="mt-6 text-steel-dark">This order was cancelled{order.refunds?.length ? " and refunded" : ""}.</p>}
 
       {order.gift && paid && <GiftProgress order={order} />}
-      {!order.gift && order.kind !== "gift_card" && paid && order.status !== "cancelled" && <OrderTracker order={order} />}
-      {!order.gift && order.kind !== "gift_card" && paid && order.method === "pickup" && order.status !== "completed" && order.status !== "cancelled" && (
+      {!order.gift && order.kind !== "gift_card" && paid && <OrderTracker order={order} />}
+      {!order.gift && order.kind !== "gift_card" && paid && order.method === "pickup" && order.status !== "completed" && (
         <section aria-labelledby="pickup-h" className="mt-6 border border-mist p-5">
           <h2 id="pickup-h" className="text-lg font-semibold">
             Picking it up
@@ -281,7 +290,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
         </section>
       )}
 
-      {order.kind === "gift_card" && order.issuedCardCode && (
+      {order.kind === "gift_card" && order.issuedCardCode && !cancelled && (
         <section aria-label="Gift card" className="mt-10 bg-photo p-5 md:p-6">
           {paid ? (
             <>
@@ -386,7 +395,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
             <span className="tabular-nums">{formatPrice(order.total)}</span>
           </p>
           <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-steel-dark">
-            VAT incl. · {order.status === "awaiting_payment" ? `Awaiting ${providerLabel[order.provider]}` : order.status === "expired" ? "Expired" : `Paid by ${providerLabel[order.provider]}`}
+            VAT incl. · {order.status === "awaiting_payment" ? `Awaiting ${providerLabel[order.provider]}` : order.status === "expired" ? "Expired" : cancelled ? (order.paidAt ? "Cancelled" : "Cancelled, not paid") : `Paid by ${providerLabel[order.provider]}`}
             {order.payment?.gatewayRef && <span className="block">Ref {order.payment.gatewayRef}</span>}
           </p>
           <p className="display mt-6 text-center text-[26px] leading-none">Pick it. Pay it. Wear it.</p>

@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { adjustStock, type SaveState } from "@/app/admin/actions";
 import { SIZE_ORDER } from "@/lib/inventory";
 import type { Product } from "@/lib/types";
+
+type StockUi = SaveState & { n: number; values?: Record<string, string> };
 
 const reasons = [
   { value: "received", label: "Received (new pieces tagged)" },
@@ -18,16 +21,20 @@ const reasons = [
  * this page was open is never overwritten. Every change is kept in the stock history.
  */
 export function StockForm({ product, demand }: { product: Product; demand: Record<string, number> }) {
-  const [state, action, pending] = useActionState<SaveState, FormData>(adjustStock, { status: "idle" });
-  const [round, setRound] = useState(0);
+  // `n` counts saves so the boxes can start fresh; after an error they keep what was typed.
+  const [state, action, pending] = useActionState<StockUi, FormData>(
+    async (prev, fd) => {
+      const r = await adjustStock({ status: "idle" }, fd);
+      return { ...r, n: prev.n + 1, values: r.status === "error" ? (Object.fromEntries([...fd].filter(([, v]) => typeof v === "string")) as Record<string, string>) : undefined };
+    },
+    { status: "idle", n: 0 },
+  );
+  const [reason, setReason] = useState("received");
   const sizes = SIZE_ORDER.filter((s) => product.variants.some((v) => v.size === s));
 
   return (
     <form
-      action={async (fd) => {
-        await action(fd);
-        setRound((r) => r + 1); // clear the + / − boxes after saving
-      }}
+      action={action}
       className="space-y-5"
       aria-labelledby="stock-h"
     >
@@ -73,7 +80,8 @@ export function StockForm({ product, demand }: { product: Product; demand: Recor
                         Change {c.name} {s} by
                       </label>
                       <input
-                        key={round}
+                        key={state.n}
+                        defaultValue={state.values?.[`adj:${v.sku}`]}
                         id={`adj-${v.sku}`}
                         name={`adj:${v.sku}`}
                         type="number"
@@ -96,19 +104,38 @@ export function StockForm({ product, demand }: { product: Product; demand: Recor
           <label htmlFor="st-reason" className="block text-sm font-semibold">
             Why
           </label>
-          <select id="st-reason" name="reason" defaultValue="received" className="mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-3">
+          <select
+            key={state.n}
+            id="st-reason"
+            name="reason"
+            defaultValue={reason}
+            onChange={(e) => setReason(e.target.value)}
+            aria-describedby="st-reason-hint"
+            className="mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-3">
             {reasons.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
               </option>
             ))}
           </select>
+          <p id="st-reason-hint" className="mt-1 text-[13px] text-steel-dark">
+            {reason === "count" ? (
+              <>
+                For a full recount use the <Link href="/admin/stock" className="underline underline-offset-2">Stock count</Link> page: it keeps pieces held for
+                orders out of the count. Here, type only the difference (+1 or −1).
+              </>
+            ) : reason === "damaged" ? (
+              "Take pieces off: use numbers like −1."
+            ) : (
+              "Add pieces: use numbers like 5."
+            )}
+          </p>
         </div>
         <div>
           <label htmlFor="st-note" className="block text-sm font-semibold">
             Note <span className="font-normal text-steel-dark">(optional)</span>
           </label>
-          <input id="st-note" name="note" placeholder="e.g. Drop 02 delivery" className="mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4" />
+          <input key={state.n} id="st-note" name="note" maxLength={80} defaultValue={state.values?.note} placeholder="e.g. Drop 02 delivery" className="mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4" />
         </div>
       </div>
       <div className="flex items-center gap-4">
