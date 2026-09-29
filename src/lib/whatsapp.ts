@@ -25,7 +25,7 @@ export async function sendWhatsAppCode(phone: string, code: string): Promise<voi
       type: "template",
       template: {
         name: process.env.WHATSAPP_TEMPLATE,
-        language: { code: process.env.WHATSAPP_TEMPLATE_LANG ?? "en" },
+        language: { code: process.env.WHATSAPP_TEMPLATE_LANG || "en" },
         components: [
           { type: "body", parameters: [{ type: "text", text: code }] },
           // Authentication templates carry a copy-code button that needs the code too.

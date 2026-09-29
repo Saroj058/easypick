@@ -80,7 +80,7 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
 
   // Stop anyone running up the SMS bill: a daily ceiling for the whole site and for each
   // number (only codes actually sent count, so failed sends can't lock sign-in), and per visitor.
-  const dailyCap = Number(process.env.CODE_DAILY_CAP ?? 1000);
+  const dailyCap = Number(process.env.CODE_DAILY_CAP) || 1000;
   if (await isBlocked("code-daily", dailyCap)) {
     return { ok: false, message: "Phone sign-in is busy right now. Try Google, or try again later." };
   }
