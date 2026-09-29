@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 
 import { placeOrder, type CheckoutState } from "@/app/actions";
 import { previewGiftCard } from "@/app/gift-actions";
+import { myUsableCards } from "@/app/wallet-actions";
 import { useBag } from "@/components/bag-provider";
 import { useMe, usePrefilled } from "@/components/session";
 import { formatPrice } from "@/lib/format";
@@ -52,7 +53,8 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   const detailsField = usePrefilled(saved?.address?.details);
   const [cardOpen, setCardOpen] = useState(false);
   const [cardCode, setCardCode] = useState("");
-  const [card, setCard] = useState<{ code: string; balance: number } | null>(null);
+  const [card, setCard] = useState<{ code: string; balance: number; saved?: boolean } | null>(null);
+  const [walletTried, setWalletTried] = useState(false);
   const [cardMsg, setCardMsg] = useState("");
   const [applying, setApplying] = useState(false);
 
@@ -73,6 +75,23 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
       setApplying(false);
     }
   }
+
+  // Signed in with a gift card saved to their account: use it without typing the code.
+  // (Once per visit to checkout; removing it keeps it off.)
+  useEffect(() => {
+    if (!me || walletTried) return;
+    let live = true;
+    myUsableCards()
+      .then((cards) => {
+        if (!live) return;
+        setWalletTried(true);
+        if (cards[0]) setCard((c) => c ?? { code: cards[0].code, balance: cards[0].balance, saved: true });
+      })
+      .catch(() => live && setWalletTried(true));
+    return () => {
+      live = false;
+    };
+  }, [me, walletTried]);
 
   if (!ready) return <div className="mt-10 h-96" aria-hidden />;
 
@@ -224,7 +243,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
             </button>
           ) : card ? (
             <p className="text-[14px]">
-              Gift card applied. {formatPrice(card.balance - cardApplied)} stays on the card.{" "}
+              {card.saved ? `Your saved gift card ${card.code.replace(/^EP-[A-Z0-9]{4}-/, "EP-••••-")} is applied.` : "Gift card applied."} {formatPrice(card.balance - cardApplied)} stays on the card.{" "}
               <button type="button" onClick={() => setCard(null)} className="min-h-11 underline">
                 Remove
               </button>

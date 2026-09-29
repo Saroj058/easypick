@@ -243,11 +243,13 @@ describe("bought gift cards", () => {
     expect(await sendDueGiftCards(onTheDay)).toBe(0); // never twice
   });
 
-  it("must be a whole amount within the limits", async () => {
-    const f = new FormData();
-    f.set("custom", "750.5");
-    const r = await buyGiftCard({ status: "idle" }, f);
-    expect(r.status === "error" && r.message).toMatch(/whole amount/);
+  it("must be Rs 1,000 to 20,000 in steps of Rs 100", async () => {
+    for (const amount of ["750.5", "500", "1250", "20100"]) {
+      const f = new FormData();
+      f.set("custom", amount);
+      const r = await buyGiftCard({ status: "idle" }, f);
+      expect(r.status === "error" && r.message).toMatch(/steps of Rs 100/);
+    }
   });
 });
 

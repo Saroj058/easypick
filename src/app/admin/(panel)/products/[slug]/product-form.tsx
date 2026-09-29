@@ -97,6 +97,19 @@ export function ProductForm({ product }: { product: Product }) {
         <input id="shortDescription" name="shortDescription" maxLength={300} defaultValue={product.shortDescription} className={input} />
       </div>
 
+      <fieldset>
+        <legend className="text-lg font-semibold">Trending page</legend>
+        <p className="mt-1 text-[14px] text-steel-dark">Until there are enough real orders, Trending shows your staff picks instead (labelled as such).</p>
+        <label className="mt-3 flex min-h-11 items-center gap-3 text-[15px]">
+          <input type="checkbox" name="staffPick" defaultChecked={Boolean(product.staffPick)} className="h-5 w-5 accent-ink" />
+          Staff pick
+        </label>
+        <label className="flex min-h-11 items-center gap-3 text-[15px]">
+          <input type="checkbox" name="hideFromTrending" defaultChecked={Boolean(product.hideFromTrending)} className="h-5 w-5 accent-ink" />
+          Keep off Trending <span className="text-[13px] text-steel-dark">(recorded in the activity log)</span>
+        </label>
+      </fieldset>
+
       <div className="sticky bottom-0 flex items-center gap-4 border-t border-mist bg-paper py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
         <button type="submit" disabled={pending} className="btn btn-volt min-w-40">
           {pending ? "Saving…" : "Save"}

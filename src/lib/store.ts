@@ -8,6 +8,7 @@ import { allDrops, loadProducts } from "./catalogue";
 import { getDb, schema } from "./db";
 import { effectiveStatus, isPublicStatus } from "./product-status";
 import type { Drop, LiveStock, Product } from "./types";
+import { isNewProduct } from "./newness";
 
 // Data access for the website. With STORE_API_URL set, reads from the Store API
 // (FastAPI). Without it, serves the local catalogue (seeded from mock-data.ts and
@@ -67,7 +68,8 @@ export async function getProducts(): Promise<Product[]> {
   return list
     .filter((p) => p.showOn.website)
     .map((p) => ({ ...p, status: effectiveStatus(p, dropList) }))
-    .filter((p) => isPublicStatus(p.status));
+    .filter((p) => isPublicStatus(p.status))
+    .map((p) => ({ ...p, isNew: isNewProduct(p, dropList) }));
 }
 
 export async function getProduct(slug: string): Promise<Product | null> {

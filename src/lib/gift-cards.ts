@@ -30,6 +30,10 @@ export interface GiftCard {
   orderId: string | null;
   uses: { orderId: string; amount: number; at: string; refunded?: boolean }[];
   /** "welcome": the receiver's first-order credit from a gift. */
+  /** Card artwork (lib/gift-card-designs.ts). */
+  design?: string;
+  /** Saved to this account's wallet: its balance is offered at checkout without typing the code. */
+  ownerUserId?: string;
   kind?: "welcome";
   /** A bought card waiting for its send date; lib/gift-card-delivery.ts sends it. */
   pendingSend?: boolean;
@@ -38,7 +42,9 @@ export interface GiftCard {
 }
 
 export const GIFT_CARD_VALUES = [1000, 2000, 3000, 5000];
-export const GIFT_CARD_MIN = 500;
+export const GIFT_CARD_MIN = 1000;
+/** Custom amounts go in steps of Rs 100. */
+export const GIFT_CARD_STEP = 100;
 export const GIFT_CARD_MAX = 20000;
 
 // No 0/O, 1/I/L: easy to read out loud and type from an SMS.

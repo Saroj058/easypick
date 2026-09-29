@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, secret, updateUser } from "@/lib/auth";
 import { mergeBag } from "@/lib/bag-rules";
 import { addRestockAlert } from "@/lib/catalogue";
+import { recordEvent } from "@/lib/events";
 import { getDb, schema } from "@/lib/db";
 import { normaliseEmail } from "@/lib/email";
 import { checkGiftCard } from "@/lib/gift-cards";
@@ -234,6 +235,7 @@ export async function requestRestock(_prev: RestockState, form: FormData): Promi
   if (!(await allow(`restock:${await clientIp()}`, 20, 60 * 60_000))) return { status: "error", message: "That's a lot of requests. Try again in an hour." };
 
   await addRestockAlert({ slug, sku, size: variant.size, colour: variant.colour, email, phone });
+  await recordEvent(slug, "restock");
   const what = variant.size === "ONE" ? variant.colour : `${variant.colour}, ${variant.size}`;
   return { status: "done", message: `Done. We'll ${email ? "email" : "text"} you once when ${what} is back.` };
 }

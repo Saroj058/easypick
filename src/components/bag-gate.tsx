@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { track } from "@/lib/track";
 import type { BagLine } from "@/lib/types";
 import { useBag } from "./bag-provider";
 import { useMe } from "./session";
@@ -43,7 +44,10 @@ export function useAddToBag() {
     const items = waiting.current;
     waiting.current = null;
     // Signed in: the bag already took the add (it holds changes until the session is known).
-    if (me) showBagToast(addedNote(items));
+    if (me) {
+      showBagToast(addedNote(items));
+      items.forEach((l) => track(l.slug, "bag"));
+    }
     else sendToLogin(items, router);
   }, [me, router]);
 
@@ -59,6 +63,7 @@ export function useAddToBag() {
         return false;
       }
       items.forEach(add);
+      items.forEach((l) => track(l.slug, "bag"));
       return true;
     },
     [me, add, router],
@@ -146,6 +151,7 @@ export function PendingBagAdd() {
     if (!Array.isArray(items) || items.length === 0) return;
     const lines = items as Omit<BagLine, "qty">[];
     lines.forEach(add);
+    lines.forEach((l) => track(l.slug, "bag"));
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-off note after login
     setMessage(addedNote(lines));
   }, [me, ready, add]);

@@ -9,6 +9,8 @@ import { kathmanduToday } from "./kathmandu-date";
 import { notifyEmail, notifySms } from "./notify";
 import { updateOrder } from "./orders";
 import { site } from "./site";
+import { giftCardEmailBlock } from "./gift-card-designs";
+import { formatPrice } from "./format";
 
 // Bought gift cards with a send date wait until that Kathmandu day; the cron sends them.
 // Cards sent at payment are marked sent there (lib/payments.ts), so nothing goes twice.
@@ -26,7 +28,7 @@ export async function sendGiftCardToRecipient(card: GiftCard): Promise<"sent" | 
       intro: `${from} sent you an Easypick gift card. Use it online or at the kiosk in our store. Any balance you don't use stays on the card.`,
       quote: card.message || null,
       from: card.senderName,
-      extra: `<div style="margin:0 0 24px;background:#0a0a0a;color:#ffffff;padding:18px 22px;font-family:ui-monospace,Menlo,monospace;font-size:24px;font-weight:700;letter-spacing:0.1em">${card.code}</div>`,
+      extra: giftCardEmailBlock({ design: card.design, amount: formatPrice(card.value), code: card.code }),
       button: { label: "Start shopping", url: `${site.url}/shop` },
       small: "Valid for 12 months. Enter the code at checkout, or show it at the kiosk.",
     }),

@@ -29,6 +29,13 @@
       "when": 1790389770332,
       "tag": "0003_paid_at_index",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790697960073,
+      "tag": "0004_product_events",
+      "breakpoints": true
     }
   ]
 }

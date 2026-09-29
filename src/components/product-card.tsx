@@ -37,7 +37,11 @@ export function ProductCard({
       ? "Sold out"
       : product.status === "scheduled"
         ? `Drop ${product.dropSlug}`
-        : null;
+        : product.isNew
+          ? product.dropSlug
+            ? `New · Drop ${product.dropSlug}`
+            : "New"
+          : null;
 
   return (
     <div className="group relative">
@@ -66,7 +70,7 @@ export function ProductCard({
             )}
             {note && (
               <span
-                className={`absolute left-3 top-3 ${product.status === "scheduled" ? "tag-volt" : "index bg-paper px-2 py-1"}`}
+                className={`absolute left-3 top-3 ${product.status === "scheduled" || (product.isNew && product.status === "live") ? "tag-volt" : "index bg-paper px-2 py-1"}`}
               >
                 {note}
               </span>

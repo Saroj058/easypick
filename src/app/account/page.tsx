@@ -11,6 +11,8 @@ import { formatPrice } from "@/lib/format";
 import { ordersFor } from "@/lib/orders";
 import { site } from "@/lib/site";
 import { currentStaff } from "@/lib/staff";
+import { walletFor } from "@/lib/wallet";
+import { WalletForm } from "./wallet-form";
 
 export const metadata: Metadata = { title: "Account", robots: { index: false } };
 
@@ -39,7 +41,7 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/account");
 
-  const orders = await ordersFor(user.id, user.phone);
+  const [orders, wallet] = await Promise.all([ordersFor(user.id, user.phone), walletFor(user.id)]);
   const first = user.name?.split(" ")[0];
   const fmt = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, day: "numeric", month: "short", year: "numeric" });
 
@@ -102,18 +104,41 @@ export default async function AccountPage() {
             )}
           </Section>
 
-          <Section id="fit-title" index="02" title="Your size in cm">
+          <Section id="wallet-title" index="02" title="Gift card wallet">
+            {wallet.length === 0 ? (
+              <p className="max-w-[52ch] text-steel-dark">Save a gift card here and it pays at checkout by itself, no code to type.</p>
+            ) : (
+              <ul className="divide-y divide-mist border-y border-mist">
+                {wallet.map((c) => (
+                  <li key={c.code} className="flex flex-wrap items-baseline justify-between gap-3 py-4">
+                    <span>
+                      <span className="block font-mono font-semibold">{c.code}</span>
+                      <span className="block text-[13px] text-steel-dark">
+                        {c.usable ? `Valid until ${fmt.format(new Date(c.expiresAt))}` : c.status === "blocked" ? "Blocked" : c.balance <= 0 ? "Used up" : "Expired"}
+                      </span>
+                    </span>
+                    <span className="font-mono tabular-nums">
+                      {formatPrice(c.balance)} <span className="text-[13px] text-steel-dark">of {formatPrice(c.value)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <WalletForm />
+          </Section>
+
+          <Section id="fit-title" index="03" title="Your size in cm">
             <p className="-mt-2 mb-6 max-w-[52ch] text-steel-dark">Saved to your account, so every phone you sign in on marks your size.</p>
             <FitFinder />
           </Section>
         </div>
 
         <div className="space-y-16 lg:col-span-4 lg:col-start-9">
-          <Section id="profile-title" index="03" title="Details">
+          <Section id="profile-title" index="04" title="Details">
             <ProfileForm mode="edit" user={{ name: user.name, email: user.email, alerts: user.alerts, phone: user.phone, contactPhone: user.contactPhone ?? null }} />
           </Section>
 
-          <Section id="signin-title" index="04" title="Sign-in methods">
+          <Section id="signin-title" index="05" title="Sign-in methods">
             <ul className="space-y-3 text-[15px]">
               <li className="flex items-center justify-between gap-4">
                 <span>Phone code (WhatsApp / SMS)</span>

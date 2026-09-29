@@ -12,6 +12,7 @@ const links: { href: string; label: string; owner?: boolean }[] = [
   { href: "/admin/stock", label: "Stock count" },
   { href: "/admin/drops", label: "Drops", owner: true },
   { href: "/admin/reports", label: "Reports", owner: true },
+  { href: "/admin/trending", label: "Trending", owner: true },
   { href: "/admin/gift-cards", label: "Gift cards", owner: true },
   { href: "/admin/festivals", label: "Festivals", owner: true },
   { href: "/admin/staff", label: "Staff", owner: true },

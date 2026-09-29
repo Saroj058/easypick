@@ -55,6 +55,14 @@ export interface Product {
   variants: Variant[];
   status: ProductStatus;
   showOn: { website: boolean; kiosk: boolean };
+  /** When it first went live (drop pieces use their drop's release time instead). */
+  liveAt?: string;
+  /** Owner's pick, shown on Trending while there isn't enough real data. */
+  staffPick?: boolean;
+  /** Owner chose to keep it off Trending (logged in the activity log). */
+  hideFromTrending?: boolean;
+  /** Worked out when the catalogue is read: added in the last 30 days (and within two drops). */
+  isNew?: boolean;
 }
 
 export interface Drop {

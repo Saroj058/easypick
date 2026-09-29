@@ -6,6 +6,7 @@ import { BuyPanel } from "@/components/buy-panel";
 import { HangTag } from "@/components/hang-tag";
 import { ChevronIcon } from "@/components/icons";
 import { RecentlyViewed } from "@/components/local-lists";
+import { TrackView } from "@/components/track-view";
 import { ProductGrid } from "@/components/product-card";
 import { RecordView } from "@/components/saved";
 import { ProductImage } from "@/components/product-image";
@@ -257,6 +258,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
         )}
         <RecordView slug={product.slug} />
         <RecentlyViewed exclude={product.slug} title="You looked at" />
+        <TrackView slug={product.slug} />
       </div>
     </>
   );

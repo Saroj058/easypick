@@ -15,6 +15,7 @@ import { formatDropTime, formatHour, formatPrice } from "@/lib/format";
 import { jsonLd } from "@/lib/json-ld";
 import { categoryLabels, site } from "@/lib/site";
 import { getDropTimeline, getHomeStats, getProducts } from "@/lib/store";
+import { getTrending } from "@/lib/trending";
 import type { Category, Product } from "@/lib/types";
 
 export const revalidate = 300;
@@ -83,7 +84,9 @@ const orgLd = {
 };
 
 export default async function HomePage() {
-  const [products, { current, next }] = await Promise.all([getProducts(), getDropTimeline()]);
+  const [products, { current, next }, trending] = await Promise.all([getProducts(), getDropTimeline(), getTrending()]);
+  const trendingRow = trending.items.slice(0, 4).map((i) => i.product);
+  const trendingTitle = trending.mode === "trending" ? "Trending this week" : trending.label;
   const drop = current ?? next;
   const dropProducts = drop ? products.filter((p) => p.dropSlug === drop.slug) : products;
   const onRack = dropProducts.filter((p) => p.status !== "scheduled");
@@ -309,6 +312,29 @@ export default async function HomePage() {
                 <ArrowIcon className="h-6 w-6 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Trending (or honest staff picks until there's enough data) */}
+      {trendingRow.length > 0 && (
+        <section aria-labelledby="trend-title" className="pb-16 md:pb-24">
+          <div className="container-ep">
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 id="trend-title" className="display display-h2">
+                {trendingTitle}
+              </h2>
+              <Link href="/trending" className="shrink-0 text-[15px] font-semibold underline underline-offset-4">
+                See all
+              </Link>
+            </div>
+            <ul className="-mx-4 mt-8 flex snap-x gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0">
+              {trendingRow.map((p) => (
+                <li key={p.slug} className="w-[44%] shrink-0 snap-start md:w-auto">
+                  <ProductCard product={p} sizes="(min-width: 768px) 25vw, 44vw" />
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
       )}

@@ -15,9 +15,12 @@ import { AnimatedNavFramer, useScrollCollapse } from "./ui/navigation-menu";
 import { TwentyTwelveOne as SmoothDropdown, type SmoothDropdownItem } from "./ui/smooth-dropdown";
 import { signOut } from "@/app/auth-actions";
 import {
+  Calendar03Icon,
   DashboardSquare01Icon,
   DeliveryTracking01Icon,
   FavouriteIcon,
+  FireIcon,
+  GiftCardIcon,
   HangerIcon,
   HelpCircleIcon,
   InformationCircleIcon,
@@ -29,14 +32,18 @@ import {
 } from "@hugeicons/core-free-icons";
 
 const primary = [
-  { href: "/drops", label: "Drops" },
+  { href: "/new", label: "New" },
+  { href: "/trending", label: "Trending" },
   { href: "/shop", label: "Shop" },
-  { href: "/gift", label: "Send a gift" },
+  { href: "/gift", label: "Gifts" },
   { href: "/visit", label: "Visit" },
 ];
 
 // Everything that isn't in the main links, shown in the dropdown once the header becomes pills.
 const menu: SmoothDropdownItem[] = [
+  { id: "/drops", href: "/drops", label: "Drops", icon: Calendar03Icon },
+  { id: "/trending", href: "/trending", label: "Trending", icon: FireIcon },
+  { id: "/gift-cards", href: "/gift-cards", label: "Gift cards", icon: GiftCardIcon },
   { id: "/saved", href: "/saved", label: "Saved", icon: FavouriteIcon },
   { id: "/fit", href: "/fit", label: "Build a fit", icon: HangerIcon },
   { id: "/how-it-works", href: "/how-it-works", label: "How it works", icon: HelpCircleIcon },
@@ -140,7 +147,7 @@ export function SiteHeader() {
                 onExpandedChange={setExpanded}
                 flat={atTop}
                 collapsedIcon={<Ellipsis className="h-6 w-6" aria-hidden />}
-                items={primary.map((l) => ({ name: l.label, href: l.href, active: pathname.startsWith(l.href) }))}
+                items={primary.map((l) => ({ name: l.label, href: l.href, active: pathname === l.href || pathname.startsWith(`${l.href}/`) }))}
               />
             </div>
 
@@ -174,14 +181,14 @@ export function SiteHeader() {
 }
 
 const tabs = [
-  { href: "/drops", label: "Drops", Icon: DropIcon },
+  { href: "/new", label: "New", Icon: DropIcon },
   { href: "/shop", label: "Shop", Icon: ShopIcon },
   { href: "/gift", label: "Gift", Icon: GiftIcon },
   { href: "/visit", label: "Visit", Icon: PinIcon },
   { href: "/alerts", label: "Alerts", Icon: BellIcon },
 ];
 
-/** Bottom tab bar on phones: Drops · Shop · Gift · Visit · Alerts. */
+/** Bottom tab bar on phones: New · Shop · Gift · Visit · Alerts. */
 export function MobileTabBar() {
   const pathname = usePathname();
   const [typing, setTyping] = useState(false);
@@ -207,7 +214,7 @@ export function MobileTabBar() {
     >
       <ul className="grid grid-cols-5">
         {tabs.map(({ href, label, Icon }) => {
-          const active = pathname.startsWith(href);
+          const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <li key={href}>
               <Link

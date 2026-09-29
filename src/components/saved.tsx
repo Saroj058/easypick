@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { BookmarkIcon } from "./icons";
+import { track } from "@/lib/track";
 
 // Saved pieces and recently viewed, kept in this browser (no account needed).
 // Every hook on the page stays in sync, and other tabs catch up through "storage" events.
@@ -65,6 +66,7 @@ export function useList(name: ListName) {
 
 export function toggleSaved(slug: string) {
   const list = read("saved");
+  if (!list.includes(slug)) track(slug, "save");
   write("saved", list.includes(slug) ? list.filter((s) => s !== slug) : [slug, ...list]);
 }
 

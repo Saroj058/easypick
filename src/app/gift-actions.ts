@@ -13,7 +13,7 @@ import { getDb, schema } from "@/lib/db";
 import { normaliseNepaliMobile } from "@/lib/format";
 import {
   GIFT_CARD_MAX,
-  GIFT_CARD_MIN,
+  GIFT_CARD_MIN, GIFT_CARD_STEP,
   checkGiftCard,
   issueGiftCard,
   maskCode,
@@ -29,6 +29,7 @@ import { allow, clientIp } from "@/lib/rate-limit";
 import { formatPrice } from "@/lib/format";
 import { site } from "@/lib/site";
 import { giftEmailHtml, normaliseEmail } from "@/lib/email";
+import { isGiftCardDesign } from "@/lib/gift-card-designs";
 import { notifyEmail, notifySms as notify } from "@/lib/notify";
 import { getProducts } from "@/lib/store";
 import type { PaymentProvider, Size } from "@/lib/types";
@@ -178,9 +179,10 @@ export async function buyGiftCard(_prev: GiftState, form: FormData): Promise<Gif
   const preset = Number(str(form, "value"));
   const custom = Number(str(form, "custom"));
   const value = preset > 0 ? preset : custom;
-  if (!Number.isInteger(value) || value < GIFT_CARD_MIN || value > GIFT_CARD_MAX) {
-    return { status: "error", message: `Choose a whole amount from Rs ${GIFT_CARD_MIN} to Rs ${GIFT_CARD_MAX.toLocaleString("en-IN")}.` };
+  if (!Number.isInteger(value) || value < GIFT_CARD_MIN || value > GIFT_CARD_MAX || value % GIFT_CARD_STEP !== 0) {
+    return { status: "error", message: `Choose an amount from Rs ${GIFT_CARD_MIN.toLocaleString("en-IN")} to Rs ${GIFT_CARD_MAX.toLocaleString("en-IN")}, in steps of Rs ${GIFT_CARD_STEP}.` };
   }
+  const design = isGiftCardDesign(str(form, "design")) ? str(form, "design") : "pick";
   const recipientName = cleanSenderName(str(form, "receiverName", 120), 60);
   const recipientEmail = normaliseEmail(str(form, "receiverEmail", 254));
   const phoneRaw = str(form, "receiverPhone");
@@ -227,6 +229,7 @@ export async function buyGiftCard(_prev: GiftState, form: FormData): Promise<Gif
         sendOn,
         // A later date: the cron sends it on that day (lib/gift-card-delivery.ts).
         pendingSend: isFutureKathmanduDate(sendOn) || undefined,
+        design,
       },
     },
   );

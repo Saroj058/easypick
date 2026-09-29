@@ -117,6 +117,12 @@ export function BuyPanel(props: Props) {
       <p className="mt-1 text-[13px] text-steel-dark">
         Free pickup at the store · Valley delivery {formatPrice(site.delivery.flatFee)}, free over {formatPrice(site.delivery.freeAbove)}
       </p>
+      <p className="mt-1 text-[13px] text-steel-dark">
+        Gift cards accepted ·{" "}
+        <Link href="/gift-cards" className="underline underline-offset-2">
+          Give one
+        </Link>
+      </p>
 
       {colours.length > 1 && (
         <fieldset className="mt-8">

@@ -248,6 +248,32 @@ export const giftCards = pgTable(
   ],
 );
 
+// ---------- What people look at and want (for Trending) ----------
+
+/**
+ * One row per person, product, kind and Kathmandu day: repeat taps on the same day don't
+ * count twice. `actor` is a user id, or a daily hash of the visitor's network details, never
+ * anything that identifies them. Rows older than 60 days are deleted by the daily job.
+ */
+export const productEvents = pgTable(
+  "product_events",
+  {
+    id: serial("id").primaryKey(),
+    productSlug: text("product_slug").notNull(),
+    /** view, bag, save, restock */
+    kind: text("kind").notNull(),
+    actor: text("actor").notNull(),
+    /** yyyy-mm-dd in Kathmandu. */
+    day: text("day").notNull(),
+    at: ts("at").notNull().default(sql`now()`),
+  },
+  (t) => [
+    uniqueIndex("product_events_once_a_day").on(t.productSlug, t.kind, t.actor, t.day),
+    index("product_events_at_idx").on(t.at),
+    check("product_events_kind_check", sql`${t.kind} in ('view','bag','save','restock')`),
+  ],
+);
+
 // ---------- Customers asking for things ----------
 
 export const restockAlerts = pgTable(

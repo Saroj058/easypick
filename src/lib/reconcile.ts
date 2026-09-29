@@ -188,6 +188,8 @@ export async function cleanup() {
   await db.delete(schema.otps).where(lt(schema.otps.expiresAt, now - 3600_000));
   await pruneLimits();
   await db.delete(schema.restockAlerts).where(and(isNotNull(schema.restockAlerts.notifiedAt), lt(schema.restockAlerts.notifiedAt, new Date(now - 90 * 86_400_000).toISOString())));
+  // Trending only looks back a week; keep two months for checking, then let it go.
+  await db.delete(schema.productEvents).where(lt(schema.productEvents.at, new Date(now - 60 * 86_400_000).toISOString()));
 
   const cutoff = new Date(now - 548 * 86_400_000).toISOString();
   const old = await db
@@ -196,7 +198,8 @@ export async function cleanup() {
     .where(and(inArray(schema.orders.status, ["completed", "cancelled", "expired"]), lt(schema.orders.createdAt, cutoff), sql`not (${schema.orders.data} ? 'scrubbedAt')`))
     .limit(200);
   for (const { id } of old) {
-    await lockOrder(id, async (o) => {      delete o.address;
+    await lockOrder(id, async (o) => {
+      delete o.address;
       if (o.gift) {
         o.gift.receiverPhone = null;
         o.gift.receiverEmail = null;

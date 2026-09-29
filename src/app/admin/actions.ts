@@ -312,7 +312,12 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
   await updateProduct(slug, (p) => {
     p.price = price;
     p.salePrice = salePrice;
+    // First time it goes live: remember when, for "New" (drop pieces use their drop's time).
+    if (status === "live" && p.status !== "live" && !p.liveAt && !p.dropSlug) p.liveAt = new Date().toISOString();
     p.status = status;
+    // Trending: the owner's picks and hides.
+    p.staffPick = form.get("staffPick") === "on" || undefined;
+    p.hideFromTrending = form.get("hideFromTrending") === "on" || undefined;
     p.shortDescription = str(form, "shortDescription", 300) || p.shortDescription;
     if (photoSrc) {
       const front = { src: photoSrc, alt: `${p.name}, front`, kind: "front" as const };
@@ -326,8 +331,11 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     salePrice: product.salePrice !== salePrice ? [product.salePrice ?? null, salePrice ?? null] : undefined,
     status: product.status !== status ? [product.status, status] : undefined,
     photo: photoSrc ? "changed" : undefined,
+    staffPick: Boolean(product.staffPick) !== (form.get("staffPick") === "on") ? form.get("staffPick") === "on" : undefined,
+    hiddenFromTrending: Boolean(product.hideFromTrending) !== (form.get("hideFromTrending") === "on") ? form.get("hideFromTrending") === "on" : undefined,
   });
   catalogueChanged();
+  updateTag("trending");
   return { status: "saved", message: "Saved." };
 }
 
@@ -536,6 +544,7 @@ export async function addProduct(_prev: SaveState, form: FormData): Promise<Save
       measurements,
       variants,
       status: waitsForDrop ? "scheduled" : live ? "live" : "draft",
+      ...(live && !dropSlug ? { liveAt: new Date().toISOString() } : {}),
       showOn: { website: true, kiosk: true },
     });
   } catch (e) {
