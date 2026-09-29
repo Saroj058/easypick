@@ -9,6 +9,7 @@ import { hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { searchProducts } from "@/lib/search";
 import { categoryLabels } from "@/lib/site";
+import { loadCatalogue } from "@/lib/catalogue-client";
 import type { Product } from "@/lib/types";
 import { useFitProfile } from "./fit-finder";
 import { ProductImage } from "./product-image";
@@ -16,22 +17,6 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 
 const RECENT_KEY = "ep-search-recent-v1";
 const UNDER = 1500;
-
-// The whole catalogue, fetched once per visit. A failed fetch resolves to null and
-// isn't kept, so the next try asks again instead of showing "Nothing for …".
-let catalogue: Promise<Product[] | null> | null = null;
-function loadCatalogue() {
-  catalogue ??= fetch("/api/products")
-    .then((r) => {
-      if (!r.ok) throw new Error(`catalogue ${r.status}`);
-      return r.json() as Promise<Product[]>;
-    })
-    .catch(() => {
-      catalogue = null; // try again next time
-      return null;
-    });
-  return catalogue;
-}
 
 function readRecent(): string[] {
   try {

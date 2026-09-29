@@ -59,7 +59,7 @@ Each server keeps up to 5 database connections (`DB_POOL_MAX` changes it; lower 
    - **Photos:** create a **public** Storage bucket named `products` in Supabase before uploading photos.
    - **Errors:** server errors are logged as JSON (`"event":"request_error"`) and emailed to `STAFF_ALERT_EMAIL` at most once every 10 minutes.
 4. **Payments.** Leave `PAYMENTS_MODE=test` for a trial run. For real money set `PAYMENTS_MODE=live`, `ESEWA_PRODUCT_CODE` and `ESEWA_SECRET_KEY` from the eSewa merchant account.
-5. **Cron.** `CRON_SECRET` is required (without it `/api/cron` refuses to run). `vercel.json` calls `/api/cron` every 5 minutes. The Hobby plan only allows one run a day; on Hobby, use a free external pinger (e.g. cron-job.org) sending `Authorization: Bearer <CRON_SECRET>` every 5 minutes instead. The order page also checks eSewa itself when a customer opens it, so this is a safety net, not the only path.
+5. **Cron.** `CRON_SECRET` is required (without it `/api/cron` refuses to run). `vercel.json` calls `/api/cron` once a day (00:15 Kathmandu), the most the Hobby plan allows. For the recommended every-5-minutes, upgrade to Pro and change the schedule to `*/5 * * * *`, or use a free external pinger (e.g. cron-job.org) sending `Authorization: Bearer <CRON_SECRET>` every 5 minutes instead. The order page also checks eSewa itself when a customer opens it, so this is a safety net, not the only path.
 6. **Analytics.** Turn on Web Analytics in the Vercel project. It's cookie-free and skips private pages (gift links, orders, admin).
 7. **After the first deploy.** Sign in at `/admin`, change the password in Account, and add each helper under Staff with their own login.
 

@@ -19,7 +19,11 @@ import { FestivalNotice } from "@/components/festival-notice";
 export const revalidate = 300;
 
 export async function generateStaticParams() {
-  return (await getProducts()).map((p) => ({ slug: p.slug }));
+  // Built ahead: the first 60 pieces on sale now. The rest are built the first time someone opens them.
+  return (await getProducts())
+    .filter((p) => p.status === "live")
+    .slice(0, 60)
+    .map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/product/[slug]">): Promise<Metadata> {
@@ -252,7 +256,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           </section>
         )}
         <RecordView slug={product.slug} />
-        <RecentlyViewed products={all} exclude={product.slug} title="You looked at" />
+        <RecentlyViewed exclude={product.slug} title="You looked at" />
       </div>
     </>
   );

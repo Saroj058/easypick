@@ -1,10 +1,12 @@
 "use client";
 
+import { useCatalogue } from "@/lib/catalogue-client";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "./product-card";
 import { useList } from "./saved";
 
-// Lists built from what this browser saved or looked at (see saved.tsx).
+// Lists built from what this browser saved or looked at (see saved.tsx). The pieces come
+// from the catalogue loaded in the browser, and only when there's something to show.
 
 function pick(products: Product[], slugs: string[], exclude?: string) {
   const bySlug = new Map(products.map((p) => [p.slug, p]));
@@ -12,8 +14,10 @@ function pick(products: Product[], slugs: string[], exclude?: string) {
 }
 
 /** A row of what they looked at lately. Renders nothing until there's something to show. */
-export function RecentlyViewed({ products, exclude, title = "Recently viewed" }: { products: Product[]; exclude?: string; title?: string }) {
-  const list = pick(products, useList("recent"), exclude).slice(0, 8);
+export function RecentlyViewed({ exclude, title = "Recently viewed" }: { exclude?: string; title?: string }) {
+  const slugs = useList("recent").filter((s) => s !== exclude);
+  const products = useCatalogue(slugs.length > 0);
+  const list = products ? pick(products, slugs, exclude).slice(0, 8) : [];
   if (list.length === 0) return null;
   return (
     <section aria-labelledby="recent-h" className="mt-20">
@@ -32,9 +36,11 @@ export function RecentlyViewed({ products, exclude, title = "Recently viewed" }:
 }
 
 /** Everything saved in this browser, newest first. */
-export function SavedList({ products }: { products: Product[] }) {
+export function SavedList() {
   const slugs = useList("saved");
-  const list = pick(products, slugs);
+  const products = useCatalogue(slugs.length > 0);
+  const list = products ? pick(products, slugs) : [];
+  if (slugs.length > 0 && !products) return <p className="mt-10 text-steel-dark">Loading your saved pieces…</p>;
   return list.length === 0 ? (
     <div className="mt-10">
       <p className="text-lg">Nothing saved yet.</p>

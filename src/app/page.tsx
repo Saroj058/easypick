@@ -93,6 +93,9 @@ export default async function HomePage() {
   const [storyHead, ...storyRest] = (current?.story ?? "").split(/(?<=\.)\s+/);
   const leftPct = stats.piecesTotal ? Math.round((stats.piecesLeft / stats.piecesTotal) * 100) : 0;
 
+  const offers = products.filter((p) => p.salePrice && p.status === "live");
+  const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
+
   const categories = (Object.keys(categoryLabels) as Category[])
     .map((c) => ({ c, count: products.filter((p) => p.category === c && p.status === "live").length }))
     .filter((x) => x.count > 0);
@@ -108,6 +111,7 @@ export default async function HomePage() {
     "Pay by QR · eSewa",
     ...stats.lowSizes.map((l) => `${l.stock} left · ${l.name} · ${l.colour} ${l.size}`),
     "Fixed prices. Same for everyone.",
+    ...(offers.length ? [`Festival offers · ${offers.length} pieces · up to ${formatPrice(bestSaving)} off`] : []),
     "Measurements in cm on every tag",
     next ? `${next.name} · ${formatDropTime(next.releaseAt)}` : "New drop every other Friday",
   ];
@@ -278,7 +282,18 @@ export default async function HomePage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-6 grid gap-2 md:grid-cols-2 md:gap-3">
+            {offers.length > 0 && (
+              <Link href="/shop?sale=1" className="group mt-6 flex min-h-[88px] items-center justify-between gap-4 bg-volt px-6 py-5 text-ink">
+                <span>
+                  <span className="display display-h2 block">Festival offers.</span>
+                  <span className="text-[14px] text-ink/80">
+                    {offers.length} pieces marked down, up to {formatPrice(bestSaving)} off. Same price in store.
+                  </span>
+                </span>
+                <ArrowIcon className="h-6 w-6 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
+              </Link>
+            )}
+            <div className="mt-2 grid gap-2 md:mt-3 md:grid-cols-2 md:gap-3">
               <Link href="/fit" className="group flex min-h-[88px] items-center justify-between gap-4 bg-ink px-6 py-5 text-paper">
                 <span>
                   <span className="display display-h2 block">Build the fit.</span>

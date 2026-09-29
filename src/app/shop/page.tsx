@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { RecentlyViewed } from "@/components/local-lists";
+import { formatPrice } from "@/lib/format";
 import { ProductGrid } from "@/components/product-card";
 import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
@@ -26,7 +27,10 @@ const sorts = [
   { key: "price-desc", label: "Price: high to low" },
 ];
 
-type Filters = { category?: string; size?: string; colour?: string; price?: string; sort?: string };
+type Filters = { category?: string; size?: string; colour?: string; price?: string; sort?: string; sale?: string; page?: string };
+
+/** Pieces per page: enough to browse, small enough for a phone on mobile data. */
+const PER_PAGE = 48;
 
 function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
@@ -35,6 +39,8 @@ function one(v: string | string[] | undefined) {
 function href(current: Filters, change: Partial<Filters>) {
   const next = { ...current, ...change };
   const q = new URLSearchParams();
+  // Changing a filter starts again from page 1.
+  if (!("page" in change)) delete next.page;
   for (const [k, v] of Object.entries(next)) if (v) q.set(k, v);
   const s = q.toString();
   return s ? `/shop?${s}` : "/shop";
@@ -63,6 +69,8 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
     colour: one(sp.colour),
     price: one(sp.price),
     sort: one(sp.sort),
+    sale: one(sp.sale) === "1" ? "1" : undefined,
+    page: one(sp.page),
   };
 
   const all = await getProducts();
@@ -71,6 +79,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
   const priceOf = (p: Product) => p.salePrice ?? p.price;
   let list = all.filter((p) => p.status !== "scheduled");
+  if (f.sale) list = list.filter((p) => p.salePrice);
   if (f.category) list = list.filter((p) => p.category === f.category);
   if (f.colour) list = list.filter((p) => p.colours.some((c) => c.name === f.colour));
   if (f.size) list = list.filter((p) => p.variants.some((v) => v.size === f.size && v.stock > 0));
@@ -81,18 +90,32 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   // Sold out sinks to the bottom, but keeps its page for sharing and search.
   list = [...list].sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
 
-  const active = Boolean(f.category || f.size || f.colour || f.price);
+  const active = Boolean(f.category || f.size || f.colour || f.price || f.sale);
+  const onSale = all.filter((p) => p.salePrice && p.status === "live");
+  const bestSaving = onSale.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
+
+  const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
+  const page = Math.min(pages, Math.max(1, Math.floor(Number(f.page) || 1)));
+  const shown = list.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
     <div className="container-ep pb-24 pt-10 md:pt-16">
-      <h1 className="display text-[40px] md:text-[72px]">{f.category ? categoryLabels[f.category as Category] ?? "Shop all" : "Shop all"}</h1>
+      <h1 className="display text-[40px] md:text-[72px]">
+        {f.sale ? "On sale" : f.category ? categoryLabels[f.category as Category] ?? "Shop all" : "Shop all"}
+      </h1>
+      {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
       <FestivalNotice className="mt-4 max-w-2xl" />
 
       <div className="mt-8 space-y-3">
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
-          <Chip active={!f.category} href={href(f, { category: undefined })}>
+          <Chip active={!f.category && !f.sale} href={href(f, { category: undefined, sale: undefined })}>
             All
           </Chip>
+          {onSale.length > 0 && (
+            <Chip active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })}>
+              On sale
+            </Chip>
+          )}
           {(Object.keys(categoryLabels) as Category[]).map((c) => (
             <Chip key={c} active={f.category === c} href={href(f, { category: c })}>
               {categoryLabels[c]}
@@ -151,6 +174,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
       <p className="mt-6 font-mono text-[13px] text-steel-dark" aria-live="polite">
         {list.length} {list.length === 1 ? "piece" : "pieces"}
+        {pages > 1 && ` · page ${page} of ${pages}`}
         {active && (
           <>
             {" · "}
@@ -163,12 +187,38 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
       <div className="mt-8">
         {list.length ? (
-          <ProductGrid products={list} priorityCount={4} />
+          <>
+            <ProductGrid products={shown} priorityCount={page === 1 ? 4 : 0} />
+            {pages > 1 && (
+              <nav aria-label="Pages" className="mt-16 flex flex-wrap items-center justify-center gap-2">
+                {page > 1 && (
+                  <Link href={href(f, { page: String(page - 1) })} className="btn btn-outline">
+                    Previous
+                  </Link>
+                )}
+                {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
+                  <Link
+                    key={n}
+                    href={href(f, { page: n === 1 ? undefined : String(n) })}
+                    aria-current={n === page ? "page" : undefined}
+                    className={`grid h-11 min-w-11 place-items-center rounded-[2px] border px-3 font-mono text-[14px] ${n === page ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}
+                  >
+                    {n}
+                  </Link>
+                ))}
+                {page < pages && (
+                  <Link href={href(f, { page: String(page + 1) })} className="btn btn-ink">
+                    Next
+                  </Link>
+                )}
+              </nav>
+            )}
+          </>
         ) : (
           <p className="py-24 text-center text-steel-dark">Nothing matches that yet. Try another size or colour.</p>
         )}
       </div>
-      <RecentlyViewed products={all} />
+      <RecentlyViewed />
     </div>
   );
 }
