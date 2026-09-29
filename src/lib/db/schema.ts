@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, index, integer, jsonb, pgSequence, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, customType, index, integer, jsonb, pgSequence, pgTable, serial, text, uniqueIndex } from "drizzle-orm/pg-core";
 
 import type { FitProfile } from "../fit-profile";
 import type { GiftCard } from "../gift-cards";
@@ -13,7 +13,19 @@ import type { Colour, Measurements, Product, SavedCheckout, Size } from "../type
 // Change a table → `npm run db:generate` writes a migration in /drizzle, applied
 // on the next start (development) or by `npm run db:migrate` (production).
 
-const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "string" });
+/**
+ * timestamptz as an ISO string. The driver hands back a Date, a string or (through some
+ * poolers and bundles) other shapes; anything is turned into the same ISO text, so pages
+ * and Safari's Date.parse always get "2026-10-02T12:15:00.000Z".
+ */
+const ts = customType<{ data: string; driverData: string | Date | number }>({
+  dataType: () => "timestamp with time zone",
+  fromDriver: (v) => {
+    const d = v instanceof Date ? v : new Date(typeof v === "number" ? v : String(v));
+    return Number.isNaN(d.getTime()) ? String(v) : d.toISOString();
+  },
+  toDriver: (v) => v,
+});
 
 // ---------- Accounts ----------
 
@@ -98,7 +110,7 @@ export const staffEvents = pgTable(
     action: text("action").notNull(),
     target: text("target"),
     detail: jsonb("detail").$type<Record<string, unknown>>(),
-    at: ts("at").notNull().defaultNow(),
+    at: ts("at").notNull().default(sql`now()`),
   },
   (t) => [index("staff_events_at_idx").on(t.at)],
 );
@@ -114,7 +126,7 @@ export const products = pgTable("products", {
   /** Display order in lists. */
   position: integer("position").notNull().default(0),
   data: jsonb("data").$type<ProductData>().notNull(),
-  updatedAt: ts("updated_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().default(sql`now()`),
 });
 
 export const variants = pgTable(
@@ -154,7 +166,7 @@ export const stockMovements = pgTable(
     ref: text("ref"),
     actor: text("actor"),
     stockAfter: integer("stock_after"),
-    at: ts("at").notNull().defaultNow(),
+    at: ts("at").notNull().default(sql`now()`),
   },
   (t) => [index("stock_movements_sku_idx").on(t.sku, t.at)],
 );

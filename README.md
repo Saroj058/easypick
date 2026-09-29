@@ -51,7 +51,7 @@ Each server keeps up to 5 database connections (`DB_POOL_MAX` changes it; lower 
 
 ## Going live (Vercel + Supabase)
 
-1. **Database.** Create the Supabase project in Mumbai (`ap-south-1`). On Vercel, set `DATABASE_URL` to the *Transaction pooler* string (port 6543, user `postgres.<project-ref>`).
+1. **Database.** Create the Supabase project in Mumbai (`ap-south-1`). On Vercel, set `DATABASE_URL` to the *Session pooler* string (port **5432** on `aws-0-ap-south-1.pooler.supabase.com`, user `postgres.<project-ref>`) and `DB_POOL_MAX=2`. Not the transaction pooler (6543): with the postgres driver, more parallel queries than open connections hang there, which stalls the build and busy pages.
 2. **Migrations.** Leave `DB_AUTO_MIGRATE` unset on Vercel (servers don't migrate in production). Run `npm run db:migrate` against the live database **before** each deploy that adds a file to `/drizzle`.
 3. **Secrets.** Set `SESSION_SECRET`, `CRON_SECRET`, `ADMIN_USERNAME` / `ADMIN_PASSWORD` (first login only), `SUPABASE_URL` / `SUPABASE_SECRET_KEY` (photos), email and SMS keys, and `NEXT_PUBLIC_SITE_URL` (the real domain, `https://`). Copy from `.env.example`. A production server won't start without `NEXT_PUBLIC_SITE_URL`, `SESSION_SECRET` (32+ chars) and `DATABASE_URL`, and logs `[config]` errors for anything else missing (check the Vercel logs after deploying).
    - Scope `SUPABASE_SECRET_KEY` (and the live `DATABASE_URL`, eSewa keys) to **Production** only. Give **Preview** deployments a separate database (or none): a preview build and its servers otherwise read and write the live shop. Previews without `NEXT_PUBLIC_SITE_URL` use their own `*.vercel.app` address.
