@@ -68,6 +68,11 @@ export default function HowItWorksPage() {
             </li>
           ))}
         </ol>
+        <div className="container-ep mt-12">
+          <Link href="/visit/tour" className="btn btn-ink">
+            Take the virtual tour
+          </Link>
+        </div>
       </section>
 
       <section className="bg-photo py-20 md:py-28">

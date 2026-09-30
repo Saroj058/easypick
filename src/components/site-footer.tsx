@@ -27,6 +27,7 @@ const cols = [
     links: [
       { href: "/how-it-works", label: "How it works" },
       { href: "/visit", label: "Visit us" },
+      { href: "/visit/tour", label: "Virtual tour" },
       { href: "/about", label: "About" },
       { href: "/account", label: "Account" },
     ],

@@ -120,6 +120,9 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
 
       <div className="container-ep pb-24">
         <div className="flex flex-wrap gap-x-6 gap-y-2 pt-6 text-[15px]">
+          <Link href="/visit/tour" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
+            Take the virtual tour
+          </Link>
           {directions && (
             <a href={directions} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
               Get directions
