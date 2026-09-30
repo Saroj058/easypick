@@ -87,3 +87,22 @@ async function pickInStockSize(page: Page) {
   await expect(page.getByText("Checking stock…")).toHaveCount(0, { timeout: 20_000 });
   await page.locator('label:has(input[name="size"]:not([disabled]))').first().click();
 }
+
+test("phone menu and tab bar @phone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const tabs = page.getByRole("navigation", { name: "Quick links" });
+  await expect(tabs.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  await expect(async () => {
+    await tabs.getByRole("button", { name: "Search" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Menu" }).click();
+  const menu = page.getByRole("dialog");
+  await expect(menu.getByText("Help me choose")).toBeVisible();
+  await menu.getByRole("link", { name: "Track an order" }).click();
+  await expect(page).toHaveURL(/\/track$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});

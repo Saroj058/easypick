@@ -1,4 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+/** Sign in as the owner. Checks by opening /admin, since the redirect after signing in can lag on a cold dev server. */
+async function ownerSignIn(page: Page) {
+  await expect(async () => {
+    await page.goto("/admin");
+    if (/\/admin$/.test(page.url())) return;
+    await page.getByLabel("Username").fill("e2e-owner");
+    await page.getByLabel("Password", { exact: true }).fill("e2e-owner-password");
+    await page.getByRole("button", { name: /Sign in/ }).click();
+    await page.waitForTimeout(1500);
+    await page.goto("/admin");
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 5000 });
+  }).toPass({ timeout: 90_000 });
+}
 
 test.describe.configure({ mode: "serial" });
 
@@ -41,13 +55,7 @@ test("the admin isn't reachable without signing in", async ({ request }) => {
 });
 
 test("the owner puts a piece in The Vault and it shows on the home page", async ({ page }) => {
-  await page.goto("/admin/login");
-  await expect(async () => {
-    await page.getByLabel("Username").fill("e2e-owner");
-    await page.getByLabel("Password", { exact: true }).fill("e2e-owner-password");
-    await page.getByRole("button", { name: /Sign in/ }).click();
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 5000 });
-  }).toPass({ timeout: 60_000 });
+  await ownerSignIn(page);
 
   await page.goto("/admin/products/coach-jacket");
   const vault = page.getByRole("group", { name: "The Vault" });
@@ -86,13 +94,7 @@ test("the owner puts a piece in The Vault and it shows on the home page", async 
 });
 
 test("the owner sets a Wear it to… look and the home page uses it", async ({ page }) => {
-  await page.goto("/admin/login");
-  await expect(async () => {
-    await page.getByLabel("Username").fill("e2e-owner");
-    await page.getByLabel("Password", { exact: true }).fill("e2e-owner-password");
-    await page.getByRole("button", { name: /Sign in/ }).click();
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 5000 });
-  }).toPass({ timeout: 60_000 });
+  await ownerSignIn(page);
 
   await page.goto("/admin/looks");
   const party = page.getByRole("group", { name: "Party" });

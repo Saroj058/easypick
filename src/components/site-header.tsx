@@ -1,14 +1,15 @@
 "use client";
 
 import { MotionConfig, motion, useMotionValueEvent, useScroll, type Variants } from "framer-motion";
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, Heart, House, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { useBag } from "./bag-provider";
-import { BagIcon, BellIcon, DropIcon, GiftIcon, PinIcon, ShopIcon, UserIcon } from "./icons";
+import { BagIcon, ShopIcon, UserIcon } from "./icons";
+import { MobileMenu } from "./mobile-menu";
 import { SearchButton } from "./search";
 import { useMe } from "./session";
 import { AnimatedNavFramer, useScrollCollapse } from "./ui/navigation-menu";
@@ -164,9 +165,10 @@ export function SiteHeader() {
                     </span>
                   )}
                 </Link>
-                {/* Full-width bar: no menu button. Pills: the smooth dropdown with everything else. */}
+                <MobileMenu />
+                {/* Large screens: at the top, no menu button; as pills, the smooth dropdown with everything else. */}
                 {!atTop && (
-                  <div className="ml-0.5 mr-0.5">
+                  <div className="ml-0.5 mr-0.5 hidden lg:block">
                     <SmoothDropdown items={dropdownItems} activeId={pathname} label="More" />
                   </div>
                 )}
@@ -180,18 +182,18 @@ export function SiteHeader() {
   );
 }
 
-const tabs = [
-  { href: "/new", label: "New", Icon: DropIcon },
-  { href: "/shop", label: "Shop", Icon: ShopIcon },
-  { href: "/gift", label: "Gift", Icon: GiftIcon },
-  { href: "/visit", label: "Visit", Icon: PinIcon },
-  { href: "/alerts", label: "Alerts", Icon: BellIcon },
-];
+const tabClass = "flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold uppercase tracking-[0.06em]";
 
-/** Bottom tab bar on phones: New · Shop · Gift · Visit · Alerts. */
+/** Bottom tab bar on phones: Home · Shop · Search · Saved · Bag. Everything else is in the menu. */
 export function MobileTabBar() {
   const pathname = usePathname();
+  const { count, ready } = useBag();
   const [typing, setTyping] = useState(false);
+  const tabs = [
+    { href: "/", label: "Home", icon: <House className="h-5 w-5" strokeWidth={1.8} aria-hidden /> },
+    { href: "/shop", label: "Shop", icon: <ShopIcon className="h-5 w-5" /> },
+    { href: "/saved", label: "Saved", icon: <Heart className="h-5 w-5" strokeWidth={1.8} aria-hidden /> },
+  ];
 
   // Slide away while a text field has focus, so it never floats above the keyboard.
   useEffect(() => {
@@ -215,22 +217,44 @@ export function MobileTabBar() {
       className={`fixed inset-x-0 bottom-0 z-40 border-t border-mist bg-paper pb-[env(safe-area-inset-bottom)] transition-transform duration-200 lg:hidden ${typing ? "translate-y-full" : ""}`}
     >
       <ul className="grid grid-cols-5">
-        {tabs.map(({ href, label, Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
-          return (
-            <li key={href}>
-              <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={`flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] ${active ? "text-ink" : "text-steel-dark"}`}
-              >
-                <Icon className="h-5 w-5" />
-                {label}
-              </Link>
-            </li>
-          );
-        })}
+        {tabs.slice(0, 2).map((t) => (
+          <Tab key={t.href} {...t} active={t.href === "/" ? pathname === "/" : pathname.startsWith(t.href)} />
+        ))}
+        <li>
+          <button type="button" onClick={() => window.dispatchEvent(new Event("ep-open-search"))} className={`${tabClass} text-steel-dark`}>
+            <Search className="h-5 w-5" strokeWidth={1.8} aria-hidden />
+            Search
+          </button>
+        </li>
+        <Tab {...tabs[2]} active={pathname.startsWith("/saved")} />
+        <li>
+          <Link
+            href="/bag"
+            aria-current={pathname.startsWith("/bag") ? "page" : undefined}
+            aria-label={`Bag, ${ready ? count : 0} items`}
+            className={`${tabClass} relative ${pathname.startsWith("/bag") ? "text-ink" : "text-steel-dark"}`}
+          >
+            <BagIcon className="h-5 w-5" />
+            Bag
+            {ready && count > 0 && (
+              <span className="absolute left-1/2 top-1.5 ml-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-volt px-1 font-mono text-[11px] font-semibold text-ink">
+                {count}
+              </span>
+            )}
+          </Link>
+        </li>
       </ul>
     </nav>
+  );
+}
+
+function Tab({ href, label, icon, active }: { href: string; label: string; icon: React.ReactNode; active: boolean }) {
+  return (
+    <li>
+      <Link href={href} aria-current={active ? "page" : undefined} className={`${tabClass} ${active ? "text-ink" : "text-steel-dark"}`}>
+        {icon}
+        {label}
+      </Link>
+    </li>
   );
 }

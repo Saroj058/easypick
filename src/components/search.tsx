@@ -70,8 +70,13 @@ export function SearchButton() {
         setOpen(true);
       }
     };
+    const onOpen = () => setOpen(true); // the Search tab on phones
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("ep-open-search", onOpen);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("ep-open-search", onOpen);
+    };
   }, []);
 
   const [failed, setFailed] = useState(false);
