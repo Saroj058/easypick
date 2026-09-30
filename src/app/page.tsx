@@ -9,6 +9,7 @@ import { ArrowIcon } from "@/components/icons";
 import { ProductCard } from "@/components/product-card";
 import { GarmentSvg } from "@/components/product-image";
 import { RevealRoot } from "@/components/reveal-root";
+import { SelfCheckout } from "@/components/self-checkout";
 import { Ticker } from "@/components/ticker";
 import { VisitCard } from "@/components/visit-card";
 import { getStoreInfo } from "@/lib/store-info";
@@ -440,6 +441,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Self-checkout: the kiosk, the steps, and the Nepali line */}
+      <SelfCheckout />
 
       {/* 06 — Visit, as a shop signboard */}
       <section aria-labelledby="visit-title" className="section">
