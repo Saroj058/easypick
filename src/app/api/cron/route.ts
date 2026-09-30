@@ -2,7 +2,7 @@ import { revalidateTag } from "next/cache";
 
 import { alertStaff } from "@/lib/alerts";
 import { catalogueNeedsRefresh, claimCronAlert, markCronRun } from "@/lib/cron-state";
-import { sendDueGiftCards } from "@/lib/gift-card-delivery";
+import { sendDueGiftCards, sendDueGiftLinks } from "@/lib/gift-card-delivery";
 import { cleanup, reconcileRecent } from "@/lib/reconcile";
 import { sameSecret } from "@/lib/same-secret";
 
@@ -37,6 +37,8 @@ export async function GET(req: Request) {
   const tidied = await step("cleanup", () => cleanup());
   // Gift cards bought with a later "send on" date go out on that day.
   const giftCards = await step("gift cards", () => sendDueGiftCards());
+  // …and so do piece gifts where the buyer chose the size and a date.
+  const giftLinks = await step("gift links", () => sendDueGiftLinks());
   // Refresh the shop only when stock moved (expiry, late payment, a sale…) or a drop went live since the last run.
   const refresh = await step("catalogue check", () => catalogueNeedsRefresh());
   if (refresh !== false) revalidateTag("catalogue", "max");
@@ -45,5 +47,5 @@ export async function GET(req: Request) {
   if (problems.length && (await claimCronAlert().catch(() => true))) {
     await alertStaff("Background job had problems", `The every-5-minutes job (payments check, releasing holds, tidying) hit errors at ${runAt}:\n\n${problems.join("\n")}`).catch(() => {});
   }
-  return Response.json({ ok: problems.length === 0, reconciled, tidied, giftCards, refreshed: refresh !== false, problems, at: runAt }, { status: problems.length ? 500 : 200 });
+  return Response.json({ ok: problems.length === 0, reconciled, tidied, giftCards, giftLinks, refreshed: refresh !== false, problems, at: runAt }, { status: problems.length ? 500 : 200 });
 }

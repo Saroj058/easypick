@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { placeGiftOrder, type GiftState } from "@/app/gift-actions";
 import { formatPrice, normaliseNepaliMobile } from "@/lib/format";
 import { kathmanduToday } from "@/lib/kathmandu-date";
+import { formatBS } from "@/lib/nepali-date";
 import { site } from "@/lib/site";
 import type { Product, Size } from "@/lib/types";
 import { useMe, usePrefilled } from "./session";
@@ -12,7 +13,38 @@ import { PayWith } from "./pay-with";
 
 const input = "mt-2 h-14 w-full rounded-[2px] border border-steel-dark bg-paper px-4 text-base";
 const label = "block text-sm font-semibold";
-const STEPS = ["The piece", "Your note", "Who and when", "Pay"] as const;
+const STEPS = ["The piece", "Your note", "Send and pay"] as const;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** Common slips after the @, for a "Did you mean …?" hint. */
+const TYPOS: Record<string, string> = {
+  "gmial.com": "gmail.com",
+  "gmai.com": "gmail.com",
+  "gmal.com": "gmail.com",
+  "gamil.com": "gmail.com",
+  "gmail.co": "gmail.com",
+  "gmail.con": "gmail.com",
+  "yaho.com": "yahoo.com",
+  "yahoo.co": "yahoo.com",
+  "hotmial.com": "hotmail.com",
+  "outlok.com": "outlook.com",
+};
+function emailTypo(v: string): string | null {
+  const [user, domain] = v.trim().toLowerCase().split("@");
+  return user && domain && TYPOS[domain] ? `${user}@${TYPOS[domain]}` : null;
+}
+
+const addDays = (ymd: string, n: number) => {
+  const d = new Date(`${ymd}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const dayFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+/** "Sat 11 Oct (Asoj 25)" */
+const niceDay = (ymd: string) => `${dayFmt.format(new Date(`${ymd}T12:00:00Z`))} (${formatBS(new Date(`${ymd}T12:00:00+05:45`))})`;
+
+/** The festival coming up, worked out on the server (lib/festival.ts). */
+export type GiftFestival = { name: string; open: boolean; dateText: string; orderByText: string } | null;
 
 function Choice({ name, value, checked, onChange, title, note }: { name: string; value: string; checked: boolean; onChange: () => void; title: string; note?: string }) {
   return (
@@ -55,8 +87,8 @@ function MessageCard({
   );
 }
 
-/** Send one piece as a gift, one short step at a time. "Let them pick the size" is the default. */
-export function GiftForm({ product }: { product: Product }) {
+/** Send one piece as a gift in three short steps. "Let them pick the size" is the default. */
+export function GiftForm({ product, festival = null }: { product: Product; festival?: GiftFestival }) {
   const me = useMe();
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<GiftState, FormData>(placeGiftOrder, { status: "idle" });
@@ -71,6 +103,7 @@ export function GiftForm({ product }: { product: Product }) {
   };
   const invalid = (id: string) => (hintField === id ? { "aria-invalid": true, "aria-describedby": "g-hint" } : {});
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const buyerPhoneRef = useRef<HTMLInputElement>(null);
 
   const oneSize = product.variants.every((v) => v.size === "ONE");
   const [mode, setMode] = useState<"pick" | "set">(oneSize ? "set" : "pick");
@@ -88,6 +121,7 @@ export function GiftForm({ product }: { product: Product }) {
   const [method, setMethod] = useState<"delivery" | "pickup">("delivery");
   const [area, setArea] = useState("");
   const [landmark, setLandmark] = useState("");
+  const [deliverOn, setDeliverOn] = useState("");
 
   const senderName = anonymous ? null : (sender ?? me?.name ?? "").trim() || null;
   const price = product.salePrice ?? product.price;
@@ -96,6 +130,8 @@ export function GiftForm({ product }: { product: Product }) {
   const wrapFee = wrap === "premium" ? site.gifting.premiumWrapFee : 0;
   const total = price + deliveryFee + wrapFee;
   const today = kathmanduToday(); // the shop's calendar day, wherever the buyer is
+  const typo = emailTypo(receiverEmail);
+  const near = site.gifting.messageMax - message.length <= 20;
 
   // Move focus to the step heading so keyboard and screen-reader users land in the right place.
   const moved = useRef(false);
@@ -108,18 +144,31 @@ export function GiftForm({ product }: { product: Product }) {
     setHint("");
     setHintField(null);
     if (step === 0 && mode === "set" && !size) return fail("Pick their size, or let them pick.");
-    if (step === 2) {
-      if (!receiverName.trim()) return fail("Add their name.", "g-rname");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(receiverEmail.trim())) return fail("Add their email address so we can send them the gift link.", "g-remail");
-      if (receiverPhone.trim() && !normaliseNepaliMobile(receiverPhone)) return fail("Their mobile number should be 10 digits, like 98XXXXXXXX, or leave it empty.", "g-rphone");
-      if (mode === "set" && method === "delivery" && !normaliseNepaliMobile(receiverPhone)) return fail("Add their mobile number so the rider can reach them.", "g-rphone");
-      if (mode === "set" && method === "delivery" && (!area.trim() || !landmark.trim())) return fail("Add their area and a nearby landmark.", area.trim() ? "g-landmark" : "g-area");
-    }
+    if (step === 1 && !receiverName.trim()) return fail("Add their name, so the card is for them.", "g-rname");
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
 
+  /** The last step is checked here, before eSewa, so nothing comes back from the server as a surprise. */
+  function check(e: React.FormEvent<HTMLFormElement>) {
+    if (step < STEPS.length - 1) {
+      e.preventDefault(); // Enter in a field on an earlier step means "Continue"
+      return next();
+    }
+    setHint("");
+    setHintField(null);
+    const stop = (text: string, field?: string) => {
+      e.preventDefault();
+      fail(text, field);
+    };
+    if (!EMAIL.test(receiverEmail.trim())) return stop("Add their email address so we can send them the gift link.", "g-remail");
+    if (receiverPhone.trim() && !normaliseNepaliMobile(receiverPhone)) return stop("Their mobile number should be 10 digits, like 98XXXXXXXX, or leave it empty.", "g-rphone");
+    if (mode === "set" && method === "delivery" && !normaliseNepaliMobile(receiverPhone)) return stop("Add their mobile number so the rider can reach them.", "g-rphone");
+    if (mode === "set" && method === "delivery" && (!area.trim() || !landmark.trim())) return stop("Add their area and a nearby landmark.", area.trim() ? "g-landmark" : "g-area");
+    if (!normaliseNepaliMobile(buyerPhoneRef.current?.value ?? "")) return stop("Add your own mobile number (10 digits, like 98XXXXXXXX) for updates.", "g-bphone");
+  }
+
   return (
-    <form action={action} noValidate>
+    <form action={action} onSubmit={check} noValidate>
       {/* Every field stays in the form; only the current step is shown. */}
       <input type="hidden" name="slug" value={product.slug} />
       <input type="hidden" name="mode" value={mode} />
@@ -130,14 +179,22 @@ export function GiftForm({ product }: { product: Product }) {
       <input type="hidden" name="showPrice" value={showPrice ? "on" : ""} />
 
       <div className="mb-8">
-        <p className="text-sm text-steel-dark">
-          Step {step + 1} of {STEPS.length}
-        </p>
-        <div className="mt-2 grid grid-cols-4 gap-1" aria-hidden>
+        <ol className="grid grid-cols-3 gap-1" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
           {STEPS.map((s, i) => (
-            <span key={s} className={`h-1 ${i <= step ? "bg-ink" : "bg-mist"}`} />
+            <li key={s}>
+              {/* Finished steps can be opened again; later ones can't be skipped to. */}
+              <button
+                type="button"
+                disabled={i >= step}
+                onClick={() => setStep(i)}
+                aria-current={i === step ? "step" : undefined}
+                className={`block min-h-11 w-full border-t-4 pt-2 text-left text-[13px] font-semibold disabled:cursor-default ${i <= step ? "border-ink" : "border-mist text-steel-dark"} ${i < step ? "hover:underline" : ""}`}
+              >
+                <span className="font-mono">{i + 1}</span> {s}
+              </button>
+            </li>
           ))}
-        </div>
+        </ol>
         <h2 ref={headingRef} tabIndex={-1} className="mt-5 text-2xl font-semibold outline-none">
           {STEPS[step]}
         </h2>
@@ -195,11 +252,18 @@ export function GiftForm({ product }: { product: Product }) {
                       }`}
                     >
                       {v.size}
+                      {out && <span className="sr-only"> (sold out)</span>}
                     </span>
                   </label>
                 );
               })}
             </div>
+            <p className="mt-3 text-[13px] text-steel-dark">
+              Between sizes, or theirs is sold out?{" "}
+              <button type="button" onClick={() => setMode("pick")} className="font-semibold text-ink underline underline-offset-2">
+                Let them pick instead
+              </button>
+            </p>
           </fieldset>
         )}
         {mode === "pick" && (
@@ -213,13 +277,13 @@ export function GiftForm({ product }: { product: Product }) {
               <li>
                 <span className="font-semibold">2. They pick online, or try it on in the store.</span>{" "}
                 <span className="text-steel-dark">
-                  Online: they tap their size{product.colours.length > 1 ? " (and colour, if you allow it below)" : ""}, then delivery or pickup. In store: they
-                  show their gift code at the counter and try the sizes on.
+                  Online: they tap their size{product.colours.length > 1 ? " (and colour, if you allow it)" : ""}, then delivery or pickup. In store: they show
+                  their gift code at the counter and try the sizes on.
                 </span>
               </li>
               <li>
                 <span className="font-semibold">3. We hold one for them meanwhile.</span>{" "}
-                <span className="text-steel-dark">You choose whether they see the price (tick box below).</span>
+                <span className="text-steel-dark">So it can&apos;t sell out before they choose.</span>
               </li>
             </ol>
           </div>
@@ -228,6 +292,12 @@ export function GiftForm({ product }: { product: Product }) {
 
       {/* 2. Your note */}
       <section hidden={step !== 1} className="space-y-6">
+        <div>
+          <label htmlFor="g-rname" className={label}>
+            Their name
+          </label>
+          <input id="g-rname" {...invalid("g-rname")} name="receiverName" autoComplete="off" value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className={input} />
+        </div>
         <div>
           <label htmlFor="g-message" className={label}>
             Message <span className="font-normal text-steel-dark">(optional)</span>
@@ -240,10 +310,11 @@ export function GiftForm({ product }: { product: Product }) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Happy Dashain! Thought this was very you."
+            aria-describedby="g-message-count"
             className="mt-2 w-full rounded-[2px] border border-steel-dark bg-paper p-4 text-base"
           />
-          <p className="mt-1 text-right text-[13px] text-steel-dark">
-            {message.length}/{site.gifting.messageMax}
+          <p id="g-message-count" className={`mt-1 text-right text-[13px] ${near ? "font-semibold text-[#7a3e00]" : "text-steel-dark"}`} aria-live={near ? "polite" : "off"}>
+            {near ? `${site.gifting.messageMax - message.length} characters left` : `${message.length}/${site.gifting.messageMax}`}
           </p>
         </div>
         {!anonymous && (
@@ -262,20 +333,21 @@ export function GiftForm({ product }: { product: Product }) {
           <Choice name="wrapUi" value="standard" checked={wrap === "standard"} onChange={() => setWrap("standard")} title="Easypick bag" note="Tissue and a printed card. Free." />
           <Choice name="wrapUi" value="premium" checked={wrap === "premium"} onChange={() => setWrap("premium")} title="Premium black box" note={`Sealed box and card. ${formatPrice(site.gifting.premiumWrapFee)}.`} />
         </div>
+        {/* Price visibility: shown by default; ticked = they never see what it cost. */}
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[15px]">
+          <input type="checkbox" checked={!showPrice} onChange={(e) => setShowPrice(!e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#0a0a0a]" />
+          <span>
+            Hide the price from them <span className="text-steel-dark">(their card and receipt won&apos;t show what it cost)</span>
+          </span>
+        </label>
         <MessageCard to={receiverName} from={senderName} message={message} wrap={wrap} price={showPrice ? formatPrice(price) : null} />
       </section>
 
-      {/* 3. Who and when */}
+      {/* 3. Send and pay */}
       <section hidden={step !== 2} className="space-y-6">
         <div>
-          <label htmlFor="g-rname" className={label}>
-            Their name
-          </label>
-          <input id="g-rname" {...invalid("g-rname")} name="receiverName" value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className={input} />
-        </div>
-        <div>
           <label htmlFor="g-remail" className={label}>
-            Their email
+            {receiverName.trim() ? `${receiverName.trim().split(" ")[0]}'s email` : "Their email"}
           </label>
           <input
             id="g-remail"
@@ -289,9 +361,19 @@ export function GiftForm({ product }: { product: Product }) {
             onChange={(e) => setReceiverEmail(e.target.value)}
             className={input}
           />
-          <p className="mt-1 text-[13px] text-steel-dark">
-            {mode === "pick" ? "We email them a private link to open the gift and pick their size." : "We email them a link to see their gift."}
-          </p>
+          {typo ? (
+            <p className="mt-1 text-[14px]">
+              Did you mean{" "}
+              <button type="button" onClick={() => setReceiverEmail(typo)} className="font-semibold underline underline-offset-2">
+                {typo}
+              </button>
+              ?
+            </p>
+          ) : (
+            <p className="mt-1 text-[13px] text-steel-dark">
+              {mode === "pick" ? "We email them a private link to open the gift and pick their size." : "We email them a link to see their gift."}
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor="g-rphone" className={label}>
@@ -309,9 +391,7 @@ export function GiftForm({ product }: { product: Product }) {
             onChange={(e) => setReceiverPhone(e.target.value)}
             className={`${input} font-mono`}
           />
-          <p className="mt-1 text-[13px] text-steel-dark">
-            We also text them the link. Never shown to anyone else.
-          </p>
+          <p className="mt-1 text-[13px] text-steel-dark">We also text them the link. Never shown to anyone else.</p>
         </div>
         {mode === "set" && (
           <>
@@ -345,20 +425,54 @@ export function GiftForm({ product }: { product: Product }) {
         )}
         <div>
           <label htmlFor="g-date" className={label}>
-            Deliver on <span className="font-normal text-steel-dark">(optional, e.g. their birthday or Tika day)</span>
+            {mode === "set" ? "Deliver on" : "Arrive by"} <span className="font-normal text-steel-dark">(optional, e.g. their birthday or Tika day)</span>
           </label>
-          <input id="g-date" name="deliverOn" type="date" min={today} className={input} />
+          <input
+            id="g-date"
+            name="deliverOn"
+            type="date"
+            min={today}
+            max={addDays(today, 60)}
+            value={deliverOn}
+            onChange={(e) => setDeliverOn(e.target.value)}
+            aria-describedby="g-date-hint"
+            className={input}
+          />
+          <p id="g-date-hint" className="mt-1 text-[13px] text-steel-dark">
+            {/^\d{4}-\d{2}-\d{2}$/.test(deliverOn) ? (
+              <>
+                <span className="font-semibold text-ink">{niceDay(deliverOn)}.</span>{" "}
+                {mode === "set" ? "We send them the link that morning, so it stays a surprise until then." : "We send them the link now, so they can pick their size in time."}
+              </>
+            ) : mode === "set" ? (
+              "Leave it empty and we send it as soon as it's packed."
+            ) : (
+              "Leave it empty and we send it as soon as they've picked their size."
+            )}
+          </p>
+          {festival && (
+            <p className="mt-2 flex gap-2 text-[13px]">
+              <span className="mt-1 h-2 w-2 shrink-0 bg-volt ring-1 ring-ink" aria-hidden />
+              <span>
+                {festival.open ? (
+                  <>
+                    For {festival.name} ({festival.dateText}), order by <span className="font-semibold">{festival.orderByText}</span>.
+                  </>
+                ) : (
+                  <>Delivery before {festival.name} has closed. Store pickup still works.</>
+                )}
+              </span>
+            </p>
+          )}
         </div>
-      </section>
-
-      {/* 4. Pay */}
-      <section hidden={step !== 3} className="space-y-6">
         <div>
           <label htmlFor="g-bphone" className={label}>
             Your mobile number
           </label>
           <input
             id="g-bphone"
+            ref={buyerPhoneRef}
+            {...invalid("g-bphone")}
             name="buyerPhone"
             type="tel"
             inputMode="numeric"
@@ -379,7 +493,7 @@ export function GiftForm({ product }: { product: Product }) {
           </p>
           <p className="text-[15px] text-steel-dark">
             For {receiverName.trim() || "them"}
-            {senderName ? `, from ${senderName}` : ", anonymously"}
+            {senderName ? `, from ${senderName}` : ", anonymously"} · {showPrice ? "price shown" : "price hidden"}
           </p>
           <dl className="mt-4 space-y-2 text-[15px]">
             <div className="flex justify-between">
@@ -408,29 +522,29 @@ export function GiftForm({ product }: { product: Product }) {
       <p id="g-hint" role="alert" className="mt-6 min-h-5 text-[14px] text-error-light">
         {hint || (state.status === "error" ? state.message : "")}
       </p>
-      <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row">
-        {step > 0 && (
-          <button type="button" onClick={() => setStep((s) => s - 1)} className="btn btn-outline sm:flex-1">
-            Back
-          </button>
-        )}
-        {step < STEPS.length - 1 ? (
-          <button type="button" onClick={next} className="btn btn-ink sm:flex-1">
-            Continue
-          </button>
-        ) : (
-          <button type="submit" className="btn btn-volt sm:flex-1" disabled={pending} aria-busy={pending}>
-            Send gift · {formatPrice(total)}
-          </button>
-        )}
+      {/* Stays on screen on phones, with the total, so the next step is always one tap away. */}
+      <div className="sticky bottom-0 z-10 -mx-4 mt-2 border-t border-mist bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
+        <p className="mb-2 flex items-baseline justify-between text-[14px] sm:hidden">
+          <span className="text-steel-dark">Total</span>
+          <span className="font-mono font-semibold">{formatPrice(total)}</span>
+        </p>
+        <div className="flex gap-3">
+          {step > 0 && (
+            <button type="button" onClick={() => setStep((s) => s - 1)} className="btn btn-outline flex-1">
+              Back
+            </button>
+          )}
+          {step < STEPS.length - 1 ? (
+            <button type="button" onClick={next} className="btn btn-ink flex-[2]">
+              Continue
+            </button>
+          ) : (
+            <button type="submit" className="btn btn-volt flex-[2]" disabled={pending} aria-busy={pending}>
+              {pending ? "One moment…" : `Pay ${formatPrice(total)}`}
+            </button>
+          )}
+        </div>
       </div>
-      {/* Price visibility: shown by default; ticked = they never see what it cost. */}
-      <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 text-[14px]">
-        <input type="checkbox" checked={!showPrice} onChange={(e) => setShowPrice(!e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#0a0a0a]" />
-        <span>
-          Hide the price from them <span className="text-steel-dark">(they won&apos;t see what it cost)</span>
-        </span>
-      </label>
     </form>
   );
 }

@@ -37,7 +37,7 @@ export function BalanceCheck() {
             <span className="font-mono text-2xl font-semibold">{formatPrice(state.balance)}</span> left · valid until {day.format(new Date(state.expiresAt))}
           </p>
         )}
-        {state.status === "error" && <p className="text-[14px] text-[#d70015]">{state.message}</p>}
+        {state.status === "error" && <p className="text-[14px] text-error-light">{state.message}</p>}
       </div>
     </form>
   );

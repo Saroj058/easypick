@@ -35,7 +35,7 @@ vi.mock("@/lib/notify", () => ({
 
 import { buyGiftCard, chooseGift, giftToCard, placeGiftOrder } from "@/app/gift-actions";
 import { getDb, schema } from "@/lib/db";
-import { sendDueGiftCards } from "@/lib/gift-card-delivery";
+import { sendDueGiftCards, sendDueGiftLinks, smsName } from "@/lib/gift-card-delivery";
 import { CARD_CHECK_FAILED, activateGiftCard, checkGiftCard, findGiftCard, issueGiftCard, maskCode, visitorKey } from "@/lib/gift-cards";
 import { cleanGiftMessage, cleanSenderName } from "@/lib/gift-text";
 import { kathmanduToday } from "@/lib/kathmandu-date";
@@ -89,13 +89,14 @@ async function paidGift(buyer: string, to: { email: string; phone?: string | nul
   return r.order;
 }
 
-function choose(token: string, method: "pickup" | "delivery" = "delivery") {
+function choose(token: string, method: "pickup" | "delivery" = "delivery", phone: string | null = "9812345670") {
   const f = new FormData();
   f.set("token", token);
   f.set("size", "ONE");
   f.set("method", method);
   f.set("area", "Jhamsikhel");
   f.set("landmark", "Near the school");
+  if (phone) f.set("phone", phone);
   return chooseGift({ status: "idle" }, f);
 }
 
@@ -309,5 +310,71 @@ describe("limits", () => {
       }
     }
     expect(results).toEqual(["redirect", "redirect", expect.stringMatching(/Too many gift orders/)]);
+  });
+});
+
+describe("piece gift sending", () => {
+  const inDays = (n: number) => {
+    const d = new Date(`${kathmanduToday()}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+
+  it("holds a dated 'I know their size' gift until that day, then sends it once", async () => {
+    const email = `held-${randomUUID()}@example.com`;
+    const draft = giftDraft("9811000101", { email });
+    draft.gift = { ...draft.gift!, mode: "set", deliverOn: inDays(5), pendingSend: true };
+    const r = await createOrder(draft);
+    if (!r.ok) throw new Error(r.message);
+    await confirmPayment(r.order.id);
+    await flush();
+    expect(h.emails.some((e) => e.to === email)).toBe(false); // the surprise holds
+
+    // A day early: still nothing.
+    await sendDueGiftLinks(new Date(Date.now() + 3 * 86_400_000));
+    expect(h.emails.some((e) => e.to === email)).toBe(false);
+
+    // On the day: sent, and only once however often the job runs.
+    const day = new Date(`${inDays(5)}T06:00:00+05:45`);
+    await sendDueGiftLinks(day);
+    await sendDueGiftLinks(day);
+    expect(h.emails.filter((e) => e.to === email)).toHaveLength(1);
+    const after = (await findOrder(r.order.id))!.gift!;
+    expect(after.pendingSend).toBe(false);
+    expect(after.sentAt).toBeTruthy();
+  });
+
+  it("sends a 'let them pick' gift straight away, even with a date", async () => {
+    const email = `now-${randomUUID()}@example.com`;
+    const draft = giftDraft("9811000102", { email });
+    draft.gift = { ...draft.gift!, deliverOn: inDays(5) };
+    const r = await createOrder(draft);
+    if (!r.ok) throw new Error(r.message);
+    await confirmPayment(r.order.id);
+    await flush();
+    expect(h.emails.filter((e) => e.to === email)).toHaveLength(1);
+  });
+
+  it("asks the receiver for a number for the rider when the sender gave none, and keeps it", async () => {
+    const order = await paidGift("9811000103", { email: `rider-${randomUUID()}@example.com` });
+    const refused = await choose(order.gift!.token, "delivery", null);
+    expect(refused.status).toBe("error");
+    const ok = await choose(order.gift!.token, "delivery", "9812345671");
+    expect(ok.status).toBe("done");
+    expect((await findOrder(order.id))!.gift!.receiverPhone).toBe("9812345671");
+  });
+
+  it("keeps the gift text to plain letters, so it goes as one SMS part", async () => {
+    expect(smsName("राम")).toBeNull();
+    expect(smsName("Ram Bahadur Shrestha Thapa")).toBe("Ram");
+    const draft = giftDraft("9811000104", { email: `sms-${randomUUID()}@example.com`, phone: "9812345672" });
+    draft.gift = { ...draft.gift!, senderName: "राम" };
+    const r = await createOrder(draft);
+    if (!r.ok) throw new Error(r.message);
+    await confirmPayment(r.order.id);
+    await flush();
+    const text = h.sms.find((m) => m.to === "9812345672")!.text;
+    expect(text).toMatch(/^Namaste Sita! Someone sent you a gift from Easypick\. Open it: /);
+    expect(/^[\x20-\x7E]*$/.test(text)).toBe(true);
   });
 });

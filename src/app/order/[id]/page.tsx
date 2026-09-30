@@ -24,6 +24,8 @@ const clock = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, hour: 
 
 const providerLabel = { esewa: "eSewa", khalti: "Khalti", fonepay: "Fonepay" } as const;
 
+const niceDay = (ymd: string) =>
+  new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, weekday: "short", day: "numeric", month: "short" }).format(new Date(`${ymd}T12:00:00+05:45`));
 const time = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 /** Sent → Opened → Size picked → Packed → Delivered, with times. Never shows the receiver's address. */
@@ -32,7 +34,9 @@ function GiftProgress({ order }: { order: Order }) {
   const first = g.receiverName.split(" ")[0];
   const converted = g.status === "converted";
   const steps: { label: string; at?: string; done: boolean }[] = [
-    { label: `Sent to ${first}`, at: order.createdAt, done: true },
+    g.pendingSend
+      ? { label: `We send ${first} the link on ${niceDay(g.deliverOn!)}`, done: false }
+      : { label: `Sent to ${first}`, at: g.sentAt ?? order.paidAt ?? order.createdAt, done: true },
     { label: "Opened", at: g.openedAt, done: Boolean(g.openedAt) || g.status !== "sent" },
     ...(converted
       ? [{ label: "Turned into a gift card (their size was sold out)", done: true }]
@@ -54,7 +58,11 @@ function GiftProgress({ order }: { order: Order }) {
       <ShareGiftLink url={`${site.url}/g/${g.token}`} name={g.receiverName} from={g.senderName} />
       {g.receiverEmail && (
         <p className="mt-3 text-[14px] text-steel-dark">
-          {g.emailStatus === "failed" ? (
+          {g.pendingSend ? (
+            <>
+              <span className="font-semibold">Scheduled.</span> We email {g.receiverEmail} the link on the morning of {niceDay(g.deliverOn!)}, so it stays a surprise until then. Keep the link above to yourself until then.
+            </>
+          ) : g.emailStatus === "failed" ? (
             <>
               <span className="font-semibold">We couldn&apos;t email {first} at {g.receiverEmail}.</span> Share the link above instead.
             </>
@@ -182,7 +190,9 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
       : cancelled
         ? "Order cancelled."
         : order.gift
-        ? "Your gift is ready."
+        ? order.gift.pendingSend
+          ? `Scheduled for ${niceDay(order.gift.deliverOn!)}.`
+          : "Sent."
         : order.kind === "gift_card"
           ? "Gift card sent."
           : "Order confirmed.";
@@ -198,8 +208,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
         <div className="mt-8 border-l-4 border-volt bg-photo p-5">
           {order.gift && (
             <p className="mb-3 text-[15px]">
-              <span className="font-semibold">Pay to send your gift.</span> As soon as payment is confirmed we email {receiverFirst} the link, and
-              it appears here for you to share too.
+              <span className="font-semibold">Pay to send your gift.</span>{" "}
+              {order.gift.pendingSend
+                ? `We email ${receiverFirst} the link on the morning of ${niceDay(order.gift.deliverOn!)}. It appears here straight after payment, for you to keep.`
+                : `As soon as payment is confirmed we email ${receiverFirst} the link, and it appears here for you to share too.`}
             </p>
           )}
           {payProblem && (

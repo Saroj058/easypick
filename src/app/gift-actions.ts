@@ -142,6 +142,8 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
     message,
     wrap,
     deliverOn,
+    // "Let them pick" goes now, so they can choose in time for the date; "I know their size" waits for the day.
+    pendingSend: (mode === "set" && isFutureKathmanduDate(deliverOn)) || undefined,
     colourChoice: mode === "pick" && form.get("colourChoice") === "on",
     showPrice: form.get("showPrice") === "on",
     status: "sent",
@@ -322,6 +324,12 @@ export async function chooseGift(_prev: ChooseState, form: FormData): Promise<Ch
     if (!area || !landmark) return { status: "error", message: "Add your area and a nearby landmark so the rider can find you." };
     address = { area, landmark, details: str(form, "details", 120) };
   }
+  // The rider needs a number to call. Asked for only when the sender didn't give one.
+  let riderPhone: string | null = null;
+  if (method === "delivery" && !found.gift.receiverPhone) {
+    riderPhone = normaliseNepaliMobile(str(form, "phone"));
+    if (!riderPhone) return { status: "error", message: "Add your mobile number (10 digits, like 98XXXXXXXX) so the rider can reach you." };
+  }
   const slot = ["morning", "afternoon", "evening"].includes(str(form, "slot")) ? str(form, "slot") : undefined;
 
   try {
@@ -364,6 +372,7 @@ export async function chooseGift(_prev: ChooseState, form: FormData): Promise<Ch
         o.lines[0] = { ...o.lines[0], sku: variant.sku, size: variant.size, colour };
         o.method = method;
         g.receiver = { method, address, slot };
+        if (riderPhone && !g.receiverPhone) g.receiverPhone = riderPhone;
         g.status = "chosen";
         g.chosenAt = new Date().toISOString();
         o.events = [...(o.events ?? []), event("receiver", `Chose ${colour}, ${variant.size}, ${method}`)];

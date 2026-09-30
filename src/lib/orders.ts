@@ -70,6 +70,10 @@ export interface GiftInfo {
   wrap: GiftWrap;
   /** yyyy-mm-dd, or null for as soon as possible. */
   deliverOn: string | null;
+  /** "I know their size" with a later date: the link waits until that morning (the cron sends it), so the surprise holds. */
+  pendingSend?: boolean;
+  /** When the link went to the receiver. */
+  sentAt?: string;
   /** The receiver sees what it cost (default: shown; the buyer can tick "Hide the price from them"). */
   showPrice?: boolean;
   /** Receiver may also change the colour (pick mode only). */

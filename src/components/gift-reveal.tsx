@@ -46,6 +46,8 @@ export interface RevealData {
   /** Where codes were sent, e.g. "your email and phone". */
   sentTo: string;
   thanked: boolean;
+  /** No mobile number on the gift yet: ask for one if they choose delivery. */
+  needsPhone?: boolean;
   /** Null unless the buyer chose to show the price. */
   price: number | null;
   line: { size: Size; colour: string; sku: string };
@@ -203,6 +205,7 @@ export function GiftReveal({ data }: { data: RevealData }) {
   );
   const [cardError, setCardError] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [confirmCard, setConfirmCard] = useState(false);
 
   const profile = useFitProfile();
   const p = data.product;
@@ -237,7 +240,10 @@ export function GiftReveal({ data }: { data: RevealData }) {
     setUnwrapping(true);
     openedByTap.current = true;
     void openGift(data.token);
-    setTimeout(() => setOpened(true), 900);
+    // With reduced motion there's no lid animation to wait for.
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (still) setOpened(true);
+    else setTimeout(() => setOpened(true), 700);
   }
 
   async function toCard() {
@@ -284,10 +290,12 @@ export function GiftReveal({ data }: { data: RevealData }) {
           type="button"
           onClick={open}
           disabled={unwrapping}
+          aria-busy={unwrapping}
           className="btn btn-volt mt-14 min-w-56"
         >
-          Open it
+          {unwrapping ? "Opening…" : "Open it"}
         </button>
+        <p className="mt-6 text-[13px] text-paper/60">Private link, just for you.</p>
       </section>
     );
   }
@@ -379,10 +387,15 @@ export function GiftReveal({ data }: { data: RevealData }) {
         </>
       ) : done ? (
         <section className="mt-12 text-center">
-          <h2 className="text-2xl font-semibold">It&apos;s on its way.</h2>
+          <h2 className="text-2xl font-semibold">
+            {data.status === "delivered" ? "Delivered." : data.chosen?.method === "pickup" ? "We're getting it ready." : "It's on its way."}
+          </h2>
           <p className="mt-2 text-steel-dark">
-            {data.chosen?.method === "pickup" ||
-            (data.mode === "set" && !data.chosen)
+            {data.status === "delivered"
+              ? "Enjoy it."
+              : data.chosen?.method === "pickup"
+              ? `Collect it at ${site.store.address ?? `${site.name}, ${site.store.area}`}, open every day ${formatHour(site.store.hours.open)} to ${formatHour(site.store.hours.close)}. We'll text you when it's ready.`
+              : data.mode === "set" && !data.chosen
               ? "We'll text you when it's ready."
               : data.deliverOn
                 ? `Arriving ${niceDate(data.deliverOn)}${data.chosen?.slot ? `, ${data.chosen.slot}` : ""}.`
@@ -599,6 +612,14 @@ export function GiftReveal({ data }: { data: RevealData }) {
 
               {method === "delivery" && (
                 <div className="space-y-4">
+                  {data.needsPhone && (
+                    <div>
+                      <label htmlFor="r-phone" className="block text-sm font-semibold">
+                        Your mobile number <span className="font-normal text-steel-dark">(for the rider)</span>
+                      </label>
+                      <input id="r-phone" name="phone" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="98XXXXXXXX" className={`${input} font-mono`} />
+                    </div>
+                  )}
                   <div>
                     <label
                       htmlFor="r-area"
@@ -678,13 +699,30 @@ export function GiftReveal({ data }: { data: RevealData }) {
                     : "Your size is sold out. "}
                   <button
                     type="button"
-                    onClick={toCard}
-                    disabled={converting}
+                    onClick={() => setConfirmCard(true)}
+                    disabled={converting || confirmCard}
+                    aria-expanded={confirmCard}
                     className="min-h-11 font-semibold text-ink underline underline-offset-2"
                   >
                     Turn it into a gift card
                   </button>
                 </p>
+                {confirmCard && (
+                  <div className="mt-3 bg-photo p-5 text-center text-[15px]" role="group" aria-label="Confirm gift card">
+                    <p>
+                      <span className="font-semibold">Swap this gift for a gift card{data.price ? ` worth ${formatPrice(data.price)}` : " for its full value"}?</span>{" "}
+                      You can spend it on anything, online or in store. This can&apos;t be undone.
+                    </p>
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      <button type="button" onClick={() => setConfirmCard(false)} className="btn btn-outline flex-1">
+                        Keep the piece
+                      </button>
+                      <button type="button" onClick={toCard} disabled={converting} aria-busy={converting} className="btn btn-ink flex-1">
+                        {converting ? "One moment…" : "Yes, make it a card"}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {cardError && (
                   <p role="alert" className="mt-2 text-center text-[14px] text-error-light">
                     We couldn&apos;t change this gift. Refresh the page and try again.

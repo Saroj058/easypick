@@ -3,20 +3,36 @@
 import { useActionState, useState } from "react";
 
 import { buyGiftCard, type GiftState } from "@/app/gift-actions";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, normaliseNepaliMobile } from "@/lib/format";
 import { GIFT_CARD_DESIGNS, type GiftCardDesign } from "@/lib/gift-card-designs";
 import { kathmanduToday } from "@/lib/kathmandu-date";
 import { GiftCardArt } from "./gift-card-art";
 import { useMe, usePrefilled } from "./session";
 import { PayWith } from "./pay-with";
 
-const VALUES = [1000, 2000, 3000, 5000];
+const VALUES = [1000, 2000, 3000, 5000, 10000];
 const MIN = 1000;
 const MAX = 20000;
 const STEP = 100;
-const input = "mt-2 h-14 w-full rounded-[2px] border border-steel-dark bg-paper px-4 text-base";
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const input = "mt-2 h-14 w-full rounded-[2px] border border-steel-dark bg-paper px-4 text-base aria-[invalid=true]:border-error-light";
 const label = "block text-sm font-semibold";
 const chip = (on: boolean) => `h-14 rounded-[2px] border font-semibold ${on ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`;
+
+/** Checked when the field loses focus, so a slip shows up before Pay, not after. */
+function useFieldCheck(test: (v: string) => string | null) {
+  const [error, setError] = useState<string | null>(null);
+  return {
+    error,
+    props: {
+      onBlur: (e: React.FocusEvent<HTMLInputElement>) => setError(test(e.target.value.trim())),
+      onInput: () => setError(null),
+      "aria-invalid": error ? true : undefined,
+    },
+  };
+}
+const emailCheck = (v: string) => (v && !EMAIL.test(v) ? "Check the email, like name@example.com." : null);
+const phoneCheck = (v: string) => (v && !normaliseNepaliMobile(v) ? "10 digits, starting 97 or 98." : null);
 
 /** Buy a gift card: design, amount, who it's for, message and date, with a live preview. */
 export function GiftCardForm() {
@@ -36,9 +52,12 @@ export function GiftCardForm() {
   const amount = value === "custom" ? (customOk ? customN : 0) : value;
   const from = anonymous ? null : senderField.value;
   const today = kathmanduToday(); // the shop's calendar day, wherever the buyer is
+  const email = useFieldCheck(emailCheck);
+  const rphone = useFieldCheck(phoneCheck);
+  const bphone = useFieldCheck(phoneCheck);
 
   return (
-    <form action={action} className="grid gap-12 lg:grid-cols-[1fr_minmax(0,420px)]" noValidate>
+    <form action={action} className="grid gap-10 pb-24 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-12 lg:pb-0" noValidate>
       <div className="space-y-12">
         <section className="space-y-3" aria-labelledby="gc-design-h">
           <h2 id="gc-design-h" className="text-xl font-semibold">
@@ -68,7 +87,10 @@ export function GiftCardForm() {
             2. Choose an amount
           </h2>
           <input type="hidden" name="value" value={value === "custom" ? "" : value} />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5" role="radiogroup" aria-labelledby="gc-amount-h">
+          <p className="font-mono text-[40px] font-semibold leading-none md:text-[48px]" aria-live="polite">
+            {amount ? formatPrice(amount) : <span className="text-steel">Rs –</span>}
+          </p>
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="gc-amount-h">
             {VALUES.map((v) => (
               <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => setValue(v)} className={`${chip(value === v)} font-mono`}>
                 {formatPrice(v)}
@@ -93,7 +115,7 @@ export function GiftCardForm() {
                 aria-describedby="gc-custom-hint"
                 className={`${input} font-mono`}
               />
-              <p id="gc-custom-hint" className={`mt-1 text-[13px] ${custom !== "" && !customOk ? "text-[#d70015]" : "text-steel-dark"}`}>
+              <p id="gc-custom-hint" className={`mt-1 text-[13px] ${custom !== "" && !customOk ? "text-error-light" : "text-steel-dark"}`}>
                 {custom !== "" && !customOk ? "Use a whole number of hundreds, from Rs 1,000 to Rs 20,000." : "For example 2,500 or 7,000."}
               </p>
             </div>
@@ -122,15 +144,19 @@ export function GiftCardForm() {
             <label htmlFor="gc-remail" className={label}>
               {forMe ? "Your email" : "Their email"}
             </label>
-            <input id="gc-remail" name="receiverEmail" type="email" inputMode="email" autoComplete={forMe ? "email" : "off"} placeholder="name@example.com" className={input} />
-            <p className="mt-1 text-[13px] text-steel-dark">The card and its code arrive by email.</p>
+            <input id="gc-remail" name="receiverEmail" type="email" inputMode="email" autoComplete={forMe ? "email" : "off"} placeholder="name@example.com" aria-describedby="gc-remail-hint" {...email.props} className={input} />
+            <p id="gc-remail-hint" className={`mt-1 text-[13px] ${email.error ? "text-error-light" : "text-steel-dark"}`}>
+              {email.error ?? "The card and its code arrive by email."}
+            </p>
           </div>
           <div>
             <label htmlFor="gc-rphone" className={label}>
               {forMe ? "Your mobile number" : "Their mobile number"} <span className="font-normal text-steel-dark">(optional)</span>
             </label>
-            <input id="gc-rphone" name="receiverPhone" type="tel" inputMode="numeric" placeholder="98XXXXXXXX" className={`${input} font-mono`} />
-            <p className="mt-1 text-[13px] text-steel-dark">We text the code too.</p>
+            <input id="gc-rphone" name="receiverPhone" type="tel" inputMode="numeric" placeholder="98XXXXXXXX" aria-describedby="gc-rphone-hint" {...rphone.props} className={`${input} font-mono`} />
+            <p id="gc-rphone-hint" className={`mt-1 text-[13px] ${rphone.error ? "text-error-light" : "text-steel-dark"}`}>
+              {rphone.error ?? "We text the code too."}
+            </p>
           </div>
         </section>
 
@@ -182,7 +208,12 @@ export function GiftCardForm() {
             <label htmlFor="gc-bphone" className={label}>
               Your mobile number <span className="font-normal text-steel-dark">(for the receipt)</span>
             </label>
-            <input id="gc-bphone" name="buyerPhone" type="tel" inputMode="numeric" placeholder="98XXXXXXXX" {...phoneField} className={`${input} font-mono`} />
+            <input id="gc-bphone" name="buyerPhone" type="tel" inputMode="numeric" placeholder="98XXXXXXXX" {...phoneField} {...bphone.props} aria-describedby="gc-bphone-hint" className={`${input} font-mono`} />
+            {bphone.error && (
+              <p id="gc-bphone-hint" className="mt-1 text-[13px] text-error-light">
+                {bphone.error}
+              </p>
+            )}
           </div>
           <fieldset>
             <legend className={label}>Pay with</legend>
@@ -198,19 +229,36 @@ export function GiftCardForm() {
         </section>
       </div>
 
-      {/* Live preview: what arrives in their inbox */}
-      <aside className="lg:sticky lg:top-28 lg:self-start" aria-label="Preview">
+      {/* Live preview: what arrives in their inbox. First on phones, so the card is built in view. */}
+      <aside className="order-first lg:sticky lg:top-28 lg:order-none lg:self-start" aria-label="Preview">
         <p className="index text-steel-dark">Preview</p>
-        <div className="mt-3">
+        <div className="mx-auto mt-3 max-w-[340px] lg:max-w-none">
           <GiftCardArt design={design} amount={amount || null} />
         </div>
-        <div className="mt-5 bg-photo p-5 text-[15px]">
+        <div className="mt-5 hidden bg-photo p-5 text-[15px] lg:block">
           <p className="font-semibold">{forMe ? `For you${name ? `, ${name.split(" ")[0]}` : ""}` : name ? `For ${name}` : "For them"}</p>
           {!forMe && message && <p className="mt-2 whitespace-pre-line">&ldquo;{message}&rdquo;</p>}
           {!forMe && <p className="mt-2 text-[13px] text-steel-dark">From {from || "someone who thinks of you"}</p>}
           <p className="mt-3 font-mono text-[13px] text-steel-dark">EP-XXXX-XXXX · used online and in store</p>
         </div>
       </aside>
+
+      {/* Phones: the card and the Pay button stay in view while the form scrolls. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-mist bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden">
+        {state.status === "error" && (
+          <p className="mb-2 text-[13px] text-error-light" aria-hidden>
+            {state.message}
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <div className="w-14 shrink-0" aria-hidden>
+            <GiftCardArt design={design} amount={null} className="shadow-none" />
+          </div>
+          <button type="submit" className="btn btn-volt flex-1" disabled={pending || !amount} aria-busy={pending}>
+            {pending ? "One moment…" : amount ? `Pay ${formatPrice(amount)}` : "Choose an amount"}
+          </button>
+        </div>
+      </div>
     </form>
   );
 }

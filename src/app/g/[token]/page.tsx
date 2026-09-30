@@ -12,16 +12,26 @@ export const dynamic = "force-dynamic";
 /** The receiver's private gift page. Shows no price and nothing about the buyer except the name they chose to share. */
 export default async function GiftRevealPage({ params }: PageProps<"/g/[token]">) {
   const { token } = await params;
+  // Check the shape first: a made-up link never reaches the database.
+  if (!/^[\w-]{20,40}$/.test(token)) notFound();
   const order = await findOrderByGiftToken(token);
-  if (!order?.gift || !/^[\w-]{20,40}$/.test(token)) notFound();
+  if (!order?.gift) notFound();
 
   // A gift only opens once it's paid for.
-  if (order.status === "awaiting_payment" || order.status === "expired") {
+  if (order.status === "awaiting_payment") {
     return (
       <section className="container-ep max-w-xl py-24 text-center md:py-32">
         <h1 className="display display-h1">Almost ready.</h1>
+        <p className="mt-4 text-lg text-steel-dark">Your gift is being wrapped. Open this link again in a moment.</p>
+      </section>
+    );
+  }
+  if (order.status === "expired") {
+    return (
+      <section className="container-ep max-w-xl py-24 text-center md:py-32">
+        <h1 className="display display-h1">This gift wasn&apos;t finished.</h1>
         <p className="mt-4 text-lg text-steel-dark">
-          {order.status === "expired" ? "This gift wasn't completed. Ask the sender to try again." : "Your gift is being wrapped. Open this link again in a moment."}
+          The payment didn&apos;t go through, so nothing was sent. Ask {order.gift.senderName ?? "the person who sent it"} to send it again.
         </p>
       </section>
     );
@@ -59,6 +69,8 @@ export default async function GiftRevealPage({ params }: PageProps<"/g/[token]">
     welcomeCode: g.welcomeCode ? maskCode(g.welcomeCode) : null,
     sentTo: g.receiverEmail && g.receiverPhone ? "your email and phone" : g.receiverPhone ? "your phone" : "your email",
     thanked: Boolean(g.thanks),
+    // Whether to ask for a number for the rider (never the number itself).
+    needsPhone: !g.receiverPhone,
     // Only sent to the page when the buyer chose to show it.
     price: g.showPrice ? line.unitPrice * line.qty : null,
     line: { size: line.size, colour: line.colour, sku: line.sku },

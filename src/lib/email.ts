@@ -51,13 +51,15 @@ export function normaliseEmail(input: string): string | null {
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** A calm, on-brand email: headline, optional message quote, one button, small print. */
-export function giftEmailHtml(opts: { heading: string; intro: string; quote?: string | null; from?: string | null; button: { label: string; url: string }; extra?: string; small: string }) {
+export function giftEmailHtml(opts: { preheader?: string; heading: string; nepali?: string; intro: string; quote?: string | null; from?: string | null; button: { label: string; url: string }; extra?: string; small: string }) {
   return `<!doctype html><html><body style="margin:0;background:#f2f2f2;font-family:Inter,Segoe UI,Arial,sans-serif;color:#0a0a0a">
+${opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all">${esc(opts.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>` : ""}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f2;padding:32px 16px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:4px">
 <tr><td style="background:#0a0a0a;padding:20px 28px;color:#ffffff;font-weight:700;font-size:20px;letter-spacing:-0.01em">easypick</td></tr>
 <tr><td style="padding:32px 28px 8px">
 <h1 style="margin:0 0 12px;font-size:28px;line-height:1.15">${esc(opts.heading)}</h1>
+${opts.nepali ? `<p lang="ne" style="margin:0 0 12px;font-size:16px;line-height:1.5;color:#3a3a3c">${esc(opts.nepali)}</p>` : ""}
 <p style="margin:0 0 20px;font-size:16px;line-height:1.55;color:#3a3a3c">${esc(opts.intro)}</p>
 ${opts.quote ? `<div style="background:#f2f2f2;padding:20px 22px;margin:0 0 24px;font-size:18px;line-height:1.5">&ldquo;${esc(opts.quote)}&rdquo;<div style="margin-top:10px;font-size:13px;color:#6c6c70">${esc(opts.from ? `From ${opts.from}` : "From someone who thinks of you")}</div></div>` : ""}
 ${opts.extra ?? ""}

@@ -5,15 +5,14 @@ import { after } from "next/server";
 
 import { alertStaff } from "./alerts";
 import { moveStock, StockShortError } from "./catalogue";
-import { giftEmailHtml } from "./email";
+import { sendGiftCardToRecipient, sendGiftLink } from "./gift-card-delivery";
 import { activateGiftCard, findGiftCard, markGiftCardSent, spendGiftCard } from "./gift-cards";
 import { isFutureKathmanduDate } from "./kathmandu-date";
-import { notifyEmail, notifySms } from "./notify";
+import { notifySms } from "./notify";
 import { event, lockOrder, updateOrder, type Order, type PaymentAttempt } from "./orders";
 import { formatPrice } from "./format";
 import { paymentMode } from "./gateways";
 import { site } from "./site";
-import { giftCardEmailBlock } from "./gift-card-designs";
 
 export interface VerifiedPayment {
   provider: PaymentAttempt["provider"];
@@ -148,41 +147,8 @@ export async function confirmPayment(orderId: string, verified?: VerifiedPayment
 
 /** The emails and texts that follow a payment (gift link, gift card). Never throws for a failed send. */
 async function sendPaidMessages(order: Order) {
-  // ---- A piece sent as a gift ----
-  if (order.gift) {
-    const g = order.gift;
-    const from = g.senderName ?? "Someone";
-    const first = g.receiverName.split(" ")[0];
-    const link = `${site.url}/g/${g.token}`;
-
-    await notifySms(
-      g.receiverPhone,
-      g.mode === "pick"
-        ? `${from} sent you a gift from Easypick. Open it to pick your size online, or try it on in our store: ${link}`
-        : `${from} sent you a gift from Easypick. See it here: ${link}`,
-    );
-    const emailStatus = await notifyEmail(
-      g.receiverEmail,
-      `${from} sent you a gift from Easypick`,
-      giftEmailHtml({
-        heading: `Namaste ${first}, you've got a gift.`,
-        intro:
-          g.mode === "pick"
-            ? `${from} picked something from Easypick for you. Open it to choose your size online, or try it on in our store in ${site.store.area}.`
-            : `${from} picked something from Easypick for you. Open it to see what's on the way.`,
-        quote: g.message || null,
-        from: g.senderName,
-        button: { label: "Open your gift", url: link },
-        small: g.showPrice
-          ? "This link is just for you. Swap the size within 14 days if it's not right."
-          : "This link is just for you. You won't see the price. Swap the size within 14 days if it's not right.",
-      }),
-      `${from} sent you a gift from Easypick.${g.message ? `\n\n"${g.message}"` : ""}\n\nOpen your gift: ${link}`,
-    );
-    await updateOrder(order.id, (o) => {
-      o.gift!.emailStatus = emailStatus;
-    });
-  }
+  // ---- A piece sent as a gift ---- (a dated "I know their size" gift waits for the cron: lib/gift-card-delivery.ts)
+  if (order.gift && !order.gift.pendingSend) await sendGiftLink(order);
 
   // ---- A gift card ----
   if (order.kind === "gift_card" && order.issuedCardCode) {
@@ -190,23 +156,7 @@ async function sendPaidMessages(order: Order) {
     const card = await findGiftCard(order.issuedCardCode);
     // A card with a later send date waits for the cron (lib/gift-card-delivery.ts).
     if (card && !card.pendingSend && !isFutureKathmanduDate(card.sendOn)) {
-      const from = card.senderName ?? "Someone";
-      const amount = `Rs ${card.value.toLocaleString("en-IN")}`;
-      await notifySms(card.recipientPhone, `${from} sent you an Easypick gift card worth ${amount}. Code: ${card.code}. Use it online or in store.`);
-      const cardEmailStatus = await notifyEmail(
-        card.recipientEmail,
-        `${from} sent you an Easypick gift card`,
-        giftEmailHtml({
-          heading: `Namaste ${card.recipientName.split(" ")[0]}, here's ${amount} to spend.`,
-          intro: `${from} sent you an Easypick gift card. Use it online or at the kiosk in our store. Any balance you don't use stays on the card.`,
-          quote: card.message || null,
-          from: card.senderName,
-          extra: giftCardEmailBlock({ design: card.design, amount: formatPrice(card.value), code: card.code }),
-          button: { label: "Start shopping", url: `${site.url}/shop` },
-          small: "Valid for 12 months. Enter the code at checkout, or show it at the kiosk.",
-        }),
-        `${from} sent you an Easypick gift card worth ${amount}.\nCode: ${card.code}\nUse it at ${site.url}/shop or in store. Valid 12 months.`,
-      );
+      const cardEmailStatus = await sendGiftCardToRecipient(card);
       await markGiftCardSent(card.code);
       if (card.recipientEmail) {
         await updateOrder(order.id, (o) => {
