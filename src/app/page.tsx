@@ -246,22 +246,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Colophon: findable text for search */}
-      <section aria-labelledby="about-title" className="border-t border-mist py-12">
-        <div className="container-ep grid gap-4 lg:grid-cols-12">
-          <h2 id="about-title" className="index text-steel-dark lg:col-span-3">
-            About Easypick
-          </h2>
-          <p className="max-w-[70ch] font-mono text-[13px] leading-relaxed text-steel-dark lg:col-span-7 lg:col-start-6">
-            Easypick is a self-checkout clothing store in Kathmandu for streetwear and everyday basics: oversized tees, hoodies, joggers,
-            relaxed jeans and co-ords. Every tag shows the price and the garment&apos;s measurements in cm, so you can pick your size without
-            asking. Try things on, pay at the kiosk with eSewa, and walk out. Prices are fixed and fair, with no
-            bargaining. New drops land every other Friday. Prefer to shop from home? Order online for store pickup or delivery inside the
-            Kathmandu Valley.
-          </p>
-        </div>
-      </section>
-
       <RevealRoot />
     </>
   );
