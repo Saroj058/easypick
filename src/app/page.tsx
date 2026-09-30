@@ -13,6 +13,7 @@ import { Ticker } from "@/components/ticker";
 import { VisitCard } from "@/components/visit-card";
 import { getStoreInfo } from "@/lib/store-info";
 import { formatDropTime, formatHour, formatPrice } from "@/lib/format";
+import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
 import { categoryLabels, site } from "@/lib/site";
 import { getDropTimeline, getHomeStats, getProducts } from "@/lib/store";
@@ -462,6 +463,21 @@ export default async function HomePage() {
             <div className="lg:col-span-4 lg:col-start-9" data-reveal>
               <VisitCard info={await getStoreInfo()} />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Track an order: no account needed */}
+      <section aria-labelledby="track-title" className="border-t border-mist bg-photo py-14 md:py-20">
+        <div className="container-ep grid gap-8 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-4">
+            <h2 id="track-title" className="display display-h2">
+              Track an order.
+            </h2>
+            <p className="mt-3 max-w-[36ch] text-steel-dark">No account needed. Use the order number from your SMS or receipt and the phone you ordered with.</p>
+          </div>
+          <div className="lg:col-span-7 lg:col-start-6">
+            <TrackForm compact id="home-track" />
           </div>
         </div>
       </section>

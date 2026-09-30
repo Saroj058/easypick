@@ -44,6 +44,16 @@ test("track an order page rejects wrong details", async ({ page }) => {
   await expect(page.locator("#main").getByRole("alert")).toContainText(/\w/);
 });
 
+test("track an order from the home page @phone", async ({ page }) => {
+  await page.goto("/");
+  const track = page.getByRole("region", { name: "Track an order." });
+  await track.scrollIntoViewIfNeeded();
+  await track.getByLabel("Order number").fill("EP-9999999");
+  await track.getByLabel("Mobile number").fill(randomPhone());
+  await track.getByRole("button", { name: "Track order" }).click();
+  await expect(track.getByRole("alert")).toContainText(/\w/);
+});
+
 test("security headers are sent", async ({ request }) => {
   const res = await request.get("/");
   expect(res.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
