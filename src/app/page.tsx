@@ -18,6 +18,7 @@ import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
 import { site } from "@/lib/site";
 import { getDropTimeline, getHomeStats, getProducts } from "@/lib/store";
+import { getSavedLooks } from "@/lib/looks";
 import { buildLooks } from "@/lib/occasions";
 import type { Category, Product } from "@/lib/types";
 
@@ -89,7 +90,7 @@ export default async function HomePage() {
   const offers = products.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
-  const looks = buildLooks(products);
+  const looks = buildLooks(products, await getSavedLooks());
 
   return (
     <>

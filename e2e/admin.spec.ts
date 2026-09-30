@@ -84,3 +84,43 @@ test("the owner puts a piece in The Vault and it shows on the home page", async 
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
 });
+
+test("the owner sets a Wear it to… look and the home page uses it", async ({ page }) => {
+  await page.goto("/admin/login");
+  await expect(async () => {
+    await page.getByLabel("Username").fill("e2e-owner");
+    await page.getByLabel("Password", { exact: true }).fill("e2e-owner-password");
+    await page.getByRole("button", { name: /Sign in/ }).click();
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 5000 });
+  }).toPass({ timeout: 60_000 });
+
+  await page.goto("/admin/looks");
+  const party = page.getByRole("group", { name: "Party" });
+  const pick = async (label: string, slug: string) => {
+    const select = party.getByLabel(label);
+    const value = await select.locator(`option[value^="${slug}~"]`).first().getAttribute("value");
+    await select.selectOption(value!);
+  };
+  await pick("Piece 1", "everyday-hoodie");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Party: pick at least two pieces")).toBeVisible();
+
+  await pick("Piece 2", "relaxed-straight-jean");
+  await party.getByLabel(/Where/).fill("Jhamsikhel rooftop");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText(/Saved\. The home page shows these looks/)).toBeVisible();
+
+  await page.goto("/");
+  const fits = page.getByRole("region", { name: "Wear it to…" });
+  await expect(fits.getByRole("radio", { name: /Party.*Jhamsikhel rooftop/ })).toBeVisible();
+  await expect(fits.getByText("Everyday Hoodie").first()).toBeVisible();
+  await expect(fits.getByText("Relaxed Straight Jean").first()).toBeVisible();
+
+  // Back to automatic.
+  await page.goto("/admin/looks");
+  await party.getByLabel("Piece 1").selectOption("");
+  await party.getByLabel("Piece 2").selectOption("");
+  await party.getByLabel(/Where/).fill("");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText(/Saved\./)).toBeVisible();
+});

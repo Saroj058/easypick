@@ -24,6 +24,16 @@ export interface Look {
   pieces: LookPiece[];
 }
 
+/** What the owner picked per occasion in /admin/looks: a place line and up to three pieces in a colour. */
+export type SavedLooks = Partial<Record<OccasionKey, { place?: string; pieces: { slug: string; colour: string }[] }>>;
+
+export const OCCASIONS: { key: OccasionKey; label: string; place: string }[] = [
+  { key: "party", label: "Party", place: "Thamel, Friday" },
+  { key: "casual", label: "Casual", place: "Campus, Monday" },
+  { key: "wedding", label: "Wedding", place: "Cousin's bihe" },
+  { key: "date", label: "Date", place: "Jhamsikhel, Saturday" },
+];
+
 const PLAN: { key: OccasionKey; label: string; place: string; slots: Category[][]; tone: "dark" | "light" | "mixed" }[] = [
   { key: "party", label: "Party", place: "Thamel, Friday", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
   { key: "casual", label: "Casual", place: "Campus, Monday", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
@@ -38,13 +48,13 @@ function luminance(hex: string) {
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 }
 
-function toPiece(p: Product, tone: "dark" | "light" | "mixed", slot: number): LookPiece | null {
+function toPiece(p: Product, tone: "dark" | "light" | "mixed", slot: number, pickedColour?: string): LookPiece | null {
   const inStock = p.colours.filter((c) => p.variants.some((v) => v.colour === c.name && v.stock > 0));
   if (inStock.length === 0) return null;
   const byLight = [...inStock].sort((a, b) => luminance(a.hex) - luminance(b.hex));
   // Wedding: a light top under a dark layer; party: all dark; otherwise alternate.
   const wantLight = tone === "light" ? slot === 1 : tone === "mixed" ? slot % 2 === 1 : false;
-  const colour = wantLight ? byLight[byLight.length - 1] : byLight[0];
+  const colour = inStock.find((c) => c.name === pickedColour) ?? (wantLight ? byLight[byLight.length - 1] : byLight[0]);
   const sizes = p.variants
     .filter((v) => v.colour === colour.name)
     .sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size))
@@ -62,10 +72,23 @@ function toPiece(p: Product, tone: "dark" | "light" | "mixed", slot: number): Lo
   };
 }
 
-export function buildLooks(products: Product[]): Look[] {
+export function buildLooks(products: Product[], saved: SavedLooks = {}): Look[] {
   const live = products.filter((p) => p.status === "live" && p.variants.some((v) => v.stock > 0));
   const looks: Look[] = [];
   PLAN.forEach((plan, i) => {
+    // The owner's look, when at least two of its pieces are live and in stock.
+    const mine = saved[plan.key];
+    if (mine && mine.pieces.length) {
+      const pieces = mine.pieces.flatMap((x, slot) => {
+        const p = live.find((q) => q.slug === x.slug);
+        const piece = p && toPiece(p, plan.tone, slot, x.colour);
+        return piece ? [piece] : [];
+      });
+      if (pieces.length >= 2) {
+        looks.push({ key: plan.key, label: plan.label, place: mine.place || plan.place, pieces });
+        return;
+      }
+    }
     const used = new Set<string>();
     const pieces: LookPiece[] = [];
     plan.slots.forEach((cats, slot) => {
