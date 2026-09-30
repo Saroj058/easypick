@@ -22,6 +22,8 @@ const csp = [
   "connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com",
   // eSewa's form (sandbox rc-epay / live epay, and its own redirects), plus the switched-off wallets.
   "form-action 'self' https://esewa.com.np https://*.esewa.com.np https://*.fonepay.com https://khalti.com https://*.khalti.com",
+  // The Visit page's map, loaded only when someone taps "Show map".
+  "frame-src https://www.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { site } from "@/lib/site";
+import { getStoreInfo } from "@/lib/store-info";
 import { AskWhatsApp } from "./ask-whatsapp";
 import { VisitCard } from "./visit-card";
 
@@ -43,7 +44,8 @@ const cols = [
   },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const info = await getStoreInfo();
   return (
     <footer className="border-t border-mist bg-paper pb-24 lg:pb-0">
       <div className="container-ep grid gap-12 py-16 md:grid-cols-12">
@@ -51,7 +53,7 @@ export function SiteFooter() {
           <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} className="h-8 w-auto" />
           <p className="mt-4 text-lg text-steel-dark">{site.tagline}</p>
           <div className="mt-8 max-w-sm">
-            <VisitCard compact />
+            <VisitCard info={info} compact />
           </div>
           <AskWhatsApp className="mt-4" text="Hi Easypick, " label="Questions? WhatsApp us" />
         </div>

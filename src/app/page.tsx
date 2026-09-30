@@ -11,6 +11,7 @@ import { GarmentSvg } from "@/components/product-image";
 import { RevealRoot } from "@/components/reveal-root";
 import { Ticker } from "@/components/ticker";
 import { VisitCard } from "@/components/visit-card";
+import { getStoreInfo } from "@/lib/store-info";
 import { formatDropTime, formatHour, formatPrice } from "@/lib/format";
 import { jsonLd } from "@/lib/json-ld";
 import { categoryLabels, site } from "@/lib/site";
@@ -459,7 +460,7 @@ export default async function HomePage() {
               </p>
             </div>
             <div className="lg:col-span-4 lg:col-start-9" data-reveal>
-              <VisitCard />
+              <VisitCard info={await getStoreInfo()} />
             </div>
           </div>
         </div>
