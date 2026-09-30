@@ -1,121 +1,120 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { StoreTour, type TourStop } from "@/components/store-tour";
-import { CounterScene, DoorScene, ExitScene, FittingScene, HelperScene, KioskScene, RackScene } from "@/components/tour-scenes";
+import { AlertSignup } from "@/components/alert-signup";
+import { ShareTour } from "@/components/share-tour";
+import { WalkTour, type RackPick } from "@/components/walk-tour";
+import { formatPrice } from "@/lib/format";
 import { getStoreInfo } from "@/lib/store-info";
-import { getProducts } from "@/lib/store";
+import { storeState } from "@/lib/store-state";
+import { getDropTimeline, getProducts } from "@/lib/store";
+import { TOUR_STOPS } from "@/lib/tour-plan";
+import { getTrending } from "@/lib/trending";
+import type { Product } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Virtual tour",
-  description: "Walk through the Easypick store before you visit: the racks, the fitting rooms, the self-checkout kiosk and the pickup counter.",
+  title: "Walk the store",
+  description: "Scroll to walk through Easypick in Kathmandu: the racks, the fitting rooms, the self-checkout kiosk and the way out. About a minute.",
   alternates: { canonical: "/visit/tour" },
 };
-export const revalidate = 3600;
+// The ending depends on whether the store is open right now.
+export const dynamic = "force-dynamic";
+
+const cm = (v?: number) => (v ? `${v} cm` : null);
 
 export default async function TourPage() {
-  const [products, info] = await Promise.all([getProducts(), getStoreInfo()]);
-  // A real piece for the hang tag on the rack.
-  const tagged = products.find((p) => p.status === "live" && p.category === "tees" && p.measurements.M) ?? products.find((p) => p.status === "live") ?? null;
+  const [products, info, timeline, trending] = await Promise.all([getProducts(), getStoreInfo(), getDropTimeline(), getTrending()]);
+  const live = products.filter((p) => p.status === "live");
 
-  const stops: TourStop[] = [
-    {
-      id: "door",
-      at: [120, 296],
-      zone: "door",
-      kicker: "The door",
-      title: "Aaunus.",
-      body: "The shutter's up, the greeter says hi. There's a three-step picture guide by the door if you want it. Just looking is fine too.",
-      scene: <DoorScene />,
-    },
-    {
-      id: "racks",
-      at: [62, 206],
-      zone: "racks",
-      kicker: "The racks",
-      title: "Pick it.",
-      body: "Every tag shows the fixed price and the measurements in cm, so you know it fits before you try it. Nobody follows you around.",
-      scene: <RackScene product={tagged} />,
-    },
-    {
-      id: "fitting",
-      at: [62, 64],
-      zone: "fitting",
-      kicker: "Fitting rooms",
-      title: "Try it on.",
-      body: "Take a numbered token for the pieces you bring in. The helper counts them out again. Take as long as you like.",
-      scene: <FittingScene />,
-    },
-    {
-      id: "helper",
-      at: [126, 148],
-      zone: "floor",
-      kicker: "On the floor",
-      title: "Need a hand?",
-      body: "One helper is on the floor the whole time. Another size, a second opinion, where the kiosk is: just wave.",
-      scene: <HelperScene />,
-    },
-    {
-      id: "kiosk",
-      at: [183, 54],
-      zone: "kiosk",
-      kicker: "Self-checkout",
-      title: "Pay it.",
-      body: "Drop your pieces in the kiosk's tray. It lists them and shows a QR. Scan with eSewa. No queue, no bargaining.",
-      scene: <KioskScene />,
-    },
-    {
-      id: "counter",
-      at: [190, 166],
-      zone: "counter",
-      kicker: "Pickup counter",
-      title: "Ordered online?",
-      body: "Your bag is waiting at the counter. Show your order number or the SMS. Pickup is free.",
-      scene: <CounterScene />,
-    },
-    {
-      id: "exit",
-      at: [190, 298],
-      zone: "exit",
-      kicker: "The way out",
-      title: "Wear it.",
-      body: "Your bill comes by SMS. Walk out. That's the whole thing.",
-      scene: <ExitScene />,
-    },
+  // The tag you read in the scene is a real piece: a tee from the latest drop if there is one.
+  const tee =
+    live.find((p) => p.category === "tees" && p.dropSlug === timeline.current?.slug && p.measurements.M) ??
+    live.find((p) => p.category === "tees" && p.measurements.M) ??
+    live[0];
+  const tag = {
+    name: tee?.name ?? "Heavy Tee",
+    price: formatPrice(tee ? (tee.salePrice ?? tee.price) : 1999),
+    chest: cm(tee?.measurements.M?.chest),
+    length: cm(tee?.measurements.M?.length),
+  };
+
+  // "On the rack now": real pieces, honestly labelled. Latest drop first, then the trending or picks list.
+  const fromDrop = live.filter((p) => timeline.current && p.dropSlug === timeline.current.slug);
+  const trendNote = trending.mode === "trending" ? "Trending" : trending.label === "Staff picks" ? "Staff pick" : "Latest drop";
+  const picks: { p: Product; note: string }[] = [
+    ...fromDrop.slice(0, 2).map((p) => ({ p, note: timeline.current!.name })),
+    ...trending.items.map((i) => ({ p: i.product, note: trendNote })),
   ];
+  const seen = new Set<string>();
+  const rack: RackPick[] = picks
+    .filter(({ p }) => p.status === "live" && !seen.has(p.slug) && seen.add(p.slug))
+    .slice(0, 3)
+    .map(({ p, note }) => ({ slug: p.slug, name: p.name, price: formatPrice(p.salePrice ?? p.price), note }));
+
+  const state = storeState(info, new Date());
+  const directions = info.mapUrl ?? (info.geo ? `https://www.google.com/maps/search/?api=1&query=${info.geo.lat},${info.geo.lng}` : null);
+
+  const end = (
+    <section aria-labelledby="end-h" className="bg-ink py-20 text-paper md:py-28">
+      <div className="container-ep on-dark max-w-3xl">
+        <p className="font-mono text-[12px] tracking-[0.12em] text-paper/70">END OF THE WALK</p>
+        <h2 id="end-h" className="display mt-3 text-[56px] leading-[0.9] md:text-[96px]">
+          {state.kind === "soon" ? state.headline + "." : state.headline}
+        </h2>
+        <p lang="ne" className="mt-3 font-[family-name:var(--font-nepali)] text-lg text-paper/80">
+          टिप्नुस्। तिर्नुस्। लगाउनुस्।
+        </p>
+
+        {state.kind === "soon" ? (
+          <div className="mt-8 max-w-md">
+            <p className="font-semibold">Get the opening-day SMS</p>
+            <p className="mt-1 text-[15px] text-paper/70">One message when the shutter goes up. Nothing else.</p>
+            <div className="mt-4" data-cta="opening-list">
+              <AlertSignup dark source="tour" />
+            </div>
+          </div>
+        ) : (
+          <div className="mt-8 flex flex-wrap gap-3">
+            {directions && (
+              <a href={directions} target="_blank" rel="noopener" data-cta="directions" className="btn btn-volt">
+                Get directions
+              </a>
+            )}
+            <Link href="/visit" data-cta="visit" className="btn btn-outline">
+              Hours and address
+            </Link>
+          </div>
+        )}
+
+        <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-[15px]">
+          <ShareTour />
+          <Link href="/shop" data-cta="shop" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
+            Shop online now
+          </Link>
+          <a href="#street" className="inline-flex min-h-11 items-center underline underline-offset-4">
+            Walk it again
+          </a>
+        </div>
+        <p className="mt-10 text-[13px] text-paper/60">The store as planned, built in 3D before it&apos;s fitted out. The finished store may differ in the details.</p>
+      </div>
+    </section>
+  );
 
   return (
-    <div className="container-ep pb-24">
-      <section className="pb-6 pt-12 md:pt-20">
+    <>
+      <section className="container-ep pb-6 pt-12 md:pt-20">
         <p className="index text-steel-dark">
           <Link href="/visit" className="hover:underline">
             Visit us
           </Link>{" "}
-          / Virtual tour
+          / Walk the store
         </p>
         <h1 className="display display-h1 mt-3">Walk the store.</h1>
         <p className="mt-4 max-w-[46ch] text-lg text-steel-dark md:text-xl">
-          Scroll to walk through Easypick, door to door, before you come. It takes about a minute.
+          Scroll to walk in, pick, try, pay and walk out. About a minute. Use the arrows to jump between stops.
         </p>
-        <p className="mt-2 text-[13px] text-steel-dark">Drawn from the store plan. Photos come once the store is fitted out.</p>
       </section>
-
-      <StoreTour stops={stops} />
-
-      <section className="mt-10 border-t border-mist pt-12 text-center">
-        <h2 className="display display-h2">{info.opened ? "See you soon." : "Opening soon."}</h2>
-        <p className="mx-auto mt-3 max-w-[40ch] text-steel-dark">
-          {info.opened ? "Directions, hours and how to get there are on the Visit page." : "Join the opening list on the Visit page and we'll tell you when the shutter goes up."}
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link href="/visit" className="btn btn-volt">
-            {info.opened ? "Directions and hours" : "Join the opening list"}
-          </Link>
-          <Link href="/shop" className="btn btn-outline">
-            Shop online
-          </Link>
-        </div>
-      </section>
-    </div>
+      <WalkTour stops={TOUR_STOPS} tag={tag} rack={rack} end={end} />
+    </>
   );
 }

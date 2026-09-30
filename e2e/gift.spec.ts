@@ -21,10 +21,12 @@ test("gift page: piece or card, curated rows and filters @phone", async ({ page 
 test("send a piece: three steps, their name before the note, checks before payment @phone", async ({ page }, info) => {
   await page.goto("/gift/everyday-hoodie");
   await expect(page.getByRole("heading", { name: "The piece" })).toBeVisible();
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  // Step 2: the name is asked here, so the card preview can name them.
-  await expect(page.getByRole("heading", { name: "Your note" })).toBeVisible();
+  // On a cold dev server the first click can land before the form is interactive: retry it.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Continue" }).click();
+    // Step 2: the name is asked here, so the card preview can name them.
+    await expect(page.getByRole("heading", { name: "Your note" })).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.locator("#g-hint")).toContainText(/Add their name/);
   await expect(page.locator("#g-rname")).toBeFocused();
@@ -49,7 +51,8 @@ test("send a piece: three steps, their name before the note, checks before payme
 
   await page.locator("#g-bphone").fill(randomPhone());
   await page.getByRole("button", { name: /^Pay Rs/ }).click();
-  await page.waitForURL(/esewa|\/pay\/|\/order\//, { timeout: 30_000 });
+  // Reaching payment is enough: eSewa's sandbox page can be slow to finish loading.
+  await page.waitForURL(/esewa|\/pay\/|\/order\//, { timeout: 30_000, waitUntil: "commit" });
 });
 
 test("gift card: amount shown large, checks on leaving a field @phone", async ({ page }, info) => {

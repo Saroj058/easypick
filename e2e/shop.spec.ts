@@ -24,7 +24,7 @@ test("Buy now needs no account and goes to payment", async ({ page }) => {
   await page.getByLabel("Mobile number").fill(randomPhone());
   await page.getByRole("button", { name: /^Pay Rs/ }).click();
   // eSewa's sandbox form, or our order page when the sandbox can't be reached from here.
-  await page.waitForURL(/esewa|\/order\//, { timeout: 30_000 });
+  await page.waitForURL(/esewa|\/order\//, { timeout: 30_000, waitUntil: "commit" });
 });
 
 test("Add to bag asks for a login and offers Buy now instead", async ({ page }) => {
