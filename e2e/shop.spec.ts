@@ -12,6 +12,28 @@ test("home, shop and a product page load @phone", async ({ page }) => {
   await expect(page.getByText(/Free pickup at the store/)).toBeVisible();
 });
 
+test("home: the rail, My size and Wear it to… @phone", async ({ page }) => {
+  await page.goto("/");
+  const rail = page.getByRole("region", { name: "The rail" });
+  await expect(rail.locator("#rail-grid > li:not([hidden])").first()).toBeVisible();
+  // My size keeps only pieces in stock in that size (one-size pieces stay).
+  await expect(async () => {
+    await rail.getByRole("button", { name: "XL", exact: true }).click();
+    await expect(rail.getByRole("button", { name: "XL", exact: true })).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
+  }).toPass();
+  const sizes = await rail.locator("#rail-grid > li:not([hidden])").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.sizes ?? ""));
+  expect(sizes.every((s) => s.split(" ").some((x) => x === "XL" || x === "ONE"))).toBe(true);
+  await rail.getByRole("button", { name: "XL", exact: true }).click();
+
+  const fits = page.getByRole("region", { name: "Wear it to…" });
+  await fits.scrollIntoViewIfNeeded();
+  await fits.getByRole("radio", { name: /Casual/ }).click();
+  await expect(fits.getByRole("radio", { name: /Casual/ })).toHaveAttribute("aria-checked", "true");
+  await expect(fits.getByRole("button", { name: /Add the fit · Rs/ })).toBeEnabled();
+  await fits.getByRole("link", { name: "Build your own fit" }).click();
+  await page.waitForURL(/\/fit\?.*(top|bottom)=/, { timeout: 60_000 }); // the first visit compiles /fit in dev
+});
+
 test("Buy now needs no account and goes to payment", async ({ page }) => {
   await page.goto("/product/everyday-hoodie");
   await pickInStockSize(page);

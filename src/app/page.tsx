@@ -1,24 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AlertSignup } from "@/components/alert-signup";
 import { Countdown } from "@/components/countdown";
-import { Barcode } from "@/components/hang-tag";
 import { HeroRack, type RackPiece } from "@/components/hero-rack";
-import { ArrowIcon } from "@/components/icons";
+import { OccasionFits } from "@/components/home/occasion-fits";
+import { OurStore } from "@/components/home/our-store";
+import { PriceShown } from "@/components/home/price-shown";
+import { Rail } from "@/components/home/rail";
+
 import { ProductCard } from "@/components/product-card";
-import { GarmentSvg } from "@/components/product-image";
 import { RevealRoot } from "@/components/reveal-root";
 import { SelfCheckout } from "@/components/self-checkout";
-import { Ticker } from "@/components/ticker";
-import { VisitCard } from "@/components/visit-card";
 import { getStoreInfo } from "@/lib/store-info";
-import { formatDropTime, formatHour, formatPrice } from "@/lib/format";
+import { formatDropTime, formatPrice } from "@/lib/format";
 import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
-import { categoryLabels, site } from "@/lib/site";
+import { site } from "@/lib/site";
 import { getDropTimeline, getHomeStats, getProducts } from "@/lib/store";
-import { getTrending } from "@/lib/trending";
+import { buildLooks } from "@/lib/occasions";
 import type { Category, Product } from "@/lib/types";
 
 export const revalidate = 300;
@@ -54,15 +53,6 @@ function pickRack(products: Product[]): RackPiece[] {
   });
 }
 
-function SectionIndex({ n, label, dark = false }: { n: string; label: string; dark?: boolean }) {
-  return (
-    <div className={`flex items-center gap-4 border-t pt-4 ${dark ? "border-paper/15 text-paper/70" : "border-mist text-steel-dark"}`}>
-      <span className="index">{n}</span>
-      <span className="index">{label}</span>
-    </div>
-  );
-}
-
 function timeNpt(iso: string) {
   return new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
@@ -87,40 +77,18 @@ const orgLd = {
 };
 
 export default async function HomePage() {
-  const [products, { current, next }, trending] = await Promise.all([getProducts(), getDropTimeline(), getTrending()]);
-  const trendingRow = trending.items.slice(0, 4).map((i) => i.product);
-  const trendingTitle = trending.mode === "trending" ? "Trending this week" : trending.label;
+  const [products, { current, next }] = await Promise.all([getProducts(), getDropTimeline()]);
   const drop = current ?? next;
   const dropProducts = drop ? products.filter((p) => p.dropSlug === drop.slug) : products;
   const onRack = dropProducts.filter((p) => p.status !== "scheduled");
   const stats = getHomeStats(onRack, current?.pieceCount ?? null);
   const rack = pickRack(products);
-  const featured = onRack.filter((p) => p.status === "live").slice(0, 5);
-  const [storyHead, ...storyRest] = (current?.story ?? "").split(/(?<=\.)\s+/);
   const leftPct = stats.piecesTotal ? Math.round((stats.piecesLeft / stats.piecesTotal) * 100) : 0;
 
   const offers = products.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
-  const categories = (Object.keys(categoryLabels) as Category[])
-    .map((c) => ({ c, count: products.filter((p) => p.category === c && p.status === "live").length }))
-    .filter((x) => x.count > 0);
-
-  // A believable bill: one top, one bottom.
-  const basics = [
-    products.find((p) => p.status === "live" && p.category === "hoodies"),
-    products.find((p) => p.status === "live" && p.category === "bottoms"),
-  ].filter((p): p is Product => Boolean(p));
-
-  const ticker = [
-    `Open daily ${formatHour(site.store.hours.open)} – ${formatHour(site.store.hours.close)}`,
-    "Pay by QR · eSewa",
-    ...stats.lowSizes.map((l) => `${l.stock} left · ${l.name} · ${l.colour} ${l.size}`),
-    "Fixed prices. Same for everyone.",
-    ...(offers.length ? [`Festival offers · ${offers.length} pieces · up to ${formatPrice(bestSaving)} off`] : []),
-    "Measurements in cm on every tag",
-    next ? `${next.name} · ${formatDropTime(next.releaseAt)}` : "New drop every other Friday",
-  ];
+  const looks = buildLooks(products);
 
   return (
     <>
@@ -211,268 +179,55 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Ticker */}
-      <Ticker items={ticker} />
+      {/* The rail: products first, with quick filters and "My size" */}
+      <Rail products={products} />
 
-      {/* 02 — The drop */}
-      {current && featured.length > 0 && (
-        <section aria-labelledby="drop-title" className="section">
+      {/* Price shown. No DM needed. */}
+      <PriceShown products={products} />
+
+      {/* Wear it to…: a ready fit per occasion */}
+      {looks.length > 0 && (
+        <section aria-labelledby="occasion-title" className="section bg-photo">
           <div className="container-ep">
-            <SectionIndex n="02" label={`${current.name} · ${current.pieceCount} pieces`} />
-            <div className="mt-8 grid gap-8 lg:grid-cols-12 lg:items-end">
-              <div className="lg:col-span-7" data-reveal>
-                <h2 id="drop-title" className="display display-h1">
-                  {storyHead || `${current.name}.`}
-                </h2>
-                {storyRest.length > 0 && <p className="mt-4 max-w-[40ch] text-lg text-steel-dark">{storyRest.join(" ")}</p>}
-              </div>
-              <div className="lg:col-span-4 lg:col-start-9 lg:text-right" data-reveal>
-                <p className="font-mono text-[length:var(--text-stat)] font-semibold leading-[0.85] tabular-nums">{stats.piecesLeft}</p>
-                <p className="index mt-3 text-steel-dark">
-                  of {stats.piecesTotal} pieces left · {formatPrice(stats.priceFrom)} to {formatPrice(stats.priceTo)}
-                </p>
-              </div>
-            </div>
-
-            <ul className="no-scrollbar -mx-4 mt-12 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 md:-mx-8 md:scroll-px-8 md:px-8 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-x-5 lg:gap-y-10 lg:overflow-visible lg:px-0">
-              {featured.map((p, i) => (
-                <li
-                  key={p.id}
-                  data-reveal
-                  style={{ "--i": i } as React.CSSProperties}
-                  className={`w-[72vw] max-w-[300px] shrink-0 snap-start lg:w-auto lg:max-w-none ${i === 0 ? "lg:col-span-2 lg:row-span-2" : ""}`}
-                >
-                  <ProductCard product={p} sizes={i === 0 ? "(min-width: 1024px) 50vw, 72vw" : "(min-width: 1024px) 25vw, 72vw"} />
-                </li>
-              ))}
-              <li className="w-[72vw] max-w-[300px] shrink-0 snap-start lg:hidden">
-                <Link href={`/drop/${current.slug}`} className="grid aspect-[4/5] place-items-center bg-photo">
-                  <span className="flex flex-col items-center gap-3 text-center">
-                    <span className="display display-h2">See all {dropProducts.length}</span>
-                    <ArrowIcon className="h-6 w-6" />
-                  </span>
-                </Link>
-              </li>
-            </ul>
-            <Link
-              href={`/drop/${current.slug}`}
-              className="group mt-12 hidden items-center gap-2 font-semibold uppercase tracking-[0.06em] lg:inline-flex"
-            >
-              See all of {current.name}
-              <ArrowIcon className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
-            </Link>
+            <OccasionFits looks={looks} />
           </div>
         </section>
       )}
 
-      {/* 03 — Shop by category */}
-      {categories.length > 0 && (
-        <section aria-labelledby="cat-title" className="pb-16 md:pb-24">
-          <div className="container-ep">
-            <SectionIndex n="03" label="Shop by piece" />
-            <h2 id="cat-title" className="sr-only">
-              Shop by category
-            </h2>
-            <ul className="mt-6 grid grid-cols-3 gap-2 md:auto-cols-fr md:grid-flow-col md:grid-cols-none md:gap-3">
-              {categories.map(({ c, count }, i) => (
-                <li key={c} data-reveal style={{ "--i": i % 4 } as React.CSSProperties}>
-                  <Link href={`/shop?category=${c}`} className="group block">
-                    <div className="relative aspect-square bg-photo transition-colors duration-200 group-hover:bg-mist">
-                      <GarmentSvg category={c} colourHex="#1c1c1e" className="absolute inset-0 m-auto h-[62%] w-[62%]" />
-                    </div>
-                    <p className="mt-2 flex items-baseline justify-between gap-2">
-                      <span className="text-[14px] font-semibold group-hover:underline">{categoryLabels[c]}</span>
-                      <span className="font-mono text-[12px] text-steel-dark">{String(count).padStart(2, "0")}</span>
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            {offers.length > 0 && (
-              <Link href="/shop?sale=1" className="group mt-6 flex min-h-[88px] items-center justify-between gap-4 bg-volt px-6 py-5 text-ink">
-                <span>
-                  <span className="display display-h2 block">Festival offers.</span>
-                  <span className="text-[14px] text-ink/80">
-                    {offers.length} pieces marked down, up to {formatPrice(bestSaving)} off. Same price in store.
-                  </span>
-                </span>
-                <ArrowIcon className="h-6 w-6 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
-            )}
-            <div className="mt-2 grid gap-2 md:mt-3 md:grid-cols-2 md:gap-3">
-              <Link href="/fit" className="group flex min-h-[88px] items-center justify-between gap-4 bg-ink px-6 py-5 text-paper">
-                <span>
-                  <span className="display display-h2 block">Build the fit.</span>
-                  <span className="text-[14px] text-paper/80">Top, bottom, layer. See it together, see the total.</span>
-                </span>
-                <ArrowIcon className="h-6 w-6 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
-              <Link href="/size-guide" className="group flex min-h-[88px] items-center justify-between gap-4 border border-ink px-6 py-5">
-                <span>
-                  <span className="display display-h2 block">Your size in cm.</span>
-                  <span className="text-[14px] text-steel-dark">Measure a piece you love once. We mark your size everywhere.</span>
-                </span>
-                <ArrowIcon className="h-6 w-6 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Trending (or honest staff picks until there's enough data) */}
-      {trendingRow.length > 0 && (
-        <section aria-labelledby="trend-title" className="pb-16 md:pb-24">
+      {/* Festival offers: only while a real sale runs */}
+      {offers.length > 0 && (
+        <section aria-labelledby="offers-title" className="section">
           <div className="container-ep">
             <div className="flex items-baseline justify-between gap-4">
-              <h2 id="trend-title" className="display display-h2">
-                {trendingTitle}
+              <h2 id="offers-title" className="display display-h1">
+                Festival offers
               </h2>
-              <Link href="/trending" className="shrink-0 text-[15px] font-semibold underline underline-offset-4">
+              <Link href="/shop?sale=1" className="shrink-0 text-[15px] font-semibold underline underline-offset-4">
                 See all
               </Link>
             </div>
-            <ul className="-mx-4 mt-8 flex snap-x gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0">
-              {trendingRow.map((p) => (
-                <li key={p.slug} className="w-[44%] shrink-0 snap-start md:w-auto">
-                  <ProductCard product={p} sizes="(min-width: 768px) 25vw, 44vw" />
+            <p className="mt-2 text-steel-dark">
+              {offers.length} pieces marked down, up to {formatPrice(bestSaving)} off. Same price in store.
+            </p>
+            <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+              {offers.slice(0, 4).map((p) => (
+                <li key={p.id}>
+                  <ProductCard product={p} sizes="(min-width: 768px) 25vw, 50vw" />
                 </li>
               ))}
             </ul>
           </div>
         </section>
       )}
-
-      {/* 04 — Price trust, as a receipt */}
-      <section aria-labelledby="price-title" className="section bg-photo">
-        <div className="container-ep">
-          <SectionIndex n="04" label="How we price" />
-          <div className="mt-10 grid gap-14 lg:grid-cols-12 lg:items-center">
-            <div className="lg:col-span-6" data-reveal>
-              <h2 id="price-title" className="display display-h1">
-                Price shown.
-                <br />
-                No DM needed.
-              </h2>
-              <p className="mt-5 max-w-[38ch] text-lg text-steel-dark">
-                No &ldquo;price in DM&rdquo;, no New Road bargaining. The number on the tag is the number you pay, and it&apos;s the same for everyone.
-              </p>
-              <ul className="mt-8 space-y-3 text-[15px]">
-                <li className="flex gap-3">
-                  <span className="index mt-1 text-steel-dark">cm</span>Chest, length and sleeve on every tag.
-                </li>
-                <li className="flex gap-3">
-                  <span className="index mt-1 text-steel-dark">qr</span>Scan and pay with the wallet you already use.
-                </li>
-                <li className="flex gap-3">
-                  <span className="index mt-1 text-steel-dark">1×</span>One helper on the floor. They won&apos;t follow you.
-                </li>
-              </ul>
-              <Link href="/how-it-works" className="group mt-10 inline-flex items-center gap-2 font-semibold uppercase tracking-[0.06em]">
-                How the store works
-                <ArrowIcon className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
-            </div>
-
-            <figure className="lg:col-span-5 lg:col-start-8" data-reveal>
-              <div className="receipt mx-auto max-w-[380px] px-6 pt-7 font-mono text-[13px] leading-relaxed shadow-[0_1px_0_rgba(0,0,0,0.06)]">
-                <p className="text-center font-semibold tracking-[0.16em]">EASYPICK</p>
-                <p className="text-center text-[11px] uppercase tracking-[0.12em] text-steel-dark">Self-checkout · {site.store.area}</p>
-                <div className="my-4 border-t border-dashed border-steel" />
-                <ul>
-                  {basics.map((p) => (
-                    <li key={p.id} className="flex items-baseline">
-                      <span className="truncate">{p.name} · M</span>
-                      <span className="leader" aria-hidden />
-                      <span className="tabular-nums">{formatPrice(p.salePrice ?? p.price)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="my-4 border-t border-dashed border-steel" />
-                <ul className="uppercase">
-                  {[
-                    ["Pick", "take your time"],
-                    ["Try", "token at the room"],
-                    ["Pay", "scan the QR"],
-                    ["Queue", "0"],
-                    ["Bargaining", "0"],
-                  ].map(([k, v]) => (
-                    <li key={k} className="flex items-baseline text-[12px] tracking-[0.06em]">
-                      <span>{k}</span>
-                      <span className="leader" aria-hidden />
-                      <span className="text-steel-dark">{v}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="my-4 border-t border-dashed border-steel" />
-                <p className="flex items-baseline text-[15px] font-semibold">
-                  <span>TOTAL</span>
-                  <span className="leader" aria-hidden />
-                  <span className="tabular-nums">{formatPrice(basics.reduce((n, p) => n + (p.salePrice ?? p.price), 0))}</span>
-                </p>
-                <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-steel-dark">VAT incl. · Paid by QR</p>
-                <p className="display mt-6 text-center text-[26px] leading-none">Pick it. Pay it. Wear it.</p>
-                <Barcode value="EASYPICK-KTM" className="mx-auto mt-4 h-8 w-40 text-ink" />
-              </div>
-              <figcaption className="sr-only">An example Easypick bill: fixed prices, paid by QR, no queue and no bargaining.</figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      {/* 05 — Next drop */}
-      <section aria-labelledby="next-title" className="on-dark section bg-ink text-paper">
-        <div className="container-ep">
-          <SectionIndex n="05" label={next ? `${next.name} · ${formatDropTime(next.releaseAt)}` : "Every other Friday"} dark />
-          <div className="mt-10 grid gap-12 lg:grid-cols-12 lg:items-end">
-            <div className="lg:col-span-7" data-reveal>
-              <h2 id="next-title" className="display display-h1">
-                Hear first.
-              </h2>
-              <p className="mt-4 max-w-[36ch] text-lg text-paper/80">One message the day before each drop. Nothing else.</p>
-              {next && (
-                <div className="mt-10">
-                  <Countdown to={next.releaseAt} label={next.name} />
-                </div>
-              )}
-            </div>
-            <div className="lg:col-span-5" data-reveal>
-              <AlertSignup dark source="home" />
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Self-checkout: the kiosk, the steps, and the Nepali line */}
       <SelfCheckout />
 
-      {/* 06 — Visit, as a shop signboard */}
-      <section aria-labelledby="visit-title" className="section">
-        <div className="container-ep">
-          <SectionIndex n="06" label="Visit the store" />
-          <div className="mt-10 grid gap-10 lg:grid-cols-12 lg:items-end">
-            <div className="lg:col-span-7" data-reveal>
-              <h2 id="visit-title">
-                <span className="sr-only">Visit the store: </span>
-                <span lang="ne" className="block font-nepali text-[clamp(4.5rem,2rem+10vw,10rem)] font-semibold leading-[0.9]">
-                  आउनुस्
-                </span>
-                <span className="display display-h1 mt-2 block">
-                  <span lang="ne-Latn">Aaunus.</span>
-                </span>
-              </h2>
-              <p className="mt-5 max-w-[38ch] text-lg text-steel-dark">
-                Just looking is fine too. One helper on the floor. Wave if you need a size.
-              </p>
-            </div>
-            <div className="lg:col-span-4 lg:col-start-9" data-reveal>
-              <VisitCard info={await getStoreInfo()} />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Our store: the physical shop */}
+      <OurStore info={await getStoreInfo()} />
 
       {/* Track an order: no account needed */}
-      <section aria-labelledby="track-title" className="border-t border-mist bg-photo py-14 md:py-20">
+      <section aria-labelledby="track-title" className="border-t border-mist py-14 md:py-20">
         <div className="container-ep grid gap-8 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-4">
             <h2 id="track-title" className="display display-h2">
