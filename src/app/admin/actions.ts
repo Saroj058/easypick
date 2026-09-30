@@ -301,6 +301,22 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
   if (salePrice !== undefined && !(salePrice > 0 && salePrice < price)) return { status: "error", message: "Sale price must be lower than the price." };
   if (!STATUSES.includes(status)) return { status: "error", message: "Choose a status." };
 
+  // The Vault
+  const vault = form.get("vault") === "on";
+  const brand = str(form, "brand", 40) || undefined;
+  const original = form.get("original") === "on";
+  const story = str(form, "story", 600) || undefined;
+  const noRaw = str(form, "editionNo");
+  const ofRaw = str(form, "editionOf");
+  let edition: { no: number; of: number } | undefined;
+  if (noRaw || ofRaw) {
+    const no = int(form, "editionNo");
+    const of = int(form, "editionOf");
+    if (!(no >= 1 && of >= 1 && no <= of)) return { status: "error", message: "Piece number must be between 1 and how many were made." };
+    edition = { no, of };
+  }
+  if (original && !brand) return { status: "error", message: "Add the brand before tagging it Original." };
+
   let photoSrc: string | null = null;
   const photo = form.get("photo");
   if (photo instanceof File && photo.size > 0) {
@@ -319,6 +335,11 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     p.staffPick = form.get("staffPick") === "on" || undefined;
     p.hideFromTrending = form.get("hideFromTrending") === "on" || undefined;
     p.shortDescription = str(form, "shortDescription", 300) || p.shortDescription;
+    p.vault = vault || undefined;
+    p.brand = brand;
+    p.original = original || undefined;
+    p.edition = edition;
+    p.story = story;
     if (photoSrc) {
       const front = { src: photoSrc, alt: `${p.name}, front`, kind: "front" as const };
       const i = p.images.findIndex((img) => img.kind === "front");
@@ -333,6 +354,8 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     photo: photoSrc ? "changed" : undefined,
     staffPick: Boolean(product.staffPick) !== (form.get("staffPick") === "on") ? form.get("staffPick") === "on" : undefined,
     hiddenFromTrending: Boolean(product.hideFromTrending) !== (form.get("hideFromTrending") === "on") ? form.get("hideFromTrending") === "on" : undefined,
+    vault: Boolean(product.vault) !== vault ? vault : undefined,
+    original: Boolean(product.original) !== original ? original : undefined,
   });
   catalogueChanged();
   updateTag("trending");

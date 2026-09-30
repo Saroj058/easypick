@@ -63,6 +63,16 @@ export interface Product {
   hideFromTrending?: boolean;
   /** Worked out when the catalogue is read: added in the last 30 days (and within two drops). */
   isNew?: boolean;
+  /** The Vault: premium pieces shown in their own section on the home page. */
+  vault?: boolean;
+  /** Maker, e.g. "Nike". Shown on Vault pieces. */
+  brand?: string;
+  /** The owner has proof it came from the brand or an authorised seller; only then is it tagged "Original". */
+  original?: boolean;
+  /** A numbered run, e.g. piece 7 of 20. */
+  edition?: { no: number; of: number };
+  /** A few lines about the piece, shown on its page. */
+  story?: string;
 }
 
 export interface Drop {

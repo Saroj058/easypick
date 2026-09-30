@@ -36,7 +36,7 @@ const sorts = [
   { key: "price-desc", label: "Price: high to low" },
 ];
 
-type Filters = { category?: string; size?: string; colour?: string; price?: string; fit?: string; sort?: string; sale?: string; new?: string; page?: string };
+type Filters = { category?: string; size?: string; colour?: string; price?: string; fit?: string; sort?: string; sale?: string; new?: string; vault?: string; brand?: string; page?: string };
 
 /** Pieces per page: enough to browse, small enough for a phone on mobile data. */
 const PER_PAGE = 48;
@@ -81,6 +81,8 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
     fit: one(sp.fit),
     sale: one(sp.sale) === "1" ? "1" : undefined,
     new: one(sp.new) === "1" ? "1" : undefined,
+    vault: one(sp.vault) === "1" ? "1" : undefined,
+    brand: one(sp.brand),
     page: one(sp.page),
   };
 
@@ -92,6 +94,8 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   let list = all.filter((p) => p.status !== "scheduled");
   if (f.sale) list = list.filter((p) => p.salePrice);
   if (f.new) list = list.filter((p) => p.isNew);
+  if (f.vault) list = list.filter((p) => p.vault);
+  if (f.brand) list = list.filter((p) => p.brand?.toLowerCase() === f.brand?.toLowerCase());
   if (f.category) list = list.filter((p) => p.category === f.category);
   if (f.fit) list = list.filter((p) => p.fit === f.fit);
   if (f.colour) list = list.filter((p) => p.colours.some((c) => c.name === f.colour));
@@ -103,7 +107,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   // Sold out sinks to the bottom, but keeps its page for sharing and search.
   list = [...list].sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
 
-  const active = Boolean(f.category || f.size || f.colour || f.price || f.fit || f.sale || f.new);
+  const active = Boolean(f.category || f.size || f.colour || f.price || f.fit || f.sale || f.new || f.vault || f.brand);
   const anyNew = all.some((p) => p.isNew && p.status !== "scheduled");
   const onSale = all.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = onSale.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -115,7 +119,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   return (
     <div className="container-ep pb-24 pt-10 md:pt-16">
       <h1 className="display text-[40px] md:text-[72px]">
-        {f.sale ? "On sale" : f.new ? "New in" : f.category ? categoryLabels[f.category as Category] ?? "Shop all" : "Shop all"}
+        {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.category ? categoryLabels[f.category as Category] ?? "Shop all" : "Shop all"}
       </h1>
       {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
       <FestivalNotice className="mt-4 max-w-2xl" />

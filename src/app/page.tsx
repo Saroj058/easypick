@@ -7,6 +7,7 @@ import { OccasionFits } from "@/components/home/occasion-fits";
 import { OurStore } from "@/components/home/our-store";
 import { PriceShown } from "@/components/home/price-shown";
 import { Rail } from "@/components/home/rail";
+import { Vault } from "@/components/home/vault";
 
 import { ProductCard } from "@/components/product-card";
 import { RevealRoot } from "@/components/reveal-root";
@@ -193,6 +194,9 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* The Vault: original brands and numbered pieces */}
+      <Vault products={products} />
 
       {/* Festival offers: only while a real sale runs */}
       {offers.length > 0 && (

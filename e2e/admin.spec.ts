@@ -39,3 +39,48 @@ test("the admin isn't reachable without signing in", async ({ request }) => {
   const live = await request.get("/admin/live");
   expect(live.status()).toBe(401);
 });
+
+test("the owner puts a piece in The Vault and it shows on the home page", async ({ page }) => {
+  await page.goto("/admin/login");
+  await expect(async () => {
+    await page.getByLabel("Username").fill("e2e-owner");
+    await page.getByLabel("Password", { exact: true }).fill("e2e-owner-password");
+    await page.getByRole("button", { name: /Sign in/ }).click();
+    await expect(page).toHaveURL(/\/admin$/, { timeout: 5000 });
+  }).toPass({ timeout: 60_000 });
+
+  await page.goto("/admin/products/coach-jacket");
+  const vault = page.getByRole("group", { name: "The Vault" });
+  await vault.getByLabel("Show in The Vault").check();
+  await vault.getByLabel(/Brand/).fill("");
+  await vault.getByLabel(/Tag it/).check();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Add the brand before tagging it Original.")).toBeVisible();
+
+  await vault.getByLabel(/Brand/).fill("Easypick Studio");
+  await vault.getByLabel(/Piece number/).fill("7");
+  await vault.getByLabel("Of how many").fill("20");
+  await vault.getByLabel(/Its story/).fill("Cut from the last roll of the Drop 01 nylon.");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+
+  await page.goto("/");
+  const section = page.getByRole("region", { name: "The Vault" });
+  await expect(section).toBeVisible();
+  await expect(section.getByText("07 / 20")).toBeVisible();
+  await expect(section.getByRole("link", { name: /Easypick Studio/ }).first()).toBeVisible();
+
+  await page.goto("/product/coach-jacket");
+  await expect(page.getByText("Cut from the last roll of the Drop 01 nylon.")).toBeVisible();
+
+  // Put it back so other tests see the usual catalogue.
+  await page.goto("/admin/products/coach-jacket");
+  await vault.getByLabel("Show in The Vault").uncheck();
+  await vault.getByLabel(/Tag it/).uncheck();
+  await vault.getByLabel(/Brand/).fill("");
+  await vault.getByLabel(/Piece number/).fill("");
+  await vault.getByLabel("Of how many").fill("");
+  await vault.getByLabel(/Its story/).fill("");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+});

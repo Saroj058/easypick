@@ -152,8 +152,20 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               )}
               {/* On phones and tablets the tag hangs down beside the title, so the title leaves room. */}
               <div className="pr-[128px] md:pr-[196px] lg:pr-0">
+                {(product.brand || product.edition) && (
+                  <p className="mb-2 flex flex-wrap items-center gap-x-3 font-mono text-[12px] uppercase tracking-[0.14em] text-steel-dark">
+                    {product.brand && <span>{product.brand}</span>}
+                    {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
+                    {product.edition && (
+                      <span className="text-ink">
+                        {String(product.edition.no).padStart(2, "0")} / {String(product.edition.of).padStart(2, "0")}
+                      </span>
+                    )}
+                  </p>
+                )}
                 <h1 className="display text-[40px] md:text-[56px]">{product.name}</h1>
                 <p className="mt-2 text-steel-dark">{product.shortDescription}</p>
+                {product.story && <p className="mt-4 max-w-[46ch] whitespace-pre-line text-[15px] leading-relaxed">{product.story}</p>}
               </div>
               <FestivalNotice className="mt-4" />
 

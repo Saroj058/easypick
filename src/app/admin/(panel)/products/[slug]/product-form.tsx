@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { ProductImage } from "@/components/product-image";
 
@@ -23,7 +23,15 @@ export function ProductForm({ product }: { product: Product }) {
   const front = product.images.find((i) => i.kind === "front") ?? product.images[0];
 
   return (
-    <form action={action} className="mt-8 space-y-10">
+    <form
+      // Submitted by hand so a failed save keeps what was typed (a form action resets the fields).
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className="mt-8 space-y-10"
+    >
       <input type="hidden" name="slug" value={product.slug} />
 
       <section aria-labelledby="photo-h" className="flex items-start gap-5">
@@ -96,6 +104,48 @@ export function ProductForm({ product }: { product: Product }) {
         </label>
         <input id="shortDescription" name="shortDescription" maxLength={300} defaultValue={product.shortDescription} className={input} />
       </div>
+
+      <fieldset className="space-y-4">
+        <legend className="text-lg font-semibold">The Vault</legend>
+        <p className="text-[14px] text-steel-dark">Premium pieces: original brands and numbered runs, in their own dark section on the home page.</p>
+        <label className="flex min-h-11 items-center gap-3 text-[15px]">
+          <input type="checkbox" name="vault" defaultChecked={Boolean(product.vault)} className="h-5 w-5 accent-ink" />
+          Show in The Vault
+        </label>
+        <div>
+          <label htmlFor="brand" className="block text-sm font-semibold">
+            Brand <span className="font-normal text-steel-dark">(e.g. Nike)</span>
+          </label>
+          <input id="brand" name="brand" maxLength={40} defaultValue={product.brand ?? ""} className={input} />
+        </div>
+        <label className="flex min-h-11 items-start gap-3 text-[15px]">
+          <input type="checkbox" name="original" defaultChecked={Boolean(product.original)} className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
+          <span>
+            Tag it &ldquo;Original&rdquo;
+            <span className="block text-[13px] text-steel-dark">Only when you have the invoice from the brand or an authorised seller.</span>
+          </span>
+        </label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="editionNo" className="block text-sm font-semibold">
+              Piece number <span className="font-normal text-steel-dark">(optional)</span>
+            </label>
+            <input id="editionNo" name="editionNo" type="number" inputMode="numeric" min={1} defaultValue={product.edition?.no ?? ""} className={`${input} font-mono`} />
+          </div>
+          <div>
+            <label htmlFor="editionOf" className="block text-sm font-semibold">
+              Of how many
+            </label>
+            <input id="editionOf" name="editionOf" type="number" inputMode="numeric" min={1} defaultValue={product.edition?.of ?? ""} className={`${input} font-mono`} />
+          </div>
+        </div>
+        <div>
+          <label htmlFor="story" className="block text-sm font-semibold">
+            Its story <span className="font-normal text-steel-dark">(a few lines, shown on its page)</span>
+          </label>
+          <textarea id="story" name="story" maxLength={600} rows={3} defaultValue={product.story ?? ""} className="mt-2 w-full rounded-[2px] border border-mist bg-paper px-4 py-3 text-base outline-none focus:border-ink" />
+        </div>
+      </fieldset>
 
       <fieldset>
         <legend className="text-lg font-semibold">Trending page</legend>
