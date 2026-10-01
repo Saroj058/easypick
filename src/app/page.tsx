@@ -106,11 +106,7 @@ export default async function HomePage() {
 
           {/* Words */}
           <div className="flex flex-col justify-end lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:justify-center lg:pb-10">
-            <p className="eyebrow flex items-center gap-2 text-paper/80">
-              <span className="h-1.5 w-1.5 bg-paper" aria-hidden />
-              {current ? `${current.name} · Out now · Kathmandu` : next ? `${next.name} · ${formatDropTime(next.releaseAt)}` : "Kathmandu"}
-            </p>
-            <h1 id="hero-title" className="display display-hero mt-4">
+            <h1 id="hero-title" className="display display-hero">
               {current ? (
                 <>
                   Drop {current.slug}.
