@@ -37,8 +37,9 @@ function luminance(hex: string) {
 
 const STOREY = 7;
 /** The two storeys of the hero's shelf: what hangs on the upper rail, and on the lower one. */
-const UPPER: Category[] = ["tees", "hoodies", "co-ords", "jackets"];
-const LOWER: Category[] = ["bottoms", "accessories"];
+// Jackets hang with the bottoms so the lower rail isn't only trousers and caps.
+const UPPER: Category[] = ["tees", "hoodies", "co-ords"];
+const LOWER: Category[] = ["bottoms", "jackets", "accessories"];
 
 /**
  * Up to seven live pieces for one storey, kinds mixed along the rail, each in a colour that
@@ -106,7 +107,11 @@ export default async function HomePage() {
 
           {/* Words */}
           <div className="flex flex-col justify-end lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:justify-center lg:pb-10">
-            <h1 id="hero-title" className="display display-hero">
+            <p className="eyebrow flex items-center gap-2 text-paper/80">
+              <span className="h-1.5 w-1.5 bg-paper" aria-hidden />
+              Pick it. Pay it. Wear it.
+            </p>
+            <h1 id="hero-title" className="display display-hero mt-4">
               {current ? (
                 <>
                   Drop {current.slug}.

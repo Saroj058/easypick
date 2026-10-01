@@ -44,7 +44,7 @@ function Hanger({ category }: { category: Category }) {
 }
 
 /**
- * A two-storey shelf: tops on the upper rail, bottoms and extras on the lower one, up to
+ * A two-storey shelf: tops on the upper rail; bottoms, jackets and extras on the lower one, up to
  * seven pieces each. Tap or hover a piece to bring it forward; its colour and the sizes it
  * comes in show at the bottom left, and its tag (price, measurements in cm) at the bottom right.
  */
@@ -89,14 +89,14 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
   return (
     <>
       {storey(top, 0, "top-[6%]", "Tops on the upper rail")}
-      {storey(bottom, top.length, "top-[44%] md:top-[47%]", "Bottoms and extras on the lower rail")}
+      {storey(bottom, top.length, "top-[44%] md:top-[47%]", "Bottoms, jackets and extras on the lower rail")}
 
       <p className="sr-only" aria-live="polite">
         {sel.product.name}, {sel.colour.name}, {formatPrice(sel.product.salePrice ?? sel.product.price)}
       </p>
 
       {/* The chosen piece: its colour and sizes on the left, its tag on the right (larger screens) */}
-      <div className="absolute inset-x-5 bottom-5 z-20 hidden items-end justify-between gap-6 md:flex lg:inset-x-6 lg:bottom-6">
+      <div className="pointer-events-none absolute inset-x-5 bottom-5 z-20 hidden items-end justify-between gap-6 md:flex lg:inset-x-6 lg:bottom-6">
         <div className="min-w-0">
           <p className="truncate text-lg font-semibold">{sel.product.name}</p>
           <p className="mt-2 flex items-center gap-2 text-[14px] text-paper/80">
@@ -121,14 +121,14 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
                   ),
                 )}
           </p>
-          <Link href={`/product/${sel.product.slug}`} className="group mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
+          <Link href={`/product/${sel.product.slug}`} className="group pointer-events-auto mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
             View piece
             <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
           </Link>
         </div>
         {/* The tag: the piece's fixed price and its measurements in cm */}
-        <div className="w-[132px] shrink-0" aria-hidden>
-          <div className="w-[200px] origin-bottom-left rotate-[3deg] scale-[0.66]">
+        <div className="relative h-[130px] w-[100px] shrink-0" aria-hidden>
+          <div className="absolute bottom-0 left-0 w-[200px] origin-bottom-left rotate-[3deg] scale-50">
             <HangTag key={sel.product.id} product={sel.product} colour={sel.colour.name} className="animate-fade-up" />
           </div>
         </div>
