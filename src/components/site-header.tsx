@@ -1,14 +1,14 @@
 "use client";
 
 import { MotionConfig, motion, useMotionValueEvent, useScroll, type Variants } from "framer-motion";
-import { Ellipsis, Heart, House, Search } from "lucide-react";
+import { Ellipsis, Shirt } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { useBag } from "./bag-provider";
-import { BagIcon, ShopIcon, UserIcon } from "./icons";
+import { BagIcon, GiftIcon, ShopIcon, UserIcon } from "./icons";
 import { MobileMenu } from "./mobile-menu";
 import { SearchButton } from "./search";
 import { useMe } from "./session";
@@ -32,23 +32,25 @@ import {
   UserIcon as UserHugeIcon,
 } from "@hugeicons/core-free-icons";
 
+// One menu, named for what customers want to do (docs/BLUEPRINT.md, section 05).
 const primary = [
-  { href: "/new", label: "New" },
-  { href: "/trending", label: "Trending" },
   { href: "/shop", label: "Shop" },
-  { href: "/gift", label: "Gifts" },
+  { href: "/fits", label: "Fits" },
+  { href: "/gift", label: "Gift" },
+  { href: "/shop?vault=1", label: "The Vault" },
   { href: "/visit", label: "Visit" },
 ];
 
-// Everything that isn't in the main links, shown in the dropdown once the header becomes pills.
+// Everything inside those five, shown in the dropdown once the header becomes pills.
 const menu: SmoothDropdownItem[] = [
-  { id: "/drops", href: "/drops", label: "Drops", icon: Calendar03Icon },
+  { id: "/new", href: "/new", label: "New in", icon: Calendar03Icon },
   { id: "/trending", href: "/trending", label: "Trending", icon: FireIcon },
+  { id: "/drops", href: "/drops", label: "Drops", icon: Calendar03Icon },
+  { id: "/fit", href: "/fit", label: "Build a fit", icon: HangerIcon },
   { id: "/gift-cards", href: "/gift-cards", label: "Gift cards", icon: GiftCardIcon },
   { id: "/saved", href: "/saved", label: "Saved", icon: FavouriteIcon },
-  { id: "/fit", href: "/fit", label: "Build a fit", icon: HangerIcon },
-  { id: "/how-it-works", href: "/how-it-works", label: "How it works", icon: HelpCircleIcon },
   { id: "/size-guide", href: "/size-guide", label: "Your size in cm", icon: RulerIcon },
+  { id: "/how-it-works", href: "/how-it-works", label: "How the store works", icon: HelpCircleIcon },
   { id: "/alerts", href: "/alerts", label: "Drop alerts", icon: Notification01Icon },
   { id: "/track", href: "/track", label: "Track an order", icon: DeliveryTracking01Icon },
   { id: "/about", href: "/about", label: "About", icon: InformationCircleIcon },
@@ -184,15 +186,16 @@ export function SiteHeader() {
 
 const tabClass = "flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold uppercase tracking-[0.06em]";
 
-/** Bottom tab bar on phones: Home · Shop · Search · Saved · Bag. Everything else is in the menu. */
+/** Bottom tab bar on phones: Shop · Fits · Gift · Bag · Account. The Vault and Visit are in the menu. */
 export function MobileTabBar() {
   const pathname = usePathname();
   const { count, ready } = useBag();
+  const me = useMe();
   const [typing, setTyping] = useState(false);
   const tabs = [
-    { href: "/", label: "Home", icon: <House className="h-5 w-5" strokeWidth={1.8} aria-hidden /> },
     { href: "/shop", label: "Shop", icon: <ShopIcon className="h-5 w-5" /> },
-    { href: "/saved", label: "Saved", icon: <Heart className="h-5 w-5" strokeWidth={1.8} aria-hidden /> },
+    { href: "/fits", label: "Fits", icon: <Shirt className="h-5 w-5" strokeWidth={1.8} aria-hidden /> },
+    { href: "/gift", label: "Gift", icon: <GiftIcon className="h-5 w-5" /> },
   ];
 
   // Slide away while a text field has focus, so it never floats above the keyboard.
@@ -217,16 +220,9 @@ export function MobileTabBar() {
       className={`fixed inset-x-0 bottom-0 z-40 border-t border-mist bg-paper pb-[env(safe-area-inset-bottom)] transition-transform duration-200 lg:hidden ${typing ? "translate-y-full" : ""}`}
     >
       <ul className="grid grid-cols-5">
-        {tabs.slice(0, 2).map((t) => (
-          <Tab key={t.href} {...t} active={t.href === "/" ? pathname === "/" : pathname.startsWith(t.href)} />
+        {tabs.map((t) => (
+          <Tab key={t.href} {...t} active={pathname === t.href || pathname.startsWith(`${t.href}/`) || (t.href === "/fits" && pathname === "/fit")} />
         ))}
-        <li>
-          <button type="button" onClick={() => window.dispatchEvent(new Event("ep-open-search"))} className={`${tabClass} text-steel-dark`}>
-            <Search className="h-5 w-5" strokeWidth={1.8} aria-hidden />
-            Search
-          </button>
-        </li>
-        <Tab {...tabs[2]} active={pathname.startsWith("/saved")} />
         <li>
           <Link
             href="/bag"
@@ -243,6 +239,7 @@ export function MobileTabBar() {
             )}
           </Link>
         </li>
+        <Tab href={me ? "/account" : "/login"} label="Account" icon={<UserIcon className="h-5 w-5" />} active={pathname.startsWith("/account") || pathname.startsWith("/login")} />
       </ul>
     </nav>
   );

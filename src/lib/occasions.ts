@@ -26,7 +26,7 @@ const PLAN = [
   { key: "tihar", label: "Tihar", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
   { key: "roadtrip", label: "Road trip", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
   { key: "bike", label: "Bike ride", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
-  { key: "futsal", label: "Futsal", slots: [["tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
+  { key: "weekend", label: "Weekend", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
   { key: "family", label: "Family dinner", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
   { key: "photoshoot", label: "Photoshoot", slots: [["jackets"], ["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
   { key: "winter", label: "Winter day", slots: [["jackets"], ["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
@@ -86,6 +86,22 @@ function toPiece(p: Product, tone: Tone, slot: number, pickedColour?: string): L
     measurements: p.measurements,
     sizes,
   };
+}
+
+/** The six occasions the blueprint launches with (docs/BLUEPRINT.md, section 07). */
+const LAUNCH: OccasionKey[] = ["college", "cafe", "date", "party", "dashain", "weekend"];
+
+/**
+ * The fits to show. Once the owner has set any in /admin/looks, only those show (they are
+ * the curated ones). Until then the six launch occasions are picked from the rack, and the
+ * page says "ready-made", not "curated".
+ */
+export function designerFits(products: Product[], saved: SavedLooks = {}): { looks: Look[]; curated: boolean } {
+  const set = new Set(Object.entries(saved).filter(([, v]) => v && v.pieces.length >= 2).map(([k]) => k));
+  const all = buildLooks(products, saved);
+  const mine = all.filter((l) => set.has(l.key));
+  if (mine.length > 0) return { looks: mine, curated: true };
+  return { looks: all.filter((l) => LAUNCH.includes(l.key)), curated: false };
 }
 
 export function buildLooks(products: Product[], saved: SavedLooks = {}): Look[] {

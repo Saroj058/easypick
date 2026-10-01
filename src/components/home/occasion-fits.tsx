@@ -44,8 +44,8 @@ function anchor(slot: SlotKey, side: "left" | "right", layered: boolean): { x: n
   return { x: x(36), y: 78 };
 }
 
-/** The wide-screen stage: its height, the figure's top and width, and how far from the centre line the tags start. */
-const STAGE = { h: 460, top: 58, w: 216, tagAt: 156 };
+/** The wide-screen stage (its height matches the list's xl:h-[480px]): its height, the figure's top and width, and how far from the centre line the tags start. */
+const STAGE = { h: 480, top: 62, w: 216, tagAt: 156 };
 
 const badge = "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-ink bg-volt font-mono text-[11px] font-semibold leading-none text-ink";
 
@@ -65,7 +65,7 @@ function Sizes({ piece, size, onPick }: { piece: LookPiece; size: Size | null; o
             aria-label={`${s.size}${out ? ", sold out" : ""}`}
             disabled={out}
             onClick={() => onPick(s.size)}
-            className={`h-10 min-w-9 border px-1.5 font-mono text-[13px] font-semibold sm:min-w-10 sm:px-2 xl:h-9 xl:min-w-9 ${
+            className={`h-11 min-w-11 border px-1 font-mono text-[13px] font-semibold ${
               on ? "border-ink bg-ink text-paper" : out ? "border-mist bg-photo text-[#aeaeb2] line-through" : "border-mist hover:border-ink"
             }`}
           >
@@ -83,7 +83,7 @@ const Chevron = ({ up = false }: { up?: boolean }) => (
   </svg>
 );
 
-export function OccasionFits({ looks }: { looks: Look[] }) {
+export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boolean }) {
   const addToBagOrLogin = useAddToBag();
   const profile = useFitProfile();
   const [key, setKey] = useState(looks[0]?.key);
@@ -121,6 +121,8 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
     setPicked((m) => ({ ...m, [id(p)]: s }));
     setAdded(false);
   };
+  // The side list fits about nine occasions on a wide screen; longer lists get scroll buttons.
+  const long = looks.length > 9;
   /** The up and down buttons beside the list (it also scrolls by touch, wheel and keys). */
   const scrollList = (dir: 1 | -1) => listRef.current?.scrollBy({ top: dir * 176, left: dir * 240, behavior: "smooth" });
 
@@ -166,7 +168,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
           <h2 id="occasion-title" className="display text-[clamp(2.25rem,1.6rem+2.4vw,3.75rem)] leading-[0.92]">
             Designer Fits
           </h2>
-          <p className="mt-1.5 text-[15px] text-steel-dark">Curated combinations for every occasion.</p>
+          <p className="mt-1.5 text-[15px] text-steel-dark">{curated ? "Curated combinations for every occasion." : "Ready-made combinations for every occasion."}</p>
         </div>
         <div className="md:w-[320px] md:shrink-0">
           <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Or make it yours</p>
@@ -191,12 +193,12 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
 
       <div className="mt-2 xl:grid xl:grid-cols-[208px_minmax(0,1fr)] xl:gap-3">
         {/* The occasions: a list down the side on wide screens, a row to swipe on small ones. */}
-        <div className="relative xl:h-[460px]">
+        <div className="relative xl:h-[480px]">
           <div
             ref={listRef}
             role="radiogroup"
             aria-labelledby="occasion-title"
-            className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 xl:h-full xl:flex-col xl:gap-1 xl:overflow-y-auto xl:overflow-x-hidden xl:py-10"
+            className={`no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 xl:h-full xl:flex-col xl:gap-1 xl:overflow-y-auto xl:overflow-x-hidden ${long ? "xl:py-12" : ""}`}
           >
             {looks.map((l, i) => {
               const on = l.key === look.key;
@@ -211,7 +213,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
                     setAdded(false);
                     e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
                   }}
-                  className={`flex h-11 shrink-0 items-center gap-3 whitespace-nowrap border px-4 text-left text-[15px] font-semibold xl:h-10 xl:w-full xl:text-[14px] ${
+                  className={`flex h-11 shrink-0 items-center gap-3 whitespace-nowrap border px-4 text-left text-[15px] font-semibold xl:w-full xl:text-[14px] ${
                     on ? "border-ink bg-ink text-paper" : "border-mist bg-paper hover:border-ink"
                   }`}
                 >
@@ -224,28 +226,32 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
               );
             })}
           </div>
-          {/* Scroll buttons, over a fade so the list reads as longer than it shows. */}
-          <button
-            type="button"
-            onClick={() => scrollList(-1)}
-            aria-label="Earlier occasions"
-            className="absolute inset-x-0 top-0 hidden h-9 items-center justify-center border border-mist bg-paper hover:border-ink xl:flex"
-          >
-            <Chevron up />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollList(1)}
-            aria-label="More occasions"
-            className="absolute inset-x-0 bottom-0 hidden h-9 items-center justify-center gap-2 border border-mist bg-paper text-[13px] font-semibold hover:border-ink xl:flex"
-          >
-            {looks.length} fits <Chevron />
-          </button>
+          {/* Scroll buttons, only when the list is longer than the stage is tall. */}
+          {long && (
+            <>
+              <button
+                type="button"
+                onClick={() => scrollList(-1)}
+                aria-label="Earlier occasions"
+                className="absolute inset-x-0 top-0 hidden h-11 items-center justify-center border border-mist bg-paper hover:border-ink xl:flex"
+              >
+                <Chevron up />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollList(1)}
+                aria-label="More occasions"
+                className="absolute inset-x-0 bottom-0 hidden h-11 items-center justify-center gap-2 border border-mist bg-paper text-[13px] font-semibold hover:border-ink xl:flex"
+              >
+                {looks.length} fits <Chevron />
+              </button>
+            </>
+          )}
         </div>
 
         <div>
           {/* Phones, tablets and small laptops: the figure on the left, its tags stacked on the right. */}
-          <div className="mt-3 grid grid-cols-[42%_minmax(0,1fr)] items-center gap-2 bg-photo p-3 sm:gap-6 sm:p-6 xl:hidden">
+          <div className="mt-3 grid grid-cols-[32%_minmax(0,1fr)] items-center gap-2 bg-photo p-3 sm:grid-cols-[38%_minmax(0,1fr)] sm:gap-6 sm:p-6 xl:hidden">
             <div className="pt-[12%]">{figure}</div>
             <ul className="grid gap-2">
               {worn.map((w) => (

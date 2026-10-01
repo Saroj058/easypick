@@ -20,7 +20,7 @@ import { jsonLd } from "@/lib/json-ld";
 import { site } from "@/lib/site";
 import { getDropTimeline, getHomeStats, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
-import { buildLooks } from "@/lib/occasions";
+import { designerFits } from "@/lib/occasions";
 import type { Category, Product } from "@/lib/types";
 
 export const revalidate = 60;
@@ -91,7 +91,7 @@ export default async function HomePage() {
   const offers = products.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
-  const looks = buildLooks(products, await getSavedLooks());
+  const { looks, curated } = designerFits(products, await getSavedLooks());
 
   return (
     <>
@@ -192,10 +192,39 @@ export default async function HomePage() {
       {looks.length > 0 && (
         <section aria-labelledby="occasion-title" className="py-10 md:py-14">
           <div className="container-ep">
-            <OccasionFits looks={looks} />
+            <OccasionFits looks={looks} curated={curated} />
           </div>
         </section>
       )}
+
+      {/* Find a gift and gift cards (docs/BLUEPRINT.md, home page order) */}
+      <section aria-labelledby="gift-title" className="border-t border-mist py-10 md:py-14">
+        <div className="container-ep">
+          <h2 id="gift-title" className="display text-[clamp(2.25rem,1.6rem+2.4vw,3.75rem)] leading-[0.92]">
+            Buying for someone?
+          </h2>
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
+            <Link href="/gift" className="group flex min-h-[112px] items-center justify-between gap-4 bg-ink px-6 py-5 text-paper">
+              <span>
+                <span className="block text-xl font-bold">Send a gift</span>
+                <span className="mt-1 block text-[15px] text-paper/75">You pay. They pick the size.</span>
+              </span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="shrink-0 transition-transform duration-200 group-hover:translate-x-1">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </Link>
+            <Link href="/gift-cards" className="group flex min-h-[112px] items-center justify-between gap-4 border border-ink px-6 py-5">
+              <span>
+                <span className="block text-xl font-bold">Gift cards</span>
+                <span className="mt-1 block text-[15px] text-steel-dark">Rs 1,000 to 20,000. Sent by email or SMS.</span>
+              </span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="shrink-0 transition-transform duration-200 group-hover:translate-x-1">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* The Vault: original brands and numbered pieces */}
       <Vault products={products} />

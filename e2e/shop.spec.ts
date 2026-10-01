@@ -27,8 +27,12 @@ test("home: the rail, My size and Designer Fits @phone", async ({ page }) => {
 
   const fits = page.getByRole("region", { name: "Designer Fits" });
   await fits.scrollIntoViewIfNeeded();
-  await fits.getByRole("radio", { name: /Casual/ }).click();
-  await expect(fits.getByRole("radio", { name: /Casual/ })).toHaveAttribute("aria-checked", "true");
+  // Pick another occasion when there is one (the admin test may have curated a single fit meanwhile).
+  const occasions = fits.getByRole("radiogroup").first().getByRole("radio");
+  if ((await occasions.count()) > 1) {
+    await occasions.nth(1).click();
+    await expect(occasions.nth(1)).toHaveAttribute("aria-checked", "true");
+  }
   await expect(fits.getByRole("button", { name: /Add the fit · Rs/ })).toBeEnabled();
   await fits.getByRole("link", { name: "Build your own fit" }).click();
   await page.waitForURL(/\/fit\?.*(top|bottom)=/, { timeout: 60_000 }); // the first visit compiles /fit in dev
@@ -49,13 +53,23 @@ test("Buy now needs no account and goes to payment", async ({ page }) => {
   await page.waitForURL(/esewa|\/order\//, { timeout: 30_000, waitUntil: "commit" });
 });
 
-test("Add to bag asks for a login and offers Buy now instead", async ({ page }) => {
+test("guests can use the bag; the phone code is asked for only at checkout", async ({ page }) => {
   await page.goto("/product/everyday-hoodie");
   await pickInStockSize(page);
   await page.getByRole("button", { name: /Add to bag/ }).first().click();
-  await expect(page).toHaveURL(/\/login\?reason=bag/);
-  await page.getByRole("link", { name: /now, no account/ }).click();
-  await expect(page).toHaveURL(/\/buy\/everyday-hoodie\?sku=/);
+  await expect(page).toHaveURL(/\/product\/everyday-hoodie/); // no login wall
+  await expect(page.getByText(/Everyday Hoodie.*added to bag/)).toBeAttached(); // the page confirms it, where they are
+
+  await page.goto("/bag");
+  await expect(page.getByText("Everyday Hoodie").first()).toBeVisible();
+  await expect(page.getByText(/code at checkout/)).toBeVisible();
+  await page.getByRole("link", { name: "Checkout", exact: true }).click();
+  await expect(page).toHaveURL(/\/login\?reason=bag&next=(%2F|\/)checkout/);
+  await expect(page.getByRole("heading", { name: "Confirm your number." })).toBeVisible();
+
+  // Still there after the detour (and after a reload).
+  await page.goto("/bag");
+  await expect(page.getByText("Everyday Hoodie").first()).toBeVisible();
 });
 
 test("track an order page rejects wrong details", async ({ page }) => {
@@ -90,18 +104,21 @@ async function pickInStockSize(page: Page) {
 
 test("phone menu and tab bar @phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/shop");
+  // Shop · Fits · Gift · Bag · Account (docs/BLUEPRINT.md, section 05).
   const tabs = page.getByRole("navigation", { name: "Quick links" });
-  await expect(tabs.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
-  await expect(async () => {
-    await tabs.getByRole("button", { name: "Search" }).click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1000 });
-  }).toPass();
-  await page.keyboard.press("Escape");
+  await expect(tabs.getByRole("link")).toHaveText(["Shop", "Fits", "Gift", /Bag/, "Account"]);
+  await expect(tabs.getByRole("link", { name: "Shop" })).toHaveAttribute("aria-current", "page");
+  await tabs.getByRole("link", { name: "Fits" }).click();
+  await page.waitForURL(/\/fits$/, { timeout: 60_000 });
+  await expect(page.getByRole("heading", { name: "Designer Fits" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Menu" }).click();
+  await expect(async () => {
+    await page.getByRole("button", { name: "Menu" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1500 });
+  }).toPass();
   const menu = page.getByRole("dialog");
-  await expect(menu.getByText("Help me choose")).toBeVisible();
+  for (const group of ["Shop", "Fits", "Gift", "The Vault", "Visit"]) await expect(menu.getByText(group, { exact: true }).first()).toBeVisible();
   await menu.getByRole("link", { name: "Track an order" }).click();
   await expect(page).toHaveURL(/\/track$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -143,7 +160,7 @@ test("drop pages: the run, what's left, and the drops list @phone", async ({ pag
   expect(story.headers()["content-type"]).toContain("image/png");
 });
 
-test("signed out: the heart saves a piece instead of asking for a login", async ({ page }) => {
+test("the heart saves a piece (it never adds to the bag or asks for a login)", async ({ page }) => {
   await page.goto("/shop");
   const heart = page.getByRole("button", { name: "Save Everyday Hoodie" });
   await expect(async () => {

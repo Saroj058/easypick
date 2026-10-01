@@ -165,7 +165,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
                   <Link
                     href={href(f, { [key]: undefined })}
                     scroll={false}
-                    className="inline-flex h-9 items-center gap-2 rounded-[2px] bg-photo px-3 text-[13px] font-semibold hover:bg-mist"
+                    className="inline-flex h-11 items-center gap-2 rounded-[2px] bg-photo px-3 text-[13px] font-semibold hover:bg-mist"
                   >
                     {label}
                     <span aria-hidden>×</span>

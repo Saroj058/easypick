@@ -15,7 +15,7 @@ const chip = "inline-flex shrink-0 items-center whitespace-nowrap border border-
 
 function Chip({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} data-rail-link className={`${chip} h-10`}>
+    <Link href={href} data-rail-link className={`${chip} h-11`}>
       {children}
     </Link>
   );
@@ -57,7 +57,7 @@ export function Rail({ products }: { products: Product[] }) {
               {categoryLabels[c]}
             </Chip>
           ))}
-          <Link href="/shop" data-rail-link className="ml-1 inline-flex h-10 shrink-0 items-center whitespace-nowrap px-2 text-sm font-semibold underline underline-offset-4">
+          <Link href="/shop" data-rail-link className="ml-1 inline-flex h-11 shrink-0 items-center whitespace-nowrap px-2 text-sm font-semibold underline underline-offset-4">
             All filters
           </Link>
         </nav>

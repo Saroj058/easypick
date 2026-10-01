@@ -2,14 +2,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { bagStorageKey, LEGACY_BAG_KEY } from "@/lib/bag-storage";
+import { bagStorageKey, GUEST_BAG_KEY, LEGACY_BAG_KEY } from "@/lib/bag-storage";
 import type { BagLine } from "@/lib/types";
 import { useMe } from "./session";
 
 // The bag lives in the browser until checkout. Prices and stock are re-checked on
 // the server when the order is placed, so nothing here is trusted.
-// It's kept per signed-in account on this phone: logging out hides it, and someone
-// else logging in on the same phone gets their own bag. Guests have no bag.
+// Guests have a bag too (no account needed until checkout). Logging in moves the guest
+// bag into the account's bag; logging out hides the account's bag, and someone else
+// logging in on the same phone gets their own.
 
 const MAX_QTY = 5;
 
@@ -62,10 +63,29 @@ function loadFor(key: string): BagLine[] {
   return read(key);
 }
 
+/** Moves what a guest put in the bag into the account they just logged in to. */
+function takeGuestBag(key: string, lines: BagLine[]): BagLine[] {
+  const guest = read(GUEST_BAG_KEY);
+  if (guest.length === 0) return lines;
+  const merged = [...lines];
+  for (const g of guest) {
+    const i = merged.findIndex((l) => l.sku === g.sku);
+    if (i >= 0) merged[i] = { ...merged[i], qty: Math.min(merged[i].qty + g.qty, MAX_QTY) };
+    else merged.push(g);
+  }
+  write(key, merged);
+  try {
+    localStorage.removeItem(GUEST_BAG_KEY);
+  } catch {
+    // storage blocked
+  }
+  return merged;
+}
+
 export function BagProvider({ children }: { children: React.ReactNode }) {
   const me = useMe();
-  // undefined while the session loads, null for guests, else this account's storage key.
-  const key = me === undefined ? undefined : me ? bagStorageKey(me.id) : null;
+  // undefined while the session loads, the guest key when signed out, else this account's key.
+  const key = me === undefined ? undefined : me ? bagStorageKey(me.id) : GUEST_BAG_KEY;
   const [state, setState] = useState<{ key: string | null; lines: BagLine[] } | null>(null);
   const keyRef = useRef<string | null | undefined>(undefined);
   // Changes made before we knew who's signed in (e.g. a tap right after the page opened).
@@ -75,6 +95,7 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
     if (key === undefined) return;
     keyRef.current = key;
     let lines = key ? loadFor(key) : [];
+    if (key && key !== GUEST_BAG_KEY) lines = takeGuestBag(key, lines);
     if (key && queued.current.length) {
       for (const fn of queued.current) lines = fn(lines);
       write(key, lines);
@@ -93,7 +114,7 @@ export function BagProvider({ children }: { children: React.ReactNode }) {
       queued.current.push(fn);
       return;
     }
-    if (current === null) return; // guests have no bag
+    if (current === null) return;
     setState((prev) => {
       if (!prev || prev.key !== current) return prev;
       const next = fn(prev.lines);

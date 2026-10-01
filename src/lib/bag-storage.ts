@@ -1,5 +1,6 @@
-// Where each person's bag is kept in the browser. The bag lives in localStorage, keyed per
-// signed-in account, so two people sharing a phone never see each other's bag.
+// Where each person's bag is kept in the browser. The bag lives in localStorage: one for
+// whoever is signed out on this phone, and one per signed-in account, so two accounts sharing
+// a phone never see each other's bag. A guest's bag moves into their account when they log in.
 
 /** The old single key, from before bags were kept per account. */
 export const LEGACY_BAG_KEY = "ep-bag-v1";
@@ -13,6 +14,9 @@ export function hashId(id: string): string {
   }
   return (h >>> 0).toString(36);
 }
+
+/** The bag of whoever is signed out on this phone. */
+export const GUEST_BAG_KEY = `${LEGACY_BAG_KEY}:guest`;
 
 /** The storage key for this account's bag. */
 export function bagStorageKey(userId: string): string {

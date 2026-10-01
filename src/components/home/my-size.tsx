@@ -97,7 +97,7 @@ export function MySize({ limit }: { limit: number }) {
           aria-pressed={size === s}
           aria-controls="rail-grid"
           onClick={() => choose(size === s ? null : s)}
-          className={`h-full min-w-10 border-l border-mist px-2 font-mono text-[13px] font-semibold ${size === s ? "bg-ink text-paper" : "hover:bg-photo"}`}
+          className={`h-full min-w-11 border-l border-mist px-2 font-mono text-[13px] font-semibold ${size === s ? "bg-ink text-paper" : "hover:bg-photo"}`}
         >
           {s}
         </button>

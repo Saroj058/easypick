@@ -15,33 +15,48 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Shop",
     links: [
-      { href: "/new", label: "New in" },
       { href: "/shop", label: "Shop all" },
-      { href: "/shop?vault=1", label: "The Vault" },
+      { href: "/new", label: "New in" },
+      { href: "/trending", label: "Trending" },
+      { href: "/drops", label: "Drops" },
       { href: "/shop?sale=1", label: "Sale" },
-      { href: "/gift", label: "Gifts and gift cards" },
     ],
   },
   {
-    title: "Help me choose",
+    title: "Fits",
     links: [
-      { href: "/size-guide", label: "Your size in cm" },
+      { href: "/fits", label: "Designer Fits" },
       { href: "/fit", label: "Build a fit" },
+      { href: "/size-guide", label: "Your size in cm" },
     ],
   },
   {
-    title: "Orders",
+    title: "Gift",
+    links: [
+      { href: "/gift", label: "Find a gift" },
+      { href: "/gift-cards", label: "Gift cards" },
+      { href: "/gift-cards#balance", label: "Check a balance" },
+    ],
+  },
+  {
+    title: "The Vault",
+    links: [{ href: "/shop?vault=1", label: "The Vault" }],
+  },
+  {
+    title: "Visit",
+    links: [
+      { href: "/visit", label: "The store" },
+      { href: "/how-it-works", label: "How the store works" },
+      { href: "/visit/tour", label: "Walk the store in 3D" },
+    ],
+  },
+  {
+    title: "Help",
     links: [
       { href: "/track", label: "Track an order" },
       { href: "/returns", label: "Returns" },
       { href: "/delivery", label: "Delivery and pickup" },
-    ],
-  },
-  {
-    title: "The store",
-    links: [
-      { href: "/visit", label: "Visit" },
-      { href: "/visit/tour", label: "Walk the store in 3D" },
+      { href: "/saved", label: "Saved" },
       { href: "/alerts", label: "Drop alerts" },
     ],
   },

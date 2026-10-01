@@ -17,19 +17,6 @@ export default function BagPage() {
 
       {!ready || me === undefined ? (
         <div className="mt-10 h-40" aria-hidden />
-      ) : me === null ? (
-        <div className="mt-10">
-          <p className="text-lg">The bag needs an account. It&apos;s kept for your account on this phone.</p>
-          <p className="mt-2 text-steel-dark">Log in to add pieces and check out. Want just one piece? Tap Buy now on it. No account needed.</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/login?reason=bag&next=/bag" className="btn btn-volt">
-              Log in
-            </Link>
-            <Link href="/shop" className="btn btn-outline">
-              Shop all
-            </Link>
-          </div>
-        </div>
       ) : lines.length === 0 ? (
         <div className="mt-10">
           <p className="text-steel-dark">Your bag is empty.</p>
@@ -93,9 +80,9 @@ export default function BagPage() {
               <dt className="font-sans">Delivery in the Valley</dt>
               <dd>{subtotal >= site.delivery.freeAbove ? "Free" : formatPrice(site.delivery.flatFee)}</dd>
             </div>
-            <div className="flex justify-between border-t border-mist pt-2 text-[15px] font-semibold">
+            <div className="flex justify-between gap-4 border-t border-mist pt-2 text-[15px] font-semibold">
               <dt className="font-sans">Total</dt>
-              <dd>
+              <dd className="text-right">
                 {subtotal >= site.delivery.freeAbove ? formatPrice(subtotal) : `${formatPrice(subtotal)} pickup · ${formatPrice(subtotal + site.delivery.flatFee)} delivered`}
               </dd>
             </div>
@@ -113,6 +100,7 @@ export default function BagPage() {
               Keep shopping
             </Link>
           </div>
+          {me === null && <p className="mt-3 text-[13px] text-steel-dark">We&apos;ll text you a code at checkout to confirm your number. Your bag stays as it is.</p>}
         </>
       )}
     </div>

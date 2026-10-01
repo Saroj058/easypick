@@ -8,18 +8,15 @@ import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
 import type { Product, Size, Variant } from "@/lib/types";
 import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
-import { useBag } from "./bag-provider";
 import { useFitProfile } from "./fit-finder";
 import { BagIcon, HeartIcon } from "./icons";
 import { toggleSaved, useList } from "./saved";
-import { useMe } from "./session";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
 
 // The two buttons on a product card. Both start from the person's saved size when it's in
 // stock, otherwise M, otherwise the first size in stock (in the first colour):
 //   Quick buy -> a small picker with that choice made, then the Buy now checkout.
-//   Heart     -> signed in: straight into the bag (tap again to take it out).
-//                signed out: saved to this phone's Saved list, so nobody is sent to log in.
+//   Heart     -> Save (this phone's Saved list). Always, signed in or not.
 
 const canBuy = (v: Variant) => sellable(v) > 0;
 
@@ -51,6 +48,7 @@ const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 export function QuickBuy({ product, className = "" }: { product: Product; className?: string }) {
   const suggested = useCardVariant(product);
   const profile = useFitProfile();
+  const addToBag = useAddToBag();
   const [open, setOpen] = useState(false);
   const [colour, setColour] = useState<string | null>(null);
   const [size, setSize] = useState<Size | null>(null);
@@ -171,9 +169,22 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
           )}
 
           {chosen ? (
-            <Link href={`/buy/${product.slug}?sku=${encodeURIComponent(chosen.sku)}`} onClick={() => setOpen(false)} className="btn btn-volt mt-8 w-full">
-              Continue to checkout
-            </Link>
+            <>
+              <Link href={`/buy/${product.slug}?sku=${encodeURIComponent(chosen.sku)}`} onClick={() => setOpen(false)} className="btn btn-volt mt-8 w-full">
+                Buy now
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  const line = { slug: product.slug, sku: chosen.sku, name: product.name, size: chosen.size, colour: chosen.colour, price: product.salePrice ?? product.price };
+                  if (addToBag([line])) showBagToast(addedMessage(line));
+                  setOpen(false);
+                }}
+                className="btn btn-outline mt-3 w-full"
+              >
+                Add to bag
+              </button>
+            </>
           ) : (
             <button type="button" disabled className="btn btn-volt mt-8 w-full">
               Sold out in {chosenColour}
@@ -189,44 +200,28 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
 }
 
 /**
- * The heart (bottom left of the photo). Signed in: one tap adds it to the bag, another takes
- * it out. Signed out: it saves the piece on this phone instead of sending them to log in.
+ * The heart (bottom left of the photo) always means Save: it keeps the piece in this phone's
+ * Saved list. Adding to the bag is in Quick buy, under the bag icon.
  */
 export function HeartAdd({ product, className = "" }: { product: Product; className?: string }) {
-  const variant = useCardVariant(product);
-  const { lines, remove } = useBag();
-  const addToBag = useAddToBag();
-  const me = useMe();
   const saved = useList("saved").includes(product.slug);
-  if (product.status !== "live" || !variant) return null;
-  const guest = me === null;
-  const inBag = guest ? saved : lines.some((l) => l.slug === product.slug);
+  if (product.status !== "live") return null;
 
   function onTap() {
-    if (guest) {
-      toggleSaved(product.slug);
-      showBagToast(saved ? `Removed ${product.name} from Saved.` : `Saved ${product.name}. Find it under Saved.`);
-      return;
-    }
-    if (inBag) {
-      lines.filter((l) => l.slug === product.slug).forEach((l) => remove(l.sku));
-      showBagToast(`Removed ${product.name} from your bag.`);
-      return;
-    }
-    const line = { slug: product.slug, sku: variant!.sku, name: product.name, size: variant!.size, colour: variant!.colour, price: product.salePrice ?? product.price };
-    if (addToBag([line])) showBagToast(addedMessage(line));
+    toggleSaved(product.slug);
+    showBagToast(saved ? `Removed ${product.name} from Saved.` : `Saved ${product.name}. Find it under Saved.`);
   }
 
   return (
     <button
       type="button"
       onClick={onTap}
-      aria-pressed={inBag}
-      aria-label={guest ? `Save ${product.name}` : `Add ${product.name} to bag`}
-      className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${inBag ? "" : reveal} ${className}`}
+      aria-pressed={saved}
+      aria-label={`Save ${product.name}`}
+      className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${saved ? "" : reveal} ${className}`}
     >
       <span className={`grid h-9 w-9 place-items-center rounded-full ${glass}`}>
-        <HeartIcon filled={inBag} className={`h-4 w-4 ${inBag ? "text-[#d70015]" : ""}`} />
+        <HeartIcon filled={saved} className={`h-4 w-4 ${saved ? "text-[#d70015]" : ""}`} />
       </span>
     </button>
   );

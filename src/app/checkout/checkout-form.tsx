@@ -67,7 +67,7 @@ function subscribeGuest(fn: () => void) {
 
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 
-/** Checks out the bag (needs an account), or one piece with `buyNow` (no account needed). */
+/** Checks out the bag (the phone code was confirmed on the way in), or one piece with `buyNow` (no code needed). */
 export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   const bag = useBag();
   const lines = buyNow ? [buyNow] : bag.lines;

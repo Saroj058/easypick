@@ -9,7 +9,7 @@ import { FestivalNotice } from "@/components/festival-notice";
 export const metadata: Metadata = { title: "Checkout", robots: { index: false } };
 
 export default async function CheckoutPage() {
-  // The bag is saved to an account; one piece without an account goes through Buy now.
+  // The phone code is asked for here and nowhere earlier; the guest's bag follows them through the login.
   if (!(await getCurrentUser())) redirect("/login?reason=bag&next=/checkout");
   return (
     <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">

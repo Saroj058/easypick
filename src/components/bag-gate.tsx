@@ -1,111 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { track } from "@/lib/track";
 import type { BagLine } from "@/lib/types";
 import { useBag } from "./bag-provider";
-import { useMe } from "./session";
 
-// The bag needs an account (it's kept per account on this phone). Buying one piece with
-// "Buy now" doesn't. If a logged-out person taps Add to bag, we remember what they picked,
-// send them to log in, and add it once they're back.
+// Adding to the bag needs no account: guests have a bag on this phone, and the phone code is
+// only asked for at checkout (docs/BLUEPRINT.md, section 06 and rule 4 of section 18).
 
-const PENDING = "ep-bag-pending";
-
-function sendToLogin(items: Omit<BagLine, "qty">[], router: ReturnType<typeof useRouter>) {
-  try {
-    sessionStorage.setItem(PENDING, JSON.stringify(items));
-  } catch {
-    // storage blocked: they'll just pick again after logging in
-  }
-  const here = window.location.pathname + window.location.search;
-  router.push(`/login?reason=bag&next=${encodeURIComponent(here)}`);
-}
-
-const addedNote = (items: Omit<BagLine, "qty">[]) =>
-  items.length === 1 ? addedMessage(items[0]) : `${items.length} pieces added to your bag.`;
-
-/**
- * Add to bag, or send the person to log in first. Returns true when it was added now.
- * A tap before we know who's signed in waits for that answer, then finishes (with the
- * bag note) or goes to log in, so a signed-out person is never treated as signed in.
- */
+/** Adds pieces to the bag. Returns true so callers can show their "added" note. */
 export function useAddToBag() {
   const { add } = useBag();
-  const me = useMe();
-  const router = useRouter();
-  const waiting = useRef<Omit<BagLine, "qty">[] | null>(null);
-
-  useEffect(() => {
-    if (me === undefined || !waiting.current) return;
-    const items = waiting.current;
-    waiting.current = null;
-    // Signed in: the bag already took the add (it holds changes until the session is known).
-    if (me) {
-      showBagToast(addedNote(items));
-      items.forEach((l) => track(l.slug, "bag"));
-    }
-    else sendToLogin(items, router);
-  }, [me, router]);
-
   return useCallback(
     (items: Omit<BagLine, "qty">[]) => {
-      if (me === undefined) {
-        items.forEach(add); // the bag keeps these only if they turn out to be signed in
-        waiting.current = items;
-        return false;
-      }
-      if (me === null) {
-        sendToLogin(items, router);
-        return false;
-      }
       items.forEach(add);
       items.forEach((l) => track(l.slug, "bag"));
       return true;
     },
-    [me, add, router],
-  );
-}
-
-/** The piece waiting on a login, read once in the browser (null on the server). */
-function readPending(): Omit<BagLine, "qty">[] | null {
-  try {
-    const v = JSON.parse(sessionStorage.getItem(PENDING) ?? "null");
-    return Array.isArray(v) && v.length ? v : null;
-  } catch {
-    return null;
-  }
-}
-// A string snapshot, so React sees the same value until the stored piece really changes.
-const pendingStore = {
-  subscribe: () => () => {},
-  get: () => JSON.stringify(readPending()),
-};
-
-/**
- * On the login page after "Add to bag": offer to buy that one piece right away instead,
- * with no account (Buy now goes straight to payment).
- */
-export function BuyPendingNow() {
-  const raw = useSyncExternalStore(pendingStore.subscribe, pendingStore.get, () => null);
-  const items = raw ? (JSON.parse(raw) as Omit<BagLine, "qty">[] | null) : null;
-  if (!items || items.length !== 1) return null;
-  const l = items[0];
-  return (
-    <Link
-      href={`/buy/${l.slug}?sku=${encodeURIComponent(l.sku)}`}
-      onClick={() => {
-        try {
-          sessionStorage.removeItem(PENDING);
-        } catch {}
-      }}
-      className="btn btn-outline mt-6 w-full"
-    >
-      Buy {l.name} now, no account
-    </Link>
+    [add],
   );
 }
 
@@ -121,13 +35,8 @@ export function addedMessage(l: Omit<BagLine, "qty">) {
   return `Added ${describe(l)} to your bag.`;
 }
 
-/**
- * The bag confirmation popup. Also finishes an Add to bag that was waiting on a login.
- * Mounted once in the layout.
- */
+/** The small bag confirmation at the bottom of the screen. Mounted once in the layout. */
 export function PendingBagAdd() {
-  const me = useMe();
-  const { add, ready } = useBag();
   const [message, setMessage] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
 
@@ -137,24 +46,6 @@ export function PendingBagAdd() {
     window.addEventListener(TOAST_EVENT, on);
     return () => window.removeEventListener(TOAST_EVENT, on);
   }, []);
-
-  // Back from logging in: add what they picked before.
-  useEffect(() => {
-    if (!me || !ready) return;
-    let items: unknown;
-    try {
-      items = JSON.parse(sessionStorage.getItem(PENDING) ?? "null");
-      sessionStorage.removeItem(PENDING);
-    } catch {
-      return;
-    }
-    if (!Array.isArray(items) || items.length === 0) return;
-    const lines = items as Omit<BagLine, "qty">[];
-    lines.forEach(add);
-    lines.forEach((l) => track(l.slug, "bag"));
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-off note after login
-    setMessage(addedNote(lines));
-  }, [me, ready, add]);
 
   // Stays 8 seconds, and not while the pointer or keyboard focus is on it.
   useEffect(() => {
