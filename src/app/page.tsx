@@ -8,9 +8,9 @@ import { OurStore } from "@/components/home/our-store";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
 
-import { ProductCard } from "@/components/product-card";
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
+import { OffersCarousel } from "@/components/ui/offers-carousel";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { SelfCheckout } from "@/components/self-checkout";
 import { getStoreInfo } from "@/lib/store-info";
@@ -88,7 +88,7 @@ export default async function HomePage() {
   const upper = pickStorey(range, UPPER);
   const lower = pickStorey(range, LOWER);
 
-  const offers = products.filter((p) => p.salePrice && p.status === "live");
+  const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
   const { looks, curated } = designerFits(products, await getSavedLooks());
@@ -223,28 +223,30 @@ export default async function HomePage() {
       {/* The Vault: original brands and numbered pieces */}
       <Vault products={products} />
 
-      {/* Festival offers: only while a real sale runs */}
+      {/* Festival offers: only while a real sale runs. The pieces move along by themselves. */}
       {offers.length > 0 && (
-        <section aria-labelledby="offers-title" className="section">
+        <section aria-labelledby="offers-title" className="section overflow-hidden">
           <div className="container-ep">
-            <div className="flex items-baseline justify-between gap-4">
-              <h2 id="offers-title" className="display display-h1">
-                Festival offers
-              </h2>
-              <Link href="/shop?sale=1" className="shrink-0 text-[15px] font-semibold underline underline-offset-4">
-                See all
-              </Link>
-            </div>
-            <p className="mt-2 text-steel-dark">
-              {offers.length} pieces marked down, up to {formatPrice(bestSaving)} off. Same price in store.
-            </p>
-            <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
-              {offers.slice(0, 4).map((p) => (
-                <li key={p.id}>
-                  <ProductCard product={p} sizes="(min-width: 768px) 25vw, 50vw" />
-                </li>
-              ))}
-            </ul>
+            <OffersCarousel
+              eyebrow="Marked down now"
+              title="Festival offers"
+              subtitle={`${offers.length} pieces marked down, up to ${formatPrice(bestSaving)} off. Same price in store.`}
+              ctaText="See all offers"
+              ctaHref="/shop?sale=1"
+              items={offers.slice(0, 12).map((p) => ({
+                id: p.id,
+                href: `/product/${p.slug}`,
+                name: p.name,
+                sub: p.colours.length > 1 ? `${p.colours.length} colours` : (p.colours[0]?.name ?? ""),
+                price: formatPrice(p.salePrice ?? p.price),
+                was: formatPrice(p.price),
+                off: Math.round((1 - (p.salePrice ?? p.price) / p.price) * 100),
+                sku: p.variants[0]?.sku ?? p.id,
+                image: p.images[0] ?? { src: null, alt: p.name, kind: "front" },
+                category: p.category,
+                hex: p.colours[0]?.hex ?? "#2b2b2e",
+              }))}
+            />
           </div>
         </section>
       )}
