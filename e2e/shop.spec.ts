@@ -12,37 +12,38 @@ test("home, shop and a product page load @phone", async ({ page }) => {
   await expect(page.getByText(/Free pickup at the store/)).toBeVisible();
 });
 
-test("home: the rail filters in place, and Designer Fits @phone", async ({ page }) => {
+test("home: the rail (sections, one-tap add in My size) and Designer Fits @phone", async ({ page }) => {
   await page.goto("/");
   const rail = page.getByRole("region", { name: "The rail" });
-  await expect(rail.locator("#rail-grid > li:not([hidden])").first()).toBeVisible();
-  // My size keeps only pieces in stock in that size (one-size pieces stay).
+  // Laid out in sections, each with its own pieces.
+  const first = rail.getByRole("region").first();
+  await expect(first.getByRole("listitem").first()).toBeVisible();
+
+  // My size is picked once on the sign, and is then chosen on the cards.
   await expect(async () => {
-    await rail.getByRole("button", { name: "XL", exact: true }).click();
-    await expect(rail.getByRole("button", { name: "XL", exact: true })).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
+    await rail.getByRole("button", { name: "M", exact: true }).click();
+    await expect(rail.getByRole("button", { name: "M", exact: true })).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
   }).toPass();
-  const sizes = await rail.locator("#rail-grid > li:not([hidden])").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.sizes ?? ""));
-  expect(sizes.every((s) => s.split(" ").some((x) => x === "XL" || x === "ONE"))).toBe(true);
-  await expect(rail.getByRole("status")).toContainText(/size XL/);
-  // The shop opens with the same filter; Clear puts the rail back.
-  await expect(rail.getByRole("link", { name: "See these in the shop" })).toHaveAttribute("href", "/shop?size=XL");
+  const hoodie = first.getByRole("listitem").filter({ hasText: "Everyday Hoodie" });
+  const add = hoodie.getByRole("button", { name: /^Add \w+ to bag$/ });
+  await expect(add).toBeVisible();
+  // Another size can be tapped on the card itself; sold-out sizes can't.
+  await hoodie.locator('[role="radio"]:not([disabled])').last().click();
+  await add.click();
+  await expect(hoodie.getByRole("link", { name: /In your bag/ })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
+
+  // A budget narrows the wall and can be cleared; the shop link carries the size.
+  const budget = rail.getByRole("group", { name: "Budget" }).getByRole("button").first();
+  await budget.click();
+  await expect(rail.getByRole("status")).toContainText(/of \d+ under Rs/);
   await rail.getByRole("button", { name: "Clear", exact: true }).click();
-  await expect(rail.getByRole("button", { name: "XL", exact: true })).toHaveAttribute("aria-pressed", "false");
-  // A tab narrows it to one kind of piece.
-  const tab = rail.getByRole("group", { name: "Show" }).getByRole("button").nth(1);
-  await tab.click();
-  await expect(tab).toHaveAttribute("aria-pressed", "true");
-  await expect(rail.locator("#rail-grid > li:not([hidden])").first()).toBeVisible();
-  // Coming back from a product page finds the rail as it was.
-  await rail.locator("#rail-grid > li:not([hidden]) a").first().click();
-  await page.waitForURL(/\/product\//, { timeout: 60_000 });
-  await page.goBack();
-  await expect(rail.getByRole("group", { name: "Show" }).getByRole("button").nth(1)).toHaveAttribute("aria-pressed", "true");
-  await rail.getByRole("button", { name: "Clear", exact: true }).click();
-  // Cheapest first.
+  await expect(budget).toHaveAttribute("aria-pressed", "false");
+  await expect(rail.getByRole("link", { name: "Shop all" }).last()).toHaveAttribute("href", "/shop?size=M");
   await rail.getByRole("button", { name: /Sorted newest first/ }).click();
   await expect(rail.getByRole("button", { name: /Sorted by price/ })).toBeVisible();
   await rail.getByRole("button", { name: /Sorted by price/ }).click();
+  await rail.getByRole("button", { name: "M", exact: true }).click();
 
   const fits = page.getByRole("region", { name: "Designer Fits" });
   await fits.scrollIntoViewIfNeeded();
