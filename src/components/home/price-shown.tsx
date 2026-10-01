@@ -25,7 +25,8 @@ export function PriceShown({ products }: { products: Product[] }) {
   return (
     <>
       <section aria-labelledby="price-title" className="section">
-        <div className="container-ep grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_300px_minmax(0,1fr)] lg:gap-16">
+        {/* Three columns on one centre line: headline on the left edge, the tag dead centre, the points on the right edge. */}
+        <div className="container-ep grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_280px_minmax(0,1fr)] lg:gap-16">
           <h2 id="price-title" className="display display-h1" data-reveal>
             Price shown.
             <br />
@@ -34,7 +35,7 @@ export function PriceShown({ products }: { products: Product[] }) {
           {piece && (
             <Link
               href={`/product/${piece.slug}`}
-              className="mx-auto block w-[280px] -rotate-3 border border-mist bg-[#fbfbf8] px-[22px] pb-5 pt-[26px] font-mono text-[13px] shadow-[0_24px_40px_-24px_rgba(0,0,0,0.45)] transition-transform duration-200 hover:rotate-0"
+              className="mx-auto block w-[280px] border border-mist bg-[#fbfbf8] px-[22px] pb-5 pt-[26px] font-mono text-[13px] shadow-[0_24px_40px_-24px_rgba(0,0,0,0.45)] transition-transform duration-200 hover:-translate-y-1"
               data-reveal
             >
               <span className="mx-auto mb-3.5 block h-2.5 w-2.5 rounded-full bg-ink" aria-hidden />
@@ -54,10 +55,13 @@ export function PriceShown({ products }: { products: Product[] }) {
               )}
             </Link>
           )}
-          <ul className="flex flex-col gap-4 text-xl font-semibold" data-reveal>
-            <li>One price for everyone</li>
-            <li>Measured in cm</li>
-            <li>VAT included</li>
+          <ul className="w-full text-xl font-semibold lg:max-w-[340px] lg:justify-self-end" data-reveal>
+            {["One price for everyone", "Measured in cm", "VAT included"].map((t, i) => (
+              <li key={t} className={`flex items-center gap-4 border-t border-mist py-4 ${i === 2 ? "border-b" : ""}`}>
+                <span className="font-mono text-[12px] font-normal text-steel-dark">0{i + 1}</span>
+                {t}
+              </li>
+            ))}
           </ul>
         </div>
       </section>

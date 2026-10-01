@@ -12,9 +12,11 @@ const RAIL_SHOWN = 8;
 // The rail: the newest pieces first, with a few one-tap filters that open the shop already filtered.
 // Links marked data-rail-link pick up the "My size" choice (see my-size.tsx).
 
+const chip = "inline-flex shrink-0 items-center whitespace-nowrap border border-mist px-4 text-sm font-semibold hover:border-ink";
+
 function Chip({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} data-rail-link className="inline-flex h-10 shrink-0 items-center whitespace-nowrap border border-mist px-4 text-sm font-semibold hover:border-ink">
+    <Link href={href} data-rail-link className={`${chip} h-10`}>
       {children}
     </Link>
   );
@@ -37,7 +39,15 @@ export function Rail({ products }: { products: Product[] }) {
           <h2 id="rail-title" className="display display-h1">
             The rail
           </h2>
-          <MySize limit={RAIL_SHOWN} />
+          <div className="flex flex-wrap items-center gap-2">
+            <MySize limit={RAIL_SHOWN} />
+            <Link href="/shop?price=u1000" data-rail-link className={`${chip} h-11`}>
+              Under Rs 1,000
+            </Link>
+            <Link href="/shop?price=u2500" data-rail-link className={`${chip} h-11`}>
+              Under Rs 2,500
+            </Link>
+          </div>
         </div>
 
         <nav aria-label="Shop by" className="no-scrollbar -mx-4 mt-6 flex items-center gap-2 overflow-x-auto border-b border-mist px-4 pb-4 md:mx-0 md:flex-wrap md:px-0">
@@ -48,9 +58,6 @@ export function Rail({ products }: { products: Product[] }) {
               {categoryLabels[c]}
             </Chip>
           ))}
-          <span className="mx-1 h-6 w-px shrink-0 bg-mist" aria-hidden />
-          <Chip href="/shop?price=u1000">Under Rs 1,000</Chip>
-          <Chip href="/shop?price=u2500">Under Rs 2,500</Chip>
           <Link href="/shop" data-rail-link className="ml-1 inline-flex h-10 shrink-0 items-center whitespace-nowrap px-2 text-sm font-semibold underline underline-offset-4">
             All filters
           </Link>

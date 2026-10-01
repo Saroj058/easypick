@@ -66,12 +66,9 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
                   setKey(l.key);
                   setAdded(false);
                 }}
-                className={`flex min-h-14 flex-col items-start justify-center gap-0.5 border px-4 py-2 text-left lg:flex-row lg:items-center lg:justify-between ${
-                  on ? "border-ink bg-ink text-paper" : "border-[#c7c7cc] bg-paper hover:border-ink"
-                }`}
+                className={`flex min-h-14 items-center border px-4 text-left font-bold ${on ? "border-ink bg-ink text-paper" : "border-[#c7c7cc] bg-paper hover:border-ink"}`}
               >
-                <span className="font-bold">{l.label}</span>
-                <span className={`font-mono text-[12px] ${on ? "text-paper/70" : "text-steel-dark"}`}>{l.place}</span>
+                {l.label}
               </button>
             );
           })}
@@ -114,12 +111,24 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
             );
           })}
         </ul>
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-[2fr_1fr]">
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
           <button type="button" onClick={addAll} disabled={!ready} className="btn btn-ink h-[60px] w-full">
             {added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
           </button>
-          <Link href={`/fit?${encodeFit(fit)}`} className="btn btn-outline h-[60px] w-full bg-paper">
-            Build your own fit
+          {/* The one lime button in the section: make it yours. */}
+          <Link
+            href={`/fit?${encodeFit(fit)}`}
+            className="group flex h-[60px] w-full items-center justify-between gap-3 rounded-[2px] border border-ink bg-volt px-5 text-[15px] font-semibold uppercase tracking-[0.06em] text-ink transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#0a0a0a]"
+          >
+            <span className="flex items-center gap-3">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M12 8a2 2 0 1 0-2-2M12 8v2l9 6.5a1 1 0 0 1-.6 1.8H3.6a1 1 0 0 1-.6-1.8L12 10" />
+              </svg>
+              Build your own fit
+            </span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
           </Link>
         </div>
       </div>

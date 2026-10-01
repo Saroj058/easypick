@@ -441,7 +441,7 @@
   padding: 0 6px;
 }
 .ks-wrap {
-  --k: 0.54;
+  --k: 0.5;
   position: relative;
   flex-shrink: 0;
   width: calc(420px * var(--k));
@@ -449,17 +449,12 @@
 }
 @media (min-width: 640px) {
   .ks-wrap {
-    --k: 0.72;
-  }
-}
-@media (min-width: 1024px) {
-  .ks-wrap {
-    --k: 0.86;
+    --k: 0.6;
   }
 }
 @media (min-width: 1280px) {
   .ks-wrap {
-    --k: 1;
+    --k: 0.7;
   }
 }
 .ks-scene {
@@ -895,17 +890,17 @@
 }
 @media (min-width: 640px) {
   .ks-steps > li {
-    gap: 14px;
-    padding-bottom: 30px;
+    gap: 12px;
+    padding-bottom: 20px;
   }
   .ks-steps > li:not(:last-child)::before {
-    left: 16px;
-    top: 38px;
+    left: 14px;
+    top: 34px;
   }
   .ks-step-n {
-    width: 34px;
-    height: 34px;
-    font-size: 14px;
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

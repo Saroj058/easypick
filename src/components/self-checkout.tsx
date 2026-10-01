@@ -193,23 +193,23 @@ function TrailArrow({ up }: { up: boolean }) {
 
 export function SelfCheckout() {
   return (
-    <section aria-labelledby="checkout-title" className="section overflow-hidden">
+    <section aria-labelledby="checkout-title" className="overflow-hidden py-12 md:py-16">
       <div className="container-ep">
         <div className="grid gap-10 lg:grid-cols-12 lg:items-center lg:gap-6">
           <div className="lg:col-span-5" data-reveal>
-            <h2 id="checkout-title" className="display display-h1">
+            <h2 id="checkout-title" className="display text-[clamp(2.5rem,1.9rem+2.4vw,4rem)] leading-[0.92]">
               Pick it.
               <br />
               Scan it.
               <br />
               <span className="hl-volt">Walk out.</span>
             </h2>
-            <p className="mt-5 max-w-[40ch] text-lg text-steel-dark">
+            <p className="mt-4 max-w-[40ch] text-base text-steel-dark">
               The price is on the tag. The kiosk does the rest. A helper is always there if you need one.
             </p>
-            <ul className="mt-8 flex flex-wrap gap-2.5">
+            <ul className="mt-6 flex flex-wrap gap-2">
               {PROMISES.map((t) => (
-                <li key={t} className="flex h-11 items-center gap-2 border border-ink px-3.5 text-[15px] font-semibold">
+                <li key={t} className="flex h-10 items-center gap-2 border border-ink px-3 text-[14px] font-semibold">
                   <span className="h-2 w-2 rounded-full border border-ink bg-volt" aria-hidden />
                   {t}
                 </li>
@@ -219,8 +219,8 @@ export function SelfCheckout() {
 
           <div className="flex items-center justify-center gap-3 sm:gap-5 lg:col-span-7" data-reveal>
             <Kiosk />
-            <div className="flex w-[128px] flex-col gap-5 sm:w-[240px] sm:gap-9">
-              <div className="w-[72px] self-start sm:w-[120px]">
+            <div className="flex w-[128px] flex-col gap-4 sm:w-[210px] sm:gap-6">
+              <div className="w-[64px] self-start sm:w-[88px]">
                 <Stamp />
               </div>
               <ol aria-label="How to pay at the kiosk" className="ks-steps">
@@ -228,8 +228,8 @@ export function SelfCheckout() {
                   <li key={n}>
                     <span className="ks-step-n">{n}</span>
                     <span className="flex flex-col gap-1 pt-0.5 sm:pt-1">
-                      <span className="text-[12px] font-bold leading-tight sm:text-[17px]">{t}</span>
-                      <span className="text-[11px] leading-snug text-steel-dark sm:text-[14px]">{d}</span>
+                      <span className="text-[12px] font-bold leading-tight sm:text-[15px]">{t}</span>
+                      <span className="text-[11px] leading-snug text-steel-dark sm:text-[13px]">{d}</span>
                     </span>
                   </li>
                 ))}
@@ -238,8 +238,8 @@ export function SelfCheckout() {
                     ✓
                   </span>
                   <span className="flex flex-col gap-1 pt-0.5 sm:pt-1">
-                    <span className="text-[12px] font-bold leading-tight sm:text-[17px]">Walk out</span>
-                    <span className="text-[11px] leading-snug text-steel-dark sm:text-[14px]">Your bill comes by SMS.</span>
+                    <span className="text-[12px] font-bold leading-tight sm:text-[15px]">Walk out</span>
+                    <span className="text-[11px] leading-snug text-steel-dark sm:text-[13px]">Your bill comes by SMS.</span>
                   </span>
                 </li>
               </ol>
@@ -247,10 +247,10 @@ export function SelfCheckout() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-dashed border-steel pt-5 md:mt-12 md:pt-7">
+        <div className="mt-8 border-t border-dashed border-steel pt-4 md:pt-5">
           <p
             lang="ne"
-            className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center font-baloo text-[17px] font-bold leading-relaxed md:text-[22px] xl:flex-nowrap xl:text-[26px]"
+            className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center font-baloo text-[16px] font-bold leading-relaxed md:text-[19px] lg:flex-nowrap lg:text-[21px]"
           >
             {TRAIL.map((w, i) => (
               <Fragment key={w}>

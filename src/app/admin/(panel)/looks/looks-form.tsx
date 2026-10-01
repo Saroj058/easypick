@@ -41,12 +41,6 @@ export function LooksForm({
         return (
           <fieldset key={o.key} className="space-y-4 border-t border-mist pt-6">
             <legend className="text-lg font-semibold">{o.label}</legend>
-            <div>
-              <label htmlFor={`${o.key}-place`} className="block text-sm font-semibold">
-                Where <span className="font-normal text-steel-dark">(the small line, e.g. {o.place})</span>
-              </label>
-              <input id={`${o.key}-place`} name={`${o.key}.place`} maxLength={40} defaultValue={mine?.place ?? ""} placeholder={o.place} className={input} />
-            </div>
             {[0, 1, 2].map((i) => {
               const current = mine?.pieces[i];
               return (
