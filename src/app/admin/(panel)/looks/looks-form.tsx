@@ -19,7 +19,7 @@ export function LooksForm({
   options,
   saved,
 }: {
-  occasions: { key: OccasionKey; label: string; place: string }[];
+  occasions: { key: OccasionKey; label: string }[];
   options: PieceOption[];
   saved: SavedLooks;
 }) {
@@ -41,13 +41,13 @@ export function LooksForm({
         return (
           <fieldset key={o.key} className="space-y-4 border-t border-mist pt-6">
             <legend className="text-lg font-semibold">{o.label}</legend>
-            {[0, 1, 2].map((i) => {
+            {[0, 1, 2, 3].map((i) => {
               const current = mine?.pieces[i];
               return (
                 <div key={i}>
                   <label htmlFor={`${o.key}-${i}`} className="block text-sm font-semibold">
                     Piece {i + 1}
-                    {i === 2 ? <span className="font-normal text-steel-dark"> (optional)</span> : null}
+                    {i >= 2 ? <span className="font-normal text-steel-dark"> (optional)</span> : null}
                   </label>
                   <select id={`${o.key}-${i}`} name={`${o.key}.${i}`} defaultValue={current ? `${current.slug}~${current.colour}` : ""} className={input}>
                     <option value="">{i === 0 && !mine?.pieces.length ? "Let the site pick" : "None"}</option>

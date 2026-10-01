@@ -14,9 +14,8 @@ export async function saveLooksForm(_prev: SaveState, form: FormData): Promise<S
   const looks: SavedLooks = {};
 
   for (const o of OCCASIONS) {
-    const place = String(form.get(`${o.key}.place`) ?? "").trim().slice(0, 40);
     const pieces: { slug: string; colour: string }[] = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       const raw = String(form.get(`${o.key}.${i}`) ?? "");
       if (!raw) continue;
       const [slug, colour] = raw.split("~");
@@ -26,7 +25,7 @@ export async function saveLooksForm(_prev: SaveState, form: FormData): Promise<S
       pieces.push({ slug, colour });
     }
     if (pieces.length === 1) return { status: "error", message: `${o.label}: pick at least two pieces, or none to let the site choose.` };
-    if (pieces.length || place) looks[o.key] = { place: place || undefined, pieces };
+    if (pieces.length) looks[o.key] = { pieces };
   }
 
   await saveLooks(looks);

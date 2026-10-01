@@ -114,8 +114,8 @@ test("the owner sets a Wear it to… look and the home page uses it", async ({ p
   await page.goto("/");
   const fits = page.getByRole("region", { name: "Wear it to…" });
   await expect(fits.getByRole("radio", { name: "Party" })).toBeVisible();
-  await expect(fits.getByText("Everyday Hoodie").first()).toBeVisible();
-  await expect(fits.getByText("Relaxed Straight Jean").first()).toBeVisible();
+  await expect(fits.getByText("Everyday Hoodie").filter({ visible: true }).first()).toBeVisible(); // the phone layout holds a hidden copy
+  await expect(fits.getByText("Relaxed Straight Jean").filter({ visible: true }).first()).toBeVisible(); // the phone layout holds a hidden copy
 
   // Back to automatic.
   await page.goto("/admin/looks");

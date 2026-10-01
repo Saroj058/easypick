@@ -1,19 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useAddToBag } from "@/components/bag-gate";
-import { encodeFit, type Fit } from "@/components/fit-builder";
+import { encodeFit, type Fit, type SlotKey } from "@/components/fit-builder";
 import { useFitProfile } from "@/components/fit-finder";
-import { ProductImage } from "@/components/product-image";
+import { GarmentSvg } from "@/components/product-image";
 import { matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { fitSlot, type Look, type LookPiece } from "@/lib/occasions";
 import type { Size } from "@/lib/types";
 
-// "Wear it to…": the occasion is a big type tab, the outfit is one composed look
-// (a large piece and two smaller ones), and beside it an itemised list with sizes and the total.
+// "Wear it to…" as a fit check: a scrolling list of occasions at the side, and the outfit drawn
+// the way it's worn (jacket over tee over joggers) on a grey stage, each piece tied to a hang
+// tag with its name, price and sizes. Numbers on the garments match the numbers on the tags.
 
 /** The size to start on: the customer's matched size, else M, else the first one in stock. */
 function startSize(p: LookPiece, matched: Size | null): Size | null {
@@ -23,7 +24,61 @@ function startSize(p: LookPiece, matched: Size | null): Size | null {
   return p.sizes.find((x) => x.stock > 0)?.size ?? null;
 }
 
-const plate = (i: number) => String(i + 1).padStart(2, "0");
+// The figure is a 300×500 box; every garment is placed in percent of it so it scales on phones.
+// Drawn back to front: joggers, tee (its hem shows under a jacket), jacket, cap.
+const WEAR: Record<SlotKey, { box: string; z: number }> = {
+  bottom: { box: "left-[11%] top-[46%] w-[78%]", z: 0 },
+  top: { box: "left-0 top-[11%] w-full", z: 10 },
+  layer: { box: "left-[-3%] top-[5%] w-[106%]", z: 20 },
+  cap: { box: "left-[29%] top-[-11%] w-[42%]", z: 30 },
+};
+/** Head to toe, for numbering and for which side a tag hangs on. */
+const ORDER: SlotKey[] = ["cap", "layer", "top", "bottom"];
+
+/** Where a piece's number sits on the figure, in percent of the figure box. */
+function anchor(slot: SlotKey, side: "left" | "right", layered: boolean): { x: number; y: number } {
+  const x = (l: number) => (side === "left" ? l : 100 - l);
+  if (slot === "cap") return { x: x(40), y: 5 };
+  if (slot === "layer") return { x: x(18), y: 30 };
+  if (slot === "top") return layered ? { x: x(32), y: 58.5 } : { x: x(20), y: 34 };
+  return { x: x(36), y: 78 };
+}
+
+const badge = "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-ink bg-volt font-mono text-[11px] font-semibold leading-none text-ink";
+
+function Sizes({ piece, size, onPick }: { piece: LookPiece; size: Size | null; onPick: (s: Size) => void }) {
+  if (piece.sizes.length === 1 && piece.sizes[0].size === "ONE") return <p className="mt-3 font-mono text-[12px] text-steel-dark">One size</p>;
+  return (
+    <div role="radiogroup" aria-label={`Size for ${piece.name}`} className="mt-3 flex flex-wrap gap-1 sm:gap-1.5">
+      {piece.sizes.map((s) => {
+        const out = s.stock <= 0;
+        const on = size === s.size;
+        return (
+          <button
+            key={s.size}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            aria-label={`${s.size}${out ? ", sold out" : ""}`}
+            disabled={out}
+            onClick={() => onPick(s.size)}
+            className={`h-11 min-w-9 border px-1.5 font-mono text-[13px] font-semibold sm:min-w-11 sm:px-2 ${
+              on ? "border-ink bg-ink text-paper" : out ? "border-mist bg-photo text-[#aeaeb2] line-through" : "border-mist hover:border-ink"
+            }`}
+          >
+            {s.size}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const Chevron = ({ up = false }: { up?: boolean }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className={up ? "rotate-180" : ""}>
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
 
 export function OccasionFits({ looks }: { looks: Look[] }) {
   const addToBagOrLogin = useAddToBag();
@@ -31,6 +86,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
   const [key, setKey] = useState(looks[0]?.key);
   const [picked, setPicked] = useState<Record<string, Size | null>>({});
   const [added, setAdded] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const look = looks.find((l) => l.key === key) ?? looks[0];
   if (!look) return null;
@@ -38,6 +94,13 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
   const id = (p: LookPiece) => `${look.key}:${p.slug}`;
   const sizeOf = (p: LookPiece) => (picked[id(p)] !== undefined ? picked[id(p)] : startSize(p, matchSize(p.category, p.measurements, profile)?.size ?? null));
   const total = look.pieces.reduce((n, p) => n + p.price, 0);
+
+  // Head to toe, one piece per place on the body; tags hang left, right, left, right.
+  const worn = ORDER.flatMap((slot) => {
+    const piece = look.pieces.find((p) => fitSlot(p.category) === slot);
+    return piece ? [{ slot, piece }] : [];
+  }).map((w, i) => ({ ...w, n: i + 1, side: (i % 2 === 0 ? "left" : "right") as "left" | "right" }));
+  const layered = worn.some((w) => w.slot === "layer");
 
   function addAll() {
     const items = look.pieces.flatMap((p) => {
@@ -51,154 +114,177 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
   const fit: Fit = {};
   for (const p of look.pieces) fit[fitSlot(p.category)] = { slug: p.slug, colour: p.colour, size: sizeOf(p) };
   const ready = look.pieces.every((p) => sizeOf(p));
-  const [lead, ...rest] = look.pieces;
+  const pick = (p: LookPiece) => (s: Size) => {
+    setPicked((m) => ({ ...m, [id(p)]: s }));
+    setAdded(false);
+  };
+  /** The up and down buttons beside the list (it also scrolls by touch, wheel and keys). */
+  const scrollList = (dir: 1 | -1) => listRef.current?.scrollBy({ top: dir * 232, left: dir * 240, behavior: "smooth" });
+
+  const figure = (
+    <div key={look.key} aria-hidden className="relative aspect-[3/5] w-full animate-fade-up">
+      {worn.map(({ slot, piece }) => (
+        <div key={slot} className={`absolute ${WEAR[slot].box}`} style={{ zIndex: WEAR[slot].z }}>
+          <GarmentSvg category={piece.category} colourHex={piece.hex} className="block w-full drop-shadow-[0_6px_10px_rgba(0,0,0,0.12)]" />
+        </div>
+      ))}
+      {worn.map(({ slot, n, side }) => {
+        const a = anchor(slot, side, layered);
+        return (
+          <span key={slot} className={`${badge} absolute z-40 -translate-x-1/2 -translate-y-1/2`} style={{ left: `${a.x}%`, top: `${a.y}%` }}>
+            {n}
+          </span>
+        );
+      })}
+    </div>
+  );
+
+  const tag = (w: (typeof worn)[number]) => (
+    <div className="relative border border-mist bg-paper p-3 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.5)] sm:p-4">
+      <div className="flex items-center gap-2">
+        <span className={badge} aria-hidden>
+          {w.n}
+        </span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-steel-dark">{w.piece.colour}</span>
+        <span className="ml-auto font-mono text-[14px] tabular-nums">{formatPrice(w.piece.price)}</span>
+      </div>
+      <Link href={`/product/${w.piece.slug}`} className="mt-2 block text-[15px] font-semibold leading-tight sm:text-[17px] decoration-1 underline-offset-4 hover:underline">
+        {w.piece.name}
+      </Link>
+      <Sizes piece={w.piece} size={sizeOf(w.piece)} onPick={pick(w.piece)} />
+    </div>
+  );
 
   return (
     <div>
-      {/* The sentence: "Wear it to…" then the occasion, set as large type tabs. */}
-      <h2 id="occasion-title" className="font-mono text-[13px] uppercase tracking-[0.14em] text-steel-dark">
-        Wear it to…
-      </h2>
-      <div role="radiogroup" aria-labelledby="occasion-title" className="no-scrollbar -mx-4 mt-3 flex gap-x-6 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:gap-x-10 md:px-0">
-        {looks.map((l) => {
-          const on = l.key === look.key;
-          return (
-            <button
-              key={l.key}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => {
-                setKey(l.key);
-                setAdded(false);
-              }}
-              className={`display shrink-0 text-[clamp(2.5rem,1.6rem+4vw,5.5rem)] leading-[0.95] transition-colors duration-200 ${on ? "text-ink" : "text-[#c7c7cc] hover:text-steel-dark"}`}
-            >
-              <span className={on ? "hl-volt" : ""}>{l.label}</span>
-            </button>
-          );
-        })}
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between md:gap-8">
+        <h2 id="occasion-title" className="display display-h1">
+          Wear it to…
+        </h2>
+        <p className="max-w-[34ch] text-steel-dark md:pb-2 md:text-right">Fit combinations according to top designers.</p>
       </div>
 
-      <div className="mt-8 grid gap-8 md:mt-10 lg:grid-cols-12 lg:gap-12">
-        {/* The look: one large piece, the others beside it. */}
-        {/* Every tile fills its cell, so the big one and the two small ones always end on the same line. */}
-        <ul className={`grid gap-2 md:gap-3 lg:col-span-7 lg:aspect-auto lg:min-h-[520px] ${rest.length > 1 ? "aspect-[6/5] grid-cols-3 grid-rows-2" : "aspect-[8/5] grid-cols-2"}`}>
-          <li className={`min-h-0 ${rest.length > 1 ? "col-span-2 row-span-2" : ""}`}>
-            <Link href={`/product/${lead.slug}`} aria-label={lead.name} className="group relative block h-full overflow-hidden bg-photo">
-              <ProductImage
-                image={lead.image}
-                category={lead.category}
-                colourHex={lead.hex}
-                decorative
-                priority={false}
-                className="!aspect-auto h-full transition-transform duration-500 group-hover:scale-[1.03]"
-                sizes="(min-width: 1024px) 40vw, 66vw"
-              />
-              <span aria-hidden className="absolute left-3 top-3 font-mono text-[12px] tracking-[0.12em] text-ink/70">
-                {plate(0)}
-              </span>
-            </Link>
-          </li>
-          {rest.map((p, i) => (
-            <li key={p.slug} className="min-h-0">
-              <Link href={`/product/${p.slug}`} aria-label={p.name} className="group relative block h-full overflow-hidden bg-photo">
-                <ProductImage
-                  image={p.image}
-                  category={p.category}
-                  colourHex={p.hex}
-                  decorative
-                  className="!aspect-auto h-full transition-transform duration-500 group-hover:scale-[1.03]"
-                  sizes="(min-width: 1024px) 20vw, 33vw"
-                />
-                <span aria-hidden className="absolute left-2 top-2 font-mono text-[11px] tracking-[0.12em] text-ink/70 md:left-3 md:top-3 md:text-[12px]">
-                  {plate(i + 1)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-
-        {/* The list: each piece with its size, then the total and the two ways on. */}
-        <div className="flex flex-col lg:col-span-5">
-          <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-steel-dark">
-            The {look.label.toLowerCase()} fit · {look.pieces.length} pieces
-          </p>
-          <ul className="mt-3 border-b border-mist">
-            {look.pieces.map((p, i) => {
-              const size = sizeOf(p);
-              const oneSize = p.sizes.length === 1 && p.sizes[0].size === "ONE";
+      <div className="mt-6 xl:mt-8 xl:grid xl:grid-cols-[224px_minmax(0,1fr)] xl:gap-3">
+        {/* The occasions: a list down the side on wide screens, a row to swipe on small ones. */}
+        <div className="relative xl:h-[640px]">
+          <div
+            ref={listRef}
+            role="radiogroup"
+            aria-labelledby="occasion-title"
+            className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 xl:h-full xl:flex-col xl:gap-1.5 xl:overflow-y-auto xl:overflow-x-hidden xl:py-11"
+          >
+            {looks.map((l, i) => {
+              const on = l.key === look.key;
               return (
-                <li key={p.slug} className="grid grid-cols-[auto_1fr_auto] gap-x-4 border-t border-mist py-4">
-                  <span aria-hidden className="pt-0.5 font-mono text-[12px] text-steel-dark">
-                    {plate(i)}
+                <button
+                  key={l.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={(e) => {
+                    setKey(l.key);
+                    setAdded(false);
+                    e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+                  }}
+                  className={`flex h-12 shrink-0 items-center gap-3 whitespace-nowrap border px-4 text-left text-[15px] font-semibold xl:w-full ${
+                    on ? "border-ink bg-ink text-paper" : "border-mist bg-paper hover:border-ink"
+                  }`}
+                >
+                  <span aria-hidden className={`font-mono text-[11px] font-normal ${on ? "text-paper/60" : "text-steel-dark"}`}>
+                    {String(i + 1).padStart(2, "0")}
                   </span>
-                  <div className="min-w-0">
-                    <Link href={`/product/${p.slug}`} className="font-semibold decoration-1 underline-offset-4 hover:underline">
-                      {p.name}
-                    </Link>
-                    <p className="text-[13px] text-steel-dark">{p.colour}</p>
-                    {oneSize ? (
-                      <p className="mt-2 font-mono text-[12px] text-steel-dark">One size</p>
-                    ) : (
-                      <div role="radiogroup" aria-label={`Size for ${p.name}`} className="mt-2 flex flex-wrap gap-1.5">
-                        {p.sizes.map((s) => {
-                          const out = s.stock <= 0;
-                          const on = size === s.size;
-                          return (
-                            <button
-                              key={s.size}
-                              type="button"
-                              role="radio"
-                              aria-checked={on}
-                              aria-label={`${s.size}${out ? ", sold out" : ""}`}
-                              disabled={out}
-                              onClick={() => {
-                                setPicked((m) => ({ ...m, [id(p)]: s.size }));
-                                setAdded(false);
-                              }}
-                              className={`h-9 min-w-9 border px-2 font-mono text-[12px] font-semibold ${
-                                on ? "border-ink bg-ink text-paper" : out ? "border-mist text-[#c7c7cc] line-through" : "border-mist hover:border-ink"
-                              }`}
-                            >
-                              {s.size}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <span className="font-mono text-[14px] tabular-nums">{formatPrice(p.price)}</span>
-                </li>
+                  {l.label}
+                  {on && <span aria-hidden className="ml-auto hidden h-2 w-2 bg-volt xl:block" />}
+                </button>
               );
             })}
-          </ul>
-
-          <p className="flex items-baseline justify-between py-5">
-            <span className="text-[15px] font-semibold">The whole fit</span>
-            <span className="font-mono text-[28px] font-semibold leading-none tabular-nums">{formatPrice(total)}</span>
-          </p>
-
-          <div className="mt-auto grid gap-2.5">
-            <button type="button" onClick={addAll} disabled={!ready} aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`} className="btn btn-ink h-[60px] w-full">
-              {added ? "Added to your bag" : "Add the fit"}
-            </button>
-            {/* The one lime button in the section: make it yours. */}
-            <Link
-              href={`/fit?${encodeFit(fit)}`}
-              className="group flex h-[60px] w-full items-center justify-between gap-3 rounded-[2px] border border-ink bg-volt px-5 text-[15px] font-semibold uppercase tracking-[0.06em] text-ink transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#0a0a0a]"
-            >
-              <span className="flex items-center gap-3">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                  <path d="M12 8a2 2 0 1 0-2-2M12 8v2l9 6.5a1 1 0 0 1-.6 1.8H3.6a1 1 0 0 1-.6-1.8L12 10" />
-                </svg>
-                Build your own fit
-              </span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </Link>
           </div>
+          {/* Scroll buttons, over a fade so the list reads as longer than it shows. */}
+          <button
+            type="button"
+            onClick={() => scrollList(-1)}
+            aria-label="Earlier occasions"
+            className="absolute inset-x-0 top-0 hidden h-10 items-center justify-center border border-mist bg-paper hover:border-ink xl:flex"
+          >
+            <Chevron up />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollList(1)}
+            aria-label="More occasions"
+            className="absolute inset-x-0 bottom-0 hidden h-10 items-center justify-center gap-2 border border-mist bg-paper text-[13px] font-semibold hover:border-ink xl:flex"
+          >
+            {looks.length} fits <Chevron />
+          </button>
+        </div>
+
+        <div>
+          {/* Phones, tablets and small laptops: the figure on the left, its tags stacked on the right. */}
+          <div className="mt-3 grid grid-cols-[42%_minmax(0,1fr)] items-center gap-2 bg-photo p-3 sm:gap-6 sm:p-6 xl:hidden">
+            <div className="pt-[12%]">{figure}</div>
+            <ul className="grid gap-2">
+              {worn.map((w) => (
+                <li key={w.slot}>{tag(w)}</li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Wide screens: the figure in the middle, each tag tied to its garment by a line. */}
+          <div className="relative hidden h-[640px] bg-photo xl:block">
+            <p className="absolute left-5 top-4 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
+              The {look.label.toLowerCase()} fit · {look.pieces.length} pieces
+            </p>
+            <div className="absolute left-1/2 top-[84px] w-[300px] -translate-x-1/2">{figure}</div>
+            {worn.map((w) => {
+              const a = anchor(w.slot, w.side, layered);
+              // The figure box is 300×500 with its top 84px down the stage; tags start 200px from the centre line.
+              const y = 84 + (a.y / 100) * 500;
+              const fromCentre = Math.abs(a.x - 50) * 3 + 12; // px from the centre line to just past the number
+              const line = { top: y, width: 200 - fromCentre };
+              return (
+                <div key={w.slot}>
+                  <span
+                    aria-hidden
+                    className="absolute h-px bg-ink/50"
+                    style={w.side === "left" ? { ...line, right: `calc(50% + ${fromCentre}px)` } : { ...line, left: `calc(50% + ${fromCentre}px)` }}
+                  />
+                  <div className="absolute w-[250px]" style={w.side === "left" ? { top: y - 28, right: "calc(50% + 200px)" } : { top: y - 28, left: "calc(50% + 200px)" }}>
+                    {tag(w)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* One bar: what it costs and the two ways on. */}
+      <div className="mt-0 flex flex-col gap-4 border border-mist p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between xl:mt-3">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
+            The {look.label.toLowerCase()} fit · {look.pieces.length} pieces
+          </p>
+          <p className="mt-1 font-mono text-[32px] font-semibold leading-none tabular-nums">{formatPrice(total)}</p>
+        </div>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:w-[640px]">
+          <button type="button" onClick={addAll} disabled={!ready} aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`} className="btn btn-ink h-[60px] w-full">
+            {added ? "Added to your bag" : "Add the fit"}
+          </button>
+          {/* The one lime button in the section: make it yours. */}
+          <Link
+            href={`/fit?${encodeFit(fit)}`}
+            className="group flex h-[60px] w-full items-center justify-between gap-3 rounded-[2px] whitespace-nowrap border border-ink bg-volt px-5 text-[15px] font-semibold uppercase tracking-[0.04em] text-ink transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#0a0a0a]"
+          >
+            <span className="flex items-center gap-3">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M12 8a2 2 0 1 0-2-2M12 8v2l9 6.5a1 1 0 0 1-.6 1.8H3.6a1 1 0 0 1-.6-1.8L12 10" />
+              </svg>
+              Build your own fit
+            </span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </Link>
         </div>
       </div>
     </div>

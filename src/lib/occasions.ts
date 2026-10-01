@@ -3,7 +3,36 @@
 
 import type { Category, Product, Size } from "./types";
 
-export type OccasionKey = "party" | "casual" | "wedding" | "date";
+type Tone = "dark" | "light" | "mixed";
+
+/**
+ * Every occasion the home page offers a fit for, with which kinds of piece make it up
+ * (one per place on the body) and whether it leans dark or light.
+ */
+const PLAN = [
+  { key: "party", label: "Party", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
+  { key: "casual", label: "Casual", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
+  { key: "wedding", label: "Wedding", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
+  { key: "date", label: "Date", slots: [["hoodies", "tees"], ["bottoms"], ["accessories", "jackets"]], tone: "mixed" },
+  { key: "college", label: "College", slots: [["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
+  { key: "office", label: "Office", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
+  { key: "gym", label: "Gym", slots: [["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
+  { key: "travel", label: "Travel", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
+  { key: "hike", label: "Hike", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
+  { key: "concert", label: "Concert", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
+  { key: "cafe", label: "Café", slots: [["tees", "co-ords"], ["bottoms"], ["accessories"]], tone: "light" },
+  { key: "movie", label: "Movie night", slots: [["hoodies"], ["bottoms"]], tone: "dark" },
+  { key: "dashain", label: "Dashain", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
+  { key: "tihar", label: "Tihar", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
+  { key: "roadtrip", label: "Road trip", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
+  { key: "bike", label: "Bike ride", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
+  { key: "futsal", label: "Futsal", slots: [["tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
+  { key: "family", label: "Family dinner", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
+  { key: "photoshoot", label: "Photoshoot", slots: [["jackets"], ["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
+  { key: "winter", label: "Winter day", slots: [["jackets"], ["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
+] as const satisfies readonly { key: string; label: string; slots: readonly (readonly Category[])[]; tone: Tone }[];
+
+export type OccasionKey = (typeof PLAN)[number]["key"];
 
 export interface LookPiece {
   slug: string;
@@ -20,26 +49,13 @@ export interface LookPiece {
 export interface Look {
   key: OccasionKey;
   label: string;
-  place: string;
   pieces: LookPiece[];
 }
 
-/** What the owner picked per occasion in /admin/looks: a place line and up to three pieces in a colour. */
+/** What the owner picked per occasion in /admin/looks: up to four pieces, each in a colour. */
 export type SavedLooks = Partial<Record<OccasionKey, { place?: string; pieces: { slug: string; colour: string }[] }>>;
 
-export const OCCASIONS: { key: OccasionKey; label: string; place: string }[] = [
-  { key: "party", label: "Party", place: "Thamel, Friday" },
-  { key: "casual", label: "Casual", place: "Campus, Monday" },
-  { key: "wedding", label: "Wedding", place: "Cousin's bihe" },
-  { key: "date", label: "Date", place: "Jhamsikhel, Saturday" },
-];
-
-const PLAN: { key: OccasionKey; label: string; place: string; slots: Category[][]; tone: "dark" | "light" | "mixed" }[] = [
-  { key: "party", label: "Party", place: "Thamel, Friday", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-  { key: "casual", label: "Casual", place: "Campus, Monday", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-  { key: "wedding", label: "Wedding", place: "Cousin's bihe", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-  { key: "date", label: "Date", place: "Jhamsikhel, Saturday", slots: [["hoodies", "tees"], ["bottoms"], ["accessories", "jackets"]], tone: "mixed" },
-];
+export const OCCASIONS: { key: OccasionKey; label: string }[] = PLAN.map((p) => ({ key: p.key, label: p.label }));
 
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
@@ -48,7 +64,7 @@ function luminance(hex: string) {
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 }
 
-function toPiece(p: Product, tone: "dark" | "light" | "mixed", slot: number, pickedColour?: string): LookPiece | null {
+function toPiece(p: Product, tone: Tone, slot: number, pickedColour?: string): LookPiece | null {
   const inStock = p.colours.filter((c) => p.variants.some((v) => v.colour === c.name && v.stock > 0));
   if (inStock.length === 0) return null;
   const byLight = [...inStock].sort((a, b) => luminance(a.hex) - luminance(b.hex));
@@ -85,14 +101,14 @@ export function buildLooks(products: Product[], saved: SavedLooks = {}): Look[] 
         return piece ? [piece] : [];
       });
       if (pieces.length >= 2) {
-        looks.push({ key: plan.key, label: plan.label, place: mine.place || plan.place, pieces });
+        looks.push({ key: plan.key, label: plan.label, pieces });
         return;
       }
     }
     const used = new Set<string>();
     const pieces: LookPiece[] = [];
     plan.slots.forEach((cats, slot) => {
-      const options = live.filter((p) => cats.includes(p.category) && !used.has(p.slug));
+      const options = live.filter((p) => (cats as readonly Category[]).includes(p.category) && !used.has(p.slug));
       if (options.length === 0) return;
       // Rotate through the options so each occasion shows different pieces.
       const p = options[i % options.length];
@@ -101,7 +117,7 @@ export function buildLooks(products: Product[], saved: SavedLooks = {}): Look[] 
       used.add(p.slug);
       pieces.push(piece);
     });
-    if (pieces.length >= 2) looks.push({ key: plan.key, label: plan.label, place: plan.place, pieces });
+    if (pieces.length >= 2) looks.push({ key: plan.key, label: plan.label, pieces });
   });
   return looks;
 }
