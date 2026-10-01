@@ -107,7 +107,7 @@ export default async function HomePage() {
           {/* Words */}
           <div className="flex flex-col justify-end lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:justify-center lg:pb-10">
             <p className="eyebrow flex items-center gap-2 text-paper/80">
-              <span className="h-1.5 w-1.5 bg-volt" aria-hidden />
+              <span className="h-1.5 w-1.5 bg-paper" aria-hidden />
               {current ? `${current.name} · Out now · Kathmandu` : next ? `${next.name} · ${formatDropTime(next.releaseAt)}` : "Kathmandu"}
             </p>
             <h1 id="hero-title" className="display display-hero mt-4">
@@ -154,7 +154,7 @@ export default async function HomePage() {
             </p>
             <div className="flex justify-center">{next && <Countdown to={next.releaseAt} label={next.name} size="sm" seconds />}</div>
             <div className="flex md:justify-end">
-              <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn btn-volt w-full md:w-auto">
+              <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn w-full bg-paper text-ink hover:bg-paper/85 md:w-auto">
                 {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
               </Link>
             </div>
