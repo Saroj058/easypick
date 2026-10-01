@@ -1,22 +1,35 @@
 import Link from "next/link";
 
 import { formatPrice } from "@/lib/format";
+import { sellable } from "@/lib/inventory";
 import type { Product, Size } from "@/lib/types";
-import { MiniTag } from "./hang-tag";
 import { ProductImage } from "./product-image";
 import { HeartAdd, QuickBuy } from "./quick-buy";
 
 const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL"];
 
-/** Sizes across all colours: in stock, low (≤3), or gone. */
+/** What can be bought online per size, across colours (the last piece on the shop floor doesn't count). */
 function sizeRow(p: Product) {
   const totals = new Map<Size, number>();
-  for (const v of p.variants)
-    totals.set(v.size, (totals.get(v.size) ?? 0) + v.stock);
-  return ORDER.filter((s) => totals.has(s)).map((s) => ({
-    size: s,
-    stock: totals.get(s) ?? 0,
-  }));
+  for (const v of p.variants) totals.set(v.size, (totals.get(v.size) ?? 0) + sellable(v));
+  return ORDER.filter((s) => totals.has(s)).map((s) => ({ size: s, stock: totals.get(s) ?? 0 }));
+}
+
+/** One quiet line under the name: only what helps someone decide. */
+function statusLine(p: Product): { text: string; strong?: boolean } {
+  const colours = p.colours.length > 1 ? `${p.colours.length} colours` : p.colours[0].name;
+  if (p.status === "sold_out") return { text: "Sold out · tell me when it's back" };
+  const row = sizeRow(p);
+  if (p.status === "scheduled") {
+    const range = row.length > 1 ? `${row[0].size}–${row[row.length - 1].size}` : row[0]?.size;
+    return { text: range ? `${colours} · ${range}` : colours };
+  }
+  const online = row.reduce((n, r) => n + r.stock, 0);
+  if (online === 0 && p.variants.some((v) => v.stock > 0)) return { text: "In store only" };
+  const low = row.filter((r) => r.stock > 0 && r.stock <= 3);
+  if (online > 0 && online <= 3) return { text: `Only ${online} left`, strong: true };
+  if (low.length) return { text: `Few left in ${low.slice(0, 3).map((r) => r.size).join(", ")}` };
+  return { text: colours };
 }
 
 export function ProductCard({
@@ -30,18 +43,10 @@ export function ProductCard({
 }) {
   const [front, back] = product.images;
   const hex = product.colours[0].hex;
-  const row = product.status === "live" ? sizeRow(product) : [];
   const price = product.salePrice ?? product.price;
-  const note =
-    product.status === "sold_out"
-      ? "Sold out"
-      : product.status === "scheduled"
-        ? `Drop ${product.dropSlug}`
-        : product.isNew
-          ? product.dropSlug
-            ? `New · Drop ${product.dropSlug}`
-            : "New"
-          : null;
+  const status = statusLine(product);
+  // Only what changes whether it can be bought gets a label on the photo.
+  const note = product.status === "sold_out" ? "Sold out" : product.status === "scheduled" ? `Drop ${product.dropSlug}` : null;
 
   return (
     <div className="group relative">
@@ -68,66 +73,25 @@ export function ProductCard({
                 />
               </div>
             )}
-            {note && (
-              <span
-                className={`absolute left-3 top-3 ${product.status === "scheduled" || (product.isNew && product.status === "live") ? "tag-volt" : "index bg-paper px-2 py-1"}`}
-              >
-                {note}
-              </span>
-            )}
+            {note && <span className={`absolute left-3 top-3 ${product.status === "scheduled" ? "tag-volt" : "index bg-paper px-2 py-1"}`}>{note}</span>}
           </div>
-          {/* Tied just above the hem of the photo, hanging down outside the card. */}
-          <MiniTag
-            product={product}
-            className="absolute right-2 top-full z-10 -mt-3 md:right-4"
-          />
         </div>
-        {/* Room on the right for the hanging tag, which carries the price. */}
-        <div className="mt-3 pr-[62px] md:pr-[92px]">
-          <h3 className="line-clamp-2 text-[15px] font-semibold decoration-1 underline-offset-4 group-hover:underline">
-            {product.name}
-            <span className="sr-only">
-              , {product.salePrice ? "sale price " : ""}
+        <div className="mt-3">
+          {/* Phones: the name gets its own line so it isn't cut short. Wider: name and price share one. */}
+          <h3 className="flex flex-col gap-0.5 text-[15px] md:flex-row md:items-baseline md:justify-between md:gap-3">
+            <span className="line-clamp-1 font-semibold decoration-1 underline-offset-4 group-hover:underline">{product.name}</span>
+            <span className="shrink-0 font-mono text-[14px] tabular-nums">
+              {product.salePrice && (
+                <s className="mr-1.5 text-steel-dark">
+                  <span className="sr-only">was </span>
+                  {product.price.toLocaleString("en-IN")}
+                </s>
+              )}
+              <span className="sr-only">{product.salePrice ? ", sale price " : ", "}</span>
               {formatPrice(price)}
             </span>
           </h3>
-          <p className="mt-0.5 text-[13px] text-steel-dark">
-            {product.colours.length > 1
-              ? `${product.colours.length} colours`
-              : product.colours[0].name}
-            {product.salePrice && (
-              <>
-                {" · "}
-                <s>
-                  <span className="sr-only">was </span>
-                  {formatPrice(product.price)}
-                </s>
-              </>
-            )}
-          </p>
-          {row.length > 1 && (
-            <p
-              className="mt-2 flex gap-2.5 font-mono text-[12px]"
-              aria-label={`Sizes: ${row.map((r) => `${r.size} ${r.stock === 0 ? "sold out" : r.stock <= 3 ? `${r.stock} left` : "in stock"}`).join(", ")}`}
-            >
-              {row.map((r) => (
-                <span
-                  key={r.size}
-                  aria-hidden
-                  className={
-                    r.stock === 0 ? "text-steel-dark line-through" : "text-ink"
-                  }
-                >
-                  {r.size}
-                  {r.stock > 0 && r.stock <= 3 && (
-                    <sup className="ml-px text-[9px] text-steel-dark">
-                      {r.stock}
-                    </sup>
-                  )}
-                </span>
-              ))}
-            </p>
-          )}
+          <p className={`mt-0.5 text-[13px] ${status.strong ? "font-semibold text-ink" : "text-steel-dark"}`}>{status.text}</p>
         </div>
       </Link>
       {/* Outside the link: a button can't sit inside one. */}
@@ -149,10 +113,10 @@ export function ProductGrid({
   priorityCount?: number;
 }) {
   return (
-    <ul className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
+    <ul className="grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
       {products.map((p, i) => (
         <li key={p.id}>
-          <ProductCard product={p} priority={i < priorityCount} />
+          <ProductCard product={p} priority={i < priorityCount} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" />
         </li>
       ))}
     </ul>

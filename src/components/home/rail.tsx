@@ -1,46 +1,28 @@
 import Link from "next/link";
 
 import { ProductCard } from "@/components/product-card";
+import { sellable } from "@/lib/inventory";
 import { categoryLabels } from "@/lib/site";
 import type { Category, Product } from "@/lib/types";
 import { MySize } from "./my-size";
 
 const RAIL_SHOWN = 8;
 
-// The rail: the newest pieces first, with one-tap filters that open the shop already filtered.
+// The rail: the newest pieces first, with a few one-tap filters that open the shop already filtered.
+// Links marked data-rail-link pick up the "My size" choice (see my-size.tsx).
 
-const PRICE_CHIPS = [
-  { href: "/shop?price=u1000", label: "Under Rs 1,000" },
-  { href: "/shop?price=u1500", label: "Under Rs 1,500" },
-  { href: "/shop?price=u2500", label: "Under Rs 2,500" },
-];
-const FIT_CHIPS = [
-  { href: "/shop?fit=oversized", label: "Oversized" },
-  { href: "/shop?fit=relaxed", label: "Relaxed" },
-  { href: "/shop?fit=regular", label: "Regular" },
-];
-
-function Chip({ href, children, strong = false }: { href: string; children: React.ReactNode; strong?: boolean }) {
+function Chip({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className={`inline-flex h-10 shrink-0 items-center whitespace-nowrap border px-4 text-sm font-semibold ${
-        strong ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"
-      }`}
-    >
+    <Link href={href} data-rail-link className="inline-flex h-10 shrink-0 items-center whitespace-nowrap border border-mist px-4 text-sm font-semibold hover:border-ink">
       {children}
     </Link>
   );
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <span className="mr-1 shrink-0 font-mono text-[12px] tracking-[0.08em] text-steel-dark">{children}</span>;
-}
-
 export function Rail({ products }: { products: Product[] }) {
   const live = products.filter((p) => p.status === "live");
   // Newest first; a few extra so "My size" can still fill the grid.
-  const pool = [...live].sort((a, b) => (b.liveAt ?? "").localeCompare(a.liveAt ?? "")).slice(0, RAIL_SHOWN * 3);
+  const pool = [...live].sort((a, b) => (b.liveAt ?? "").localeCompare(a.liveAt ?? "")).slice(0, RAIL_SHOWN * 2);
   const categories = (Object.keys(categoryLabels) as Category[]).filter((c) => live.some((p) => p.category === c));
   const anySale = live.some((p) => p.salePrice);
   const anyNew = live.some((p) => p.isNew);
@@ -54,61 +36,46 @@ export function Rail({ products }: { products: Product[] }) {
           <h2 id="rail-title" className="display display-h1">
             The rail
           </h2>
-          <div className="flex items-center gap-2">
-            <MySize limit={RAIL_SHOWN} />
-            <Link href="/shop?sort=price-asc" className="hidden h-11 items-center whitespace-nowrap border border-mist px-4 text-sm font-semibold hover:border-ink sm:inline-flex">
-              Lowest price first
-            </Link>
-          </div>
+          <MySize limit={RAIL_SHOWN} />
         </div>
 
-        <nav aria-label="Categories" className="no-scrollbar -mx-4 mt-6 flex gap-2 overflow-x-auto border-b border-mist px-4 pb-4 md:mx-0 md:px-0">
-          <Chip href="/shop" strong>
-            All
-          </Chip>
+        <nav aria-label="Shop by" className="no-scrollbar -mx-4 mt-6 flex items-center gap-2 overflow-x-auto border-b border-mist px-4 pb-4 md:mx-0 md:flex-wrap md:px-0">
+          {anySale && <Chip href="/shop?sale=1">On sale</Chip>}
+          {anyNew && <Chip href="/shop?new=1">New in</Chip>}
           {categories.map((c) => (
             <Chip key={c} href={`/shop?category=${c}`}>
               {categoryLabels[c]}
             </Chip>
           ))}
+          <span className="mx-1 h-6 w-px shrink-0 bg-mist" aria-hidden />
+          <Chip href="/shop?price=u1000">Under Rs 1,000</Chip>
+          <Chip href="/shop?price=u2500">Under Rs 2,500</Chip>
+          <Link href="/shop" data-rail-link className="ml-1 inline-flex h-10 shrink-0 items-center whitespace-nowrap px-2 text-sm font-semibold underline underline-offset-4">
+            All filters
+          </Link>
         </nav>
 
-        <div aria-label="Quick filters" role="group" className="no-scrollbar -mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
-          <Label>PRICE</Label>
-          {PRICE_CHIPS.map((c) => (
-            <Chip key={c.href} href={c.href}>
-              {c.label}
-            </Chip>
-          ))}
-          <span className="mx-2 h-6 w-px shrink-0 bg-mist" aria-hidden />
-          <Label>FIT</Label>
-          {FIT_CHIPS.map((c) => (
-            <Chip key={c.href} href={c.href}>
-              {c.label}
-            </Chip>
-          ))}
-          {(anySale || anyNew) && <span className="mx-2 h-6 w-px shrink-0 bg-mist" aria-hidden />}
-          {anySale && <Chip href="/shop?sale=1">On sale</Chip>}
-          {anyNew && <Chip href="/shop?new=1">New in</Chip>}
-        </div>
-
-        <ul id="rail-grid" className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
+        <ul id="rail-grid" className="mt-8 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
           {pool.map((p, i) => (
             <li
               key={p.id}
-              data-sizes={Array.from(new Set(p.variants.filter((v) => v.stock > 0).map((v) => v.size))).join(" ")}
+              // Sizes that can be bought online, for the "My size" switch.
+              data-sizes={Array.from(new Set(p.variants.filter((v) => sellable(v) > 0).map((v) => v.size))).join(" ")}
               hidden={i >= RAIL_SHOWN}
             >
-              <ProductCard product={p} priority={i < 2} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" />
+              <ProductCard product={p} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" />
             </li>
           ))}
         </ul>
         <p id="rail-empty" hidden className="py-12 text-center text-steel-dark">
-          Nothing on the rail in your size right now. <Link href="/shop" className="underline">See everything</Link>
+          Nothing on the rail in your size right now.{" "}
+          <Link href="/shop" className="underline">
+            See everything
+          </Link>
         </p>
 
         <div className="mt-12 flex justify-center">
-          <Link href="/shop" className="btn btn-outline">
+          <Link href="/shop" data-rail-link className="btn btn-outline">
             Shop all
           </Link>
         </div>

@@ -99,7 +99,8 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   if (f.category) list = list.filter((p) => p.category === f.category);
   if (f.fit) list = list.filter((p) => p.fit === f.fit);
   if (f.colour) list = list.filter((p) => p.colours.some((c) => c.name === f.colour));
-  if (f.size) list = list.filter((p) => p.variants.some((v) => v.size === f.size && v.stock > 0));
+  // One-size pieces (caps) fit every size, the same as on the home rail.
+  if (f.size) list = list.filter((p) => p.variants.some((v) => (v.size === f.size || v.size === "ONE") && v.stock > 0));
   const priceRule = prices.find((x) => x.key === f.price);
   if (priceRule) list = list.filter((p) => priceRule.test(priceOf(p)));
   if (f.sort === "price-asc") list = [...list].sort((a, b) => priceOf(a) - priceOf(b));
@@ -125,7 +126,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
       <FestivalNotice className="mt-4 max-w-2xl" />
 
       <div className="mt-8 space-y-3">
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
+        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
           <Chip active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })}>
             All
           </Chip>
@@ -139,12 +140,43 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
               New in
             </Chip>
           )}
-          {(Object.keys(categoryLabels) as Category[]).map((c) => (
+          {(Object.keys(categoryLabels) as Category[])
+            .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
+            .map((c) => (
             <Chip key={c} active={f.category === c} href={href(f, { category: c })}>
               {categoryLabels[c]}
             </Chip>
           ))}
         </div>
+
+        {active && (
+          <ul aria-label="Filters on" className="flex flex-wrap gap-2">
+            {(
+              [
+                ["size", f.size && `Size ${f.size}`],
+                ["colour", f.colour],
+                ["price", prices.find((x) => x.key === f.price)?.label],
+                ["fit", fits.find((x) => x.key === f.fit)?.label],
+                ["brand", f.brand],
+                ["vault", f.vault && "The Vault"],
+              ] as [keyof Filters, string | undefined][]
+            )
+              .filter(([, label]) => label)
+              .map(([key, label]) => (
+                <li key={key}>
+                  <Link
+                    href={href(f, { [key]: undefined })}
+                    scroll={false}
+                    className="inline-flex h-9 items-center gap-2 rounded-[2px] bg-photo px-3 text-[13px] font-semibold hover:bg-mist"
+                  >
+                    {label}
+                    <span aria-hidden>×</span>
+                    <span className="sr-only">, remove filter</span>
+                  </Link>
+                </li>
+              ))}
+          </ul>
+        )}
 
         <details className="group">
           <summary className="flex h-11 cursor-pointer list-none items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
