@@ -197,8 +197,8 @@ export function SelfCheckout() {
       {/* Continues the Our store section above: same background, joined by a dashed line. */}
       <div className="container-ep">
         <div className="mb-12 border-t border-dashed border-steel md:mb-16" aria-hidden />
-        {/* Wide screens: words on the left edge, the kiosk in the middle, the steps on the right edge. */}
-        <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+        {/* Wide screens: three columns with equal sides, so the kiosk sits exactly in the middle of the page. */}
+        <div className="flex flex-col gap-10 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-8">
           <div className="lg:max-w-[420px]" data-reveal>
             <p className="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-steel-dark">Inside the store · self-checkout</p>
             <h2 id="checkout-title" className="display text-[clamp(2.5rem,1.9rem+2.4vw,4rem)] leading-[0.92]">
@@ -223,7 +223,7 @@ export function SelfCheckout() {
 
           <div className="flex items-center justify-center gap-3 sm:gap-6 lg:contents">
             <Kiosk />
-            <div className="flex w-[128px] flex-col gap-4 sm:w-[210px] sm:gap-6">
+            <div className="flex w-[128px] flex-col gap-4 sm:w-[210px] sm:gap-6 lg:justify-self-end">
               <div className="w-[64px] self-start sm:w-[88px]">
                 <Stamp />
               </div>
