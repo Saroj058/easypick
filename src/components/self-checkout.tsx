@@ -69,7 +69,7 @@ function Kiosk() {
           <div className="ks-face ks-front">
             <div className="ks-head">
               <span className="ks-brand">
-                EASYPICK<span className="text-volt">.</span>
+                EASYPICK.
               </span>
               <span className="ks-small">SELF-CHECKOUT</span>
             </div>
@@ -77,7 +77,7 @@ function Kiosk() {
               <div className="ks-screen">
                 <div className="flex items-center justify-between">
                   <span className="font-display text-[21px] tracking-[1px]">YOUR PIECES</span>
-                  <span className="bg-volt px-1.5 py-0.5 text-[10px]">2 TAGS READ</span>
+                  <span className="bg-ink px-1.5 py-0.5 text-[10px] text-paper">2 TAGS READ</span>
                 </div>
                 <div className="flex justify-between">
                   <span>✓ Coach Jacket · M</span>
@@ -149,9 +149,9 @@ function Kiosk() {
             </div>
             <div className="ks-face ks-c-front">
               <Marker n="1" className="ks-m1" />
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c6ff3d" strokeWidth="2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#aeaeb2" strokeWidth="2">
                 <path d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0" />
-                <circle cx="12" cy="12" r="1.5" fill="#c6ff3d" />
+                <circle cx="12" cy="12" r="1.5" fill="#aeaeb2" />
               </svg>
               PLACE CLOTHES · TAGS SCAN AUTOMATICALLY
             </div>
