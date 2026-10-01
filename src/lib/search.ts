@@ -54,7 +54,10 @@ const norm = (s: string) =>
     .replace(/[^a-z0-9\s-]/g, " ")
     .trim();
 
-function words(p: Product): string[] {
+/** What the search reads from a piece. */
+export type Searchable = Pick<Product, "name" | "category" | "fit" | "gender" | "tags" | "status"> & { colours: { name: string }[] };
+
+function words(p: Searchable): string[] {
   const text = [p.name, categoryLabels[p.category], ...(CATEGORY_WORDS[p.category] ?? []), ...p.colours.map((c) => c.name), p.fit, p.gender, ...p.tags].join(" ");
   return Array.from(new Set(norm(text).split(/[\s-]+/).filter(Boolean)));
 }
@@ -92,7 +95,7 @@ export function queryTokens(query: string) {
 }
 
 /** Products matching every typed word, best first. An empty query returns them all. */
-export function searchProducts(products: Product[], query: string): Product[] {
+export function searchProducts<T extends Searchable>(products: T[], query: string): T[] {
   const tokens = queryTokens(query);
   if (!tokens.length) return products;
   return products
@@ -107,7 +110,7 @@ export function searchProducts(products: Product[], query: string): Product[] {
       if (p.status !== "live") score -= 0.5; // what they can buy now comes first
       return { p, score };
     })
-    .filter((x): x is { p: Product; score: number } => x !== null)
+    .filter((x): x is { p: T; score: number } => x !== null)
     .sort((a, b) => b.score - a.score)
     .map((x) => x.p);
 }

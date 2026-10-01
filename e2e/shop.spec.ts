@@ -12,38 +12,48 @@ test("home, shop and a product page load @phone", async ({ page }) => {
   await expect(page.getByText(/Free pickup at the store/)).toBeVisible();
 });
 
-test("home: the rail (sections, one-tap add in My size) and Designer Fits @phone", async ({ page }) => {
+test("home: the rail (size asked once, buy or bag from the card, search) and Designer Fits @phone", async ({ page }) => {
   await page.goto("/");
   const rail = page.getByRole("region", { name: "The rail" });
   // Laid out in sections, each with its own pieces.
   const first = rail.getByRole("region").first();
   await expect(first.getByRole("listitem").first()).toBeVisible();
 
-  // My size is picked once on the sign, and is then chosen on the cards.
+  // The size is asked once; after that it is picked on the cards and the question folds away.
+  const ask = rail.getByRole("group", { name: "Your size" });
   await expect(async () => {
-    await rail.getByRole("button", { name: "M", exact: true }).click();
-    await expect(rail.getByRole("button", { name: "M", exact: true })).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
+    await ask.getByRole("button", { name: "M", exact: true }).click();
+    await expect(rail.getByRole("button", { name: "My size is M. Change it" })).toBeVisible({ timeout: 1000 });
   }).toPass();
   const hoodie = first.getByRole("listitem").filter({ hasText: "Everyday Hoodie" });
-  const add = hoodie.getByRole("button", { name: /^Add \w+ to bag$/ });
-  await expect(add).toBeVisible();
-  // Another size can be tapped on the card itself; sold-out sizes can't.
-  await hoodie.locator('[role="radio"]:not([disabled])').last().click();
-  await add.click();
-  await expect(hoodie.getByRole("link", { name: /In your bag/ })).toBeVisible();
+  // Buy now goes straight to the checkout for that size...
+  await expect(hoodie.getByRole("link", { name: "Buy now" })).toHaveAttribute("href", /\/buy\/everyday-hoodie\?sku=/);
+  // ...and the bag button adds it without leaving, then the bag's total shows.
+  await hoodie.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
+  await expect(hoodie.getByRole("button", { name: "Everyday Hoodie is in your bag" })).toBeVisible();
+  await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
   await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
 
-  // A budget narrows the wall and can be cleared; the shop link carries the size.
+  // Search narrows the rail as you type, forgiving of spelling.
+  await rail.getByLabel("Search the rail").fill("hudi");
+  await expect(rail.getByRole("status").first()).toContainText(/of \d+ match "hudi"/);
+  await expect(rail.getByRole("listitem").filter({ hasText: "Everyday Hoodie" })).toBeVisible();
+  await rail.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect(rail.getByLabel("Search the rail")).toHaveValue("");
+
+  // Budget and order sit behind Filter.
+  await rail.getByRole("button", { name: "Filter" }).click();
   const budget = rail.getByRole("group", { name: "Budget" }).getByRole("button").first();
   await budget.click();
-  await expect(rail.getByRole("status")).toContainText(/of \d+ under Rs/);
+  await expect(rail.getByRole("status").first()).toContainText(/of \d+ under Rs/);
   await rail.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(budget).toHaveAttribute("aria-pressed", "false");
   await expect(rail.getByRole("link", { name: "Shop all" }).last()).toHaveAttribute("href", "/shop?size=M");
-  await rail.getByRole("button", { name: /Sorted newest first/ }).click();
-  await expect(rail.getByRole("button", { name: /Sorted by price/ })).toBeVisible();
-  await rail.getByRole("button", { name: /Sorted by price/ }).click();
-  await rail.getByRole("button", { name: "M", exact: true }).click();
+
+  // The size can be forgotten again.
+  await rail.getByRole("button", { name: "My size is M. Change it" }).click();
+  await rail.getByRole("button", { name: "Forget my size" }).click();
+  await expect(ask.getByRole("button", { name: "M", exact: true })).toHaveAttribute("aria-pressed", "false");
 
   const fits = page.getByRole("region", { name: "Designer Fits" });
   await fits.scrollIntoViewIfNeeded();
