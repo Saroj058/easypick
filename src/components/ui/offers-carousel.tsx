@@ -58,7 +58,7 @@ function ItemCard({ item }: { item: OfferItem }) {
         </div>
         <h3 className="mt-3 line-clamp-1 pr-[72px] text-[15px] md:pr-[88px] font-semibold decoration-1 underline-offset-4 group-hover:underline">{item.name}</h3>
         <p className="mt-0.5 line-clamp-1 pr-[72px] text-[13px] text-steel-dark md:pr-[88px]">{item.sub}</p>
-        <p className="mt-1.5 flex items-baseline gap-2 font-mono tabular-nums">
+        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 pr-[72px] font-mono tabular-nums md:pr-[88px]">
           <span className="text-[16px] font-semibold">
             <span className="sr-only">now </span>
             {item.price}
