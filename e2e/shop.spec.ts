@@ -127,3 +127,17 @@ test("drop alerts: sign up by email, then stop with the link @phone", async ({ p
   await page.getByRole("button", { name: "Stop the messages" }).click();
   await expect(page.getByText(/doesn't match a sign-up/)).toBeVisible();
 });
+
+test("drop pages: the run, what's left, and the drops list @phone", async ({ page, request }) => {
+  await page.goto("/drops");
+  await expect(page.getByRole("heading", { name: "Out now" })).toBeVisible();
+  await page.getByRole("link", { name: /Drop 01/ }).first().click();
+  await expect(page).toHaveURL(/\/drop\/01$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Drop 01" })).toBeVisible();
+  await expect(page.getByText(/\d+ of \d+ left/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Share this drop" })).toBeVisible();
+
+  const story = await request.get("/drop/01/story");
+  expect(story.status()).toBe(200);
+  expect(story.headers()["content-type"]).toContain("image/png");
+});

@@ -36,10 +36,13 @@ export function ProductCard({
   product,
   priority,
   sizes,
+  plate,
 }: {
   product: Product;
   priority?: boolean;
   sizes?: string;
+  /** A lookbook-style number on drop pages, e.g. "07/03". */
+  plate?: string;
 }) {
   const [front, back] = product.images;
   const hex = product.colours[0].hex;
@@ -77,6 +80,11 @@ export function ProductCard({
           </div>
         </div>
         <div className="mt-3">
+          {plate && (
+            <p aria-hidden className="mb-1 font-mono text-[11px] tracking-[0.12em] text-steel-dark">
+              {plate}
+            </p>
+          )}
           {/* Phones: the name gets its own line so it isn't cut short. Wider: name and price share one. */}
           <h3 className="flex flex-col gap-0.5 text-[15px] md:flex-row md:items-baseline md:justify-between md:gap-3">
             <span className="line-clamp-1 font-semibold decoration-1 underline-offset-4 group-hover:underline">{product.name}</span>
