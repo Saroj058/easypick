@@ -10,18 +10,18 @@ function parts(ms: number) {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
- * Counts down to a drop. Seconds tick only in the large variant, only while the
- * tab is visible, and never under reduced motion (then it updates once a minute).
+ * Counts down to a drop. Seconds tick in the large variant (or when `seconds` is asked for), only
+ * while the tab is visible, and never under reduced motion (then it updates once a minute).
  * Height is fixed in every state so nothing shifts.
  */
-export function Countdown({ to, label, size = "lg" }: { to: string; label: string; size?: "sm" | "lg" }) {
+export function Countdown({ to, label, size = "lg", seconds = false }: { to: string; label: string; size?: "sm" | "lg"; seconds?: boolean }) {
   const target = Date.parse(to);
   const [now, setNow] = useState<number | null>(null);
   const [calm, setCalm] = useState(true);
 
   useEffect(() => {
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const fast = size === "lg" && !reduce;
+    const fast = (size === "lg" || seconds) && !reduce;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- read the clock and motion preference once mounted
     setCalm(!fast);
     const tick = () => document.visibilityState === "visible" && setNow(Date.now());
@@ -33,7 +33,7 @@ export function Countdown({ to, label, size = "lg" }: { to: string; label: strin
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [size]);
+  }, [size, seconds]);
 
   const live = now !== null && now >= target;
   const { d, h, m, s } = parts(now === null ? 0 : target - now);
@@ -58,7 +58,7 @@ export function Countdown({ to, label, size = "lg" }: { to: string; label: strin
         <div role="timer" aria-label={`${label} in ${d} days ${h} hours ${m} minutes`}>
           <ol className={`flex font-mono ${size === "lg" ? "gap-5 md:gap-8" : "gap-3"}`} aria-hidden>
             {units.map((u) => (
-              <li key={u.l} className="flex flex-col">
+              <li key={u.l} className={`flex flex-col ${seconds ? "items-center" : ""}`}>
                 <span className={`font-semibold tabular-nums ${numCls}`}>{pad(u.v)}</span>
                 <span className="mt-2 text-[11px] uppercase tracking-[0.14em] opacity-70">{u.l}</span>
               </li>

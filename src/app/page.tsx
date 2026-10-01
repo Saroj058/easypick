@@ -14,11 +14,11 @@ import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
 import { SelfCheckout } from "@/components/self-checkout";
 import { getStoreInfo } from "@/lib/store-info";
-import { formatDropTime, formatPrice } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
 import { site } from "@/lib/site";
-import { getDropTimeline, getHomeStats, getProducts } from "@/lib/store";
+import { getDropTimeline, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
 import { designerFits } from "@/lib/occasions";
 import type { Category, Product } from "@/lib/types";
@@ -82,9 +82,6 @@ const orgLd = {
 export default async function HomePage() {
   const [products, { current, next }] = await Promise.all([getProducts(), getDropTimeline()]);
   const drop = current ?? next;
-  const dropProducts = drop ? products.filter((p) => p.dropSlug === drop.slug) : products;
-  const onRack = dropProducts.filter((p) => p.status !== "scheduled");
-  const stats = getHomeStats(onRack, current?.pieceCount ?? null);
   const upper = pickStorey(products, UPPER);
   const lower = pickStorey(products, LOWER);
 
@@ -106,62 +103,37 @@ export default async function HomePage() {
 
           {/* Words */}
           <div className="flex flex-col justify-end lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:justify-center lg:pb-10">
-            <p className="eyebrow flex items-center gap-2 text-paper/80">
-              <span className="h-1.5 w-1.5 bg-volt" aria-hidden />
-              {current ? `${current.name} · Out now · Kathmandu` : next ? `${next.name} · ${formatDropTime(next.releaseAt)}` : "Kathmandu"}
-            </p>
-            <h1 id="hero-title" className="display display-hero mt-4">
-              {current ? (
-                <>
-                  Drop {current.slug}.
-                  <br />
-                  Out now.
-                </>
-              ) : next ? (
-                <>
-                  Drop {next.slug}.
-                  <br />
-                  {formatDropTime(next.releaseAt).split(",")[0]}.
-                </>
-              ) : (
-                <>
-                  Pick it.
-                  <br />
-                  Wear it.
-                </>
-              )}
+            <h1 id="hero-title" className="display text-[clamp(2.5rem,1.5rem+4.2vw,4.75rem)] leading-[0.92] tracking-[-0.015em]">
+              Shopping shouldn&apos;t feel like negotiation.
+              <span className="mt-3 block text-[0.62em] leading-[0.95] text-paper/60">That&apos;s why we built Easypick.</span>
             </h1>
-            {/* The promise: the message people send other shops, struck out before it is sent. */}
-            <div className="group mt-6 max-w-[440px]">
-              <div aria-hidden className="flex items-center gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="dm-bubble rounded-[18px] rounded-bl-[5px] bg-[#2c2c2e] px-3.5 py-2 text-[15px] leading-5 text-paper/70">
-                    <span className="dm-strike">bro price?</span>
-                  </span>
-                  <span className="dm-note pl-1 font-mono text-[10px] uppercase tracking-[0.14em] text-paper/60">Not sent</span>
-                </div>
-              </div>
-              <p className="display mt-3 text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] leading-[0.95]">
-                Price shown. <span className="whitespace-nowrap text-paper/60">No DM needed.</span>
-              </p>
-            </div>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn btn-volt">
-                {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
-              </Link>
-              <Link href="/visit" className="btn btn-outline">
-                Find the store
+            <ul className="mt-6 space-y-1.5 text-[16px] text-paper/85 sm:text-[17px]">
+              {["Fixed prices.", "Automated checkout.", "Same price online and in-store."].map((line) => (
+                <li key={line} className="flex items-center gap-3">
+                  <span aria-hidden className="h-1.5 w-1.5 shrink-0 bg-volt" />
+                  {line}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-7">
+              <Link href="/visit" className="btn btn-outline w-full sm:w-auto">
+                Visit store
               </Link>
             </div>
           </div>
 
-          {/* At the end: only the countdown to the next drop */}
-          {next && (
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-paper/15 pt-5 lg:col-span-12 lg:row-start-2">
-              <p className="index text-paper/70">Drop {next.slug} opens in</p>
-              <Countdown to={next.releaseAt} label={next.name} size="sm" />
+          {/* At the end: the drop. The countdown in the middle, the way into the drop beside it. */}
+          <div className="grid items-center gap-x-6 gap-y-4 border-t border-paper/15 pt-5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:col-span-12 lg:row-start-2">
+            <p className="index text-center text-paper/70 md:text-left">
+              {next ? `Drop ${next.slug} opens in` : current ? `${current.name} · out now` : "Kathmandu"}
+            </p>
+            <div className="flex justify-center">{next && <Countdown to={next.releaseAt} label={next.name} size="sm" seconds />}</div>
+            <div className="flex md:justify-end">
+              <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn btn-volt w-full md:w-auto">
+                {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
+              </Link>
             </div>
-          )}
+          </div>
         </div>
       </section>
 
