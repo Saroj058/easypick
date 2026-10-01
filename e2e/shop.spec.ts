@@ -12,22 +12,34 @@ test("home, shop and a product page load @phone", async ({ page }) => {
   await expect(page.getByText(/Free pickup at the store/)).toBeVisible();
 });
 
-test("home: the rail (size asked once, buy or bag from the card, search) and Designer Fits @phone", async ({ page }) => {
+test("home: the rail (cover-flow rows, size asked once, buy or bag, search) and Designer Fits @phone", async ({ page }) => {
   await page.goto("/");
   const rail = page.getByRole("region", { name: "The rail" });
-  // Laid out in sections, each with its own pieces.
-  const first = rail.getByRole("region").first();
-  await expect(first.getByRole("listitem").first()).toBeVisible();
-
-  // The size is asked once; after that it is picked on the cards and the question folds away.
-  const ask = rail.getByRole("group", { name: "Your size" });
+  // Laid out in sections; each is a cover-flow with one piece at the centre and its details underneath.
+  const first = rail.locator("section").first();
+  const flow = first.getByRole("region", { name: "Tops" });
+  await expect(flow.getByRole("group").first()).toBeVisible();
+  const centre = first.getByRole("heading", { level: 4 });
+  const before = await centre.innerText();
   await expect(async () => {
-    await ask.getByRole("button", { name: "M", exact: true }).click();
-    await expect(rail.getByRole("button", { name: "My size is M. Change it" })).toBeVisible({ timeout: 1000 });
+    await flow.getByRole("button", { name: "Next" }).click();
+    await expect(centre).not.toHaveText(before, { timeout: 1500 });
   }).toPass();
-  const hoodie = first.getByRole("listitem").filter({ hasText: "Everyday Hoodie" });
+  // Bring the hoodie to the centre.
+  for (let i = 0; i < 12 && (await centre.innerText()) !== "Everyday Hoodie"; i++) {
+    const was = await centre.innerText();
+    await flow.getByRole("button", { name: "Next" }).click();
+    await expect(centre).not.toHaveText(was);
+  }
+  await expect(centre).toHaveText("Everyday Hoodie");
+
+  // The size is asked once; after that it is picked for the piece and the question folds away.
+  const ask = rail.getByRole("group", { name: "Your size" });
+  await ask.getByRole("button", { name: "M", exact: true }).click();
+  await expect(rail.getByRole("button", { name: "My size is M. Change it" })).toBeVisible();
+  await expect(first.getByText(/In your size/)).toBeVisible();
   // Buy now opens the payment form in a pop-up, on this page...
-  await hoodie.getByRole("button", { name: "Buy now" }).click();
+  await first.getByRole("button", { name: "Buy now" }).click();
   const pay = page.getByRole("dialog");
   await expect(pay.getByText(/Everyday Hoodie · .* · M · Rs/)).toBeVisible();
   await expect(pay.getByLabel("Mobile number")).toBeVisible();
@@ -36,25 +48,24 @@ test("home: the rail (size asked once, buy or bag from the card, search) and Des
   await page.keyboard.press("Escape");
   await expect(pay).toHaveCount(0);
   // ...and the bag button adds it without leaving, then the bag's total shows.
-  await hoodie.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
-  await expect(hoodie.getByRole("button", { name: "Everyday Hoodie is in your bag" })).toBeVisible();
+  await first.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
+  await expect(first.getByRole("button", { name: "Everyday Hoodie is in your bag" })).toBeVisible();
   await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
   // Undo takes it back out; adding again puts it back.
   await rail.getByRole("button", { name: /^Undo/ }).click();
-  await expect(hoodie.getByRole("button", { name: /^Add Everyday Hoodie/ })).toBeEnabled();
-  await hoodie.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
+  await expect(first.getByRole("button", { name: /^Add Everyday Hoodie/ })).toBeEnabled();
+  await first.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
   await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
-  // The tag's back: the measurements in cm for the size chosen.
-  await hoodie.getByRole("button", { name: "Everyday Hoodie: measurements in cm" }).click();
-  await expect(hoodie.getByText(/Size M · cm/)).toBeVisible();
-  await hoodie.getByRole("button", { name: "Close the measurements" }).click();
   await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
+  // The measurements in cm for the size chosen.
+  await first.getByRole("button", { name: "Measurements in cm" }).click();
+  await expect(first.getByText(/Size M · cm/)).toBeVisible();
 
   // Search narrows the rail as you type, forgiving of spelling.
   await rail.getByRole("button", { name: "Search the rail" }).click(); // the round button opens into a field
   await rail.getByRole("textbox", { name: "Search the rail" }).fill("hudi");
   await expect(rail.getByRole("status").first()).toContainText(/of \d+ match "hudi"/);
-  await expect(rail.getByRole("listitem").filter({ hasText: "Everyday Hoodie" })).toBeVisible();
+  await expect(rail.getByRole("heading", { level: 4, name: "Everyday Hoodie" })).toBeVisible();
   await rail.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(rail.getByRole("textbox", { name: "Search the rail" })).toHaveValue("");
   // The cross folds the field back into the round button.
@@ -69,11 +80,6 @@ test("home: the rail (size asked once, buy or bag from the card, search) and Des
   await rail.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(budget).toHaveAttribute("aria-pressed", "false");
   await expect(rail.getByRole("link", { name: "Shop all" }).last()).toHaveAttribute("href", "/shop?size=M");
-  // Each section is one row that slides sideways: every card the same size, arrows on the label.
-  const row = first.getByRole("list");
-  expect(await row.evaluate((el) => getComputedStyle(el).flexWrap)).toBe("nowrap");
-  const sizes = await row.getByRole("listitem").evaluateAll((els) => els.map((e) => `${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`));
-  expect(new Set(sizes).size).toBe(1);
   // Each section's Show all opens everything of that kind in the shop.
   await expect(rail.getByRole("link", { name: /^Show all/ }).first()).toHaveAttribute("href", /\/shop\?category=tees,hoodies.*size=M/);
 

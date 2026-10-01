@@ -1,21 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Children,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useRouter } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useAddToBag } from "@/components/bag-gate";
 import { useFitProfile } from "@/components/fit-finder";
 import { useBag } from "@/components/bag-provider";
-import { Barcode } from "@/components/hang-tag";
 import { BagIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
+import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
 import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock";
 import { FlowButton } from "@/components/ui/flow-button";
 import {
@@ -38,12 +33,12 @@ import type {
 } from "@/lib/types";
 
 // The rail, built around what a customer asks, in the order they ask it:
-//   "What do they sell, and how much?"  clothes first, the price on a hang tag
+//   "What do they sell, and how much?"  clothes first, the price under the piece
 //   "Do they have my size?"             asked once, above the first piece, then remembered
-//   "Is this one in my size?"           one line on each card
-//   "I want it now."                    Buy now on every card, a bag button beside it
+//   "Is this one in my size?"           one line under the piece at the centre
+//   "I want it now."                    Buy now under it, a bag button beside it
 //   "What have I picked?"               a bar with the bag's total after the first add
-// The pieces hang in sections, in the order an outfit goes on, three or four to a section.
+// The pieces hang in sections, in the order an outfit goes on; each section is a cover-flow of its pieces.
 
 export interface RailColour {
   name: string;
@@ -152,68 +147,19 @@ const Arrow = ({ className = "" }: { className?: string }) => (
   </svg>
 );
 
-/** The hook a piece hangs from, over the section's rail. */
-const Hook = () => (
-  <svg
-    width="14"
-    height="20"
-    viewBox="0 0 14 20"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    aria-hidden
-    className="absolute left-1/2 top-[-9px] z-10 -translate-x-1/2"
-  >
-    <path d="M7 20V10a3.5 3.5 0 1 0-3.5-3.5" />
-  </svg>
-);
-
-/** The price, on the tag tied to the hem of the photo (the same tag as on the shop's cards). */
-function PriceTag({
-  price,
-  sku,
-  className = "",
-}: {
-  price: number;
-  sku: string;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`tag-hang pointer-events-none flex flex-col items-center ${className}`}
-    >
-      <span className="h-2 w-2 rounded-full border border-ink/60 bg-paper" />
-      <span className="h-4 w-px bg-ink/60 md:h-5" />
-      <div className="hang-tag w-[64px] px-1 pb-1.5 pt-4 font-mono [--hole:var(--color-mist)] before:top-[6px] before:-ml-1 before:h-2 before:w-2 md:w-[78px] md:px-2 md:pb-2 md:pt-5 md:before:top-[10px] md:before:-ml-[5px] md:before:h-2.5 md:before:w-2.5">
-        <p className="whitespace-nowrap text-center text-[11px] font-semibold leading-none tabular-nums md:text-[12.5px]">
-          {formatPrice(price)}
-        </p>
-        <p className="mt-1 whitespace-nowrap text-center text-[7px] uppercase tracking-[0.12em] text-steel-dark">
-          <span className="md:hidden">Tap for cm</span>
-          <span className="hidden md:inline">Fixed price</span>
-        </p>
-        <Barcode
-          value={sku}
-          className="mt-1 h-2.5 w-full text-ink md:mt-1.5 md:h-3"
-        />
-      </div>
-    </div>
-  );
-}
-
-function Piece({
+/**
+ * Everything about the piece at the centre of a rail: its name and price, whether it comes in
+ * their size, and the two ways to take it. The photo itself is in the carousel above.
+ */
+function PieceControls({
   piece,
   mySize,
-  priority,
   onAdded,
   onBuy,
 }: {
   piece: RailPiece;
   mySize: string | null;
-  priority: boolean;
   onAdded: (line: { sku: string; name: string }) => void;
-  /** Buy now: pay for this one piece, in the pop-up. */
   onBuy: (line: BagLine) => void;
 }) {
   const addToBag = useAddToBag();
@@ -222,7 +168,7 @@ function Piece({
   const [colourName, setColourName] = useState<string | null>(null);
   const [picked, setPicked] = useState<Size | null>(null);
   const [open, setOpen] = useState(false); // the size row
-  const [tagOpen, setTagOpen] = useState(false); // the back of the tag: measurements
+  const [showCm, setShowCm] = useState(false); // the back of the tag: measurements
 
   const colour =
     piece.colours.find((c) => c.name === colourName) ?? piece.colours[0];
@@ -277,9 +223,8 @@ function Piece({
           price: piece.price,
         },
       ])
-    ) {
+    )
       onAdded({ sku: variant.sku, name: piece.name });
-    }
   }
 
   const sizeRowOpen = !oneSize && anyLeft && (open || !variant);
@@ -287,275 +232,223 @@ function Piece({
   const inBag = Boolean(
     variant && bag.lines.some((l) => l.sku === variant.sku),
   );
-  // The back of the tag shows the size chosen, or the first one in stock.
+  // The measurements shown are for the size chosen, or the first one in stock.
   const tagSize = size ?? inStock[0]?.size ?? colour.sizes[0]?.size;
   const cm = Object.entries(
     (tagSize && piece.measurements[tagSize]) || {},
   ).filter(([, v]) => typeof v === "number");
 
   return (
-    <div className="group relative flex h-full flex-col">
-      <div>
-        <div className="relative">
-          <Hook />
-          <Link
-            href={`/product/${piece.slug}`}
-            className="block"
-            aria-label={piece.name}
+    <div className="mx-auto w-full max-w-[360px] text-center">
+      <h4 className="text-[17px] font-semibold leading-snug">
+        <Link
+          href={`/product/${piece.slug}`}
+          className="decoration-1 underline-offset-4 hover:underline"
+        >
+          {piece.name}
+        </Link>
+      </h4>
+      <p className="mt-1 font-mono text-[15px] tabular-nums">
+        {piece.was && (
+          <s className="mr-2 text-steel-dark">
+            <span className="sr-only">was </span>
+            {piece.was.toLocaleString("en-IN")}
+          </s>
+        )}
+        {formatPrice(piece.price)}
+        <span className="ml-2 font-sans text-[13px] text-steel-dark">
+          fixed price
+        </span>
+      </p>
+
+      {/* Colour, and whether it comes in their size. */}
+      <div className="mt-1 flex min-h-11 items-center justify-center gap-2 text-[13px] text-steel-dark">
+        {piece.colours.length > 1 && (
+          <span
+            role="radiogroup"
+            aria-label={`Colour of ${piece.name}`}
+            className="flex shrink-0"
           >
-            <ProductImage
-              image={piece.image}
-              category={piece.category}
-              colourHex={colour.hex}
-              decorative
-              priority={priority}
-              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 62vw"
-            />
-          </Link>
-          {/* The tag is the store: its front is the price, its back the measurements in cm. */}
+            {piece.colours.map((c) => (
+              <button
+                key={c.name}
+                type="button"
+                role="radio"
+                aria-checked={c.name === colour.name}
+                aria-label={c.name}
+                onClick={() => setColourName(c.name)}
+                className="grid h-11 w-8 place-items-center"
+              >
+                <span
+                  className={`h-4 w-4 rounded-full border border-black/20 ${c.name === colour.name ? "ring-2 ring-ink ring-offset-2" : ""}`}
+                  style={{ background: c.hex }}
+                />
+              </button>
+            ))}
+          </span>
+        )}
+        {note && (
+          <span className={strong ? "font-semibold text-ink" : ""}>{note}</span>
+        )}
+      </div>
+
+      {/* The sizes: open when there's a choice to make, or when asked for. Sold-out sizes can't be picked. */}
+      {sizeRowOpen && (
+        <div
+          role="radiogroup"
+          aria-label={`Size of ${piece.name}`}
+          className="mt-1 flex"
+        >
+          {colour.sizes.map((s) => {
+            const out = s.left <= 0;
+            return (
+              <button
+                key={s.size}
+                type="button"
+                role="radio"
+                aria-checked={s.size === size}
+                aria-label={`${s.size}${out ? ", sold out" : ""}`}
+                disabled={out}
+                onClick={() => {
+                  setPicked(s.size);
+                  setOpen(false);
+                }}
+                className={`${cell} min-w-0 flex-1 ${s.size === size ? cellOn : out ? cellOut : cellOff}`}
+              >
+                {s.size}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Buy now is the way through; the bag is for taking more than one. */}
+      <div className="mt-2 flex gap-1.5">
+        {!oneSize && variant && (
           <button
             type="button"
-            onClick={() => setTagOpen(!tagOpen)}
-            aria-expanded={tagOpen}
-            aria-label={`${piece.name}: measurements in cm`}
-            className="absolute right-2 top-full z-10 -mt-3 md:right-3"
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            aria-label={`Size ${size}. Change size`}
+            className="flex h-12 shrink-0 items-center gap-1 border border-mist px-3 font-mono text-[13px] font-semibold hover:border-ink"
           >
-            <PriceTag
-              price={piece.price}
-              sku={variant?.sku ?? colour.sizes[0]?.sku ?? piece.id}
-            />
+            {size}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              aria-hidden
+              className={open ? "rotate-180" : ""}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </button>
-          {tagOpen && (
-            <div className="absolute inset-x-2 bottom-2 z-20 border border-ink bg-paper p-3 font-mono text-[12px] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.5)]">
-              <div className="flex items-center justify-between gap-2">
-                <p className={`${mono} text-steel-dark`}>
-                  {tagSize === "ONE" ? "One size" : `Size ${tagSize}`} · cm
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setTagOpen(false)}
-                  aria-label="Close the measurements"
-                  className="-m-2 grid h-11 w-11 place-items-center"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    aria-hidden
+        )}
+        {variant ? (
+          <button
+            type="button"
+            onClick={() =>
+              size &&
+              onBuy({
+                slug: piece.slug,
+                sku: variant.sku,
+                name: piece.name,
+                size,
+                colour: colour.name,
+                price: piece.price,
+                qty: 1,
+              })
+            }
+            className="btn btn-ink h-12 min-h-0 min-w-0 flex-1 px-2 text-[13px]"
+          >
+            Buy now
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="btn h-12 min-h-0 min-w-0 flex-1 border border-mist bg-paper px-2 text-[13px] text-steel-dark disabled:opacity-100"
+          >
+            {anyLeft ? "Pick a size" : "In store only"}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={add}
+          disabled={!variant || inBag}
+          aria-label={
+            inBag
+              ? `${piece.name} is in your bag`
+              : `Add ${piece.name}${variant && !oneSize ? ` in ${size}` : ""} to bag`
+          }
+          className={`grid h-12 w-12 shrink-0 place-items-center border ${inBag ? "border-ink bg-ink text-paper" : "border-ink hover:bg-photo disabled:border-mist disabled:text-[#8e8e93]"}`}
+        >
+          {inBag ? (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              aria-hidden
+            >
+              <path d="M5 12l5 5 9-10" />
+            </svg>
+          ) : (
+            <BagIcon className="h-[18px] w-[18px]" />
+          )}
+        </button>
+      </div>
+
+      {/* The back of the tag: the garment's measurements in cm. */}
+      {cm.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowCm(!showCm)}
+            aria-expanded={showCm}
+            className="mt-1 h-11 text-[13px] text-steel-dark underline underline-offset-4"
+          >
+            Measurements in cm
+          </button>
+          {showCm && (
+            <div className="border border-mist p-3 text-left font-mono text-[12px]">
+              <p className={`${mono} text-steel-dark`}>
+                {tagSize === "ONE" ? "One size" : `Size ${tagSize}`} · cm
+              </p>
+              <dl className="mt-2 border-t border-dashed border-steel pt-1.5">
+                {cm.map(([k, v]) => (
+                  <div
+                    key={k}
+                    className="flex justify-between py-0.5 tabular-nums"
                   >
-                    <path d="M6 6l12 12M18 6L6 18" />
-                  </svg>
-                </button>
-              </div>
-              {cm.length > 0 ? (
-                <dl className="mt-1 border-t border-dashed border-steel pt-1.5">
-                  {cm.map(([k, v]) => (
-                    <div
-                      key={k}
-                      className="flex justify-between py-0.5 tabular-nums"
-                    >
-                      <dt className="capitalize">{k}</dt>
-                      <dd className="font-semibold">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <p className="mt-2 font-sans text-[13px] text-steel-dark">
-                  No measurements for this size yet.
-                </p>
-              )}
+                    <dt className="capitalize">{k}</dt>
+                    <dd className="font-semibold">{v}</dd>
+                  </div>
+                ))}
+              </dl>
               <Link
                 href="/size-guide"
-                className="mt-1.5 flex h-11 items-center font-sans text-[13px] underline underline-offset-4"
+                className="mt-1 flex h-11 items-center font-sans text-[13px] underline underline-offset-4"
               >
                 Compare with one you own
               </Link>
             </div>
           )}
-        </div>
-
-        <div
-          className={`mt-3 min-h-[60px] pr-[74px] md:min-h-[76px] md:pr-[92px]`}
-        >
-          <h3 className={`text-[15px] font-semibold leading-5`}>
-            <Link
-              href={`/product/${piece.slug}`}
-              className={`decoration-1 underline-offset-4 hover:underline line-clamp-1`}
-            >
-              {piece.name}
-            </Link>
-          </h3>
-          <p className="sr-only">
-            {piece.was ? `was ${formatPrice(piece.was)}, now ` : ""}
-            {formatPrice(piece.price)}
-          </p>
-          {/* Colour, and whether it comes in their size. */}
-          <div
-            className={`mt-1 flex min-h-6 items-center gap-2 text-[13px] text-steel-dark`}
-          >
-            {piece.colours.length > 1 && (
-              <span
-                role="radiogroup"
-                aria-label={`Colour of ${piece.name}`}
-                className="-my-2.5 -ml-2.5 flex shrink-0"
-              >
-                {piece.colours.map((c) => (
-                  <button
-                    key={c.name}
-                    type="button"
-                    role="radio"
-                    aria-checked={c.name === colour.name}
-                    aria-label={c.name}
-                    onClick={() => {
-                      setColourName(c.name);
-                    }}
-                    className="grid h-11 w-8 place-items-center first:w-9 first:pl-1"
-                  >
-                    <span
-                      className={`h-4 w-4 rounded-full border border-black/20 ${c.name === colour.name ? "ring-2 ring-ink ring-offset-2" : ""}`}
-                      style={{ background: c.hex }}
-                    />
-                  </button>
-                ))}
-              </span>
-            )}
-            <span
-              className={`min-w-0 ${strong ? "font-semibold text-ink" : ""}`}
-            >
-              {note}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-auto">
-        {/* The sizes: open when there's a choice to make, or when asked for. Sold-out sizes can't be picked. */}
-        {sizeRowOpen && (
-          <div
-            role="radiogroup"
-            aria-label={`Size of ${piece.name}`}
-            className="mt-2 flex"
-          >
-            {colour.sizes.map((s) => {
-              const out = s.left <= 0;
-              return (
-                <button
-                  key={s.size}
-                  type="button"
-                  role="radio"
-                  aria-checked={s.size === size}
-                  aria-label={`${s.size}${out ? ", sold out" : ""}`}
-                  disabled={out}
-                  onClick={() => {
-                    setPicked(s.size);
-                    setOpen(false);
-                  }}
-                  className={`${cell} min-w-0 flex-1 ${s.size === size ? cellOn : out ? cellOut : cellOff}`}
-                >
-                  {s.size}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Buy now is the way through; the bag is for taking more than one. */}
-        <div className="mt-2 flex gap-1.5">
-          {!oneSize && variant && (
-            <button
-              type="button"
-              onClick={() => setOpen(!open)}
-              aria-expanded={open}
-              aria-label={`Size ${size}. Change size`}
-              className="flex h-12 shrink-0 items-center gap-1 border border-mist px-2.5 font-mono text-[13px] font-semibold hover:border-ink"
-            >
-              {size}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                aria-hidden
-                className={open ? "rotate-180" : ""}
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </button>
-          )}
-          {variant ? (
-            <button
-              type="button"
-              onClick={() =>
-                size &&
-                onBuy({
-                  slug: piece.slug,
-                  sku: variant.sku,
-                  name: piece.name,
-                  size,
-                  colour: colour.name,
-                  price: piece.price,
-                  qty: 1,
-                })
-              }
-              className="btn btn-ink h-12 min-h-0 min-w-0 flex-1 px-2 text-[13px]"
-            >
-              Buy now
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="btn h-12 min-h-0 min-w-0 flex-1 border border-mist bg-paper px-2 text-[13px] text-steel-dark disabled:opacity-100"
-            >
-              {anyLeft ? "Pick a size" : "In store only"}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={add}
-            disabled={!variant || inBag}
-            aria-label={
-              inBag
-                ? `${piece.name} is in your bag`
-                : `Add ${piece.name}${variant && !oneSize ? ` in ${size}` : ""} to bag`
-            }
-            className={`grid h-12 w-12 shrink-0 place-items-center border ${inBag ? "border-ink bg-ink text-paper" : "border-ink hover:bg-photo disabled:border-mist disabled:text-[#8e8e93]"}`}
-          >
-            {inBag ? (
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                aria-hidden
-              >
-                <path d="M5 12l5 5 9-10" />
-              </svg>
-            ) : (
-              <BagIcon className="h-[18px] w-[18px]" />
-            )}
-          </button>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
 
-/** Every card on a rail is the same width: about two and a half to a phone screen, three to a tablet, four to a desktop. */
-const card =
-  "w-[62%] max-w-[260px] shrink-0 snap-start md:w-[calc((100%-2rem)/3)] md:max-w-none lg:w-[calc((100%-3rem)/4)]";
-
 /**
- * One section of the wall: its shelf label, and its pieces in a single row that slides sideways.
- * The row snaps card by card; phones swipe it, and wider screens also get arrows on the label.
- * It keeps going to the right as pieces are added.
+ * One section of the wall: its shelf label, then its pieces as a cover-flow: the piece at the
+ * centre faces you, the rest turn away either side. Swipe, drag, use the arrows, or tap a
+ * neighbour. What's under the carousel belongs to the piece at the centre.
  */
 function Shelf({
   index,
@@ -563,7 +456,10 @@ function Shelf({
   label,
   caption,
   showAll,
-  children,
+  pieces,
+  mySize,
+  onAdded,
+  onBuy,
 }: {
   index: number;
   id: string;
@@ -571,38 +467,17 @@ function Shelf({
   caption: string;
   /** Where "Show all" goes; none while searching. */
   showAll: string | null;
-  children: React.ReactNode;
+  pieces: RailPiece[];
+  mySize: string | null;
+  onAdded: (line: { sku: string; name: string }) => void;
+  onBuy: (line: BagLine) => void;
 }) {
-  const row = useRef<HTMLUListElement>(null);
-  const [edge, setEdge] = useState({ start: true, end: true });
-  const count = Children.count(children);
-
-  // Which arrows have somewhere to go.
-  useEffect(() => {
-    const el = row.current;
-    if (!el) return;
-    const measure = () =>
-      setEdge({
-        start: el.scrollLeft <= 2,
-        end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2,
-      });
-    measure();
-    el.addEventListener("scroll", measure, { passive: true });
-    window.addEventListener("resize", measure);
-    return () => {
-      el.removeEventListener("scroll", measure);
-      window.removeEventListener("resize", measure);
-    };
-  }, [count]);
-
-  /** One screenful along; the snap lines it up on a card. */
-  const slide = (dir: 1 | -1) =>
-    row.current?.scrollBy({
-      left: dir * row.current.clientWidth,
-      behavior: "smooth",
-    });
-  const arrow =
-    "grid h-11 w-11 place-items-center border border-ink bg-paper hover:bg-ink hover:text-paper disabled:border-mist disabled:bg-transparent disabled:text-[#8e8e93]";
+  const router = useRouter();
+  // A long row goes round in a ring from its first piece; a short one starts on its middle piece, so both sides are filled.
+  const loop = pieces.length >= 5;
+  const start = loop ? 0 : Math.floor((pieces.length - 1) / 2);
+  const [active, setActive] = useState(start);
+  const piece = pieces[Math.min(active, pieces.length - 1)];
 
   return (
     <section
@@ -610,7 +485,7 @@ function Shelf({
       aria-labelledby={`rail-${id}-title`}
       className={`scroll-mt-24 ${index === 0 ? "pt-4" : "pt-8 md:pt-10"}`}
     >
-      {/* The shelf label: section number, what hangs here, the arrows and Show all. */}
+      {/* The shelf label: section number, what hangs here, which piece is at the centre, and Show all. */}
       <div className="flex min-h-11 items-center gap-3 border-t-2 border-ink bg-photo px-3 py-1.5">
         <span className="grid h-5 min-w-6 place-items-center bg-ink px-1 font-mono text-[11px] font-semibold text-paper">
           {String(index + 1).padStart(2, "0")}
@@ -625,6 +500,12 @@ function Shelf({
           {caption}
         </span>
         <div className="-my-1.5 ml-auto flex shrink-0 items-center gap-3">
+          <span className="font-mono text-[11px] tabular-nums tracking-[0.12em] text-steel-dark">
+            <span className="text-ink">
+              {String(Math.min(active, pieces.length - 1) + 1).padStart(2, "0")}
+            </span>{" "}
+            / {String(pieces.length).padStart(2, "0")}
+          </span>
           {showAll && (
             <Link
               href={showAll}
@@ -636,39 +517,42 @@ function Shelf({
               </span>
             </Link>
           )}
-          {!(edge.start && edge.end) && (
-            <div className="hidden md:flex">
-              <button
-                type="button"
-                onClick={() => slide(-1)}
-                disabled={edge.start}
-                aria-label={`Earlier ${label.toLowerCase()}`}
-                className={arrow}
-              >
-                <Arrow className="rotate-180" />
-              </button>
-              <button
-                type="button"
-                onClick={() => slide(1)}
-                disabled={edge.end}
-                aria-label={`More ${label.toLowerCase()}`}
-                className={`${arrow} -ml-px`}
-              >
-                <Arrow />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* The section's rail, with the pieces hanging from it in one row. */}
-      <div className="mt-5 border-t-2 border-ink">
-        <ul
-          ref={row}
-          className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto scroll-smooth px-4 pb-1 md:mx-0 md:gap-4 md:scroll-px-0 md:px-0"
-        >
-          {children}
-        </ul>
+      <CoverflowCarousel
+        count={pieces.length}
+        aspect={1.25}
+        cardWidth="clamp(190px, 24vw, 300px)"
+        loop={loop}
+        initial={start}
+        showNavigation
+        label={label}
+        onSelect={setActive}
+        onActivate={(i) => router.push(`/product/${pieces[i].slug}`)}
+        cardClassName="[&_img]:pointer-events-none"
+        className="-mx-4 w-auto md:mx-0"
+        renderSlide={(i) => (
+          <ProductImage
+            image={pieces[i].image}
+            category={pieces[i].category}
+            colourHex={pieces[i].colours[0].hex}
+            decorative
+            priority={index === 0 && i < 2}
+            sizes="(min-width: 1280px) 300px, (min-width: 800px) 24vw, 190px"
+            className="h-full"
+          />
+        )}
+      />
+
+      <div aria-live="polite">
+        <PieceControls
+          key={piece.id}
+          piece={piece}
+          mySize={mySize}
+          onAdded={onAdded}
+          onBuy={onBuy}
+        />
       </div>
     </section>
   );
@@ -940,28 +824,21 @@ export function RailWall({
 
       {wall.map((s, i) => (
         <Shelf
-          key={s.key}
+          // A new set of pieces (a search, a budget, the order) starts the row again at its first piece.
+          key={`${s.key}:${s.show.map((p) => p.id).join(",")}`}
           index={i}
           id={s.key}
           label={s.label}
           caption={s.caption}
           showAll={q ? null : withSize(s.href)}
-        >
-          {s.show.map((p, n) => (
-            <li key={p.id} className={card}>
-              <Piece
-                piece={p}
-                mySize={mySize}
-                priority={i === 0 && n < 2}
-                onBuy={setBuying}
-                onAdded={(line) => {
-                  setAddedHere(true);
-                  setLast(line);
-                }}
-              />
-            </li>
-          ))}
-        </Shelf>
+          pieces={s.show}
+          mySize={mySize}
+          onBuy={setBuying}
+          onAdded={(line) => {
+            setAddedHere(true);
+            setLast(line);
+          }}
+        />
       ))}
 
       {wall.length === 0 && (

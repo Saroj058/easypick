@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ProductImage } from "@/components/product-image";
+import { VaultFeatured } from "./vault-featured";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
@@ -162,18 +163,23 @@ export function Vault({ products }: { products: Product[] }) {
           </nav>
         )}
 
-        {/* Featured: the word runs up the left side, five pieces beside it. (Enter, above, is the way to all of them.) */}
+        {/* Featured: the word runs up the left side, the pieces as a fanned stack beside it. (Enter, above, is the way to all of them.) */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 lg:gap-6">
           <h3 className="rotate-180 self-stretch border-l border-[#2c2c2e] pl-3 text-center font-display text-[30px] uppercase leading-none tracking-[0.14em] [writing-mode:vertical-rl] lg:pl-5 lg:text-[40px]">
             Featured
           </h3>
-          <ul className="no-scrollbar -mr-4 flex snap-x gap-4 overflow-x-auto pr-4 md:mr-0 md:grid md:grid-cols-5 md:overflow-visible md:pr-0">
-            {featured.map((p) => (
-              <li key={p.id} className="w-[52vw] max-w-[240px] shrink-0 snap-start md:w-auto md:max-w-none">
-                <VaultCard piece={p} sizes="(min-width: 768px) 18vw, 52vw" />
-              </li>
-            ))}
-          </ul>
+          <VaultFeatured
+            pieces={featured.map((p) => ({
+              slug: p.slug,
+              name: p.brand && p.name.toLowerCase().startsWith(`${p.brand.toLowerCase()} `) ? p.name.slice(p.brand.length + 1) : p.name,
+              brand: p.brand ?? "",
+              tag: tag(p),
+              price: p.status === "sold_out" ? "Sold" : formatPrice(p.salePrice ?? p.price),
+              image: p.images[0] ?? { src: null, alt: p.name, kind: "front" },
+              category: p.category,
+              hex: p.colours[0]?.hex ?? "#2b2b2e",
+            }))}
+          />
         </div>
       </div>
     </section>
