@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { RecentlyViewed } from "@/components/local-lists";
 import { formatPrice } from "@/lib/format";
+import { sellable } from "@/lib/inventory";
 import { ProductGrid } from "@/components/product-card";
 import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
@@ -99,7 +100,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   if (f.fit) list = list.filter((p) => p.fit === f.fit);
   if (f.colour) list = list.filter((p) => p.colours.some((c) => c.name === f.colour));
   // One-size pieces (caps) fit every size, the same as on the home rail.
-  if (f.size) list = list.filter((p) => p.variants.some((v) => (v.size === f.size || v.size === "ONE") && v.stock > 0));
+  if (f.size) list = list.filter((p) => p.variants.some((v) => (v.size === f.size || v.size === "ONE") && sellable(v) > 0));
   const priceRule = prices.find((x) => x.key === f.price);
   if (priceRule) list = list.filter((p) => priceRule.test(priceOf(p)));
   if (f.sort === "price-asc") list = [...list].sort((a, b) => priceOf(a) - priceOf(b));

@@ -7,7 +7,8 @@ import { MiniTag } from "./hang-tag";
 import { ProductImage } from "./product-image";
 import { HeartAdd, QuickBuy } from "./quick-buy";
 
-const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL"];
+// One-size pieces (caps) count too, so they don't read as "in store only".
+const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
 /** What can be bought online per size, across colours (the last piece on the shop floor doesn't count). */
 function sizeRow(p: Product) {
@@ -16,8 +17,16 @@ function sizeRow(p: Product) {
   return ORDER.filter((s) => totals.has(s)).map((s) => ({ size: s, stock: totals.get(s) ?? 0 }));
 }
 
+/** The customer's size on the home rail stands out in the size row (the rail sets data-size on its wrapper). */
+const MINE: Record<string, string> = {
+  S: "group-data-[size=S]/rail:font-semibold group-data-[size=S]/rail:text-ink",
+  M: "group-data-[size=M]/rail:font-semibold group-data-[size=M]/rail:text-ink",
+  L: "group-data-[size=L]/rail:font-semibold group-data-[size=L]/rail:text-ink",
+  XL: "group-data-[size=XL]/rail:font-semibold group-data-[size=XL]/rail:text-ink",
+};
+
 /** One quiet line under the name: only what helps someone decide. */
-function statusLine(p: Product): { text: string; strong?: boolean } {
+function statusLine(p: Product): { text: string; strong?: boolean; dots?: boolean } {
   const colours = p.colours.length > 1 ? `${p.colours.length} colours` : p.colours[0].name;
   if (p.status === "sold_out") return { text: "Sold out · tell me when it's back" };
   const row = sizeRow(p);
@@ -30,7 +39,7 @@ function statusLine(p: Product): { text: string; strong?: boolean } {
   const low = row.filter((r) => r.stock > 0 && r.stock <= 3);
   if (online > 0 && online <= 3) return { text: `Only ${online} left`, strong: true };
   if (low.length) return { text: `Few left in ${low.slice(0, 3).map((r) => r.size).join(", ")}` };
-  return { text: colours };
+  return { text: colours, dots: p.colours.length > 1 };
 }
 
 export function ProductCard({
@@ -49,6 +58,9 @@ export function ProductCard({
   const hex = product.colours[0].hex;
   const price = product.salePrice ?? product.price;
   const status = statusLine(product);
+  const row = product.status === "live" ? sizeRow(product) : [];
+  // The colours that can still be bought, as dots.
+  const dots = status.dots ? product.colours.filter((c) => product.variants.some((v) => v.colour === c.name && sellable(v) > 0)) : [];
   const fresh = product.isNew && product.status === "live";
   const note =
     product.status === "sold_out"
@@ -76,7 +88,7 @@ export function ProductCard({
             />
             {/* The back photo only exists where it can be seen (mouse hover); phones never download it. */}
             {back && (
-              <div className="absolute inset-0 hidden opacity-0 transition-opacity duration-300 group-focus-visible:opacity-100 [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100">
+              <div className="absolute inset-0 hidden opacity-0 transition-opacity duration-300 group-has-[a:focus-visible]:opacity-100 [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100">
                 <ProductImage
                   image={back}
                   category={product.category}
@@ -92,7 +104,7 @@ export function ProductCard({
           <MiniTag product={product} className="absolute right-2 top-full z-10 -mt-3 md:right-4" />
         </div>
         {/* Room on the right for the hanging tag, which carries the price. */}
-        <div className="mt-3 pr-[62px] md:pr-[92px]">
+        <div className="mt-3 pr-[70px] md:pr-[100px]">
           {plate && (
             <p aria-hidden className="mb-1 font-mono text-[11px] tracking-[0.12em] text-steel-dark">
               {plate}
@@ -105,7 +117,14 @@ export function ProductCard({
               {formatPrice(price)}
             </span>
           </h3>
-          <p className={`mt-0.5 text-[13px] ${status.strong ? "font-semibold text-ink" : "text-steel-dark"}`}>
+          <p className={`mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] ${status.strong ? "font-semibold text-ink" : "text-steel-dark"}`}>
+            {dots.length > 1 && (
+              <span aria-hidden className="flex gap-1">
+                {dots.map((c) => (
+                  <span key={c.name} className="h-2.5 w-2.5 rounded-full border border-black/15" style={{ background: c.hex }} />
+                ))}
+              </span>
+            )}
             {status.text}
             {product.salePrice && (
               <span className="font-normal text-steel-dark">
@@ -117,6 +136,24 @@ export function ProductCard({
               </span>
             )}
           </p>
+          {/* Sizes that can be bought online; the rest are struck through. */}
+          {row.length > 1 && (
+            <p className="mt-1.5 flex gap-2.5 font-mono text-[11px] text-steel-dark">
+              <span className="sr-only">Sizes: </span>
+              {row.map((r) =>
+                r.stock > 0 ? (
+                  <span key={r.size} className={MINE[r.size] ?? ""}>
+                    {r.size}
+                  </span>
+                ) : (
+                  <s key={r.size} className="text-[#8e8e93]">
+                    {r.size}
+                    <span className="sr-only"> sold out</span>
+                  </s>
+                ),
+              )}
+            </p>
+          )}
         </div>
       </Link>
       {/* Outside the link: a button can't sit inside one. */}

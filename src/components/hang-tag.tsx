@@ -77,8 +77,8 @@ export function MiniTag({ product, className = "" }: { product: Product; classNa
     >
       <span className="h-2 w-2 rounded-full border border-ink/60 bg-paper" />
       <span className="h-4 w-px bg-ink/60 md:h-5" />
-      <div className="hang-tag w-[54px] px-1 pb-1.5 pt-4 font-mono [--hole:var(--color-mist)] before:top-[6px] before:h-2 before:w-2 before:-ml-1 md:w-[76px] md:px-2 md:pb-2 md:pt-5 md:before:top-[10px] md:before:h-2.5 md:before:w-2.5 md:before:-ml-[5px]">
-        <p className={`whitespace-nowrap text-center text-[9.5px] font-semibold leading-none tabular-nums md:text-[12px] ${soldOut ? "text-steel-dark line-through" : ""}`}>
+      <div className="hang-tag w-[60px] px-1 pb-1.5 pt-4 font-mono [--hole:var(--color-mist)] before:top-[6px] before:h-2 before:w-2 before:-ml-1 md:w-[76px] md:px-2 md:pb-2 md:pt-5 md:before:top-[10px] md:before:h-2.5 md:before:w-2.5 md:before:-ml-[5px]">
+        <p className={`whitespace-nowrap text-center text-[10.5px] font-semibold leading-none tabular-nums md:text-[12px] ${soldOut ? "text-steel-dark line-through" : ""}`}>
           {formatPrice(product.salePrice ?? product.price)}
         </p>
         <p className="mt-1 whitespace-nowrap text-center text-[6.5px] uppercase tracking-[0.1em] text-steel-dark md:text-[7px] md:tracking-[0.12em]">

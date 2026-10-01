@@ -33,6 +33,16 @@ test("home: the rail filters in place, and Designer Fits @phone", async ({ page 
   await tab.click();
   await expect(tab).toHaveAttribute("aria-pressed", "true");
   await expect(rail.locator("#rail-grid > li:not([hidden])").first()).toBeVisible();
+  // Coming back from a product page finds the rail as it was.
+  await rail.locator("#rail-grid > li:not([hidden]) a").first().click();
+  await page.waitForURL(/\/product\//, { timeout: 60_000 });
+  await page.goBack();
+  await expect(rail.getByRole("group", { name: "Show" }).getByRole("button").nth(1)).toHaveAttribute("aria-pressed", "true");
+  await rail.getByRole("button", { name: "Clear", exact: true }).click();
+  // Cheapest first.
+  await rail.getByRole("button", { name: /Sorted newest first/ }).click();
+  await expect(rail.getByRole("button", { name: /Sorted by price/ })).toBeVisible();
+  await rail.getByRole("button", { name: /Sorted by price/ }).click();
 
   const fits = page.getByRole("region", { name: "Designer Fits" });
   await fits.scrollIntoViewIfNeeded();

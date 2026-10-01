@@ -7,6 +7,7 @@ import { useAddToBag } from "@/components/bag-gate";
 import { encodeFit, type Fit, type SlotKey } from "@/components/fit-builder";
 import { useFitProfile } from "@/components/fit-finder";
 import { GarmentSvg } from "@/components/product-image";
+import { FlowButton } from "@/components/ui/flow-button";
 import { matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { fitSlot, type Look, type LookPiece } from "@/lib/occasions";
@@ -205,28 +206,8 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
           </h2>
           <p className="mt-1.5 text-[15px] text-steel-dark">{curated ? "Curated combinations for every occasion." : "Ready-made combinations for every occasion."}</p>
         </div>
-        <Link
-          href={`/fit?${encodeFit(fit)}`}
-          className="group flex h-[60px] items-stretch overflow-hidden rounded-[2px] bg-ink text-paper transition-shadow duration-200 hover:shadow-[4px_4px_0_0_var(--color-volt)] md:w-[340px] md:shrink-0"
-        >
-          <span className="flex min-w-0 flex-1 items-center gap-3 px-4">
-            {/* The colours of the fit on show: the builder opens with these pieces. */}
-            <span aria-hidden className="flex shrink-0 -space-x-1.5">
-              {look.pieces.slice(0, 3).map((p) => (
-                <span key={p.slug} className="h-6 w-6 rounded-full border-2 border-ink ring-1 ring-paper/40" style={{ background: p.hex }} />
-              ))}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[15px] font-semibold uppercase leading-tight tracking-[0.04em]">Build your own fit</span>
-              <span className="block truncate text-[12px] text-paper/70">Starts with this fit.</span>
-            </span>
-          </span>
-          <span aria-hidden className="grid w-[60px] shrink-0 place-items-center bg-volt text-ink">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="transition-transform duration-200 group-hover:translate-x-1">
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </span>
-        </Link>
+        {/* Opens the builder with the fit on show, ready to swap pieces. */}
+        <FlowButton href={`/fit?${encodeFit(fit)}`} text="Build your own fit" className="w-full md:w-auto md:shrink-0" />
       </div>
 
       <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Ready-made · pick an occasion, then a fit</p>

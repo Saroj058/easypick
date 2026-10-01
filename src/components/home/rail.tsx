@@ -5,18 +5,18 @@ import type { Category, Product } from "@/lib/types";
 import { RailControls, type RailItem, type RailTab } from "./rail-controls";
 
 const RAIL_SHOWN = 8;
-/** The newest pieces the rail can filter through without leaving the page. */
+/** The newest pieces the rail holds as cards; counts cover every live piece, and the shop holds them all. */
 const RAIL_POOL = 48;
 const BUDGETS = [1000, 1500, 2500];
 
-// The rail: the newest pieces first, filtered in place by size, budget and kind (see rail-controls.tsx).
+// The rail: the newest pieces first, filtered and sorted in place (see rail-controls.tsx).
 
 export function Rail({ products }: { products: Product[] }) {
-  const live = products.filter((p) => p.status === "live");
-  const pool = [...live].sort((a, b) => (b.liveAt ?? "").localeCompare(a.liveAt ?? "")).slice(0, RAIL_POOL);
-  if (pool.length === 0) return null;
+  const live = products.filter((p) => p.status === "live").sort((a, b) => (b.liveAt ?? "").localeCompare(a.liveAt ?? ""));
+  if (live.length === 0) return null;
 
-  const items: RailItem[] = pool.map((p) => ({
+  const items: RailItem[] = live.map((p) => ({
+    id: p.id,
     sizes: Array.from(new Set(p.variants.filter((v) => sellable(v) > 0).map((v) => v.size))),
     category: p.category,
     price: p.salePrice ?? p.price,
@@ -37,27 +37,17 @@ export function Rail({ products }: { products: Product[] }) {
   });
 
   return (
-    <section aria-labelledby="rail-title" className="pt-16 md:pt-24">
+    <section aria-labelledby="rail-title" className="pt-12 md:pt-20">
       <div className="container-ep">
-        <div className="flex items-end justify-between gap-4">
-          <h2 id="rail-title" className="display display-h1">
-            The rail
-          </h2>
-          <p className="pb-1 text-right font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
-            {live.length} {live.length === 1 ? "piece" : "pieces"} live
-            <span className="hidden sm:inline"> · fixed prices</span>
-          </p>
-        </div>
-
-        <RailControls items={items} tabs={tabs} budgets={budgets} step={RAIL_SHOWN}>
-          <ul id="rail-grid" className="mt-4 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
-            {pool.map((p, i) => (
-              <li key={p.id} data-sizes={items[i].sizes.join(" ")} hidden={i >= RAIL_SHOWN}>
-                <ProductCard product={p} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" />
-              </li>
-            ))}
-          </ul>
-        </RailControls>
+        <RailControls
+          items={items}
+          tabs={tabs}
+          budgets={budgets}
+          step={RAIL_SHOWN}
+          cards={live.slice(0, RAIL_POOL).map((p) => (
+            <ProductCard key={p.id} product={p} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" />
+          ))}
+        />
       </div>
     </section>
   );

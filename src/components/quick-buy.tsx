@@ -6,6 +6,7 @@ import { useState } from "react";
 import { describeMatch, hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
+import { useMySize } from "@/lib/my-size";
 import type { Product, Size, Variant } from "@/lib/types";
 import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
 import { useFitProfile } from "./fit-finder";
@@ -13,8 +14,9 @@ import { BagIcon, HeartIcon } from "./icons";
 import { toggleSaved, useList } from "./saved";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
 
-// The two buttons on a product card. Both start from the person's saved size when it's in
-// stock, otherwise M, otherwise the first size in stock (in the first colour):
+// The two buttons on a product card. Quick buy starts from the size that matches the person's
+// measurements, else the "My size" they picked on the rail, else M, else the first size in
+// stock (in the first colour):
 //   Quick buy -> a small picker with that choice made, then the Buy now checkout.
 //   Heart     -> Save (this phone's Saved list). Always, signed in or not.
 
@@ -22,11 +24,12 @@ const canBuy = (v: Variant) => sellable(v) > 0;
 
 function useCardVariant(product: Product): Variant | null {
   const profile = useFitProfile();
+  const mySize = useMySize();
   const inStock = product.variants.filter(canBuy);
   if (!inStock.length) return null;
   const firstColour = product.colours[0]?.name;
   const fit = matchSize(product.category, product.measurements, profile)?.size;
-  for (const size of [fit, "M", "ONE"]) {
+  for (const size of [fit, mySize, "M", "ONE"]) {
     if (!size) continue;
     const v = inStock.find((x) => x.size === size && x.colour === firstColour) ?? inStock.find((x) => x.size === size);
     if (v) return v;
@@ -36,8 +39,6 @@ function useCardVariant(product: Product): Variant | null {
 
 const glass =
   "bg-paper/80 text-ink ring-1 ring-ink/10 backdrop-blur-md transition-colors duration-200 [:focus-visible>&]:outline [:focus-visible>&]:outline-2 [:focus-visible>&]:outline-offset-2 [:focus-visible>&]:outline-ink";
-// Hidden until hover on hover screens; always shown on phones.
-const reveal = "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100";
 
 const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
@@ -76,10 +77,10 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <button type="button" aria-label={`Quick buy: ${product.name}`} className={`flex h-11 min-w-11 items-center justify-end outline-none transition-opacity duration-200 ${reveal} ${className}`}>
+        <button type="button" aria-label={`Quick buy: ${product.name}`} className={`flex h-11 min-w-11 items-center justify-end outline-none ${className}`}>
           <span className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 hover:bg-ink hover:text-paper ${glass}`}>
             <BagIcon className="h-4 w-4" />
-            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] [@media(hover:hover)]:inline">Quick buy</span>
+            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] md:[@media(hover:hover)]:inline">Quick buy</span>
           </span>
         </button>
       </SheetTrigger>
@@ -218,7 +219,7 @@ export function HeartAdd({ product, className = "" }: { product: Product; classN
       onClick={onTap}
       aria-pressed={saved}
       aria-label={`Save ${product.name}`}
-      className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${saved ? "" : reveal} ${className}`}
+      className={`flex h-11 w-11 items-center justify-center outline-none ${className}`}
     >
       <span className={`grid h-9 w-9 place-items-center rounded-full ${glass}`}>
         <HeartIcon filled={saved} className={`h-4 w-4 ${saved ? "text-[#d70015]" : ""}`} />
