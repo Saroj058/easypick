@@ -157,14 +157,36 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
 
   return (
     <div>
-      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between md:gap-8">
-        <h2 id="occasion-title" className="display display-h1">
-          Designer Fits
-        </h2>
-        <p className="max-w-[34ch] text-steel-dark md:pb-2 md:text-right">Curated combinations for every occasion.</p>
+      {/* Two ways in: pick a ready-made fit below, or build your own (top right). */}
+      <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8">
+        <div>
+          <h2 id="occasion-title" className="display display-h1">
+            Designer Fits
+          </h2>
+          <p className="mt-2 text-steel-dark">Curated combinations for every occasion.</p>
+        </div>
+        <div className="md:w-[340px] md:shrink-0">
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Or make it yours</p>
+          <Link
+            href={`/fit?${encodeFit(fit)}`}
+            className="group flex h-[60px] w-full items-center justify-between gap-3 whitespace-nowrap rounded-[2px] border border-ink bg-volt px-5 text-[15px] font-semibold uppercase tracking-[0.04em] text-ink transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#0a0a0a]"
+          >
+            <span className="flex items-center gap-3">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M12 8a2 2 0 1 0-2-2M12 8v2l9 6.5a1 1 0 0 1-.6 1.8H3.6a1 1 0 0 1-.6-1.8L12 10" />
+              </svg>
+              Build your own fit
+            </span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </Link>
+        </div>
       </div>
 
-      <div className="mt-6 xl:mt-8 xl:grid xl:grid-cols-[224px_minmax(0,1fr)] xl:gap-3">
+      <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark xl:mt-10">Ready-made · pick an occasion</p>
+
+      <div className="mt-3 xl:grid xl:grid-cols-[224px_minmax(0,1fr)] xl:gap-3">
         {/* The occasions: a list down the side on wide screens, a row to swipe on small ones. */}
         <div className="relative xl:h-[640px]">
           <div
@@ -258,7 +280,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
         </div>
       </div>
 
-      {/* One bar: what it costs and the two ways on. */}
+      {/* One bar: what the ready-made fit costs, and the button to take it. */}
       <div className="mt-0 flex flex-col gap-4 border border-mist p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between xl:mt-3">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
@@ -266,26 +288,15 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
           </p>
           <p className="mt-1 font-mono text-[32px] font-semibold leading-none tabular-nums">{formatPrice(total)}</p>
         </div>
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:w-[640px]">
-          <button type="button" onClick={addAll} disabled={!ready} aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`} className="btn btn-ink h-[60px] w-full">
-            {added ? "Added to your bag" : "Add the fit"}
-          </button>
-          {/* The one lime button in the section: make it yours. */}
-          <Link
-            href={`/fit?${encodeFit(fit)}`}
-            className="group flex h-[60px] w-full items-center justify-between gap-3 rounded-[2px] whitespace-nowrap border border-ink bg-volt px-5 text-[15px] font-semibold uppercase tracking-[0.04em] text-ink transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#0a0a0a]"
-          >
-            <span className="flex items-center gap-3">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                <path d="M12 8a2 2 0 1 0-2-2M12 8v2l9 6.5a1 1 0 0 1-.6 1.8H3.6a1 1 0 0 1-.6-1.8L12 10" />
-              </svg>
-              Build your own fit
-            </span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </Link>
-        </div>
+        <button
+          type="button"
+          onClick={addAll}
+          disabled={!ready}
+          aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
+          className="btn btn-ink h-[60px] w-full lg:w-[360px]"
+        >
+          {added ? "Added to your bag" : "Add the fit"}
+        </button>
       </div>
     </div>
   );
