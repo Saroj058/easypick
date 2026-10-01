@@ -141,3 +141,35 @@ test("drop pages: the run, what's left, and the drops list @phone", async ({ pag
   expect(story.status()).toBe(200);
   expect(story.headers()["content-type"]).toContain("image/png");
 });
+
+test("signed out: the heart saves a piece instead of asking for a login", async ({ page }) => {
+  await page.goto("/shop");
+  const heart = page.getByRole("button", { name: "Save Everyday Hoodie" });
+  await expect(async () => {
+    await heart.scrollIntoViewIfNeeded();
+    await heart.hover();
+    await heart.click();
+    await expect(heart).toHaveAttribute("aria-pressed", "true", { timeout: 1500 });
+  }).toPass();
+  await expect(page).toHaveURL(/\/shop$/); // not sent to log in
+  await page.goto("/saved");
+  await expect(page.getByRole("link", { name: /Everyday Hoodie/ }).first()).toBeVisible();
+});
+
+test("Buy now remembers a guest's number on this phone, and forgets it when asked", async ({ page }) => {
+  const phone = randomPhone();
+  await page.goto("/product/everyday-hoodie");
+  await pickInStockSize(page);
+  await page.getByRole("link", { name: /Buy now/ }).first().click();
+  await expect(page).toHaveURL(/\/buy\/everyday-hoodie/);
+  await page.getByLabel("Mobile number").fill(phone);
+  await page.getByRole("button", { name: /^Pay Rs/ }).click();
+  await page.waitForURL(/esewa|\/order\//, { timeout: 30_000, waitUntil: "commit" });
+
+  await page.goto("/product/everyday-hoodie");
+  await pickInStockSize(page);
+  await page.getByRole("link", { name: /Buy now/ }).first().click();
+  await expect(page.getByLabel("Mobile number")).toHaveValue(phone);
+  await page.getByRole("button", { name: "Forget my details" }).click();
+  await expect(page.getByRole("button", { name: "Forget my details" })).toHaveCount(0);
+});

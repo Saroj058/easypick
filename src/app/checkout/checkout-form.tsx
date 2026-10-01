@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
 
 import { placeOrder, type CheckoutState } from "@/app/actions";
 import { previewGiftCard } from "@/app/gift-actions";
@@ -25,6 +25,46 @@ function Option({ name, value, checked, onChange, title, note }: { name: string;
   );
 }
 
+// A guest's number and address from last time, kept on this phone only so Buy now doesn't
+// ask again. (Signed-in people get theirs from the account instead.)
+const GUEST_KEY = "ep-checkout-v1";
+const GUEST_EVENT = "ep-checkout-change";
+type GuestDetails = { phone?: string; method?: FulfilmentMethod; area?: string; landmark?: string; details?: string };
+let guestCache: { raw: string | null; value: GuestDetails | null } = { raw: null, value: null };
+
+function readGuest(): GuestDetails | null {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(GUEST_KEY);
+  } catch {
+    return null; // storage blocked
+  }
+  if (raw === guestCache.raw) return guestCache.value;
+  let value: GuestDetails | null = null;
+  try {
+    value = raw ? (JSON.parse(raw) as GuestDetails) : null;
+  } catch {
+    // unreadable: start again
+  }
+  guestCache = { raw, value };
+  return value;
+}
+
+function writeGuest(d: GuestDetails | null) {
+  try {
+    if (d) localStorage.setItem(GUEST_KEY, JSON.stringify(d));
+    else localStorage.removeItem(GUEST_KEY);
+  } catch {
+    // storage blocked: it just won't be remembered
+  }
+  window.dispatchEvent(new Event(GUEST_EVENT));
+}
+
+function subscribeGuest(fn: () => void) {
+  window.addEventListener(GUEST_EVENT, fn);
+  return () => window.removeEventListener(GUEST_EVENT, fn);
+}
+
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 
 /** Checks out the bag (needs an account), or one piece with `buyNow` (no account needed). */
@@ -34,7 +74,10 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   const ready = buyNow ? true : bag.ready;
   const subtotal = buyNow ? buyNow.price * buyNow.qty : bag.subtotal;
   const me = useMe();
-  const phoneField = usePrefilled(me?.phone);
+  // Only used while signed out.
+  const stored = useSyncExternalStore(subscribeGuest, readGuest, () => null);
+  const guest = me === null ? stored : null;
+  const phoneField = usePrefilled(me?.phone ?? guest?.phone);
   const [state, action, pending] = useActionState<CheckoutState, FormData>(placeOrder, { status: "idle" });
   // After a failed submit, put the cursor in the field that needs fixing.
   useEffect(() => {
@@ -45,12 +88,12 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   const saved = me?.checkout ?? null;
   const [methodChoice, setMethod] = useState<FulfilmentMethod | null>(null);
   const [providerChoice, setProvider] = useState<PaymentProvider | null>(null);
-  const method = methodChoice ?? saved?.method ?? "pickup";
+  const method = methodChoice ?? saved?.method ?? guest?.method ?? "pickup";
   const offered = (p: PaymentProvider | null | undefined) => (p && site.payments.enabled.includes(p) ? p : null);
   const provider = offered(providerChoice) ?? offered(saved?.provider) ?? site.payments.enabled[0];
-  const areaField = usePrefilled(saved?.address?.area);
-  const landmarkField = usePrefilled(saved?.address?.landmark);
-  const detailsField = usePrefilled(saved?.address?.details);
+  const areaField = usePrefilled(saved?.address?.area ?? guest?.area);
+  const landmarkField = usePrefilled(saved?.address?.landmark ?? guest?.landmark);
+  const detailsField = usePrefilled(saved?.address?.details ?? guest?.details);
   const [cardOpen, setCardOpen] = useState(false);
   const [cardCode, setCardCode] = useState("");
   const [card, setCard] = useState<{ code: string; balance: number; saved?: boolean } | null>(null);
@@ -113,7 +156,22 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
   const toPay = subtotal + deliveryFee - cardApplied;
 
   return (
-    <form action={action} className="mt-10 space-y-12" noValidate>
+    <form
+      action={action}
+      // Signed out: keep the number and address on this phone for next time.
+      onSubmit={() => {
+        if (me !== null) return;
+        // Only a number that looks right is worth remembering.
+        if (!/^9[678]\d{8}$/.test(phoneField.value.replace(/\D/g, "").replace(/^977/, ""))) return;
+        writeGuest({
+          phone: phoneField.value,
+          method,
+          ...(method === "delivery" ? { area: areaField.value, landmark: landmarkField.value, details: detailsField.value } : { area: guest?.area, landmark: guest?.landmark, details: guest?.details }),
+        });
+      }}
+      className="mt-10 space-y-12"
+      noValidate
+    >
       <input type="hidden" name="bag" value={JSON.stringify(lines)} />
       <input type="hidden" name="mode" value={buyNow ? "buy_now" : "bag"} />
       <input type="hidden" name="giftCard" value={card?.code ?? ""} />
@@ -138,6 +196,14 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
           {...describe("phone")}
           className={`${input} font-mono`}
         />
+        {guest?.phone && (
+          <p className="mt-2 text-[13px] text-steel-dark">
+            Filled in from last time on this phone.{" "}
+            <button type="button" onClick={() => writeGuest(null)} className="underline underline-offset-2">
+              Forget my details
+            </button>
+          </p>
+        )}
         <p className="mt-2 text-[13px] text-steel-dark">
           Order updates come by SMS.{" "}
           {me === null && buyNow && <>No account needed.</>}

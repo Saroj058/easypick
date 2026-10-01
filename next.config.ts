@@ -35,6 +35,8 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [75],
+    // Widths that match real phones and the grid, so fewer, better-fitting sizes are made.
+    deviceSizes: [360, 414, 640, 828, 1080, 1200, 1920],
     // Product photos uploaded in the admin live in Supabase Storage.
     remotePatterns: process.env.SUPABASE_URL ? [new URL(`${process.env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/**`)] : [],
   },

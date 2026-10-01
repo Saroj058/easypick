@@ -253,7 +253,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
       <div className="mt-8">
         {list.length ? (
           <>
-            <ProductGrid products={shown} priorityCount={page === 1 ? 4 : 0} />
+            <ProductGrid products={shown} priorityCount={page === 1 ? 2 : 0} />
             {pages > 1 && (
               <nav aria-label="Pages" className="mt-16 flex flex-wrap items-center justify-center gap-2">
                 {page > 1 && (

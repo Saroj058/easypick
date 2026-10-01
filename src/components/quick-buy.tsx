@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { matchSize } from "@/lib/fit-profile";
+import { describeMatch, hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
 import type { Product, Size, Variant } from "@/lib/types";
@@ -11,12 +11,15 @@ import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
 import { useBag } from "./bag-provider";
 import { useFitProfile } from "./fit-finder";
 import { BagIcon, HeartIcon } from "./icons";
+import { toggleSaved, useList } from "./saved";
+import { useMe } from "./session";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
 
 // The two buttons on a product card. Both start from the person's saved size when it's in
 // stock, otherwise M, otherwise the first size in stock (in the first colour):
 //   Quick buy -> a small picker with that choice made, then the Buy now checkout.
-//   Heart     -> straight into the bag (tap again to take it out).
+//   Heart     -> signed in: straight into the bag (tap again to take it out).
+//                signed out: saved to this phone's Saved list, so nobody is sent to log in.
 
 const canBuy = (v: Variant) => sellable(v) > 0;
 
@@ -47,6 +50,7 @@ const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
  */
 export function QuickBuy({ product, className = "" }: { product: Product; className?: string }) {
   const suggested = useCardVariant(product);
+  const profile = useFitProfile();
   const [open, setOpen] = useState(false);
   const [colour, setColour] = useState<string | null>(null);
   const [size, setSize] = useState<Size | null>(null);
@@ -60,6 +64,8 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
   const chosen = sizes.find((v) => v.size === wanted && canBuy(v)) ?? sizes.find(canBuy) ?? null;
   const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
   const colourHex = (c: string) => product.colours.find((x) => x.name === c)?.hex ?? "#ccc";
+  // "Your fit: M · 2 cm roomier than yours", from the piece they measured once.
+  const match = hasFit(profile) ? matchSize(product.category, product.measurements, profile) : null;
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -124,6 +130,17 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
           {!oneSize && (
             <fieldset className="mt-6">
               <legend className="text-sm font-semibold">Size</legend>
+              <p className="mt-1 text-[13px] text-steel-dark">
+                {match ? (
+                  <>
+                    Your fit: <span className="font-semibold text-ink">{match.size}</span> · {describeMatch(match).toLowerCase()}
+                  </>
+                ) : (
+                  <Link href="/size-guide" onClick={() => setOpen(false)} className="underline underline-offset-2">
+                    Not sure? Match your size in cm
+                  </Link>
+                )}
+              </p>
               <div className="mt-3 grid grid-cols-4 gap-2">
                 {sizes.map((v) => {
                   const left = sellable(v);
@@ -172,17 +189,25 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
 }
 
 /**
- * The heart (bottom left of the photo): one tap adds it to the bag, another tap takes it out.
- * Logged out → log in first, then it's added.
+ * The heart (bottom left of the photo). Signed in: one tap adds it to the bag, another takes
+ * it out. Signed out: it saves the piece on this phone instead of sending them to log in.
  */
 export function HeartAdd({ product, className = "" }: { product: Product; className?: string }) {
   const variant = useCardVariant(product);
   const { lines, remove } = useBag();
   const addToBag = useAddToBag();
+  const me = useMe();
+  const saved = useList("saved").includes(product.slug);
   if (product.status !== "live" || !variant) return null;
-  const inBag = lines.some((l) => l.slug === product.slug);
+  const guest = me === null;
+  const inBag = guest ? saved : lines.some((l) => l.slug === product.slug);
 
   function onTap() {
+    if (guest) {
+      toggleSaved(product.slug);
+      showBagToast(saved ? `Removed ${product.name} from Saved.` : `Saved ${product.name}. Find it under Saved.`);
+      return;
+    }
     if (inBag) {
       lines.filter((l) => l.slug === product.slug).forEach((l) => remove(l.sku));
       showBagToast(`Removed ${product.name} from your bag.`);
@@ -197,7 +222,7 @@ export function HeartAdd({ product, className = "" }: { product: Product; classN
       type="button"
       onClick={onTap}
       aria-pressed={inBag}
-      aria-label={inBag ? `Remove ${product.name} from bag` : `Add ${product.name} to bag`}
+      aria-label={guest ? `Save ${product.name}` : `Add ${product.name} to bag`}
       className={`flex h-11 w-11 items-center justify-center outline-none transition-opacity duration-200 ${inBag ? "" : reveal} ${className}`}
     >
       <span className={`grid h-9 w-9 place-items-center rounded-full ${glass}`}>
