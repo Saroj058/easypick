@@ -114,12 +114,13 @@ test("drop alerts: sign up by email, then stop with the link @phone", async ({ p
     await page.getByRole("radio", { name: "Email" }).click();
     await expect(page.getByLabel("Email address")).toBeVisible({ timeout: 1000 });
   }).toPass();
+  const main = page.locator("#main"); // the footer has its own one-line sign-up
   await page.getByLabel("Email address").fill(email);
-  await page.getByRole("button", { name: "Notify me" }).click();
+  await main.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByText("Tick the box so we're allowed to message you.")).toBeVisible();
   await expect(page.getByLabel("Email address")).toHaveValue(email); // a mistake keeps what was typed
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Notify me" }).click();
+  await main.getByRole("checkbox").check();
+  await main.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByText(/You're in\. One email to e•••@example\.com on drop day/)).toBeVisible();
 
   // A stop link that matches nothing says so and changes nothing.
@@ -172,4 +173,17 @@ test("Buy now remembers a guest's number on this phone, and forgets it when aske
   await expect(page.getByLabel("Mobile number")).toHaveValue(phone);
   await page.getByRole("button", { name: "Forget my details" }).click();
   await expect(page.getByRole("button", { name: "Forget my details" })).toHaveCount(0);
+});
+
+test("footer: one-line drop alert sign-up takes an email or a WhatsApp number", async ({ page }) => {
+  await page.goto("/track");
+  const footer = page.getByRole("contentinfo");
+  await expect(async () => {
+    await footer.getByLabel("Drop alerts").fill("not-a-number");
+    await footer.getByRole("button", { name: "Notify me" }).click();
+    await expect(footer.getByRole("alert")).toContainText(/10-digit/, { timeout: 2000 });
+  }).toPass();
+  await footer.getByLabel("Drop alerts").fill(`foot-${Date.now()}@example.com`);
+  await footer.getByRole("button", { name: "Notify me" }).click();
+  await expect(footer.getByText(/You're in\. One email to f•••@example\.com/)).toBeVisible();
 });
