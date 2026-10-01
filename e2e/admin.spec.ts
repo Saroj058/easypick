@@ -97,7 +97,7 @@ test("the owner sets a Designer Fits look and the home page uses it", async ({ p
   await ownerSignIn(page);
 
   await page.goto("/admin/looks");
-  const party = page.getByRole("group", { name: "Party" });
+  const party = page.getByRole("group", { name: "Party · Night out" });
   const pick = async (label: string, slug: string) => {
     const select = party.getByLabel(label);
     const value = await select.locator(`option[value^="${slug}~"]`).first().getAttribute("value");
@@ -105,7 +105,7 @@ test("the owner sets a Designer Fits look and the home page uses it", async ({ p
   };
   await pick("Piece 1", "everyday-hoodie");
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Party: pick at least two pieces")).toBeVisible();
+  await expect(page.getByText("Party · Night out: pick at least two pieces")).toBeVisible();
 
   await pick("Piece 2", "relaxed-straight-jean");
   await page.getByRole("button", { name: "Save" }).click();
@@ -113,7 +113,9 @@ test("the owner sets a Designer Fits look and the home page uses it", async ({ p
 
   await page.goto("/");
   const fits = page.getByRole("region", { name: "Designer Fits" });
-  await expect(fits.getByRole("radio", { name: "Party" })).toBeVisible();
+  await expect(fits.getByRole("radio", { name: "Party", exact: true })).toBeVisible();
+  await expect(fits.getByRole("radio", { name: "Night out" })).toHaveAttribute("aria-checked", "true");
+  await expect(fits.getByText(/Designer's pick/)).toBeVisible();
   await expect(fits.getByText("Everyday Hoodie").filter({ visible: true }).first()).toBeVisible(); // the phone layout holds a hidden copy
   await expect(fits.getByText("Relaxed Straight Jean").filter({ visible: true }).first()).toBeVisible(); // the phone layout holds a hidden copy
 

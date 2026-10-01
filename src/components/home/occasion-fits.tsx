@@ -12,7 +12,8 @@ import { formatPrice } from "@/lib/format";
 import { fitSlot, type Look, type LookPiece } from "@/lib/occasions";
 import type { Size } from "@/lib/types";
 
-// "Designer Fits" as a fit check: a scrolling list of occasions at the side, and the outfit drawn
+// "Designer Fits" as a fit check: the occasions down the side, the fits inside the chosen
+// occasion as tabs (Party: night out, house party, birthday), and the outfit drawn
 // the way it's worn (jacket over tee over joggers) on a grey stage, each piece tied to a hang
 // tag with its name, price and sizes. Numbers on the garments match the numbers on the tags.
 
@@ -44,8 +45,8 @@ function anchor(slot: SlotKey, side: "left" | "right", layered: boolean): { x: n
   return { x: x(36), y: 78 };
 }
 
-/** The wide-screen stage (its height matches the list's xl:h-[480px]): its height, the figure's top and width, and how far from the centre line the tags start. */
-const STAGE = { h: 480, top: 62, w: 216, tagAt: 156 };
+/** The wide-screen stage (with the 44px tabs above it, it matches the list's xl:h-[480px]): its height, the figure's top and width, and how far from the centre line the tags start. */
+const STAGE = { h: 436, top: 46, w: 208, tagAt: 152 };
 
 const badge = "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-ink bg-volt font-mono text-[11px] font-semibold leading-none text-ink";
 
@@ -86,13 +87,23 @@ const Chevron = ({ up = false }: { up?: boolean }) => (
 export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boolean }) {
   const addToBagOrLogin = useAddToBag();
   const profile = useFitProfile();
-  const [key, setKey] = useState(looks[0]?.key);
+  const [group, setGroup] = useState(looks[0]?.group);
+  /** The fit last opened in each occasion, so coming back to one shows what was there. */
+  const [chosen, setChosen] = useState<Record<string, string>>({});
   const [picked, setPicked] = useState<Record<string, Size | null>>({});
   const [added, setAdded] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const look = looks.find((l) => l.key === key) ?? looks[0];
-  if (!look) return null;
+  // Occasions in the order they come, each with its fits.
+  const groups = looks.reduce<{ key: string; label: string; fits: Look[] }[]>((all, l) => {
+    const g = all.find((x) => x.key === l.group);
+    if (g) g.fits.push(l);
+    else all.push({ key: l.group, label: l.groupLabel, fits: [l] });
+    return all;
+  }, []);
+  const current = groups.find((g) => g.key === group) ?? groups[0];
+  if (!current) return null;
+  const look = current.fits.find((l) => l.key === chosen[current.key]) ?? current.fits[0];
 
   const id = (p: LookPiece) => `${look.key}:${p.slug}`;
   const sizeOf = (p: LookPiece) => (picked[id(p)] !== undefined ? picked[id(p)] : startSize(p, matchSize(p.category, p.measurements, profile)?.size ?? null));
@@ -122,7 +133,31 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
     setAdded(false);
   };
   // The side list fits about nine occasions on a wide screen; longer lists get scroll buttons.
-  const long = looks.length > 9;
+  const long = groups.length > 9;
+  const named = `${current.label} · ${look.label}`;
+  const fitTabs = current.fits.length > 1 && (
+    <div role="radiogroup" aria-label={`${current.label} fits`} className="no-scrollbar flex overflow-x-auto">
+      {current.fits.map((l) => {
+        const on = l.key === look.key;
+        return (
+          <button
+            key={l.key}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => {
+              setChosen((m) => ({ ...m, [current.key]: l.key }));
+              setAdded(false);
+            }}
+            className={`relative h-11 shrink-0 whitespace-nowrap px-4 text-[14px] font-semibold ${on ? "text-ink" : "text-steel-dark hover:text-ink"}`}
+          >
+            {l.label}
+            {on && <span aria-hidden className="absolute inset-x-3 bottom-0 h-[3px] bg-ink" />}
+          </button>
+        );
+      })}
+    </div>
+  );
   /** The up and down buttons beside the list (it also scrolls by touch, wheel and keys). */
   const scrollList = (dir: 1 | -1) => listRef.current?.scrollBy({ top: dir * 176, left: dir * 240, behavior: "smooth" });
 
@@ -170,26 +205,31 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
           </h2>
           <p className="mt-1.5 text-[15px] text-steel-dark">{curated ? "Curated combinations for every occasion." : "Ready-made combinations for every occasion."}</p>
         </div>
-        <div className="md:w-[320px] md:shrink-0">
-          <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Or make it yours</p>
-          <Link
-            href={`/fit?${encodeFit(fit)}`}
-            className="group flex h-12 w-full items-center justify-between gap-3 whitespace-nowrap rounded-[2px] border border-ink bg-volt px-4 text-[14px] font-semibold uppercase tracking-[0.04em] text-ink transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#0a0a0a]"
-          >
-            <span className="flex items-center gap-3">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                <path d="M12 8a2 2 0 1 0-2-2M12 8v2l9 6.5a1 1 0 0 1-.6 1.8H3.6a1 1 0 0 1-.6-1.8L12 10" />
-              </svg>
-              Build your own fit
+        <Link
+          href={`/fit?${encodeFit(fit)}`}
+          className="group flex h-[60px] items-stretch overflow-hidden rounded-[2px] bg-ink text-paper transition-shadow duration-200 hover:shadow-[4px_4px_0_0_var(--color-volt)] md:w-[340px] md:shrink-0"
+        >
+          <span className="flex min-w-0 flex-1 items-center gap-3 px-4">
+            {/* The colours of the fit on show: the builder opens with these pieces. */}
+            <span aria-hidden className="flex shrink-0 -space-x-1.5">
+              {look.pieces.slice(0, 3).map((p) => (
+                <span key={p.slug} className="h-6 w-6 rounded-full border-2 border-ink ring-1 ring-paper/40" style={{ background: p.hex }} />
+              ))}
             </span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
+            <span className="min-w-0">
+              <span className="block text-[15px] font-semibold uppercase leading-tight tracking-[0.04em]">Build your own fit</span>
+              <span className="block truncate text-[12px] text-paper/70">Starts with this fit.</span>
+            </span>
+          </span>
+          <span aria-hidden className="grid w-[60px] shrink-0 place-items-center bg-volt text-ink">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="transition-transform duration-200 group-hover:translate-x-1">
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
-          </Link>
-        </div>
+          </span>
+        </Link>
       </div>
 
-      <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Ready-made · pick an occasion</p>
+      <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Ready-made · pick an occasion, then a fit</p>
 
       <div className="mt-2 xl:grid xl:grid-cols-[208px_minmax(0,1fr)] xl:gap-3">
         {/* The occasions: a list down the side on wide screens, a row to swipe on small ones. */}
@@ -200,8 +240,8 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
             aria-labelledby="occasion-title"
             className={`no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 xl:h-full xl:flex-col xl:gap-1 xl:overflow-y-auto xl:overflow-x-hidden ${long ? "xl:py-12" : ""}`}
           >
-            {looks.map((l, i) => {
-              const on = l.key === look.key;
+            {groups.map((l, i) => {
+              const on = l.key === current.key;
               return (
                 <button
                   key={l.key}
@@ -209,7 +249,7 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
                   role="radio"
                   aria-checked={on}
                   onClick={(e) => {
-                    setKey(l.key);
+                    setGroup(l.key);
                     setAdded(false);
                     e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
                   }}
@@ -221,7 +261,9 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   {l.label}
-                  {on && <span aria-hidden className="ml-auto hidden h-2 w-2 bg-volt xl:block" />}
+                  <span aria-hidden className={`ml-auto hidden font-mono text-[11px] font-normal xl:block ${on ? "text-paper/60" : "text-steel-dark"}`}>
+                    {l.fits.length} {l.fits.length === 1 ? "fit" : "fits"}
+                  </span>
                 </button>
               );
             })}
@@ -243,15 +285,24 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
                 aria-label="More occasions"
                 className="absolute inset-x-0 bottom-0 hidden h-11 items-center justify-center gap-2 border border-mist bg-paper text-[13px] font-semibold hover:border-ink xl:flex"
               >
-                {looks.length} fits <Chevron />
+                {groups.length} occasions <Chevron />
               </button>
             </>
           )}
         </div>
 
         <div>
+          {/* The fits inside this occasion, and whose pick this one is. */}
+          <div className="mt-2 flex h-11 items-center justify-between gap-3 border border-mist xl:mt-0 xl:border-b-0">
+            {fitTabs || <p className="px-4 text-[14px] font-semibold">{look.label}</p>}
+            <p className="hidden shrink-0 pr-4 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark sm:block">
+              {look.curated ? "Designer's pick · " : ""}
+              {look.pieces.length} pieces
+            </p>
+          </div>
+
           {/* Phones, tablets and small laptops: the figure on the left, its tags stacked on the right. */}
-          <div className="mt-3 grid grid-cols-[32%_minmax(0,1fr)] items-center gap-2 bg-photo p-3 sm:grid-cols-[38%_minmax(0,1fr)] sm:gap-6 sm:p-6 xl:hidden">
+          <div className="grid grid-cols-[32%_minmax(0,1fr)] items-center gap-2 bg-photo p-3 sm:grid-cols-[38%_minmax(0,1fr)] sm:gap-6 sm:p-6 xl:hidden">
             <div className="pt-[12%]">{figure}</div>
             <ul className="grid gap-2">
               {worn.map((w) => (
@@ -262,9 +313,6 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
 
           {/* Wide screens: the figure in the middle, each tag tied to its garment by a line. */}
           <div className="relative hidden bg-photo xl:block" style={{ height: STAGE.h }}>
-            <p className="absolute left-4 top-3 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
-              The {look.label.toLowerCase()} fit · {look.pieces.length} pieces
-            </p>
             <div className="absolute left-1/2 -translate-x-1/2" style={{ top: STAGE.top, width: STAGE.w }}>
               {figure}
             </div>
@@ -294,7 +342,7 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
       <div className="flex flex-col gap-3 border border-mist p-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 xl:mt-2">
         <p className="flex items-baseline gap-3">
           <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
-            The {look.label.toLowerCase()} fit · {look.pieces.length} pieces
+            {named} · {look.pieces.length} pieces
           </span>
           <span className="font-mono text-[24px] font-semibold leading-none tabular-nums">{formatPrice(total)}</span>
         </p>

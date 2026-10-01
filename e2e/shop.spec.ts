@@ -12,7 +12,7 @@ test("home, shop and a product page load @phone", async ({ page }) => {
   await expect(page.getByText(/Free pickup at the store/)).toBeVisible();
 });
 
-test("home: the rail, My size and Designer Fits @phone", async ({ page }) => {
+test("home: the rail filters in place, and Designer Fits @phone", async ({ page }) => {
   await page.goto("/");
   const rail = page.getByRole("region", { name: "The rail" });
   await expect(rail.locator("#rail-grid > li:not([hidden])").first()).toBeVisible();
@@ -23,15 +23,27 @@ test("home: the rail, My size and Designer Fits @phone", async ({ page }) => {
   }).toPass();
   const sizes = await rail.locator("#rail-grid > li:not([hidden])").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.sizes ?? ""));
   expect(sizes.every((s) => s.split(" ").some((x) => x === "XL" || x === "ONE"))).toBe(true);
-  await rail.getByRole("button", { name: "XL", exact: true }).click();
+  await expect(rail.getByRole("status")).toContainText(/size XL/);
+  // The shop opens with the same filter; Clear puts the rail back.
+  await expect(rail.getByRole("link", { name: "See these in the shop" })).toHaveAttribute("href", "/shop?size=XL");
+  await rail.getByRole("button", { name: "Clear", exact: true }).click();
+  await expect(rail.getByRole("button", { name: "XL", exact: true })).toHaveAttribute("aria-pressed", "false");
+  // A tab narrows it to one kind of piece.
+  const tab = rail.getByRole("group", { name: "Show" }).getByRole("button").nth(1);
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-pressed", "true");
+  await expect(rail.locator("#rail-grid > li:not([hidden])").first()).toBeVisible();
 
   const fits = page.getByRole("region", { name: "Designer Fits" });
   await fits.scrollIntoViewIfNeeded();
-  // Pick another occasion when there is one (the admin test may have curated a single fit meanwhile).
+  // An occasion, then one of the fits inside it.
   const occasions = fits.getByRole("radiogroup").first().getByRole("radio");
-  if ((await occasions.count()) > 1) {
-    await occasions.nth(1).click();
-    await expect(occasions.nth(1)).toHaveAttribute("aria-checked", "true");
+  await occasions.nth(1).click();
+  await expect(occasions.nth(1)).toHaveAttribute("aria-checked", "true");
+  const inside = fits.getByRole("radiogroup", { name: /fits$/ }).getByRole("radio");
+  if ((await inside.count()) > 1) {
+    await inside.nth(1).click();
+    await expect(inside.nth(1)).toHaveAttribute("aria-checked", "true");
   }
   await expect(fits.getByRole("button", { name: /Add the fit · Rs/ })).toBeEnabled();
   await fits.getByRole("link", { name: "Build your own fit" }).click();

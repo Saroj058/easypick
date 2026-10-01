@@ -27,8 +27,8 @@ export default async function AdminLooks() {
   return (
     <div className="max-w-3xl">
       <p className="text-steel-dark">
-        The ready fits in &ldquo;Designer Fits&rdquo; on the home page. Pick two to four pieces for each occasion (one per place on the body: jacket, top, bottom, cap), or leave one empty and the site
-        picks from what&apos;s live. Pieces that sell out drop out on their own.{" "}
+        The ready fits in &ldquo;Designer Fits&rdquo; on the home page and the Fits page. Each occasion holds three fits. Pick two to four pieces for a fit (one per place on the body: jacket, top,
+        bottom, cap), or leave it empty and the site picks from what&apos;s live. The fits you set are marked &ldquo;Designer&apos;s pick&rdquo;. Pieces that sell out drop out on their own.{" "}
         <a href="/#occasion-title" target="_blank" rel="noopener" className="underline underline-offset-2">
           See the home page
         </a>

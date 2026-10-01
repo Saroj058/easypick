@@ -1,38 +1,79 @@
-// "Designer Fits": a ready fit for each occasion, picked from what's live on the rack.
-// Each look is three pieces; colours lean dark or light to suit the occasion.
+// "Designer Fits": ready fits by occasion, picked from what's live on the rack.
+// Each occasion holds three fits (Party: night out, house party, birthday); a fit is two to
+// four pieces, and its colours lean dark or light to suit it.
 
 import type { Category, Product, Size } from "./types";
 
 type Tone = "dark" | "light" | "mixed";
 
 /**
- * Every occasion the home page offers a fit for, with which kinds of piece make it up
- * (one per place on the body) and whether it leans dark or light.
+ * The six occasions the store launches with (docs/BLUEPRINT.md, section 07), each with three
+ * fits. A fit says which kinds of piece make it up (one per place on the body) and its tone.
+ * The first fit of an occasion keeps the occasion's own key.
  */
 const PLAN = [
-  { key: "party", label: "Party", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-  { key: "casual", label: "Casual", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-  { key: "wedding", label: "Wedding", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-  { key: "date", label: "Date", slots: [["hoodies", "tees"], ["bottoms"], ["accessories", "jackets"]], tone: "mixed" },
-  { key: "college", label: "College", slots: [["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
-  { key: "office", label: "Office", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-  { key: "gym", label: "Gym", slots: [["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
-  { key: "travel", label: "Travel", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-  { key: "hike", label: "Hike", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
-  { key: "concert", label: "Concert", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-  { key: "cafe", label: "Café", slots: [["tees", "co-ords"], ["bottoms"], ["accessories"]], tone: "light" },
-  { key: "movie", label: "Movie night", slots: [["hoodies"], ["bottoms"]], tone: "dark" },
-  { key: "dashain", label: "Dashain", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-  { key: "tihar", label: "Tihar", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
-  { key: "roadtrip", label: "Road trip", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-  { key: "bike", label: "Bike ride", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
-  { key: "weekend", label: "Weekend", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-  { key: "family", label: "Family dinner", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-  { key: "photoshoot", label: "Photoshoot", slots: [["jackets"], ["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
-  { key: "winter", label: "Winter day", slots: [["jackets"], ["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
-] as const satisfies readonly { key: string; label: string; slots: readonly (readonly Category[])[]; tone: Tone }[];
+  {
+    key: "party",
+    label: "Party",
+    fits: [
+      { key: "party", label: "Night out", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
+      { key: "party-house", label: "House party", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "party-birthday", label: "Birthday", slots: [["tees", "co-ords"], ["bottoms"], ["jackets"]], tone: "mixed" },
+    ],
+  },
+  {
+    key: "date",
+    label: "Date",
+    fits: [
+      { key: "date", label: "Dinner", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
+      { key: "date-coffee", label: "Coffee", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "light" },
+      { key: "date-movie", label: "Movie night", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
+    ],
+  },
+  {
+    key: "college",
+    label: "College",
+    fits: [
+      { key: "college", label: "Class day", slots: [["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
+      { key: "college-presentation", label: "Presentation", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
+      { key: "college-fest", label: "Fest", slots: [["tees"], ["bottoms"], ["jackets"], ["accessories"]], tone: "dark" },
+    ],
+  },
+  {
+    key: "cafe",
+    label: "Café",
+    fits: [
+      { key: "cafe", label: "Brunch", slots: [["tees", "co-ords"], ["bottoms"], ["accessories"]], tone: "light" },
+      { key: "cafe-laptop", label: "Laptop day", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
+      { key: "cafe-evening", label: "Evening", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "mixed" },
+    ],
+  },
+  {
+    key: "dashain",
+    label: "Dashain",
+    fits: [
+      { key: "dashain", label: "Tika day", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
+      { key: "dashain-family", label: "Family visit", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
+      { key: "dashain-travel", label: "Travel home", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
+    ],
+  },
+  {
+    key: "weekend",
+    label: "Weekend",
+    fits: [
+      { key: "weekend", label: "Easy day", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
+      { key: "weekend-roadtrip", label: "Road trip", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
+      { key: "weekend-ride", label: "Bike ride", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
+    ],
+  },
+] as const satisfies readonly {
+  key: string;
+  label: string;
+  fits: readonly { key: string; label: string; slots: readonly (readonly Category[])[]; tone: Tone }[];
+}[];
 
-export type OccasionKey = (typeof PLAN)[number]["key"];
+/** One fit inside an occasion, e.g. "party-house". */
+export type OccasionKey = (typeof PLAN)[number]["fits"][number]["key"];
 
 export interface LookPiece {
   slug: string;
@@ -48,14 +89,21 @@ export interface LookPiece {
 
 export interface Look {
   key: OccasionKey;
+  /** The fit's own name inside its occasion: "Night out". */
   label: string;
+  /** The occasion it belongs to: "party", "Party". */
+  group: string;
+  groupLabel: string;
+  /** Set by the owner in /admin/looks, not picked by the site. */
+  curated: boolean;
   pieces: LookPiece[];
 }
 
-/** What the owner picked per occasion in /admin/looks: up to four pieces, each in a colour. */
+/** What the owner picked per fit in /admin/looks: up to four pieces, each in a colour. */
 export type SavedLooks = Partial<Record<OccasionKey, { place?: string; pieces: { slug: string; colour: string }[] }>>;
 
-export const OCCASIONS: { key: OccasionKey; label: string }[] = PLAN.map((p) => ({ key: p.key, label: p.label }));
+/** Every fit the owner can set, named with its occasion: "Party · Night out". */
+export const OCCASIONS: { key: OccasionKey; label: string }[] = PLAN.flatMap((g) => g.fits.map((f) => ({ key: f.key, label: `${g.label} · ${f.label}` })));
 
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
@@ -88,54 +136,61 @@ function toPiece(p: Product, tone: Tone, slot: number, pickedColour?: string): L
   };
 }
 
-/** The six occasions the blueprint launches with (docs/BLUEPRINT.md, section 07). */
-const LAUNCH: OccasionKey[] = ["college", "cafe", "date", "party", "dashain", "weekend"];
-
 /**
- * The fits to show. Once the owner has set any in /admin/looks, only those show (they are
- * the curated ones). Until then the six launch occasions are picked from the rack, and the
- * page says "ready-made", not "curated".
+ * The fits to show, in occasion order. A fit the owner set in /admin/looks is used as set;
+ * the rest are picked from the rack. `curated` is true only when every fit shown is the
+ * owner's, so the page says "curated" only when that is so.
  */
 export function designerFits(products: Product[], saved: SavedLooks = {}): { looks: Look[]; curated: boolean } {
-  const set = new Set(Object.entries(saved).filter(([, v]) => v && v.pieces.length >= 2).map(([k]) => k));
-  const all = buildLooks(products, saved);
-  const mine = all.filter((l) => set.has(l.key));
-  if (mine.length > 0) return { looks: mine, curated: true };
-  return { looks: all.filter((l) => LAUNCH.includes(l.key)), curated: false };
-}
-
-export function buildLooks(products: Product[], saved: SavedLooks = {}): Look[] {
   const live = products.filter((p) => p.status === "live" && p.variants.some((v) => v.stock > 0));
   const looks: Look[] = [];
-  PLAN.forEach((plan, i) => {
-    // The owner's look, when at least two of its pieces are live and in stock.
-    const mine = saved[plan.key];
-    if (mine && mine.pieces.length) {
-      const pieces = mine.pieces.flatMap((x, slot) => {
-        const p = live.find((q) => q.slug === x.slug);
-        const piece = p && toPiece(p, plan.tone, slot, x.colour);
-        return piece ? [piece] : [];
-      });
-      if (pieces.length >= 2) {
-        looks.push({ key: plan.key, label: plan.label, pieces });
-        return;
+  const seen = new Set<string>(); // no two fits with exactly the same pieces
+  let n = 0;
+  for (const group of PLAN) {
+    for (const plan of group.fits) {
+      const i = n++;
+      const base = { key: plan.key, label: plan.label, group: group.key, groupLabel: group.label };
+      // The owner's fit, when at least two of its pieces are live and in stock.
+      const mine = saved[plan.key];
+      if (mine && mine.pieces.length) {
+        const pieces = mine.pieces.flatMap((x, slot) => {
+          const p = live.find((q) => q.slug === x.slug);
+          const piece = p && toPiece(p, plan.tone, slot, x.colour);
+          return piece ? [piece] : [];
+        });
+        if (pieces.length >= 2) {
+          looks.push({ ...base, curated: true, pieces });
+          continue;
+        }
+      }
+      // Picked from the rack: rotate through the options so fits differ, and try the next
+      // rotation when that lands on a fit already shown.
+      let pieces: LookPiece[] = [];
+      for (let turn = 0; turn < 4; turn++) {
+        const used = new Set<string>();
+        pieces = [];
+        plan.slots.forEach((cats, slot) => {
+          const options = live.filter((p) => (cats as readonly Category[]).includes(p.category) && !used.has(p.slug));
+          if (options.length === 0) return;
+          const p = options[(i + turn + (turn ? slot : 0)) % options.length];
+          const piece = toPiece(p, plan.tone, slot);
+          if (!piece) return;
+          used.add(p.slug);
+          pieces.push(piece);
+        });
+        if (!seen.has(signature(pieces))) break;
+      }
+      if (pieces.length >= 2 && !seen.has(signature(pieces))) {
+        seen.add(signature(pieces));
+        looks.push({ ...base, curated: false, pieces });
       }
     }
-    const used = new Set<string>();
-    const pieces: LookPiece[] = [];
-    plan.slots.forEach((cats, slot) => {
-      const options = live.filter((p) => (cats as readonly Category[]).includes(p.category) && !used.has(p.slug));
-      if (options.length === 0) return;
-      // Rotate through the options so each occasion shows different pieces.
-      const p = options[i % options.length];
-      const piece = toPiece(p, plan.tone, slot);
-      if (!piece) return;
-      used.add(p.slug);
-      pieces.push(piece);
-    });
-    if (pieces.length >= 2) looks.push({ key: plan.key, label: plan.label, pieces });
-  });
-  return looks;
+  }
+  return { looks, curated: looks.length > 0 && looks.every((l) => l.curated) };
+}
+
+function signature(pieces: LookPiece[]) {
+  return pieces.map((p) => `${p.slug}~${p.colour}`).sort().join("|");
 }
 
 /** Which /fit slot a category goes in, for "Build your own fit". */

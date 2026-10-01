@@ -4,7 +4,8 @@ import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
-// The Vault: original brands and numbered pieces, quiet and dark. Shown only when the owner has marked pieces for it.
+// The Vault: original brands and numbered pieces, quiet and dark. Until the owner marks pieces for it
+// (product settings in admin), the home page shows a short strip saying what it is, with nothing to buy.
 
 function tag(p: Product) {
   if (p.edition) return `${String(p.edition.no).padStart(2, "0")} / ${String(p.edition.of).padStart(2, "0")}`;
@@ -13,7 +14,24 @@ function tag(p: Product) {
 
 export function Vault({ products }: { products: Product[] }) {
   const pieces = products.filter((p) => p.vault && (p.status === "live" || p.status === "sold_out"));
-  if (pieces.length === 0) return null;
+  if (pieces.length === 0) {
+    return (
+      <section aria-labelledby="vault-title" className="on-dark bg-ink py-10 text-[#f2efe8] md:py-14">
+        <div className="container-ep flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-steel">Not open yet</p>
+            <h2 id="vault-title" className="display display-h1 mt-2 tracking-[0.02em]">
+              The Vault
+            </h2>
+            <p className="mt-2.5 max-w-[46ch] text-[17px] text-[#aeaba3]">Rare, verified-genuine sneakers. One of each, never restocked. The first pairs aren&apos;t in yet.</p>
+          </div>
+          <Link href="/alerts" className="btn btn-volt shrink-0">
+            Get drop alerts
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   const brands = Array.from(
     pieces.reduce((m, p) => (p.brand ? m.set(p.brand, (m.get(p.brand) ?? 0) + 1) : m), new Map<string, number>()),
