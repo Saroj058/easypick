@@ -120,11 +120,6 @@ export function OurStore({ info }: { info: StoreInfo }) {
                 Visit details
               </Link>
             )}
-            {info.whatsapp && (
-              <a href={`https://wa.me/${info.whatsapp}`} target="_blank" rel="noopener" className="btn btn-outline">
-                WhatsApp
-              </a>
-            )}
           </div>
         </div>
       </div>
