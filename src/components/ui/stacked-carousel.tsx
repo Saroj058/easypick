@@ -73,11 +73,11 @@ export function StackedCarousel({
     go(Math.round(start.current) + shift);
   };
 
-  const arrow = "absolute top-1/2 z-[60] grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-black/60 text-white backdrop-blur transition hover:bg-black";
+  const arrow = "absolute top-[136px] z-[60] sm:top-[176px] lg:top-[200px] grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-black/60 text-white backdrop-blur transition hover:bg-black";
 
   return (
     <div className={cn("relative select-none", className)} role="region" aria-roledescription="carousel" aria-label={label}>
-      <div className="relative flex h-80 w-full items-center justify-center overflow-hidden sm:h-[26rem] lg:h-[30rem]">
+      <div className="relative flex h-[21rem] w-full items-start justify-center overflow-hidden sm:h-[26rem] lg:h-[30rem]">
         {/* A transparent surface over the cards takes the drag, the tap and the keys. */}
         <motion.div
           drag="x"
@@ -131,6 +131,7 @@ export function StackedCarousel({
 }
 
 function FanCard({ index, total, progress, fan, className, children }: { index: number; total: number; progress: MotionValue<number>; fan: Fan; className?: string; children: React.ReactNode }) {
+  // The card does not clip: what is drawn in it may hang below it, and the stage keeps room for that.
   // How far this card is from the front, the short way round the ring.
   const offset = useTransform(progress, (p) => {
     let diff = (index - p) % total;
@@ -147,7 +148,7 @@ function FanCard({ index, total, progress, fan, className, children }: { index: 
   const shade = useTransform(offset, [-2, -0.5, 0, 0.5, 2], [0.55, 0.25, 0, 0.25, 0.55]);
 
   return (
-    <motion.div style={{ x, rotate, y, scale, opacity, zIndex }} className={cn("pointer-events-none absolute h-56 w-44 overflow-hidden sm:h-72 sm:w-56 lg:h-80 lg:w-64", className)}>
+    <motion.div style={{ x, rotate, y, scale, opacity, zIndex }} className={cn("pointer-events-none absolute top-6 h-56 w-44 sm:top-8 sm:h-72 sm:w-56 lg:top-10 lg:h-80 lg:w-64", className)}>
       {children}
       {/* Cards further back sit in shadow. */}
       <motion.div style={{ opacity: shade }} className="pointer-events-none absolute inset-0 bg-black" />

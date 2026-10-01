@@ -32,6 +32,8 @@ export interface CoverflowCarouselProps {
   /** Space between cards, as a fraction of card width. */
   gap?: number;
   loop?: boolean;
+  /** Room kept under the cards for anything hanging off them (a price tag). Any CSS length. */
+  overhang?: string;
   /** The slide at the centre to begin with. */
   initial?: number;
   showNavigation?: boolean;
@@ -59,6 +61,7 @@ export function CoverflowCarousel({
   aspect = 1,
   gap = 0.05,
   loop = true,
+  overhang = "0px",
   initial = 0,
   showNavigation = false,
   label = "Carousel",
@@ -241,10 +244,11 @@ export function CoverflowCarousel({
     [],
   );
 
-  const arrow = "absolute top-1/2 z-[200] grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-ink/15 bg-paper/85 text-ink backdrop-blur transition hover:bg-paper disabled:opacity-30";
+  // The arrows sit at the middle of the cards, not of the cards plus what hangs under them.
+  const arrow = "absolute top-[calc(50%-var(--cf-over)/2)] z-[200] grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-ink/15 bg-paper/85 text-ink backdrop-blur transition hover:bg-paper disabled:opacity-30";
 
   return (
-    <div className={cn("w-full", className)} style={{ ["--cf-card" as string]: cardWidth }} role="region" aria-roledescription="carousel" aria-label={label}>
+    <div className={cn("w-full", className)} style={{ ["--cf-card" as string]: cardWidth, ["--cf-over" as string]: overhang }} role="region" aria-roledescription="carousel" aria-label={label}>
       <div className="relative">
         <div
           ref={frameRef}
@@ -263,7 +267,7 @@ export function CoverflowCarousel({
             } else if (event.key === "Enter") onActivate?.(selectedRef.current);
           }}
           // Vertical padding keeps the drop shadows clear of the overflow clip.
-          className="cursor-grab overflow-hidden py-8 outline-none focus-visible:ring-2 focus-visible:ring-ink active:cursor-grabbing"
+          className="cursor-grab overflow-hidden pb-[calc(2rem+var(--cf-over))] pt-8 outline-none focus-visible:ring-2 focus-visible:ring-ink active:cursor-grabbing"
           style={{
             perspective: `calc(var(--cf-card) * ${perspective})`,
             // Horizontal drag is ours; the page keeps vertical scrolling.
@@ -282,7 +286,7 @@ export function CoverflowCarousel({
                 aria-roledescription="slide"
                 aria-label={`${index + 1} of ${count}`}
                 aria-current={index === selected ? "true" : undefined}
-                className={cn("absolute left-1/2 top-0 overflow-hidden bg-photo shadow-[0_18px_40px_-18px_rgba(0,0,0,0.45)] will-change-transform", cardClassName)}
+                className={cn("absolute left-1/2 top-0 bg-photo shadow-[0_18px_40px_-18px_rgba(0,0,0,0.45)] will-change-transform", cardClassName)}
                 style={{ width: "var(--cf-card)", height: `calc(var(--cf-card) * ${aspect})` }}
               >
                 {renderSlide(index)}

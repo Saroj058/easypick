@@ -528,6 +528,7 @@ function Shelf({
         loop={loop}
         initial={start}
         showNavigation
+        overhang="clamp(56px, 7vw, 72px)"
         label={label}
         onSelect={setActive}
         onActivate={(i) => router.push(`/product/${pieces[i].slug}`)}
@@ -542,13 +543,13 @@ function Shelf({
               decorative
               priority={index === 0 && i < 2}
               sizes="(min-width: 1280px) 300px, (min-width: 800px) 24vw, 190px"
-              className="h-full"
+              className="h-full overflow-hidden"
             />
-            {/* The price, on a tag tied to the top of the card. */}
+            {/* The price, on a tag tied to the bottom of the card and hanging under it. */}
             <PriceTag
               price={formatPrice(pieces[i].price)}
               sku={pieces[i].colours[0].sizes[0]?.sku ?? pieces[i].id}
-              className="absolute right-3 top-0 md:right-4"
+              className="absolute right-3 top-full -mt-3 md:right-4"
             />
           </>
         )}

@@ -92,13 +92,14 @@ export function MiniTag({ product, className = "" }: { product: Product; classNa
 
 /**
  * The same small tag for cards that hold only a price and a code (the home rail's carousel, the
- * Vault's stack): it hangs from the top edge of the card on its string.
+ * Vault's stack, the offers): tied to the bottom edge of the card, it hangs below it on its string.
+ * `onDark` draws the string light, for a card on a dark page.
  */
-export function PriceTag({ price, sku, className = "" }: { price: string; sku: string; className?: string }) {
+export function PriceTag({ price, sku, onDark = false, className = "" }: { price: string; sku: string; onDark?: boolean; className?: string }) {
   return (
     <div className={`tag-hang pointer-events-none flex flex-col items-center ${className}`} aria-hidden>
-      <span className="h-2 w-2 rounded-full border border-ink/60 bg-paper" />
-      <span className="h-4 w-px bg-ink/60 md:h-5" />
+      <span className={`h-2 w-2 rounded-full border bg-paper ${onDark ? "border-paper" : "border-ink/60"}`} />
+      <span className={`h-4 w-px md:h-5 ${onDark ? "bg-paper/70" : "bg-ink/60"}`} />
       <div className="hang-tag w-[60px] px-1 pb-1.5 pt-4 font-mono [--hole:var(--color-mist)] before:top-[6px] before:-ml-1 before:h-2 before:w-2 md:w-[76px] md:px-2 md:pb-2 md:pt-5 md:before:top-[10px] md:before:-ml-[5px] md:before:h-2.5 md:before:w-2.5">
         <p className="whitespace-nowrap text-center text-[10.5px] font-semibold leading-none tabular-nums md:text-[12px]">{price}</p>
         <p className="mt-1 whitespace-nowrap text-center text-[6.5px] uppercase tracking-[0.1em] text-steel-dark md:text-[7px] md:tracking-[0.12em]">

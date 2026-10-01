@@ -48,13 +48,16 @@ function ItemCard({ item }: { item: OfferItem }) {
   return (
     <motion.li className="group w-[62%] max-w-[240px] shrink-0 snap-start sm:w-56" whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
       <Link href={item.href} className="block">
-        <div className="relative overflow-hidden">
-          <ProductImage image={item.image} category={item.category} colourHex={item.hex} decorative sizes="(min-width: 640px) 224px, 62vw" className="transition-transform duration-300 group-hover:scale-[1.03]" />
-          <PriceTag price={item.price} sku={item.sku} className="absolute right-3 top-0" />
-          <span className="absolute bottom-2 left-2 bg-ink px-2 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-paper">{item.off}% off</span>
+        <div className="relative">
+          <div className="relative overflow-hidden">
+            <ProductImage image={item.image} category={item.category} colourHex={item.hex} decorative sizes="(min-width: 640px) 224px, 62vw" className="transition-transform duration-300 group-hover:scale-[1.03]" />
+            <span className="absolute bottom-2 left-2 bg-ink px-2 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-paper">{item.off}% off</span>
+          </div>
+          {/* The price, on a tag tied to the bottom of the photo and hanging beside the words. */}
+          <PriceTag price={item.price} sku={item.sku} className="absolute right-2 top-full -mt-3" />
         </div>
-        <h3 className="mt-3 line-clamp-1 text-[15px] font-semibold decoration-1 underline-offset-4 group-hover:underline">{item.name}</h3>
-        <p className="mt-0.5 text-[13px] text-steel-dark">{item.sub}</p>
+        <h3 className="mt-3 line-clamp-1 pr-[72px] text-[15px] md:pr-[88px] font-semibold decoration-1 underline-offset-4 group-hover:underline">{item.name}</h3>
+        <p className="mt-0.5 line-clamp-1 pr-[72px] text-[13px] text-steel-dark md:pr-[88px]">{item.sub}</p>
         <p className="mt-1.5 flex items-baseline gap-2 font-mono tabular-nums">
           <span className="text-[16px] font-semibold">
             <span className="sr-only">now </span>
@@ -144,7 +147,7 @@ export function OffersCarousel({ eyebrow, title, subtitle, ctaText, ctaHref, ite
         onFocus={() => (held.current.focus = true)}
         onBlur={() => (held.current.focus = false)}
       >
-        <ul ref={row} className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 pt-2 lg:mx-0 lg:scroll-px-0 lg:px-1">
+        <ul ref={row} className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-5 pt-2 lg:mx-0 lg:scroll-px-0 lg:px-1">
           {items.map((item) => (
             <ItemCard key={item.id} item={item} />
           ))}

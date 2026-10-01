@@ -42,14 +42,16 @@ export function VaultFeatured({ pieces }: { pieces: FeaturedPiece[] }) {
           const p = pieces[i];
           return (
             <>
-              <ProductImage image={p.image} category={p.category} colourHex={p.hex} decorative sizes="(min-width: 1024px) 256px, (min-width: 640px) 224px, 176px" className="h-full [&_img]:pointer-events-none" />
+              <ProductImage image={p.image} category={p.category} colourHex={p.hex} decorative sizes="(min-width: 1024px) 256px, (min-width: 640px) 224px, 176px" className="h-full overflow-hidden [&_img]:pointer-events-none" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
               <span className="absolute right-3 top-3 bg-[#f2efe8] px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink">{p.brand}</span>
-              {/* The price, on a tag tied to the top of the card. */}
-              <PriceTag price={p.price} sku={p.sku} className="absolute left-3 top-0" />
               <div className="absolute inset-x-3 bottom-3 text-[#f2efe8]">
                 <p className="text-[15px] font-semibold leading-tight">{p.name}</p>
                 {p.tag && <p className="mt-1 font-mono text-[10px] tracking-[0.08em] text-[#aeaba3]">{p.tag}</p>}
+              </div>
+              {/* The price, on a tag tied to the bottom of the card and hanging under it. Only the front card shows its tag. */}
+              <div className={`absolute right-3 top-full -mt-3 transition-opacity duration-300 ${i === front ? "opacity-100" : "opacity-0"}`}>
+                <PriceTag price={p.price} sku={p.sku} onDark />
               </div>
             </>
           );
