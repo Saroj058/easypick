@@ -72,7 +72,7 @@ export function MiniTag({ product, className = "" }: { product: Product; classNa
   return (
     // The shadow sits on this wrapper: the tag's cut corners (clip-path) would clip a shadow on the tag itself.
     <div
-      className={`tag-hang pointer-events-none flex flex-col items-center [filter:drop-shadow(0_0_0.6px_rgba(0,0,0,0.45))_drop-shadow(0_5px_8px_rgba(0,0,0,0.13))] ${className}`}
+      className={`tag-hang pointer-events-none flex flex-col items-center ${className}`}
       aria-hidden
     >
       <span className="h-2 w-2 rounded-full border border-ink/60 bg-paper" />

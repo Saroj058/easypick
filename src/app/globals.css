@@ -256,14 +256,44 @@
     background: var(--hole, var(--color-graphite));
   }
 
-  /* A tag hanging on a string from the top of a product photo. Sways a little on hover. */
+  /* A tag hanging on a string from the top of a product photo. Pointing at the card knocks it:
+     it swings like a real tag and settles, and its shadow deepens as it lifts. */
   .tag-hang {
     transform-origin: 50% 0;
     transform: rotate(-3deg);
-    transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* The shadow is on the wrapper: the tag's cut corners (clip-path) would clip one on the tag itself. */
+    filter: drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.45)) drop-shadow(0 5px 8px rgba(0, 0, 0, 0.13));
+    transition:
+      transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      filter 300ms ease-out;
   }
   @media (hover: hover) {
     .group:hover .tag-hang {
+      transform: rotate(2deg);
+      animation: tag-swing 1100ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+      filter: drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.5)) drop-shadow(0 9px 12px rgba(0, 0, 0, 0.2));
+    }
+  }
+  @keyframes tag-swing {
+    0% {
+      transform: rotate(-3deg);
+    }
+    18% {
+      transform: rotate(9deg);
+    }
+    38% {
+      transform: rotate(-6deg);
+    }
+    56% {
+      transform: rotate(5deg);
+    }
+    72% {
+      transform: rotate(-1.5deg);
+    }
+    86% {
+      transform: rotate(3deg);
+    }
+    100% {
       transform: rotate(2deg);
     }
   }

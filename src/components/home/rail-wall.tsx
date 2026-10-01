@@ -157,7 +157,7 @@ function PriceTag({
 }) {
   return (
     <div
-      className={`tag-hang pointer-events-none flex flex-col items-center [filter:drop-shadow(0_0_0.6px_rgba(0,0,0,0.45))_drop-shadow(0_5px_8px_rgba(0,0,0,0.13))] ${className}`}
+      className={`tag-hang pointer-events-none flex flex-col items-center ${className}`}
     >
       <span className="h-2 w-2 rounded-full border border-ink/60 bg-paper" />
       <span className="h-4 w-px bg-ink/60 md:h-5" />
@@ -252,7 +252,7 @@ function Piece({
   const inBag = Boolean(variant && added === variant.sku);
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="group relative flex h-full flex-col">
       <div>
         <div className="relative">
           <Hook />
