@@ -77,6 +77,11 @@ test("the owner puts a piece in The Vault and it shows on the home page", async 
   await expect(section).toBeVisible();
   await expect(section.getByText("07 / 20")).toBeVisible();
   await expect(section.getByRole("link", { name: /Easypick Studio/ }).first()).toBeVisible();
+  // "Show all" under the brand opens the Vault page for that brand.
+  await section.getByRole("navigation", { name: "Vault brands" }).getByRole("link", { name: /Easypick Studio.*Show all/ }).click();
+  await page.waitForURL(/\/vault\?brand=Easypick/, { timeout: 60_000 });
+  await expect(page.getByRole("heading", { level: 1, name: "Easypick Studio" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Coach Jacket/ }).first()).toBeVisible();
 
   await page.goto("/product/coach-jacket");
   await expect(page.getByText("Cut from the last roll of the Drop 01 nylon.")).toBeVisible();

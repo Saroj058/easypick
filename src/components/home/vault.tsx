@@ -4,8 +4,9 @@ import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
-// The Vault: original brands and numbered pieces, quiet and dark. Until the owner marks pieces for it
-// (product settings in admin), the home page shows a short strip saying what it is, with nothing to buy.
+// The Vault: original brands and numbered pieces, quiet and dark. On the home page: the brands, each
+// with its own "Show all" into the Vault page, then a Featured row of five pieces. Until the owner
+// marks pieces for it (product settings in admin), the same layout shows empty.
 
 function tag(p: Product) {
   if (p.edition) return `${String(p.edition.no).padStart(2, "0")} / ${String(p.edition.of).padStart(2, "0")}`;
@@ -65,13 +66,62 @@ function VaultWaiting() {
   );
 }
 
+/** Pieces the owner has marked for the Vault that the public can see. */
+export function vaultPieces(products: Product[]) {
+  return products.filter((p) => p.vault && (p.status === "live" || p.status === "sold_out"));
+}
+
+/** Brands in the Vault with their pieces, the fullest first. Pieces without a brand are left out of the rows. */
+export function vaultBrands(pieces: Product[]) {
+  const map = new Map<string, Product[]>();
+  for (const p of pieces) if (p.brand) map.set(p.brand, [...(map.get(p.brand) ?? []), p]);
+  return Array.from(map, ([name, list]) => ({ name, pieces: list })).sort((a, b) => b.pieces.length - a.pieces.length || a.name.localeCompare(b.name));
+}
+
+export const vaultHref = (brand?: string) => (brand ? `/vault?brand=${encodeURIComponent(brand)}` : "/vault");
+
+/** One Vault piece: photo on the dark ground, brand and tag, name and price. */
+export function VaultCard({ piece, sizes }: { piece: Product; sizes: string }) {
+  // The brand has its own line, so the name doesn't repeat it ("Nike Club Fleece Hoodie" reads "Club Fleece Hoodie").
+  const model = piece.brand && piece.name.toLowerCase().startsWith(`${piece.brand.toLowerCase()} `) ? piece.name.slice(piece.brand.length + 1) : piece.name;
+  return (
+    <Link href={`/product/${piece.slug}`} aria-label={`${piece.name}, ${piece.status === "sold_out" ? "sold" : formatPrice(piece.salePrice ?? piece.price)}`} className="group flex flex-col gap-3">
+      <span className="block overflow-hidden bg-[#151517]">
+        <ProductImage
+          image={piece.images[0] ?? { src: null, alt: piece.name, kind: "front" }}
+          category={piece.category}
+          colourHex={piece.colours[0]?.hex ?? "#2b2b2e"}
+          decorative
+          className="bg-[#151517] transition-transform duration-300 group-hover:scale-[1.02]"
+          sizes={sizes}
+        />
+      </span>
+      <span className="flex items-baseline justify-between gap-3">
+        <span className="text-[12px] uppercase tracking-[0.16em] text-steel">{piece.brand ?? ""}</span>
+        <span className="font-mono text-[11px] tracking-[0.08em] text-steel">{tag(piece)}</span>
+      </span>
+      <span className="flex justify-between gap-3">
+        <span className="text-[15px] leading-snug group-hover:underline">{model}</span>
+        <span className="shrink-0 font-mono text-[14px] tabular-nums">{piece.status === "sold_out" ? "Sold" : formatPrice(piece.salePrice ?? piece.price)}</span>
+      </span>
+    </Link>
+  );
+}
+
+const FEATURED = 5;
+
 export function Vault({ products }: { products: Product[] }) {
-  const pieces = products.filter((p) => p.vault && (p.status === "live" || p.status === "sold_out"));
+  const pieces = vaultPieces(products);
   if (pieces.length === 0) return <VaultWaiting />;
 
-  const brands = Array.from(
-    pieces.reduce((m, p) => (p.brand ? m.set(p.brand, (m.get(p.brand) ?? 0) + 1) : m), new Map<string, number>()),
-  ).sort((a, b) => b[1] - a[1]);
+  const brands = vaultBrands(pieces);
+  // Featured: one piece from each brand in turn (what can be bought first), five in all.
+  const buyable = (list: Product[]) => [...list].sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
+  const rows = brands.length ? brands.map((b) => buyable(b.pieces)) : [buyable(pieces)];
+  const featured: Product[] = [];
+  for (let round = 0; featured.length < FEATURED && rows.some((r) => r.length > round); round++) {
+    for (const r of rows) if (r[round] && featured.length < FEATURED) featured.push(r[round]);
+  }
 
   return (
     <section aria-labelledby="vault-title" className="on-dark section bg-ink text-[#f2efe8]">
@@ -83,54 +133,56 @@ export function Vault({ products }: { products: Product[] }) {
             </h2>
             <p className="mt-2.5 text-[17px] text-[#aeaba3]">Original brands and numbered pieces.</p>
           </div>
-          <Link href="/shop?vault=1" className="shrink-0 text-[15px] font-semibold uppercase tracking-[0.08em] underline-offset-4 hover:underline">
+          <Link href={vaultHref()} className="shrink-0 text-[15px] font-semibold uppercase tracking-[0.08em] underline-offset-4 hover:underline">
             Enter
           </Link>
         </div>
 
+        {/* The brands, each with its own way in. */}
         {brands.length > 0 && (
           <nav aria-label="Vault brands" className="no-scrollbar -mx-4 flex overflow-x-auto border-y border-[#2c2c2e] md:mx-0 md:grid md:grid-cols-6">
-            {brands.slice(0, 6).map(([name, n]) => (
+            {brands.slice(0, 6).map((b) => (
               <Link
-                key={name}
-                href={`/shop?vault=1&brand=${encodeURIComponent(name)}`}
-                className="flex h-[88px] min-w-[140px] shrink-0 flex-col items-center justify-center gap-1 border-r border-[#1f1f22] hover:bg-[#151517] md:min-w-0"
+                key={b.name}
+                href={vaultHref(b.name)}
+                className="group flex h-[124px] min-w-[150px] shrink-0 flex-col items-center justify-center gap-1 border-r border-[#1f1f22] px-2 hover:bg-[#151517] md:min-w-0"
               >
-                <span className="font-display text-[28px] uppercase tracking-[0.04em]">{name}</span>
+                <span className="text-center font-display text-[26px] uppercase leading-none tracking-[0.04em]">{b.name}</span>
                 <span className="font-mono text-[11px] text-steel">
-                  {n} {n === 1 ? "piece" : "pieces"}
+                  {b.pieces.length} {b.pieces.length === 1 ? "piece" : "pieces"}
+                </span>
+                <span className="mt-2 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.1em] underline-offset-4 group-hover:underline">
+                  Show all
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
                 </span>
               </Link>
             ))}
           </nav>
         )}
 
-        <ul className="no-scrollbar -mx-4 flex snap-x gap-5 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0">
-          {pieces.slice(0, 4).map((p) => (
-            <li key={p.id} className="w-[64vw] max-w-[280px] shrink-0 snap-start md:w-auto md:max-w-none">
-              <Link href={`/product/${p.slug}`} className="group flex flex-col gap-3">
-                <span className="block overflow-hidden bg-[#151517]">
-                  <ProductImage
-                    image={p.images[0] ?? { src: null, alt: p.name, kind: "front" }}
-                    category={p.category}
-                    colourHex={p.colours[0]?.hex ?? "#2b2b2e"}
-                    decorative
-                    className="bg-[#151517] transition-transform duration-300 group-hover:scale-[1.02]"
-                    sizes="(min-width: 768px) 25vw, 64vw"
-                  />
-                </span>
-                <span className="flex items-baseline justify-between gap-3">
-                  <span className="text-[12px] uppercase tracking-[0.16em] text-steel">{p.brand ?? ""}</span>
-                  <span className="font-mono text-[11px] tracking-[0.08em] text-steel">{tag(p)}</span>
-                </span>
-                <span className="flex justify-between gap-3">
-                  <span className="text-base group-hover:underline">{p.name}</span>
-                  <span className="font-mono text-[14px] tabular-nums">{p.status === "sold_out" ? "Sold" : formatPrice(p.salePrice ?? p.price)}</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {/* Featured: the word on the left, five pieces beside it. */}
+        <div className="grid gap-5 lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-6">
+          <div className="flex items-baseline justify-between gap-4 lg:flex-col lg:justify-between lg:border-r lg:border-[#2c2c2e] lg:pr-6">
+            <div>
+              <h3 className="font-display text-[34px] uppercase leading-none tracking-[0.03em] lg:text-[40px]">Featured</h3>
+              <p className="mt-2 hidden font-mono text-[11px] uppercase tracking-[0.14em] text-steel lg:block">
+                {featured.length} of {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}
+              </p>
+            </div>
+            <Link href={vaultHref()} className="flex min-h-11 shrink-0 items-center text-[13px] font-semibold uppercase tracking-[0.08em] underline underline-offset-4">
+              Show all
+            </Link>
+          </div>
+          <ul className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0">
+            {featured.map((p) => (
+              <li key={p.id} className="w-[56vw] max-w-[240px] shrink-0 snap-start md:w-auto md:max-w-none">
+                <VaultCard piece={p} sizes="(min-width: 768px) 18vw, 56vw" />
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );

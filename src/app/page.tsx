@@ -82,8 +82,10 @@ const orgLd = {
 export default async function HomePage() {
   const [products, { current, next }] = await Promise.all([getProducts(), getDropTimeline()]);
   const drop = current ?? next;
-  const upper = pickStorey(products, UPPER);
-  const lower = pickStorey(products, LOWER);
+  // Vault pieces have their own section; the shelf and the rail hold the house range.
+  const range = products.filter((p) => !p.vault);
+  const upper = pickStorey(range, UPPER);
+  const lower = pickStorey(range, LOWER);
 
   const offers = products.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -138,7 +140,7 @@ export default async function HomePage() {
       </section>
 
       {/* The rail: products first, with quick filters and "My size" */}
-      <Rail products={products} />
+      <Rail products={range} />
 
       {/* Delivery, payment and the size swap, in one line */}
       <DeliveryStrip />

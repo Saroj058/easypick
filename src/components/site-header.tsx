@@ -37,7 +37,7 @@ const primary = [
   { href: "/shop", label: "Shop" },
   { href: "/fits", label: "Fits" },
   { href: "/gift", label: "Gift" },
-  { href: "/shop?vault=1", label: "The Vault" },
+  { href: "/vault", label: "The Vault" },
   { href: "/visit", label: "Visit" },
 ];
 

@@ -40,7 +40,7 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
   },
   {
     title: "The Vault",
-    links: [{ href: "/shop?vault=1", label: "The Vault" }],
+    links: [{ href: "/vault", label: "The Vault" }],
   },
   {
     title: "Visit",

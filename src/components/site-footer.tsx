@@ -15,7 +15,7 @@ export async function SiteFooter() {
       title: "Shop",
       links: [
         { href: "/shop", label: "The rail" },
-        { href: "/shop?vault=1", label: "The Vault" },
+        { href: "/vault", label: "The Vault" },
         { href: "/fit", label: "Build a fit" },
         { href: "/gift-cards", label: "Gift cards" },
       ],

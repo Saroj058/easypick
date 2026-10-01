@@ -176,9 +176,94 @@ function generate() {
   return products;
 }
 
+// ---------------------------------------------------------------------------------------------
+// The Vault's demo pieces: six known brands, five pieces each, so the Vault section and page can
+// be seen full before real stock arrives. They are placeholders: the prices and stock are made
+// up, and none is tagged "Original" (that tag is the owner's to set, with proof, in the admin).
+//
+//   npm run catalogue:seed -- --vault            add them (ids start "gen-vlt-")
+//   npm run catalogue:seed -- --vault --remove   delete only these again
+// ---------------------------------------------------------------------------------------------
+const VAULT_KINDS = {
+  tee: { category: "tees", code: "TEE", chart: "tee", sizes: ["S", "M", "L", "XL"], fit: "regular", fabric: "Cotton jersey" },
+  hoodie: { category: "hoodies", code: "HOD", chart: "hoodie", sizes: ["S", "M", "L", "XL"], fit: "regular", fabric: "Brushed fleece" },
+  jacket: { category: "jackets", code: "JKT", chart: "jacket", sizes: ["S", "M", "L", "XL"], fit: "regular", fabric: "Woven shell" },
+  pant: { category: "bottoms", code: "BTM", chart: "bottom", sizes: ["S", "M", "L", "XL"], fit: "regular", fabric: "Cotton blend" },
+  cap: { category: "accessories", code: "ACC", chart: null, sizes: ["ONE"], fit: "regular", fabric: "Cotton twill" },
+};
+const C = (name) => COLOURS.find((c) => c.name === name);
+// [model, kind, colour, price in NPR]
+const VAULT = {
+  Nike: [["Club Fleece Hoodie", "hoodie", "Black", 10999], ["Sportswear Tee", "tee", "Bone", 4999], ["Windrunner Jacket", "jacket", "Navy", 15999], ["Tech Fleece Jogger", "pant", "Charcoal", 12999], ["Heritage Cap", "cap", "Black", 3499]],
+  Adidas: [["Trefoil Tee", "tee", "Cream", 4499], ["Firebird Track Jacket", "jacket", "Navy", 11999], ["Adicolor Hoodie", "hoodie", "Black", 9999], ["3-Stripes Track Pant", "pant", "Black", 8999], ["Trefoil Cap", "cap", "Navy", 2999]],
+  "New Balance": [["Athletics Track Jacket", "jacket", "Navy", 13499], ["Essentials Tee", "tee", "Ash", 4499], ["Essentials Hoodie", "hoodie", "Stone", 10499], ["Athletics Jogger", "pant", "Slate", 8999], ["Classic Cap", "cap", "Cream", 2999]],
+  Puma: [["T7 Track Jacket", "jacket", "Black", 9999], ["Essentials Tee", "tee", "Ivory", 3999], ["Classics Hoodie", "hoodie", "Forest", 8999], ["T7 Track Pant", "pant", "Black", 7999], ["Archive Cap", "cap", "Black", 2499]],
+  Converse: [["Star Chevron Tee", "tee", "Black", 3999], ["Go-To Hoodie", "hoodie", "Cream", 8999], ["Coaches Jacket", "jacket", "Black", 10999], ["Carpenter Pant", "pant", "Sand", 8499], ["Tipoff Cap", "cap", "Maroon", 2499]],
+  Carhartt: [["Detroit Jacket", "jacket", "Mocha", 19999], ["Pocket Tee", "tee", "Sand", 4999], ["Midweight Hoodie", "hoodie", "Forest", 11999], ["Double Knee Pant", "pant", "Mocha", 12999], ["Canvas Cap", "cap", "Sand", 3499]],
+};
+
+/** The Vault's demo pieces, in a fixed order. One or two of each size, as rare pieces would be. */
+function generateVault() {
+  let n = 0;
+  return Object.entries(VAULT).flatMap(([brand, models]) =>
+    models.map(([model, kindKey, colourName, price]) => {
+      n++;
+      const k = VAULT_KINDS[kindKey];
+      const colour = C(colourName);
+      const name = `${brand} ${model}`;
+      const code = `VLT${String(n).padStart(3, "0")}`;
+      // Deterministic small stock: mostly one of each size, now and then two or none.
+      const stock = (i) => ((n * 7 + i * 3) % 9 === 0 ? 0 : (n + i) % 4 === 0 ? 2 : 1);
+      return {
+        id: `gen-vlt-${String(n).padStart(2, "0")}`,
+        slug: slugify(name),
+        name,
+        category: k.category,
+        gender: "unisex",
+        fit: k.fit,
+        dropSlug: null,
+        shortDescription: `${model} by ${brand}, in ${colour.name.toLowerCase()}. A Vault piece.`,
+        details: [k.fabric, k.sizes[0] === "ONE" ? "One size" : "Regular fit.", "Follow the care label.", "Demo piece: placeholder price and stock until real Vault stock is entered."],
+        tags: [k.category, "vault", brand.toLowerCase(), colour.name.toLowerCase()],
+        colours: [colour],
+        images: [{ src: null, alt: `${colour.name.toLowerCase()} ${name.toLowerCase()}, front view`, kind: "front" }],
+        price,
+        measurements: k.chart ? Object.fromEntries(k.sizes.map((s) => [s, CHARTS[k.chart][s]])) : {},
+        variants: k.sizes.map((size, i) => ({ sku: `${code}-${colour.name.slice(0, 3).toUpperCase()}-${size}`, size, colour: colour.name, stock: k.sizes[0] === "ONE" ? 2 : stock(i) })),
+        status: "live",
+        showOn: { website: true, kiosk: true },
+        vault: true,
+        brand,
+      };
+    }),
+  );
+}
+
 const sql = postgres(url, { max: 1, prepare: false, connect_timeout: 15 });
 try {
-  if (args.has("--remove")) {
+  if (args.has("--vault")) {
+    if (args.has("--remove")) {
+      const gone = await sql`delete from products where data->>'id' like 'gen-vlt-%' returning slug`;
+      console.log(`Removed ${gone.length} Vault demo pieces.`);
+    } else {
+      const list = generateVault();
+      console.log(`${list.length} Vault demo pieces across ${Object.keys(VAULT).length} brands, ${list.reduce((n, p) => n + p.variants.length, 0)} sizes.`);
+      if (args.has("--dry")) process.exit(0);
+      const taken = new Set((await sql`select slug from products`).map((r) => r.slug));
+      const [{ max }] = await sql`select coalesce(max(position), 0)::int as max from products`;
+      let added = 0;
+      await sql.begin(async (tx) => {
+        for (const [i, p] of list.entries()) {
+          if (taken.has(p.slug)) continue;
+          const { variants, slug, status, ...data } = p;
+          await tx`insert into products (slug, status, position, data) values (${slug}, ${status}, ${max + 1 + i}, ${tx.json(data)}) on conflict (slug) do nothing`;
+          await tx`insert into variants ${tx(variants.map((v, n) => ({ sku: v.sku, product_slug: slug, size: v.size, colour: v.colour, stock: v.stock, last_piece_on_floor: false, position: n })))} on conflict (sku) do nothing`;
+          added++;
+        }
+      });
+      console.log(`Added ${added} Vault demo pieces (${list.length - added} were already there).`);
+    }
+  } else if (args.has("--remove")) {
     const gone = await sql`delete from products where data->>'id' like 'gen-%' returning slug`;
     await sql`delete from drops where slug in ('03','04','05','06') and not exists (select 1 from products where data->>'dropSlug' = drops.slug)`;
     console.log(`Removed ${gone.length} generated pieces.`);

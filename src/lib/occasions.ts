@@ -170,7 +170,8 @@ export function designerFits(products: Product[], saved: SavedLooks = {}): { loo
         const used = new Set<string>();
         pieces = [];
         plan.slots.forEach((cats, slot) => {
-          const options = live.filter((p) => (cats as readonly Category[]).includes(p.category) && !used.has(p.slug));
+          // Vault pieces are only in a fit when the owner puts them there.
+          const options = live.filter((p) => !p.vault && (cats as readonly Category[]).includes(p.category) && !used.has(p.slug));
           if (options.length === 0) return;
           const p = options[(i + turn + (turn ? slot : 0)) % options.length];
           const piece = toPiece(p, plan.tone, slot);
