@@ -1,39 +1,60 @@
 import { expect, test } from "@playwright/test";
 
-const STOPS = ["street", "enter", "pick", "try", "pay", "pickup", "out"];
+// The tour is a film on a clock. Headless Chrome draws WebGL in software (slowly), so these tests
+// jump between chapters with the buttons instead of waiting for the film to get there.
 
-test("walk the store: scrolling moves through the stops, with real text at each @phone", async ({ page }, info) => {
-  test.setTimeout(240_000); // headless Chrome draws WebGL in software, slowly
+test("walk the store: the film plays, pauses and jumps between its chapters @phone", async ({ page }, info) => {
+  test.setTimeout(240_000);
   const errors: string[] = [];
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/visit/tour");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(/Walk the store/i);
-  // Every stop is readable text, in order, whatever the device does with the 3D.
-  for (const id of STOPS) await expect(page.locator(`#${id} h2`)).toHaveCount(1);
+  const tour = page.getByRole("region", { name: "Virtual tour" });
+  // Nothing but the film: no intro, no end block.
+  await expect(page.getByText(/Scroll to walk in/)).toHaveCount(0);
+  await expect(page.getByText(/END OF THE WALK|Get the opening-day SMS|Share the tour|Walk it again/)).toHaveCount(0);
 
-  // The 3D canvas loads (headless Chrome has WebGL) and draws.
-  await expect(page.locator("canvas")).toBeVisible({ timeout: 30_000 });
-  await page.locator('section[aria-label="Virtual tour"]').evaluate((el) => window.scrollTo(0, (el as HTMLElement).offsetTop));
-  await page.waitForTimeout(4000); // the canvas fades in over the poster
-  await page.screenshot({ path: `test-results/shots/walk-0-street-${info.project.name}.png` });
+  // The 3D canvas loads and the film starts by itself.
+  await expect(tour.locator("canvas")).toBeVisible({ timeout: 60_000 });
+  await expect(tour).toHaveAttribute("data-tour-state", "playing", { timeout: 60_000 });
+  await expect(tour).toHaveAttribute("data-chapter", "street");
+  await page.screenshot({ path: `test-results/shots/film-0-street-${info.project.name}.png` });
 
-  // The arrows walk you to the next stop, and the counter follows.
-  for (let i = 1; i < STOPS.length; i++) {
-    await page.getByRole("button", { name: "Next stop" }).click();
-    await expect(page.getByRole("navigation", { name: "Tour" })).toContainText(`0${i + 1} / 07`);
-    await page.waitForTimeout(1600);
-    await page.screenshot({ path: `test-results/shots/walk-${i}-${STOPS[i]}-${info.project.name}.png` });
+  // The button pauses and plays.
+  await tour.getByRole("button", { name: "Pause" }).click();
+  await expect(tour).toHaveAttribute("data-tour-state", "paused");
+  await tour.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(tour).toHaveAttribute("data-tour-state", "playing");
+
+  // Each chapter button jumps there, and the caption follows.
+  const captions: [string, string, RegExp][] = [
+    ["Pick", "pick", /Fixed price\. Size in cm\./],
+    ["Try", "try", /Take a token/],
+    ["Pay", "pay", /Scan with eSewa/],
+    ["Pickup", "pickup", /Collect here/],
+    ["Out", "out", /Pick it\. Pay it\. Wear it\./],
+  ];
+  for (const [name, id, caption] of captions) {
+    await tour.getByRole("button", { name: new RegExp(`^Stop \\d: ${name}$`) }).click();
+    await expect(tour).toHaveAttribute("data-chapter", id);
+    await expect(tour.getByText(caption).first()).toBeVisible();
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: `test-results/shots/film-${id}-${info.project.name}.png` });
   }
-  await expect(page).toHaveURL(/#out$/);
-  await expect(page.locator("#tour-end")).toContainText(/Shop online now/);
   expect(errors.filter((e) => !/Download the React DevTools|favicon/.test(e))).toEqual([]);
 });
 
-test("walk the store: reduced motion still works, and nothing moves on its own", async ({ browser }) => {
+test("walk the store: with motion turned off nothing plays on its own, and the stops are stepped through", async ({ browser }) => {
+  test.setTimeout(120_000);
   const ctx = await browser.newContext({ reducedMotion: "reduce" });
   const page = await ctx.newPage();
-  await page.goto("/visit/tour#pay");
-  await expect(page.locator("#pay h2")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Pause motion/ })).toHaveCount(0);
+  await page.goto("/visit/tour");
+  const tour = page.getByRole("region", { name: "Virtual tour" });
+  await expect(tour.getByRole("button", { name: "Next stop" })).toBeVisible({ timeout: 60_000 });
+  await expect(tour.getByRole("button", { name: "Pause" })).toHaveCount(0);
+  await expect(tour).not.toHaveAttribute("data-tour-state", "playing");
+  await tour.getByRole("button", { name: "Next stop" }).click();
+  await expect(tour).toHaveAttribute("data-chapter", "enter");
+  await expect(tour.getByText("Just looking? Perfect.").first()).toBeVisible();
   await ctx.close();
 });

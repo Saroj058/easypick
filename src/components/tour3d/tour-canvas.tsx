@@ -1,26 +1,48 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
-import { EYE, KEYFRAMES, shutterOpen } from "@/lib/tour-plan";
-import { buildStore, w, type Fonts, type TagInfo } from "./build-store";
+import { pathAt, SHOTS } from "@/lib/tour-plan";
+import { buildStore, w, type BuiltStore, type Fonts, type KioskBill, type TagInfo } from "./build-store";
 
-export interface TourCanvasProps {
-  /** Position along the keyframes (0 … KEYFRAMES.length − 1), written by the page on scroll. */
-  pathRef: React.RefObject<number>;
-  /** True: jump straight to each stop (reduced motion, or the viewer paused motion). */
-  still: boolean;
-  tag: TagInfo;
-  /** Called once the first frame is drawn, so the page can fade the poster out. */
-  onReady?: () => void;
+/** The film's clock, owned by the player: the current second, and whether it is running. */
+export interface TourClock {
+  t: number;
+  playing: boolean;
 }
 
-const posCurve = new THREE.CatmullRomCurve3(KEYFRAMES.map((k) => w(k.at[0], EYE, k.at[1])), false, "centripetal");
-const lookCurve = new THREE.CatmullRomCurve3(KEYFRAMES.map((k) => w(...k.look)), false, "centripetal");
-const LAST = KEYFRAMES.length - 1;
+export interface TourCanvasProps {
+  /** Moves the player's clock on by the time since the last frame (when it is running) and returns the current second. */
+  tick: (dt: number) => number;
+  /** Whether the film is running: the canvas only draws continuously while it is. */
+  playing: boolean;
+  /** Changes whenever the player jumps to another second, so one frame is drawn while paused. */
+  seek: number;
+  tag: TagInfo;
+  bill: KioskBill;
+  /** Called once the first frame is drawn, so the player can fade its poster out. */
+  onReady: () => void;
+}
+
+// One smooth curve for where the camera stands and one for what it looks at, per shot.
+const CURVES = SHOTS.map((frames) => ({
+  pos: new THREE.CatmullRomCurve3(
+    frames.map((k) => w(k.at[0], k.y, k.at[1])),
+    false,
+    "centripetal",
+  ),
+  look: new THREE.CatmullRomCurve3(
+    frames.map((k) => w(...k.look)),
+    false,
+    "centripetal",
+  ),
+  zoom: frames.map((k) => k.zoom),
+  last: frames.length - 1,
+}));
+const P = new THREE.Vector3();
+const L = new THREE.Vector3();
 
 function readFonts(): Fonts {
   const css = getComputedStyle(document.documentElement);
@@ -29,79 +51,136 @@ function readFonts(): Fonts {
     display: v("--font-barlow", "'Arial Narrow', sans-serif"),
     mono: v("--font-jetbrains", "monospace"),
     sans: v("--font-inter", "system-ui, sans-serif"),
-    nepali: `${v("--font-mukta", "")}, 'Nirmala UI', 'Noto Sans Devanagari', sans-serif`.replace(/^, /, ""),
   };
 }
 
-function Store({ pathRef, still, tag, onReady }: TourCanvasProps) {
-  const { camera, invalidate } = useThree();
-  const store = useMemo(() => buildStore({ fonts: readFonts(), tag }), [tag]);
-  /** Where the camera is now (eases towards the scroll position); −1 until the first frame. */
-  const current = useRef(-1);
+/** The signs, the tag and the kiosk screen are drawn onto textures once, so their fonts must be loaded first. */
+async function fontsReady(f: Fonts) {
+  try {
+    await Promise.all([document.fonts.load(`700 150px ${f.display}`, "EASYPICK"), document.fonts.load(`600 40px ${f.mono}`, "Rs 0123456789"), document.fonts.load(`400 30px ${f.mono}`, "Rs 0123456789"), document.fonts.load(`600 34px ${f.sans}`, "Scan")]);
+  } catch {
+    // a font that fails to load falls back; the film still plays
+  }
+}
+
+/**
+ * A small room for reflections, built here (nothing downloaded): a black ceiling with the three
+ * light tracks, pale walls and a grey floor. Rails, mirrors and the polished floor reflect it.
+ */
+function storeEnvironment(gl: THREE.WebGLRenderer) {
+  const room = new THREE.Scene();
+  const shell = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 11), [
+    new THREE.MeshBasicMaterial({ color: "#b9b8b3", side: THREE.BackSide }),
+    new THREE.MeshBasicMaterial({ color: "#b9b8b3", side: THREE.BackSide }),
+    new THREE.MeshBasicMaterial({ color: "#0c0c0e", side: THREE.BackSide }), // ceiling
+    new THREE.MeshBasicMaterial({ color: "#6a6966", side: THREE.BackSide }), // floor
+    new THREE.MeshBasicMaterial({ color: "#a4a39e", side: THREE.BackSide }),
+    new THREE.MeshBasicMaterial({ color: "#a4a39e", side: THREE.BackSide }),
+  ]);
+  room.add(shell);
+  const strip = new THREE.MeshBasicMaterial({ color: new THREE.Color("#fff1dc").multiplyScalar(9) });
+  const stripGeo = new THREE.BoxGeometry(0.16, 0.02, 8.5);
+  for (const x of [-1.7, 0, 1.7]) {
+    const s = new THREE.Mesh(stripGeo, strip);
+    s.position.set(x, 1.46, 0);
+    room.add(s);
+  }
+  const pmrem = new THREE.PMREMGenerator(gl);
+  const texture = pmrem.fromScene(room, 0.03).texture;
+  pmrem.dispose();
+  stripGeo.dispose();
+  strip.dispose();
+  shell.geometry.dispose();
+  (shell.material as THREE.Material[]).forEach((m) => m.dispose());
+  return texture;
+}
+
+function Store({ tick, playing, seek, tag, bill, onReady }: TourCanvasProps) {
+  const { invalidate, size } = useThree();
+  const [store, setStore] = useState<BuiltStore | null>(null);
   const ready = useRef(false);
 
-  useEffect(() => () => store.dispose(), [store]);
-
-  // Redraw when the page scrolls; otherwise the canvas sits idle (frameloop "demand").
+  // Build the store once the fonts for its signs are in. Rebuilt only if the tag or the bill changes.
+  const key = `${tag.name}|${tag.price}|${tag.chest}|${tag.length}|${bill.lines.map((l) => l.name + l.price).join("|")}|${bill.total}`;
   useEffect(() => {
-    const on = () => invalidate();
-    window.addEventListener("scroll", on, { passive: true });
-    window.addEventListener("resize", on);
+    const job: { cancelled: boolean; built: BuiltStore | null } = { cancelled: false, built: null };
+    const fonts = readFonts();
+    fontsReady(fonts).then(() => {
+      if (job.cancelled) return;
+      job.built = buildStore({ fonts, tag, bill });
+      setStore(job.built);
+    });
     return () => {
-      window.removeEventListener("scroll", on);
-      window.removeEventListener("resize", on);
+      job.cancelled = true;
+      job.built?.dispose();
+      setStore(null);
     };
-  }, [invalidate]);
-  useEffect(() => invalidate(), [still, invalidate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands for tag and bill
+  }, [key]);
 
-  useFrame((_, dt) => {
-    const target = Math.min(LAST, Math.max(0, pathRef.current ?? 0));
-    // Ease towards where the scroll says you are; jump when motion is off.
-    current.current = still || current.current < 0 ? target : THREE.MathUtils.damp(current.current, target, 6, Math.min(dt, 0.1));
-    const u = current.current / LAST;
-    camera.position.copy(posCurve.getPoint(u));
-    camera.lookAt(lookCurve.getPoint(u));
-    store.setShutter(shutterOpen(current.current));
-    if (Math.abs(current.current - target) > 1e-4) invalidate();
+  // Draw one frame after a seek, a resize or a pause, when the loop isn't running.
+  useEffect(() => invalidate(), [seek, playing, size.width, size.height, store, invalidate]);
+
+  useFrame(({ camera, size: view }, dt) => {
+    if (!store) return;
+    const t = tick(Math.min(dt, 0.1));
+
+    const { shot, f } = pathAt(t);
+    const curve = CURVES[shot];
+    const u = curve.last ? f / curve.last : 0;
+    camera.position.copy(curve.pos.getPoint(u, P));
+    camera.lookAt(curve.look.getPoint(u, L));
+
+    // The lens: about 52° across on a phone held upright (so the store doesn't feel like a corridor),
+    // 60° tall on a wide screen; tighter on the close-ups on phones.
+    const i = Math.min(Math.floor(f), curve.last - 1 < 0 ? 0 : curve.last - 1);
+    const zoom = curve.zoom[i] + (curve.zoom[Math.min(i + 1, curve.last)] - curve.zoom[i]) * (f - i);
+    const aspect = view.width / view.height;
+    const upright = aspect < 1;
+    const base = upright ? Math.min(82, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(26)) / aspect))) : 60;
+    const cam = camera as THREE.PerspectiveCamera;
+    // A wide screen is already close enough at the tag and the kiosk; only upright phones tighten.
+    const fov = upright ? base / zoom : base;
+    if (Math.abs(cam.fov - fov) > 0.01) {
+      cam.fov = fov;
+      cam.updateProjectionMatrix();
+    }
+
+    store.apply(t);
     if (!ready.current) {
       ready.current = true;
-      requestAnimationFrame(() => onReady?.());
+      requestAnimationFrame(onReady);
     }
   });
 
-  return <primitive object={store.group} />;
+  return store ? <primitive object={store.group} /> : null;
 }
 
-/** The 3D walk-through. Loaded only on /visit/tour, and only where the page decided 3D is a good idea. */
+/** The 3D film. Loaded only on /visit/tour, and only where the player decided 3D is a good idea. */
 export default function TourCanvas(props: TourCanvasProps) {
   return (
     <Canvas
-      frameloop="demand"
+      frameloop={props.playing ? "always" : "demand"}
       dpr={[1, 1.5]}
-      camera={{ fov: 58, near: 0.05, far: 60, position: [0, EYE, 4] }}
+      camera={{ fov: 55, near: 0.05, far: 60, position: [0, 1.5, 7] }}
       gl={{ antialias: true, powerPreference: "high-performance", alpha: false, stencil: false }}
       onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.05;
-        // Soft reflections from a room environment generated here (nothing downloaded), and a dusk sky.
-        const pmrem = new THREE.PMREMGenerator(gl);
-        scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-        scene.environmentIntensity = 0.45;
-        pmrem.dispose();
+        gl.toneMappingExposure = 1.08;
+        const env = storeEnvironment(gl);
+        scene.environment = env;
+        scene.environmentIntensity = 0.55;
         scene.background = new THREE.Color("#1a1f2b");
-        scene.fog = new THREE.Fog("#1a1f2b", 9, 26);
+        scene.fog = new THREE.Fog("#1a1f2b", 8, 24);
       }}
       aria-hidden
       tabIndex={-1}
     >
-      <hemisphereLight args={["#f4f1ea", "#3a3a3c", 1.1]} />
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[2, 6, 3]} intensity={0.9} />
-      {/* Warm 3500K spots down the store, a cool glow at the kiosk, the street lamp outside */}
-      <pointLight position={w(2.7, 2.6, 2.5).toArray()} intensity={9} distance={7} decay={1.6} color="#ffe6c7" />
-      <pointLight position={w(3.8, 2.6, 6).toArray()} intensity={9} distance={7} decay={1.6} color="#ffe6c7" />
-      <pointLight position={w(3.8, 2.4, 9.6).toArray()} intensity={7} distance={6} decay={1.6} color="#ffe2bd" />
-      <pointLight position={w(1.9, 1.6, 3.9).toArray()} intensity={2.5} distance={2.5} decay={2} color="#e9ffd0" />
+      {/* Soft fill, one light for form, and three that matter: the store's warm centre, the kiosk's screen glow, the street lamp. */}
+      <hemisphereLight args={["#f4f1ea", "#3a3a3c", 1.25]} />
+      <directionalLight position={[2, 6, 3]} intensity={0.75} />
+      <pointLight position={w(3.0, 2.6, 5.4).toArray()} intensity={16} distance={11} decay={1.5} color="#ffe6c7" />
+      <pointLight position={w(1.9, 1.6, 3.9).toArray()} intensity={2.2} distance={2.5} decay={2} color="#f2f6ff" />
       <pointLight position={w(-1.2, 5.2, -2.2).toArray()} intensity={14} distance={10} decay={1.4} color="#ffb766" />
       <Store {...props} />
     </Canvas>

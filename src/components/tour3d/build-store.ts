@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-import { STORE } from "@/lib/tour-plan";
+import { bagForward, curtainClosed, gateGreen, kioskState, shutterOpen, STORE, tagTurn, trayDrop } from "@/lib/tour-plan";
 
 // The Easypick store, built from code: no models, no photos, nothing fetched. Fixtures that
 // share a material are merged into one mesh, so the whole store is a few dozen draw calls.
@@ -16,14 +16,19 @@ export interface TagInfo {
   length: string | null;
 }
 
+/** The two pieces the film takes to the kiosk, with their real prices, and what they come to. */
+export interface KioskBill {
+  lines: [{ name: string; price: string }, { name: string; price: string }];
+  total: string;
+}
+
 export interface Fonts {
   display: string;
   mono: string;
   sans: string;
-  nepali: string;
 }
 
-// ---------- Colours (art direction: ink, concrete, steel, birch, one volt) ----------
+// ---------- Colours (art direction: ink, white, concrete, steel, birch. Lime only on the logo dot, "Paid" and the gate) ----------
 const C = {
   ink: "#0a0a0a",
   steel: "#141416",
@@ -37,6 +42,7 @@ const C = {
   sky: "#1a1f2b",
   chrome: "#c9c9cc",
   curtain: "#232326",
+  paper: "#f4f3ef",
 };
 const GARMENTS = ["#1f1f1f", "#e8e1d3", "#9a9a9c", "#5b5e3f", "#1f2a44", "#4a3528", "#8a4b2f", "#2b2b2e", "#d8d4cc"];
 
@@ -54,19 +60,21 @@ function canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D)
   return t;
 }
 
-/** A lime zone sign: big number, word, and the Nepali line underneath. */
-function zoneSign(f: Fonts, num: string, word: string, ne: string) {
+/** A zone sign: its number, small, and one word in white on black. */
+function zoneSign(f: Fonts, num: string, word: string) {
   return canvasTexture(1024, 400, (g) => {
-    g.fillStyle = C.volt;
-    g.fillRect(0, 0, 1024, 400);
     g.fillStyle = C.ink;
-    g.font = `700 230px ${f.display}`;
+    g.fillRect(0, 0, 1024, 400);
+    g.strokeStyle = "rgba(255,255,255,0.35)";
+    g.lineWidth = 6;
+    g.strokeRect(14, 14, 996, 372);
+    g.fillStyle = "#9a9a9c";
+    g.font = `600 64px ${f.mono}`;
     g.textBaseline = "alphabetic";
-    g.fillText(num, 48, 250);
-    g.font = `700 150px ${f.display}`;
-    g.fillText(word.toUpperCase(), 340, 215);
-    g.font = `600 64px ${f.nepali}`;
-    g.fillText(ne, 344, 318);
+    g.fillText(num, 56, 110);
+    g.fillStyle = "#ffffff";
+    g.font = `700 230px ${f.display}`;
+    g.fillText(word.toUpperCase(), 52, 330);
   });
 }
 
@@ -103,9 +111,9 @@ function hangTag(f: Fonts, tag: TagInfo) {
     do g.font = `700 ${size--}px ${f.sans}`;
     while (g.measureText(name).width > 304 && size > 18);
     g.fillText(name, 28, 128);
-    g.font = `700 78px ${f.mono}`;
+    g.font = `600 78px ${f.mono}`;
     g.fillText(tag.price, 26, 222);
-    g.font = `500 22px ${f.mono}`;
+    g.font = `400 22px ${f.mono}`;
     g.fillStyle = "#6c6c70";
     g.fillText("FIXED · VAT INCL.", 28, 262);
     g.strokeStyle = "#9a9a9c";
@@ -118,44 +126,95 @@ function hangTag(f: Fonts, tag: TagInfo) {
     g.fillStyle = C.ink;
     g.font = `600 28px ${f.mono}`;
     g.fillText("SIZE M", 28, 350);
-    g.font = `500 28px ${f.mono}`;
+    g.font = `400 28px ${f.mono}`;
     if (tag.chest) g.fillText(`CHEST   ${tag.chest}`, 28, 404);
     if (tag.length) g.fillText(`LENGTH  ${tag.length}`, 28, 450);
-    g.fillStyle = C.volt;
-    g.fillRect(28, 560, 304, 40);
     g.fillStyle = C.ink;
+    g.fillRect(28, 560, 304, 40);
+    g.fillStyle = "#ffffff";
     g.font = `600 22px ${f.mono}`;
     g.fillText("PICK IT. PAY IT. WEAR IT.", 38, 588);
   });
 }
 
-function kioskScreen(f: Fonts, tag: TagInfo) {
+/** The kiosk's screen in one of its four states: waiting, one piece read, both with the total and QR, paid. */
+function kioskScreen(f: Fonts, bill: KioskBill, state: 0 | 1 | 2 | 3) {
   return canvasTexture(600, 1000, (g) => {
+    const centre = (text: string, y: number) => g.fillText(text, (600 - g.measureText(text).width) / 2, y);
     g.fillStyle = "#f7f7f4";
     g.fillRect(0, 0, 600, 1000);
-    g.fillStyle = C.volt;
-    g.fillRect(0, 0, 600, 90);
     g.fillStyle = C.ink;
+    g.fillRect(0, 0, 600, 90);
+    g.fillStyle = "#ffffff";
     g.font = `700 56px ${f.display}`;
-    g.fillText("YOUR PIECES", 36, 66);
-    g.font = `500 30px ${f.mono}`;
-    const rows: [string, string][] = [
-      [`${tag.name.slice(0, 16)} · M`, tag.price.replace("Rs ", "")],
-      ["Six-Panel Cap", "999"],
-    ];
-    rows.forEach(([a, b], i) => {
-      g.fillText(a, 36, 160 + i * 52);
-      g.fillText(b, 600 - 36 - g.measureText(b).width, 160 + i * 52);
+    g.fillText(state === 0 ? "EASYPICK" : "YOUR PIECES", 36, 66);
+    g.fillStyle = C.ink;
+
+    if (state === 0) {
+      g.font = `700 76px ${f.display}`;
+      centre("DROP YOUR PIECES", 420);
+      centre("IN THE TRAY", 500);
+      // an arrow down to the tray
+      g.lineWidth = 10;
+      g.strokeStyle = C.ink;
+      g.beginPath();
+      g.moveTo(300, 580);
+      g.lineTo(300, 760);
+      g.moveTo(240, 700);
+      g.lineTo(300, 760);
+      g.lineTo(360, 700);
+      g.stroke();
+      return;
+    }
+
+    g.font = `400 30px ${f.mono}`;
+    bill.lines.slice(0, state === 1 ? 1 : 2).forEach((line, i) => {
+      const amount = line.price.replace("Rs ", "");
+      g.fillText(`${line.name.slice(0, 18)}`, 36, 160 + i * 52);
+      g.fillText(amount, 600 - 36 - g.measureText(amount).width, 160 + i * 52);
     });
+    if (state === 1) {
+      g.fillStyle = "#6c6c70";
+      g.font = `400 26px ${f.mono}`;
+      g.fillText("READING TAGS…", 36, 290);
+      return;
+    }
     g.strokeStyle = "#9a9a9c";
+    g.lineWidth = 2;
     g.setLineDash([8, 8]);
     g.beginPath();
     g.moveTo(36, 270);
     g.lineTo(564, 270);
     g.stroke();
     g.setLineDash([]);
-    g.font = `700 34px ${f.mono}`;
-    g.fillText("TOTAL", 36, 320);
+    g.font = `600 34px ${f.mono}`;
+    g.fillText("TOTAL", 36, 322);
+    g.fillText(bill.total, 600 - 36 - g.measureText(bill.total).width, 322);
+
+    if (state === 3) {
+      // Paid: the one lime thing on the screen.
+      g.fillStyle = C.volt;
+      g.beginPath();
+      g.arc(300, 560, 130, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = C.ink;
+      g.lineWidth = 22;
+      g.lineCap = "round";
+      g.lineJoin = "round";
+      g.beginPath();
+      g.moveTo(236, 564);
+      g.lineTo(284, 612);
+      g.lineTo(368, 512);
+      g.stroke();
+      g.fillStyle = C.ink;
+      g.font = `700 110px ${f.display}`;
+      centre("PAID", 800);
+      g.font = `400 24px ${f.mono}`;
+      g.fillStyle = "#6c6c70";
+      centre("BILL BY SMS · WALK OUT", 860);
+      return;
+    }
+
     // A QR-like pattern (decorative)
     const n = 25;
     const size = 360;
@@ -184,12 +243,10 @@ function kioskScreen(f: Fonts, tag: TagInfo) {
     }
     g.fillStyle = C.ink;
     g.font = `600 34px ${f.sans}`;
-    const s = "Scan with eSewa";
-    g.fillText(s, (600 - g.measureText(s).width) / 2, 820);
-    g.font = `500 24px ${f.mono}`;
+    centre("Scan with eSewa", 820);
+    g.font = `400 24px ${f.mono}`;
     g.fillStyle = "#6c6c70";
-    const s2 = "NO QUEUE · BILL BY SMS";
-    g.fillText(s2, (600 - g.measureText(s2).width) / 2, 870);
+    centre("NO QUEUE · BILL BY SMS", 870);
   });
 }
 
@@ -204,7 +261,7 @@ function momoSign(f: Fonts) {
     g.fillRect(0, 206, 1024, 50);
     g.fillStyle = "#e9e5d8";
     g.font = `600 30px ${f.sans}`;
-    g.fillText("फास्ट फुड  ·  JHAMSIKHEL", 40, 242);
+    g.fillText("FAST FOOD  ·  JHAMSIKHEL", 40, 242);
   });
 }
 
@@ -245,27 +302,45 @@ function shutterTexture() {
   return t;
 }
 
+/** Polished concrete: big soft blotches, fine speckle, and a saw-cut joint, on one large tile. */
 function floorTexture() {
-  const t = canvasTexture(256, 256, (g) => {
+  const t = canvasTexture(512, 512, (g) => {
     g.fillStyle = "#8f8e8b";
-    g.fillRect(0, 0, 256, 256);
-    // soft speckle, like polished concrete tile
+    g.fillRect(0, 0, 512, 512);
     let seed = 3;
-    for (let i = 0; i < 1400; i++) {
-      seed = (seed * 9301 + 49297) % 233280;
-      const x = (seed / 233280) * 256;
-      seed = (seed * 9301 + 49297) % 233280;
-      const y = (seed / 233280) * 256;
-      g.fillStyle = i % 2 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)";
-      g.fillRect(x, y, 2, 2);
+    const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    for (let i = 0; i < 46; i++) {
+      const x = rnd() * 512;
+      const y = rnd() * 512;
+      const r = 40 + rnd() * 120;
+      const blot = g.createRadialGradient(x, y, 0, x, y, r);
+      blot.addColorStop(0, i % 2 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)");
+      blot.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = blot;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
     }
-    g.strokeStyle = "rgba(0,0,0,0.18)";
-    g.lineWidth = 2;
-    g.strokeRect(0, 0, 256, 256);
+    for (let i = 0; i < 2600; i++) {
+      g.fillStyle = i % 2 ? "rgba(255,255,255,0.045)" : "rgba(0,0,0,0.05)";
+      g.fillRect(rnd() * 512, rnd() * 512, 1.5, 1.5);
+    }
+    g.strokeStyle = "rgba(0,0,0,0.16)";
+    g.lineWidth = 1.5;
+    g.strokeRect(0, 0, 512, 512);
   });
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(STORE.width / 0.6, STORE.depth / 0.6);
+  t.repeat.set(STORE.width / 2.7, STORE.depth / 2.75);
   return t;
+}
+
+/** A soft round blot, used dark under fixtures (contact shadow) and bright under spots (pool of light). */
+function blotTexture(inner: string) {
+  return canvasTexture(128, 128, (g) => {
+    const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grad.addColorStop(0, inner);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+  });
 }
 
 // ---------- Garment outlines (metres, top centre at 0,0) ----------
@@ -282,7 +357,7 @@ function garmentShape(kind: "tee" | "hoodie" | "jacket") {
   for (const [x, y] of pts.slice(1)) s.lineTo(x, y);
   if (kind === "hoodie") s.quadraticCurveTo(0, 0.16, -0.09, 0.02);
   else s.quadraticCurveTo(0, -0.07, pts[0][0], pts[0][1]);
-  return new THREE.ExtrudeGeometry(s, { depth: 0.025, bevelEnabled: false, curveSegments: 6 });
+  return new THREE.ExtrudeGeometry(s, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2, curveSegments: 8 });
 }
 
 // ---------- The builder ----------
@@ -306,7 +381,6 @@ class Kit {
     for (const [mat, geos] of this.parts) {
       const merged = mergeGeometries(geos);
       if (!merged) continue;
-      merged.computeVertexNormals();
       group.add(new THREE.Mesh(merged, mat));
       geos.forEach((g) => g.dispose());
     }
@@ -315,13 +389,15 @@ class Kit {
 
 export interface BuiltStore {
   group: THREE.Group;
-  /** The rolling shutter: move it with setShutter(0…1). */
-  setShutter: (open: number) => void;
+  /** Puts everything that moves where it is at this second of the film. */
+  apply: (t: number) => void;
   dispose: () => void;
 }
 
-export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
-  const { fonts, tag } = opts;
+export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill }): BuiltStore {
+  const { fonts, tag, bill } = opts;
+  /** Meshes that move during the film (everything else is frozen in place). */
+  const moving = new Set<THREE.Object3D>();
   const group = new THREE.Group();
   const disposables: { dispose: () => void }[] = [];
   const keep = <T extends { dispose: () => void }>(x: T) => (disposables.push(x), x);
@@ -338,7 +414,7 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
     brick: std(C.brick, 0.95),
     street: std(C.street, 0.9),
     curtain: std(C.curtain, 1),
-    volt: glow(C.volt),
+    white: glow("#f4f3ef"),
     light: glow("#fff6e6"),
     acrylic: keep(new THREE.MeshStandardMaterial({ color: "#dfe7ea", roughness: 0.05, metalness: 0, transparent: true, opacity: 0.18 })),
     glass: keep(new THREE.MeshStandardMaterial({ color: "#aab4b8", roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.12, depthWrite: false })),
@@ -351,7 +427,7 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
   const H = STORE.height;
 
   // ---- Shell ----
-  const floorMat = keep(new THREE.MeshStandardMaterial({ map: keep(floorTexture()), roughness: 0.45, metalness: 0.05 }));
+  const floorMat = keep(new THREE.MeshStandardMaterial({ map: keep(floorTexture()), roughness: 0.34, metalness: 0.05 }));
   const floor = new THREE.Mesh(keep(new THREE.PlaneGeometry(W, D)), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.position.copy(w(W / 2, 0, D / 2));
@@ -430,26 +506,38 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
   kit.box(M.ink, [4.55, 0.15, 0.8], [1.3, 0.3, 0.8]);
 
   // the shutter, which rolls up
-  const shutterMat = keep(new THREE.MeshStandardMaterial({ map: keep(shutterTexture()), roughness: 0.5, metalness: 0.7 }));
+  const shutterMap = keep(shutterTexture());
+  const shutterMat = keep(new THREE.MeshStandardMaterial({ map: shutterMap, roughness: 0.5, metalness: 0.7 }));
   const shutter = new THREE.Mesh(keep(new THREE.BoxGeometry(W - 0.2, 3, 0.05)), shutterMat);
-  const shutterDown = w(W / 2, 1.5, -0.1);
-  shutter.position.copy(shutterDown);
+  shutter.position.copy(w(W / 2, 1.5, -0.1));
   group.add(shutter);
-  // Rolls up into its box at 3 m: what's left hanging shrinks from the bottom.
+  moving.add(shutter);
+  // Rolls up into its box at 3 m: what's left hanging gets shorter from the bottom, its slats keeping their size.
   const setShutter = (open: number) => {
-    shutter.scale.y = Math.max(0.02, 1 - open);
+    const left = 1 - open;
+    shutter.visible = left > 0.01;
+    shutter.scale.y = Math.max(0.01, left);
     shutter.position.y = 3 - 1.5 * shutter.scale.y;
+    shutterMap.repeat.y = 30 * Math.max(0.01, left);
   };
 
   // ---- RFID gate ----
   for (const x of [1.8, 3.6]) {
     kit.box(M.acrylic, [x, 0.75, 1.0], [0.08, 1.5, 0.35]);
-    kit.box(M.volt, [x, 1.5, 1.0], [0.09, 0.015, 0.36]);
   }
-  // volt tape line on the floor: door → kiosk
-  kit.box(M.volt, [2.7, 0.004, 2.0], [0.05, 0.008, 2.0]);
+  const gateMat = keep(new THREE.MeshBasicMaterial({ color: "#f4f3ef", toneMapped: false }));
+  const gateGeo = keep(new THREE.BoxGeometry(0.09, 0.02, 0.36));
+  for (const x of [1.8, 3.6]) {
+    const light = new THREE.Mesh(gateGeo, gateMat);
+    light.position.copy(w(x, 1.51, 1.0));
+    group.add(light);
+  }
+  const gateWhite = new THREE.Color("#f4f3ef");
+  const gateLime = new THREE.Color(C.volt);
+  // white tape line on the floor: door → kiosk
+  kit.box(M.white, [2.7, 0.004, 2.0], [0.05, 0.008, 2.0]);
   const diag = new THREE.BoxGeometry(0.05, 0.008, 1.3);
-  kit.add(M.volt, diag, w(2.25, 0.004, 3.45), Math.atan2(0.9, 0.9));
+  kit.add(M.white, diag, w(2.25, 0.004, 3.45), Math.atan2(0.9, 0.9));
 
   // ---- Greeter's stand with the picture guide ----
   kit.box(M.ink, [4.1, 0.55, 1.9], [0.5, 1.1, 0.4]);
@@ -514,7 +602,7 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
 
   // ---- Helper's token station ----
   kit.box(M.ink, [2.7, 0.55, 9.1], [0.6, 1.1, 0.4]);
-  for (let i = 0; i < 6; i++) kit.add(M.volt, new THREE.CylinderGeometry(0.045, 0.045, 0.012, 16), w(2.48 + (i % 3) * 0.22, 1.12, 9.0 + Math.floor(i / 3) * 0.18));
+  for (let i = 0; i < 6; i++) kit.add(M.white, new THREE.CylinderGeometry(0.045, 0.045, 0.012, 16), w(2.48 + (i % 3) * 0.22, 1.12, 9.0 + Math.floor(i / 3) * 0.18));
 
   // ---- Fitting rooms (two, back right) ----
   kit.box(M.wall, [4.3, 1.25, 10.35], [0.06, 2.5, 1.3]); // divider
@@ -528,29 +616,56 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
   const c1 = new THREE.Mesh(keep(curtainGeo), curtainMat);
   c1.position.copy(w(4.85, 1.2, 9.72));
   group.add(c1);
-  // room 1: curtain drawn aside, a stool and a hook inside
+  // room 1: its curtain draws closed and open again during the film; a stool and a mirror inside
   const c2 = new THREE.Mesh(curtainGeo, curtainMat);
-  c2.scale.x = 0.28;
-  c2.position.copy(w(3.35, 1.2, 9.72));
   group.add(c2);
+  moving.add(c2);
+  const setCurtain = (closed: number) => {
+    const s = 0.28 + 0.72 * closed;
+    c2.scale.x = s;
+    c2.position.copy(w(3.21 + 0.5 * s, 1.2, 9.72));
+  };
   kit.box(M.birch, [3.9, 0.22, 10.7], [0.35, 0.44, 0.35]);
   kit.box(M.mirror, [3.75, 1.2, 10.97], [0.6, 1.8, 0.02]);
-  // number lightboxes: volt = free, grey = taken
-  kit.box(M.volt, [3.75, 2.62, 9.7], [0.28, 0.2, 0.04]);
+  // number lightboxes: white = free, grey = taken
+  const roomFree = new THREE.Color("#f4f3ef");
+  const roomTaken = new THREE.Color("#5a5a5e");
+  const room1Mat = keep(new THREE.MeshBasicMaterial({ color: roomFree, toneMapped: false }));
+  const room1 = new THREE.Mesh(keep(new THREE.BoxGeometry(0.28, 0.2, 0.04)), room1Mat);
+  room1.position.copy(w(3.75, 2.62, 9.7));
+  group.add(room1);
   kit.box(std("#5a5a5e", 0.8), [4.85, 2.62, 9.7], [0.28, 0.2, 0.04]);
 
   // ---- Self-checkout kiosk (faces +x): a tall totem, screen at eye level, tray below ----
   kit.box(M.ink, [1.2, 0.85, 3.9], [0.5, 1.7, 0.62]);
   kit.box(M.steel, [1.5, 0.78, 3.9], [0.14, 0.05, 0.52]); // tray
-  kit.box(M.volt, [1.575, 0.8, 3.9], [0.01, 0.025, 0.52]); // tray rim
-  const screen = new THREE.Mesh(keep(new THREE.PlaneGeometry(0.42, 0.7)), keep(new THREE.MeshBasicMaterial({ map: keep(kioskScreen(fonts, tag)), toneMapped: false })));
+  kit.box(M.white, [1.575, 0.8, 3.9], [0.01, 0.025, 0.52]); // tray rim
+  const screens = ([0, 1, 2, 3] as const).map((state) => keep(kioskScreen(fonts, bill, state)));
+  const screenMat = keep(new THREE.MeshBasicMaterial({ map: screens[0], toneMapped: false }));
+  const screen = new THREE.Mesh(keep(new THREE.PlaneGeometry(0.42, 0.7)), screenMat);
   screen.position.copy(w(1.465, 1.28, 3.9));
   screen.rotation.set(0, Math.PI / 2, 0);
   group.add(screen);
+  // the two pieces that drop into the tray: a folded tee, then a folded hoodie on top
+  const folded = keep(new THREE.BoxGeometry(0.13, 0.034, 0.3));
+  const dropped = [
+    { mesh: new THREE.Mesh(folded, std("#e8e1d3", 1)), rest: 0.823 },
+    { mesh: new THREE.Mesh(folded, std("#2b2b2e", 1)), rest: 0.858 },
+  ];
+  for (const d of dropped) {
+    group.add(d.mesh);
+    moving.add(d.mesh);
+  }
+  const setTray = (drops: [number, number]) => {
+    dropped.forEach((d, i) => {
+      d.mesh.visible = drops[i] > 0;
+      d.mesh.position.copy(w(1.5, d.rest + (1 - drops[i]) * 0.5, 3.9));
+    });
+  };
   // the kiosk's glow on the floor
-  const halo = new THREE.Mesh(keep(new THREE.CircleGeometry(0.8, 32)), keep(new THREE.MeshBasicMaterial({ color: C.volt, transparent: true, opacity: 0.12, depthWrite: false })));
+  const halo = new THREE.Mesh(keep(new THREE.CircleGeometry(0.8, 32)), keep(new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.09, depthWrite: false })));
   halo.rotation.x = -Math.PI / 2;
-  halo.position.copy(w(1.8, 0.006, 3.9));
+  halo.position.copy(w(1.8, 0.007, 3.9));
   group.add(halo);
 
   // ---- Pickup counter and cubbies ----
@@ -558,8 +673,15 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
   kit.box(M.birch, [1.2, 0.98, 2.4], [0.66, 0.04, 1.66]);
   kit.box(M.birch, [0.18, 1.1, 2.4], [0.35, 2.1, 1.6]);
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) kit.box(M.bag, [0.24, 0.45 + r * 0.6, 1.9 + c * 0.5], [0.24, 0.34, 0.3]);
-  kit.box(M.bag, [1.2, 1.18, 2.2], [0.3, 0.36, 0.16]); // the bag waiting on the counter
-  kit.box(M.volt, [1.36, 1.1, 2.2], [0.005, 0.06, 0.1]); // its order sticker
+  // the bag waiting on the counter, with its order sticker; it slides forward when you get there
+  const bag = new THREE.Group();
+  const bagBody = new THREE.Mesh(keep(new THREE.BoxGeometry(0.3, 0.36, 0.16)), M.bag);
+  const sticker = new THREE.Mesh(keep(new THREE.BoxGeometry(0.005, 0.06, 0.1)), M.ink);
+  sticker.position.set(0.155, -0.08, 0);
+  bag.add(bagBody, sticker);
+  group.add(bag);
+  moving.add(bag);
+  const setBag = (forward: number) => bag.position.copy(w(1.2 + 0.14 * forward, 1.18, 2.2));
 
   // ---- Ceiling: black track runs with spots ----
   for (const x of [1.0, 2.7, 4.4]) {
@@ -569,8 +691,31 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
       kit.add(M.light, new THREE.CircleGeometry(0.035, 12), w(x, H - 0.195, z), 0, Math.PI / 2);
     }
   }
-  // the volt LED strip along the right wall's top edge (it leads you in)
-  kit.box(M.volt, [W - 0.04, H - 0.05, 5.5], [0.02, 0.02, 9]);
+  // the LED strip along the right wall's top edge (it leads you in)
+  kit.box(M.light, [W - 0.04, H - 0.05, 5.5], [0.02, 0.02, 9]);
+
+  // ---- Fake-baked light: a dark blot under each fixture, a warm pool under each spot ----
+  const shadowMat = keep(new THREE.MeshBasicMaterial({ map: keep(blotTexture("rgba(0,0,0,0.6)")), transparent: true, depthWrite: false, toneMapped: false }));
+  const poolMat = keep(new THREE.MeshBasicMaterial({ map: keep(blotTexture("rgba(255,236,208,0.34)")), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+  const flat = (mat: THREE.Material, x: number, z: number, sx: number, sz: number, y: number) => kit.add(mat, new THREE.PlaneGeometry(sx, sz), w(x, y, z), 0, -Math.PI / 2);
+  for (const [x, z, sx, sz] of [
+    [2.7, 5.7, 1.7, 2.7], // feature table
+    [2.7, 6.9, 1.5, 1.3],
+    [2.7, 7.6, 1.8, 1.3], // mannequin plinth
+    [2.7, 9.1, 1.2, 1.0], // token station
+    [4.1, 1.9, 1.1, 1.0], // greeter's stand
+    [1.2, 3.9, 1.2, 1.3], // kiosk
+    [1.2, 2.4, 1.3, 2.4], // pickup counter
+    [0.85, 0.8, 1.9, 1.4], // window plinths
+    [4.55, 0.8, 1.9, 1.4],
+    [W - 0.3, 3.0, 1.1, 2.9], // racks along the right wall
+    [W - 0.3, 5.4, 1.1, 2.9],
+    [W - 0.3, 7.5, 1.1, 2.3],
+    [0.3, 5.7, 1.1, 2.2], // bottoms and caps on the left wall
+    [0.3, 7.5, 1.0, 2.2],
+  ] as const)
+    flat(shadowMat, x, z, sx, sz, 0.003);
+  for (const x of [1.0, 2.7, 4.4]) for (let z = 1.8; z < 10.5; z += 1.2) flat(poolMat, x, z, 1.9, 1.9, 0.005);
 
   // ---- Hanging zone signs ----
   const signGeo = keep(new THREE.PlaneGeometry(0.9, 0.35));
@@ -581,29 +726,38 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
     group.add(m);
     kit.box(M.ink, [x, y + 0.35, z], [0.006, 0.36, 0.006]);
   };
-  addSign(zoneSign(fonts, "01", "Pick", "छान्नुहोस्"), [4.55, 2.45, 3.0], -Math.PI / 2);
-  addSign(zoneSign(fonts, "02", "Try", "लगाएर हेर्नुहोस्"), [4.3, 2.45, 9.2], 0);
-  addSign(zoneSign(fonts, "03", "Pay", "तिर्नुहोस्"), [1.3, 2.35, 3.9], Math.PI / 2);
-  addSign(zoneSign(fonts, "04", "Pickup", "लिनुहोस्"), [1.3, 2.35, 2.2], Math.PI / 2);
+  addSign(zoneSign(fonts, "01", "Pick"), [4.55, 2.45, 3.0], -Math.PI / 2);
+  addSign(zoneSign(fonts, "02", "Try"), [4.3, 2.45, 9.2], 0);
+  addSign(zoneSign(fonts, "03", "Pay"), [1.3, 2.35, 3.9], Math.PI / 2);
+  addSign(zoneSign(fonts, "04", "Pickup"), [1.3, 2.35, 2.2], Math.PI / 2);
   // "Aaunus" welcome board on the greeter's stand (faces the door)
-  const welcome = new THREE.Mesh(keep(new THREE.PlaneGeometry(0.5, 0.2)), keep(new THREE.MeshBasicMaterial({ map: keep(zoneSign(fonts, "00", "Aaunus", "आउनुस्")), toneMapped: false })));
+  const welcome = new THREE.Mesh(keep(new THREE.PlaneGeometry(0.5, 0.2)), keep(new THREE.MeshBasicMaterial({ map: keep(zoneSign(fonts, "00", "Aaunus")), toneMapped: false })));
   welcome.position.copy(w(3.83, 1.3, 1.8));
   welcome.rotation.set(-0.25, -0.9, 0, "YXZ"); // turned towards you as you come through the gate
   group.add(welcome);
 
   // ---- Garments ----
   const garmentMat = keep(new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0 }));
-  const hung = new THREE.InstancedMesh(keep(new THREE.BoxGeometry(1, 1, 0.022)), garmentMat, sideHung.length);
+  const hung = new THREE.InstancedMesh(keep(new THREE.BoxGeometry(1, 1, 0.05)), garmentMat, sideHung.length);
+  const hangerMat = keep(new THREE.MeshStandardMaterial({ color: C.ink, roughness: 0.5 }));
+  const hangers = new THREE.InstancedMesh(keep(new THREE.BoxGeometry(1, 0.014, 0.014)), hangerMat, sideHung.length);
   const dummy = new THREE.Object3D();
   sideHung.forEach((g, i) => {
+    // Hung side-on, each a little off square, the way a rail really looks.
+    const yaw = (((i * 37) % 11) - 5) * 0.022;
     dummy.position.copy(g.pos);
-    dummy.rotation.set(0, 0, ((i % 3) - 1) * 0.012); // hung side-on, sleeve towards the aisle
+    dummy.rotation.set(0, yaw, ((i % 3) - 1) * 0.012);
     dummy.scale.set(g.size[0], g.size[1], 1);
     dummy.updateMatrix();
     hung.setMatrixAt(i, dummy.matrix);
     hung.setColorAt(i, new THREE.Color(g.colour));
+    dummy.position.set(g.pos.x, g.pos.y + g.size[1] / 2 + 0.012, g.pos.z);
+    dummy.rotation.set(0, yaw, 0);
+    dummy.scale.set(g.size[0] * 0.92, 1, 1);
+    dummy.updateMatrix();
+    hangers.setMatrixAt(i, dummy.matrix);
   });
-  group.add(hung);
+  group.add(hung, hangers);
   for (const f of faceOut) {
     const m = new THREE.Mesh(keep(garmentShape(f.kind)), keep(new THREE.MeshStandardMaterial({ color: f.colour, roughness: 0.95 })));
     m.position.copy(f.pos);
@@ -614,23 +768,37 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo }): BuiltStore {
   // ---- The readable hang tag, on the first face-out tee ----
   const tagMesh = new THREE.Mesh(keep(new THREE.PlaneGeometry(0.2, 0.356)), keep(new THREE.MeshBasicMaterial({ map: keep(hangTag(fonts, tag)), toneMapped: false })));
   tagMesh.position.copy(w(W - 0.62, 1.33, 1.8 + 0.45));
-  tagMesh.rotation.set(0, -Math.PI / 2 - 0.45, 0.04, "YXZ"); // turned towards you
   group.add(tagMesh);
+  moving.add(tagMesh);
+  // Starts turned towards the door, and swings to face you as you step up to it.
+  const setTag = (turn: number) => tagMesh.rotation.set(0, -Math.PI / 2 + 0.85 - 1.3 * turn, 0.04, "YXZ");
   kit.box(M.ink, [W - 0.6, 1.53, 1.8 + 0.43], [0.003, 0.1, 0.003]); // its string
 
   kit.build(group);
   group.traverse((o) => {
     if (o instanceof THREE.Mesh && o.geometry) disposables.push(o.geometry);
-    o.matrixAutoUpdate = o === shutter;
+    if (o instanceof THREE.InstancedMesh) disposables.push(o);
+    o.matrixAutoUpdate = moving.has(o);
     o.updateMatrix();
   });
 
-  return {
-    group,
-    setShutter: (open) => {
-      setShutter(open);
-      shutter.updateMatrix();
-    },
-    dispose: () => disposables.forEach((d) => d.dispose()),
+  let lastKiosk = -1;
+  const apply = (t: number) => {
+    setShutter(shutterOpen(t));
+    setTag(tagTurn(t));
+    const closed = curtainClosed(t);
+    setCurtain(closed);
+    room1Mat.color.copy(roomFree).lerp(roomTaken, closed);
+    setTray(trayDrop(t));
+    const k = kioskState(t);
+    if (k !== lastKiosk) {
+      lastKiosk = k;
+      screenMat.map = screens[k];
+    }
+    setBag(bagForward(t));
+    gateMat.color.copy(gateWhite).lerp(gateLime, gateGreen(t));
   };
+  apply(0);
+
+  return { group, apply, dispose: () => disposables.forEach((d) => d.dispose()) };
 }
