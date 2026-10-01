@@ -180,13 +180,11 @@ function PriceTag({
 function Piece({
   piece,
   mySize,
-  lead,
   priority,
   onAdded,
 }: {
   piece: RailPiece;
   mySize: string | null;
-  lead: boolean;
   priority: boolean;
   onAdded: () => void;
 }) {
@@ -255,7 +253,7 @@ function Piece({
 
   return (
     <div className="relative flex h-full flex-col">
-      <div className={lead ? "lg:grid lg:grid-cols-2 lg:gap-4" : ""}>
+      <div>
         <div className="relative">
           <Hook />
           <Link
@@ -269,11 +267,7 @@ function Piece({
               colourHex={colour.hex}
               decorative
               priority={priority}
-              sizes={
-                lead
-                  ? "(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 78vw"
-                  : "(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 62vw"
-              }
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 62vw"
             />
           </Link>
           {piece.back && (
@@ -312,7 +306,7 @@ function Piece({
           </button>
           <div
             aria-hidden
-            className={`absolute right-2 top-full z-10 -mt-3 md:right-3 ${lead ? "lg:hidden" : ""}`}
+            className={`absolute right-2 top-full z-10 -mt-3 md:right-3`}
           >
             <PriceTag
               price={piece.price}
@@ -322,19 +316,12 @@ function Piece({
         </div>
 
         <div
-          className={`mt-3 min-h-[60px] pr-[74px] md:min-h-[76px] md:pr-[92px] ${lead ? "lg:mt-0 lg:flex lg:min-h-0 lg:flex-col lg:justify-end lg:pr-0" : ""}`}
+          className={`mt-3 min-h-[60px] pr-[74px] md:min-h-[76px] md:pr-[92px]`}
         >
-          {lead && (
-            <p className={`${mono} mb-3 hidden text-steel-dark lg:block`}>
-              Newest on the rail
-            </p>
-          )}
-          <h3
-            className={`text-[15px] font-semibold leading-5 ${lead ? "lg:font-display lg:text-[44px] lg:uppercase lg:leading-[0.92] lg:tracking-[0.01em]" : ""}`}
-          >
+          <h3 className={`text-[15px] font-semibold leading-5`}>
             <Link
               href={`/product/${piece.slug}`}
-              className={`decoration-1 underline-offset-4 hover:underline ${lead ? "line-clamp-2" : "line-clamp-1"}`}
+              className={`decoration-1 underline-offset-4 hover:underline line-clamp-1`}
             >
               {piece.name}
             </Link>
@@ -343,19 +330,9 @@ function Piece({
             {piece.was ? `was ${formatPrice(piece.was)}, now ` : ""}
             {formatPrice(piece.price)}
           </p>
-          {lead && (
-            <p aria-hidden className="mt-4 hidden items-baseline gap-3 lg:flex">
-              <span className="font-mono text-[28px] font-semibold leading-none tabular-nums">
-                {formatPrice(piece.price)}
-              </span>
-              <span className="text-[13px] text-steel-dark">
-                Fixed price, as on the tag
-              </span>
-            </p>
-          )}
           {/* Colour, and whether it comes in their size. */}
           <div
-            className={`mt-1 flex min-h-6 items-center gap-2 text-[13px] text-steel-dark ${lead ? "lg:mt-4" : ""}`}
+            className={`mt-1 flex min-h-6 items-center gap-2 text-[13px] text-steel-dark`}
           >
             {piece.colours.length > 1 && (
               <span
@@ -453,7 +430,7 @@ function Piece({
           {variant ? (
             <Link
               href={`/buy/${piece.slug}?sku=${encodeURIComponent(variant.sku)}`}
-              className={`btn btn-ink h-12 min-h-0 min-w-0 flex-1 px-2 text-[13px] ${lead ? "lg:bg-volt lg:text-ink lg:hover:bg-[#b5f020]" : ""}`}
+              className={`btn btn-ink h-12 min-h-0 min-w-0 flex-1 px-2 text-[13px]`}
             >
               Buy now
             </Link>
@@ -781,8 +758,6 @@ export function RailWall({
       )}
 
       {wall.map((s, i) => {
-        // The first section opens with its newest piece shown large on wide screens (it takes two places).
-        const lead = i === 0 && !q && sort === "new";
         const shown = s.show.slice(0, 4);
         return (
           <section
@@ -816,27 +791,23 @@ export function RailWall({
             {/* The section's rail, with the pieces hanging from it. Phones swipe along it. */}
             <div className="mt-5 border-t-2 border-ink">
               <ul className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-3 md:gap-x-4 md:gap-y-10 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-4">
-                {shown.map((p, n) => {
-                  const isLead = lead && n === 0;
-                  return (
-                    <li
-                      key={p.id}
-                      className={`shrink-0 snap-start md:w-auto md:max-w-none ${isLead ? "w-[78%] max-w-[320px] lg:col-span-2" : "w-[62%] max-w-[260px]"} ${lead && n >= 3 ? "lg:hidden" : ""}`}
-                    >
-                      <Piece
-                        piece={p}
-                        mySize={mySize}
-                        lead={isLead}
-                        priority={i === 0 && n < 2}
-                        onAdded={() => setAddedHere(true)}
-                      />
-                    </li>
-                  );
-                })}
+                {shown.map((p, n) => (
+                  <li
+                    key={p.id}
+                    className="w-[62%] max-w-[260px] shrink-0 snap-start md:w-auto md:max-w-none"
+                  >
+                    <Piece
+                      piece={p}
+                      mySize={mySize}
+                      priority={i === 0 && n < 2}
+                      onAdded={() => setAddedHere(true)}
+                    />
+                  </li>
+                ))}
                 {/* The end of the rail: on to the rest of this kind in the shop. */}
                 {!q && (
                   <li
-                    className={`w-[44%] max-w-[200px] shrink-0 snap-start md:w-auto md:max-w-none ${lead ? "md:hidden" : shown.length >= 4 ? "lg:hidden" : shown.length === 3 ? "md:hidden lg:block" : ""}`}
+                    className={`w-[44%] max-w-[200px] shrink-0 snap-start md:w-auto md:max-w-none ${shown.length >= 4 ? "lg:hidden" : shown.length === 3 ? "md:hidden lg:block" : ""}`}
                   >
                     <Link
                       href={withSize(s.href)}
