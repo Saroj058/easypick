@@ -106,3 +106,24 @@ test("phone menu and tab bar @phone", async ({ page }) => {
   await expect(page).toHaveURL(/\/track$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+test("drop alerts: sign up by email, then stop with the link @phone", async ({ page }) => {
+  await page.goto("/alerts");
+  const email = `e2e-${Date.now()}@example.com`;
+  await expect(async () => {
+    await page.getByRole("radio", { name: "Email" }).click();
+    await expect(page.getByLabel("Email address")).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await page.getByLabel("Email address").fill(email);
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByText("Tick the box so we're allowed to message you.")).toBeVisible();
+  await expect(page.getByLabel("Email address")).toHaveValue(email); // a mistake keeps what was typed
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByText(/You're in\. One email to e•••@example\.com on drop day/)).toBeVisible();
+
+  // A stop link that matches nothing says so and changes nothing.
+  await page.goto("/alerts/stop?t=not-a-real-link");
+  await page.getByRole("button", { name: "Stop the messages" }).click();
+  await expect(page.getByText(/doesn't match a sign-up/)).toBeVisible();
+});

@@ -59,7 +59,7 @@ export function ProfileForm({
       )}
       <label className="flex min-h-11 items-center gap-3 text-[15px]">
         <input type="checkbox" name="alerts" defaultChecked={mode === "welcome" ? true : user.alerts} className="h-5 w-5 shrink-0 accent-[#c6ff3d]" />
-        Message me the day before each drop. Reply STOP any time.
+        Message me on drop days (email, or WhatsApp if there is no email). Every message has a link to stop.
       </label>
       <p role="status" className="min-h-5 text-[13px]">
         {state.status === "error" ? <span className="text-error-light">{state.message}</span> : state.status === "saved" ? "Saved." : ""}

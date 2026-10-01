@@ -36,6 +36,13 @@
       "when": 1790697960073,
       "tag": "0004_product_events",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790785326071,
+      "tag": "0005_windy_stellaris",
+      "breakpoints": true
     }
   ]
 }

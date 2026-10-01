@@ -9,6 +9,7 @@ import { mergeBag } from "@/lib/bag-rules";
 import { addRestockAlert } from "@/lib/catalogue";
 import { recordEvent } from "@/lib/events";
 import { getDb, schema } from "@/lib/db";
+import { subscribeToDrops } from "@/lib/drop-alerts";
 import { normaliseEmail } from "@/lib/email";
 import { checkGiftCard } from "@/lib/gift-cards";
 import { sellable } from "@/lib/inventory";
@@ -22,18 +23,26 @@ import type { FulfilmentMethod, PaymentProvider } from "@/lib/types";
 
 // ---------- Drop alerts ----------
 
-export type AlertState = { status: "idle" } | { status: "error"; message: string } | { status: "done"; phone: string };
+export type AlertState = { status: "idle" } | { status: "error"; message: string } | { status: "done"; channel: "whatsapp" | "email"; to: string };
 
+/** One message on drop day, on WhatsApp or by email. Saved with the time they agreed. */
 export async function signUpForAlerts(_prev: AlertState, form: FormData): Promise<AlertState> {
-  const phone = normaliseNepaliMobile(String(form.get("phone") ?? ""));
-  if (!phone) return { status: "error", message: "Enter a 10-digit Nepali mobile number, like 98XXXXXXXX." };
-  if (form.get("consent") !== "on") return { status: "error", message: "Tick the box so we're allowed to message you." };
-
-  // TODO: POST to Store API /alerts/subscribers { phone, source, consentAt } once it exists.
-  if (process.env.NODE_ENV !== "production") {
-    console.info("[alerts] sign-up", { phone, source: form.get("source") });
+  const channel = form.get("channel") === "email" ? "email" : "whatsapp";
+  const contact = channel === "email" ? normaliseEmail(String(form.get("email") ?? "")) : normaliseNepaliMobile(String(form.get("phone") ?? ""));
+  if (!contact) {
+    return { status: "error", message: channel === "email" ? "Enter your email address, like name@example.com." : "Enter a 10-digit Nepali mobile number, like 98XXXXXXXX." };
   }
-  return { status: "done", phone: `${phone.slice(0, 3)}•••${phone.slice(-3)}` };
+  if (form.get("consent") !== "on") return { status: "error", message: "Tick the box so we're allowed to message you." };
+  if (!(await allow(`alerts:${await clientIp()}`, 10, 60 * 60_000))) return { status: "error", message: "That's a lot of sign-ups. Try again in an hour." };
+
+  try {
+    await subscribeToDrops(channel, contact, String(form.get("source") ?? "").slice(0, 40) || null);
+  } catch (e) {
+    console.error("[alerts] sign-up failed", e);
+    return { status: "error", message: "We couldn't save that just now. Try again in a minute." };
+  }
+  const to = channel === "email" ? contact.replace(/^(.).*(@.*)$/, "$1•••$2") : `${contact.slice(0, 3)}•••${contact.slice(-3)}`;
+  return { status: "done", channel, to };
 }
 
 // ---------- Checkout ----------

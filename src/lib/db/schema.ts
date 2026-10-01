@@ -307,3 +307,29 @@ export const meta = pgTable("meta", {
 });
 
 export type { Colour, Measurements };
+
+// ---------- Drop alerts ----------
+
+/**
+ * People who asked for one message before each drop, on WhatsApp or by email.
+ * `token` is the secret in their "stop these" link; `lastDropSent` stops a drop being sent twice.
+ */
+export const dropAlertSubscribers = pgTable(
+  "drop_alert_subscribers",
+  {
+    id: serial("id").primaryKey(),
+    channel: text("channel").$type<"whatsapp" | "email">().notNull(),
+    /** 10-digit Nepali mobile for WhatsApp, lower-case address for email. */
+    contact: text("contact").notNull(),
+    source: text("source"),
+    consentAt: ts("consent_at").notNull().default(sql`now()`),
+    token: text("token").notNull(),
+    unsubscribedAt: ts("unsubscribed_at"),
+    lastDropSent: text("last_drop_sent"),
+  },
+  (t) => [
+    uniqueIndex("drop_alert_contact_idx").on(t.channel, t.contact),
+    uniqueIndex("drop_alert_token_idx").on(t.token),
+    check("drop_alert_channel_check", sql`${t.channel} in ('whatsapp','email')`),
+  ],
+);

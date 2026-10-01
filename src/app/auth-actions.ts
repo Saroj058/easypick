@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { endAllSessions, endSession, getCurrentUser, requestCode, safeNext, updateUser, verifyCode, type CodeChannel } from "@/lib/auth";
 import type { FitProfile } from "@/lib/fit-profile";
 import { normaliseNepaliMobile } from "@/lib/format";
+import { syncAccountAlerts } from "@/lib/drop-alerts";
 
 // ---------- Phone sign-in (also sign-up) ----------
 
@@ -67,6 +68,7 @@ export async function completeProfile(_prev: ProfileState, form: FormData): Prom
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { status: "error", message: "That email doesn't look right." };
   if (phoneRaw && !phone) return { status: "error", message: "Enter a 10-digit Nepali mobile number, or leave it empty." };
   await updateUser(user.id, { name, email: email ?? user.email, alerts, ...(!user.phone && { contactPhone: phone }) });
+  await syncAccountAlerts(alerts, email ?? user.email ?? null, user.phone ?? phone ?? null).catch((e) => console.error("[alerts] account sync failed", e));
   redirect(safeNext(form.get("next")));
 }
 
@@ -78,6 +80,7 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { status: "error", message: "That email doesn't look right." };
   if (phoneRaw && !phone) return { status: "error", message: "Enter a 10-digit Nepali mobile number, or leave it empty." };
   await updateUser(user.id, { name, email, alerts, ...(!user.phone && { contactPhone: phone }) });
+  await syncAccountAlerts(alerts, email, user.phone ?? phone ?? user.contactPhone ?? null).catch((e) => console.error("[alerts] account sync failed", e));
   return { status: "saved" };
 }
 

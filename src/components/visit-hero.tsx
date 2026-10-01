@@ -70,7 +70,7 @@ export function VisitHero({ info, state, stamp, personal }: { info: StoreInfo; s
               {state.openingAt && <Countdown to={state.openingAt} label="Opening day" size="sm" />}
               <div>
                 <p className="font-semibold">Join the opening list</p>
-                <p className="mt-1 text-[14px] text-paper/70">One message on WhatsApp or SMS when the shutter goes up. Nothing else.</p>
+                <p className="mt-1 text-[14px] text-paper/70">One message on WhatsApp or by email when the shutter goes up. Nothing else.</p>
                 <div className="mt-4">
                   <AlertSignup dark source="opening" />
                 </div>

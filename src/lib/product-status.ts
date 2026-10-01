@@ -5,9 +5,12 @@ import type { Drop, Product, ProductStatus } from "./types";
 
 /**
  * A scheduled product goes live by itself once its drop time passes, so the site
- * never shows "coming soon" for something already on the rack.
+ * never shows "coming soon" for something already on the rack. A piece whose only
+ * stock is on the shop floor stays live (the buy panel says "in store only").
  */
 export function effectiveStatus(p: Pick<Product, "status" | "dropSlug" | "variants">, dropList: Pick<Drop, "slug" | "releaseAt">[], now = Date.now()): ProductStatus {
+  // A live piece with nothing left anywhere is sold out, whatever its saved status says.
+  if (p.status === "live" && p.variants.length > 0 && p.variants.every((v) => v.stock <= 0)) return "sold_out";
   if (p.status !== "scheduled") return p.status;
   const drop = dropList.find((d) => d.slug === p.dropSlug);
   if (drop && Date.parse(drop.releaseAt) <= now) {

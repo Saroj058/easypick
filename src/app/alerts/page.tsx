@@ -9,7 +9,7 @@ export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Drop alerts",
-  description: "Get a WhatsApp or SMS message before every new Easypick drop.",
+  description: "Get one WhatsApp message or email on the day of every new Easypick drop.",
   alternates: { canonical: "/alerts" },
 };
 
@@ -19,7 +19,7 @@ export default async function AlertsPage() {
     <>
       <PageIntro
         title="Hear first."
-        lead={`One message the day before each drop. Nothing else.${next ? ` Next up: ${next.name}, ${formatDropTime(next.releaseAt, { bs: true })}.` : ""}`}
+        lead={`One message on drop day, on WhatsApp or by email. Nothing else.${next ? ` Next up: ${next.name}, ${formatDropTime(next.releaseAt, { bs: true })}.` : ""}`}
       />
       <div className="container-ep pb-24">
         <AlertSignup source="alerts" />

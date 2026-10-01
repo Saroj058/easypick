@@ -10,6 +10,7 @@ import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
 
 import { ProductCard } from "@/components/product-card";
+import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
 import { SelfCheckout } from "@/components/self-checkout";
 import { getStoreInfo } from "@/lib/store-info";
@@ -22,7 +23,7 @@ import { getSavedLooks } from "@/lib/looks";
 import { buildLooks } from "@/lib/occasions";
 import type { Category, Product } from "@/lib/types";
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 // Concept: "the tag is the store". The page is built from what's printed on an
 // Easypick hang tag: a fixed price, measurements in cm, a SKU. Numbers shown are
@@ -246,6 +247,7 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {next && <RefreshAt at={next.releaseAt} />}
       <RevealRoot />
     </>
   );

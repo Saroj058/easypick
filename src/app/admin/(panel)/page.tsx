@@ -32,7 +32,8 @@ export default async function AdminToday({ searchParams }: PageProps<"/admin">) 
   const waitingGifts = orders.filter((o) => inView(o, "gifts"));
   const noFestival = !fests.some((f) => f.date > today);
   const low = products
-    .filter((p) => effectiveStatus(p, drops) === "live")
+    // Live pieces, including ones that have just sold through (the site shows those as sold out).
+    .filter((p) => effectiveStatus(p, drops) === "live" || (p.status === "live" && effectiveStatus(p, drops) === "sold_out"))
     .flatMap((p) => p.variants.map((v) => ({ p, v })))
     .filter(({ v }) => v.stock <= 2)
     .sort((a, b) => a.v.stock - b.v.stock || (demand[b.v.sku] ?? 0) - (demand[a.v.sku] ?? 0))

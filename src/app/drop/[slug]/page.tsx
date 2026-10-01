@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AlertSignup } from "@/components/alert-signup";
+import { Countdown } from "@/components/countdown";
 import { PageIntro } from "@/components/page-intro";
 import { ProductGrid } from "@/components/product-card";
+import { RefreshAt } from "@/components/refresh-at";
 import { formatDropTime } from "@/lib/format";
 import { getDrop, getDrops, getProducts, isReleased } from "@/lib/store";
 
-export const revalidate = 300;
+// Short, so the page turns buyable within moments of the drop opening.
+export const revalidate = 30;
 
 export async function generateStaticParams() {
   return (await getDrops()).map((d) => ({ slug: d.slug }));
@@ -33,8 +36,14 @@ export default async function DropPage({ params }: PageProps<"/drop/[slug]">) {
 
       <div className="container-ep pb-24">
         {!released && (
+          <div className="mb-10">
+            <Countdown to={drop.releaseAt} label={drop.name} />
+            <RefreshAt at={drop.releaseAt} />
+          </div>
+        )}
+        {!released && (
           <section aria-label="Get a message when it drops" className="mb-12 bg-photo p-6 md:p-10">
-            <p className="mb-5 text-lg font-semibold">Get a message the day before.</p>
+            <p className="mb-5 text-lg font-semibold">Get one message on drop day.</p>
             <AlertSignup source={`drop-${drop.slug}`} />
           </section>
         )}

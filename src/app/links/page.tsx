@@ -19,7 +19,7 @@ export default async function LinksPage() {
     { href: "/new?utm_source=ig&utm_medium=bio", title: "New in", note: "Everything from the last 30 days" },
     { href: "/trending?utm_source=ig&utm_medium=bio", title: "Trending", note: "What people are buying this week" },
     { href: "/gift-cards?utm_source=ig&utm_medium=bio", title: "Gift cards", note: "From Rs 1,000, sent in minutes" },
-    { href: "/alerts?utm_source=ig&utm_medium=bio", title: "Get drop alerts", note: "WhatsApp or SMS" },
+    { href: "/alerts?utm_source=ig&utm_medium=bio", title: "Get drop alerts", note: "WhatsApp or email" },
     { href: "/visit?utm_source=ig&utm_medium=bio", title: "Find the store", note: "Hours and directions" },
     { href: "/how-it-works?utm_source=ig&utm_medium=bio", title: "How it works", note: "Pick. Pay. Wear." },
   ].filter(Boolean) as { href: string; title: string; note: string; primary?: boolean }[];

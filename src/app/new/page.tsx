@@ -131,7 +131,7 @@ export default async function NewPage({ searchParams }: PageProps<"/new">) {
           )}
           <div className="mt-10 max-w-xl">
             <p className="font-semibold">Remind me when it drops</p>
-            <p className="mt-1 text-[14px] text-steel-dark">One message on WhatsApp or SMS at release time. Nothing else.</p>
+            <p className="mt-1 text-[14px] text-steel-dark">One message on WhatsApp or by email on drop day. Nothing else.</p>
             <div className="mt-4">
               <AlertSignup source={`new-${next.slug}`} />
             </div>
