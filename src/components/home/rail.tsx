@@ -21,10 +21,11 @@ const BAYS: { name: string; caption: string; kinds: Category[] }[] = [
   { name: "Extras", caption: "Finish", kinds: ["accessories"] },
 ];
 
-/** "Jackets, bottoms and extras" */
+/** "Tops", "Bottoms and extras"; three or more kinds on one rail are "The rest of the fit". */
 function listed(names: string[]) {
   const rest = names.slice(1).map((n) => n.toLowerCase());
   if (rest.length === 0) return names[0];
+  if (rest.length >= 2) return "The rest of the fit";
   return `${[names[0], ...rest.slice(0, -1)].join(", ")} and ${rest[rest.length - 1]}`;
 }
 
@@ -47,6 +48,7 @@ function toPiece(p: Product): RailPiece {
     was: p.salePrice ? p.price : undefined,
     image: p.images[0] ?? { src: null, alt: p.name, kind: "front" },
     back: p.images[1],
+    measurements: p.measurements,
     colours: buyable.length ? buyable : colours,
     fit: p.fit,
     gender: p.gender,

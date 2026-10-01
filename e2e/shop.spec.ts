@@ -32,6 +32,15 @@ test("home: the rail (size asked once, buy or bag from the card, search) and Des
   await hoodie.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
   await expect(hoodie.getByRole("button", { name: "Everyday Hoodie is in your bag" })).toBeVisible();
   await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
+  // Undo takes it back out; adding again puts it back.
+  await rail.getByRole("button", { name: /^Undo/ }).click();
+  await expect(hoodie.getByRole("button", { name: /^Add Everyday Hoodie/ })).toBeEnabled();
+  await hoodie.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
+  await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
+  // The tag's back: the measurements in cm for the size chosen.
+  await hoodie.getByRole("button", { name: "Everyday Hoodie: measurements in cm" }).click();
+  await expect(hoodie.getByText(/Size M · cm/)).toBeVisible();
+  await hoodie.getByRole("button", { name: "Close the measurements" }).click();
   await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
 
   // Search narrows the rail as you type, forgiving of spelling.

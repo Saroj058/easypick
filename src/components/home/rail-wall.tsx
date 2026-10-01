@@ -4,16 +4,24 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 
 import { showBagToast, useAddToBag } from "@/components/bag-gate";
+import { useFitProfile } from "@/components/fit-finder";
 import { useBag } from "@/components/bag-provider";
 import { Barcode } from "@/components/hang-tag";
 import { BagIcon, HeartIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { toggleSaved, useList } from "@/components/saved";
 import { FlowButton } from "@/components/ui/flow-button";
+import { hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { MY_SIZES, setMySize, useMySize } from "@/lib/my-size";
 import { searchProducts } from "@/lib/search";
-import type { Category, Product, ProductImage as Img, Size } from "@/lib/types";
+import type {
+  Category,
+  Measurements,
+  Product,
+  ProductImage as Img,
+  Size,
+} from "@/lib/types";
 
 // The rail, built around what a customer asks, in the order they ask it:
 //   "What do they sell, and how much?"  clothes first, the price on a hang tag
@@ -43,6 +51,8 @@ export interface RailPiece extends Pick<
   was?: number;
   image: Img;
   back?: Img;
+  /** Garment measurements in cm, per size (the back of the tag). */
+  measurements: Measurements;
   /** Colours that can be bought online (all of them when none can). */
   colours: RailColour[];
 }
@@ -165,8 +175,9 @@ function PriceTag({
         <p className="whitespace-nowrap text-center text-[11px] font-semibold leading-none tabular-nums md:text-[12.5px]">
           {formatPrice(price)}
         </p>
-        <p className="mt-1 hidden whitespace-nowrap text-center text-[7px] uppercase tracking-[0.12em] text-steel-dark md:block">
-          Fixed price
+        <p className="mt-1 whitespace-nowrap text-center text-[7px] uppercase tracking-[0.12em] text-steel-dark">
+          <span className="md:hidden">Tap for cm</span>
+          <span className="hidden md:inline">Fixed price</span>
         </p>
         <Barcode
           value={sku}
@@ -186,15 +197,17 @@ function Piece({
   piece: RailPiece;
   mySize: string | null;
   priority: boolean;
-  onAdded: () => void;
+  onAdded: (line: { sku: string; name: string }) => void;
 }) {
   const addToBag = useAddToBag();
+  const bag = useBag();
+  const profile = useFitProfile();
   const saved = useList("saved").includes(piece.slug);
   const [colourName, setColourName] = useState<string | null>(null);
   const [picked, setPicked] = useState<Size | null>(null);
   const [open, setOpen] = useState(false); // the size row
   const [showBack, setShowBack] = useState(false);
-  const [added, setAdded] = useState<string | null>(null); // the sku just added
+  const [tagOpen, setTagOpen] = useState(false); // the back of the tag: measurements
 
   const colour =
     piece.colours.find((c) => c.name === colourName) ?? piece.colours[0];
@@ -203,29 +216,36 @@ function Piece({
   const oneSize = colour.sizes.length === 1 && colour.sizes[0].size === "ONE";
   const inStock = colour.sizes.filter((x) => x.left > 0);
   const anyLeft = inStock.length > 0;
-  // A size tapped here wins; else the size they gave once; else nothing is chosen for them.
+  // Their size for this piece: from their saved measurements when they have them (an L in a
+  // tee isn't always an L in a jacket), else the letter they gave once.
+  const fitSize = oneSize
+    ? null
+    : (matchSize(piece.category, piece.measurements, profile)?.size ?? null);
+  const wanted = fitSize ?? mySize;
+  // A size tapped here wins; else their size; else nothing is chosen for them.
   const size = oneSize
     ? can("ONE")
       ? "ONE"
       : null
     : can(picked)
       ? picked
-      : can(mySize)
-        ? (mySize as Size)
+      : can(wanted)
+        ? (wanted as Size)
         : null;
   const variant = colour.sizes.find((x) => x.size === size) ?? null;
-  const yours = !oneSize && size !== null && size === mySize;
+  const yours = !oneSize && size !== null && size === wanted;
+  const stock = (n: number) => (n <= 3 ? `${n} left` : `${n} in stock`);
 
   // One line: can they have it, in their size?
   let note = "";
   let strong = false;
   if (!anyLeft) note = "In store only";
-  else if (oneSize) note = "One size";
+  else if (oneSize) note = `One size · ${stock(inStock[0].left)}`;
   else if (variant) {
-    note = `${yours ? "In your size" : `Size ${size}`}${variant.left <= 3 ? ` · ${variant.left} left` : ""}`;
+    note = `${yours ? (fitSize ? `Your fit, ${size}` : "In your size") : `Size ${size}`} · ${stock(variant.left)}`;
     strong = yours;
-  } else if (mySize) {
-    note = `No ${mySize} · comes in ${inStock.map((x) => x.size).join(", ")}`;
+  } else if (wanted) {
+    note = `No ${wanted} · comes in ${inStock.map((x) => x.size).join(", ")}`;
     strong = true;
   } else note = inStock.map((x) => x.size).join(" · ");
 
@@ -243,13 +263,20 @@ function Piece({
         },
       ])
     ) {
-      setAdded(variant.sku);
-      onAdded();
+      onAdded({ sku: variant.sku, name: piece.name });
     }
   }
 
   const sizeRowOpen = !oneSize && anyLeft && (open || !variant);
-  const inBag = Boolean(variant && added === variant.sku);
+  // True for anything already in the bag, from this visit or an earlier one.
+  const inBag = Boolean(
+    variant && bag.lines.some((l) => l.sku === variant.sku),
+  );
+  // The back of the tag shows the size chosen, or the first one in stock.
+  const tagSize = size ?? inStock[0]?.size ?? colour.sizes[0]?.size;
+  const cm = Object.entries(
+    (tagSize && piece.measurements[tagSize]) || {},
+  ).filter(([, v]) => typeof v === "number");
 
   return (
     <div className="group relative flex h-full flex-col">
@@ -304,15 +331,69 @@ function Piece({
               />
             </span>
           </button>
-          <div
-            aria-hidden
-            className={`absolute right-2 top-full z-10 -mt-3 md:right-3`}
+          {/* The tag is the store: its front is the price, its back the measurements in cm. */}
+          <button
+            type="button"
+            onClick={() => setTagOpen(!tagOpen)}
+            aria-expanded={tagOpen}
+            aria-label={`${piece.name}: measurements in cm`}
+            className="absolute right-2 top-full z-10 -mt-3 md:right-3"
           >
             <PriceTag
               price={piece.price}
               sku={variant?.sku ?? colour.sizes[0]?.sku ?? piece.id}
             />
-          </div>
+          </button>
+          {tagOpen && (
+            <div className="absolute inset-x-2 bottom-2 z-20 border border-ink bg-paper p-3 font-mono text-[12px] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.5)]">
+              <div className="flex items-center justify-between gap-2">
+                <p className={`${mono} text-steel-dark`}>
+                  {tagSize === "ONE" ? "One size" : `Size ${tagSize}`} · cm
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTagOpen(false)}
+                  aria-label="Close the measurements"
+                  className="-m-2 grid h-11 w-11 place-items-center"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+              {cm.length > 0 ? (
+                <dl className="mt-1 border-t border-dashed border-steel pt-1.5">
+                  {cm.map(([k, v]) => (
+                    <div
+                      key={k}
+                      className="flex justify-between py-0.5 tabular-nums"
+                    >
+                      <dt className="capitalize">{k}</dt>
+                      <dd className="font-semibold">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="mt-2 font-sans text-[13px] text-steel-dark">
+                  No measurements for this size yet.
+                </p>
+              )}
+              <Link
+                href="/size-guide"
+                className="mt-1.5 flex h-11 items-center font-sans text-[13px] underline underline-offset-4"
+              >
+                Compare with one you own
+              </Link>
+            </div>
+          )}
         </div>
 
         <div
@@ -349,7 +430,6 @@ function Piece({
                     aria-label={c.name}
                     onClick={() => {
                       setColourName(c.name);
-                      setAdded(null);
                     }}
                     className="grid h-11 w-8 place-items-center first:w-9 first:pl-1"
                   >
@@ -391,7 +471,6 @@ function Piece({
                   onClick={() => {
                     setPicked(s.size);
                     setOpen(false);
-                    setAdded(null);
                   }}
                   className={`${cell} min-w-0 flex-1 ${s.size === size ? cellOn : out ? cellOut : cellOff}`}
                 >
@@ -496,7 +575,10 @@ export function RailWall({
   const [changing, setChanging] = useState(false); // the size question, reopened
   const [filterOpen, setFilterOpen] = useState(false);
   const [query, setQuery] = useState("");
+  /** The last piece added here, for the bar's Undo. */
+  const [last, setLast] = useState<{ sku: string; name: string } | null>(null);
   const [addedHere, setAddedHere] = useState(false);
+  const profile = useFitProfile();
 
   const q = query.trim();
   const fits = (p: RailPiece) => !budget || p.price < budget;
@@ -548,6 +630,13 @@ export function RailWall({
   };
   const bagTotal = bag.lines.reduce((n, l) => n + l.price * l.qty, 0);
   const asking = !mySize || changing;
+  const undoLine = last ? bag.lines.find((l) => l.sku === last.sku) : undefined;
+  function undo() {
+    if (!undoLine) return;
+    if (undoLine.qty > 1) bag.setQty(undoLine.sku, undoLine.qty - 1);
+    else bag.remove(undoLine.sku);
+    setLast(null);
+  }
 
   return (
     <div>
@@ -596,7 +685,9 @@ export function RailWall({
               href="/size-guide"
               className="flex h-11 items-center text-[13px] text-steel-dark underline underline-offset-4"
             >
-              Not sure? Check in cm
+              {hasFit(profile)
+                ? "Your measurements pick the size on each piece"
+                : "Not sure? Check in cm"}
             </Link>
             {mySize && (
               <button
@@ -800,7 +891,10 @@ export function RailWall({
                       piece={p}
                       mySize={mySize}
                       priority={i === 0 && n < 2}
-                      onAdded={() => setAddedHere(true)}
+                      onAdded={(line) => {
+                        setAddedHere(true);
+                        setLast(line);
+                      }}
                     />
                   </li>
                 ))}
@@ -869,21 +963,36 @@ export function RailWall({
         </div>
       </div>
 
-      {/* After the first add here: what's in the bag so far, and the way to it. Stays in reach while the rail is on screen. */}
+      {/* After the first add here: what's in the bag so far, the way to it, and a way back. Stays in reach while the rail is on screen. */}
       {addedHere && bag.ready && bag.count > 0 && (
         <div className="pointer-events-none sticky bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 mt-4 flex justify-center lg:bottom-4">
-          <Link
-            href="/bag"
-            className="pointer-events-auto flex h-12 w-full max-w-md items-center justify-between gap-4 bg-ink px-4 text-paper shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)]"
-          >
-            <span role="status" className="font-mono text-[13px] tabular-nums">
-              {bag.count} {bag.count === 1 ? "piece" : "pieces"} ·{" "}
-              {formatPrice(bagTotal)}
-            </span>
-            <span className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.04em]">
-              View bag <Arrow />
-            </span>
-          </Link>
+          <div className="on-dark pointer-events-auto flex h-12 w-full max-w-md bg-ink text-paper shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)]">
+            {undoLine && last && (
+              <button
+                type="button"
+                onClick={undo}
+                aria-label={`Undo: take ${last.name} out of the bag`}
+                className="shrink-0 border-r border-paper/25 px-4 text-[13px] font-semibold underline underline-offset-4"
+              >
+                Undo
+              </button>
+            )}
+            <Link
+              href="/bag"
+              className="flex min-w-0 flex-1 items-center justify-between gap-4 px-4"
+            >
+              <span
+                role="status"
+                className="font-mono text-[13px] tabular-nums"
+              >
+                {bag.count} {bag.count === 1 ? "piece" : "pieces"} ·{" "}
+                {formatPrice(bagTotal)}
+              </span>
+              <span className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.04em]">
+                View bag <Arrow />
+              </span>
+            </Link>
+          </div>
         </div>
       )}
     </div>
