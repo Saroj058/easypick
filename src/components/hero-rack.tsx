@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { formatPrice } from "@/lib/format";
 import type { Category, Product, Size } from "@/lib/types";
+import { HangTag } from "./hang-tag";
 import { ArrowIcon } from "./icons";
 import { GarmentSvg } from "./product-image";
 
@@ -45,7 +46,7 @@ function Hanger({ category }: { category: Category }) {
 /**
  * A two-storey shelf: tops on the upper rail, bottoms and extras on the lower one, up to
  * seven pieces each. Tap or hover a piece to bring it forward; its colour and the sizes it
- * comes in show at the bottom left.
+ * comes in show at the bottom left, and its tag (price, measurements in cm) at the bottom right.
  */
 export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[] }) {
   const all = [...top, ...bottom];
@@ -94,13 +95,10 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
         {sel.product.name}, {sel.colour.name}, {formatPrice(sel.product.salePrice ?? sel.product.price)}
       </p>
 
-      {/* The chosen piece: its colour and sizes on the left, the way to it on the right (larger screens) */}
+      {/* The chosen piece: its colour and sizes on the left, its tag on the right (larger screens) */}
       <div className="absolute inset-x-5 bottom-5 z-20 hidden items-end justify-between gap-6 md:flex lg:inset-x-6 lg:bottom-6">
         <div className="min-w-0">
-          <p className="flex items-baseline gap-3">
-            <span className="truncate text-lg font-semibold">{sel.product.name}</span>
-            <span className="shrink-0 font-mono text-[15px] tabular-nums text-paper/80">{formatPrice(sel.product.salePrice ?? sel.product.price)}</span>
-          </p>
+          <p className="truncate text-lg font-semibold">{sel.product.name}</p>
           <p className="mt-2 flex items-center gap-2 text-[14px] text-paper/80">
             <span aria-hidden className="h-3.5 w-3.5 rounded-full border border-paper/40" style={{ background: sel.colour.hex }} />
             {sel.colour.name}
@@ -123,11 +121,17 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
                   ),
                 )}
           </p>
+          <Link href={`/product/${sel.product.slug}`} className="group mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
+            View piece
+            <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+          </Link>
         </div>
-        <Link href={`/product/${sel.product.slug}`} className="group inline-flex min-h-11 shrink-0 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
-          View piece
-          <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-        </Link>
+        {/* The tag: the piece's fixed price and its measurements in cm */}
+        <div className="w-[132px] shrink-0" aria-hidden>
+          <div className="w-[200px] origin-bottom-left rotate-[3deg] scale-[0.66]">
+            <HangTag key={sel.product.id} product={sel.product} colour={sel.colour.name} className="animate-fade-up" />
+          </div>
+        </div>
       </div>
 
       {/* Compact bar on phones */}
