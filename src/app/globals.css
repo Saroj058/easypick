@@ -441,7 +441,7 @@
   padding: 0 6px;
 }
 .ks-wrap {
-  --k: 0.5;
+  --k: 0.62;
   position: relative;
   flex-shrink: 0;
   width: calc(420px * var(--k));
@@ -449,7 +449,7 @@
 }
 @media (min-width: 640px) {
   .ks-wrap {
-    --k: 0.6;
+    --k: 0.7;
   }
 }
 @media (min-width: 1280px) {
@@ -807,8 +807,9 @@
   right: -10px;
   top: 40%;
   height: 2px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.45);
+  /* The scanner's red line. */
+  background: #ff3b30;
+  box-shadow: 0 0 10px 2px rgba(255, 59, 48, 0.55);
   animation: ks-beam 2.2s ease-in-out infinite alternate;
 }
 .ks-stamp {
@@ -850,8 +851,8 @@
 .ks-steps > li {
   position: relative;
   display: flex;
-  gap: 10px;
-  padding-bottom: 16px;
+  gap: 12px;
+  padding-bottom: 20px;
 }
 .ks-steps > li:last-child {
   padding-bottom: 0;
@@ -859,14 +860,14 @@
 .ks-steps > li:not(:last-child)::before {
   content: "";
   position: absolute;
-  left: 12px;
-  top: 30px;
+  left: 14px;
+  top: 34px;
   bottom: 4px;
   border-left: 2px dashed #c7c7cc;
 }
 .ks-step-n {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   box-sizing: border-box;
   display: flex;
@@ -877,27 +878,12 @@
   background: var(--color-volt);
   color: var(--color-ink);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
 }
 .ks-step-done {
   background: var(--color-ink);
   color: var(--color-volt);
-}
-@media (min-width: 640px) {
-  .ks-steps > li {
-    gap: 12px;
-    padding-bottom: 20px;
-  }
-  .ks-steps > li:not(:last-child)::before {
-    left: 14px;
-    top: 34px;
-  }
-  .ks-step-n {
-    width: 30px;
-    height: 30px;
-    font-size: 13px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .ks-beam,

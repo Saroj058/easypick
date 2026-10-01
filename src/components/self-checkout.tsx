@@ -221,19 +221,17 @@ export function SelfCheckout() {
             </ul>
           </div>
 
-          <div className="flex items-center justify-center gap-3 sm:gap-6 lg:contents">
+          {/* Phones and tablets: the kiosk on its own in the middle, the steps underneath. */}
+          <div className="flex flex-col items-center gap-8 lg:contents">
             <Kiosk />
-            <div className="flex w-[128px] flex-col gap-4 sm:w-[210px] sm:gap-6 lg:justify-self-end">
-              <div className="w-[64px] self-start sm:w-[88px]">
-                <Stamp />
-              </div>
-              <ol aria-label="How to pay at the kiosk" className="ks-steps">
+            <div className="flex w-full max-w-sm items-start gap-4 lg:w-[210px] lg:max-w-none lg:flex-col lg:gap-6 lg:justify-self-end">
+              <ol aria-label="How to pay at the kiosk" className="ks-steps flex-1 lg:order-2">
                 {STEPS.map(([n, t, d]) => (
                   <li key={n}>
                     <span className="ks-step-n">{n}</span>
-                    <span className="flex flex-col gap-1 pt-0.5 sm:pt-1">
-                      <span className="text-[12px] font-bold leading-tight sm:text-[15px]">{t}</span>
-                      <span className="text-[11px] leading-snug text-steel-dark sm:text-[13px]">{d}</span>
+                    <span className="flex flex-col gap-1 pt-1">
+                      <span className="text-[15px] font-bold leading-tight">{t}</span>
+                      <span className="text-[13px] leading-snug text-steel-dark">{d}</span>
                     </span>
                   </li>
                 ))}
@@ -241,12 +239,15 @@ export function SelfCheckout() {
                   <span className="ks-step-n ks-step-done" aria-hidden>
                     ✓
                   </span>
-                  <span className="flex flex-col gap-1 pt-0.5 sm:pt-1">
-                    <span className="text-[12px] font-bold leading-tight sm:text-[15px]">Walk out</span>
-                    <span className="text-[11px] leading-snug text-steel-dark sm:text-[13px]">Your bill comes by SMS.</span>
+                  <span className="flex flex-col gap-1 pt-1">
+                    <span className="text-[15px] font-bold leading-tight">Walk out</span>
+                    <span className="text-[13px] leading-snug text-steel-dark">Your bill comes by SMS.</span>
                   </span>
                 </li>
               </ol>
+              <div className="w-[72px] shrink-0 lg:order-1 lg:w-[88px] lg:self-start">
+                <Stamp />
+              </div>
             </div>
           </div>
         </div>
