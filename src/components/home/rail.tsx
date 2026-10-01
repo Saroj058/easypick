@@ -92,7 +92,7 @@ export function Rail({ products }: { products: Product[] }) {
     key: s.kinds.join("-"),
     label: listed(s.names),
     caption: s.captions.join(" · "),
-    href: s.kinds.length === 1 ? `/shop?category=${s.kinds[0]}` : "/shop",
+    href: `/shop?category=${s.kinds.join(",")}`,
     total: s.pieces.length,
     // A few more than a rail shows, so a budget or the sort still fills it.
     pieces: s.pieces.slice(0, SECTION_SHOWN * 3).map(toPiece),

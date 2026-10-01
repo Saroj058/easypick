@@ -143,8 +143,24 @@ export default async function HomePage() {
                 Same price online and in-store.
               </p>
             </div>
-            <div className="mt-7">
+            {/* Visit store, and the two ways to do it: they slide out beside the button on hover or focus (always shown on touch screens). */}
+            <div className="group/visit mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
               <InteractiveHoverButton href="/visit" text="Visit store" className="w-full sm:w-auto" />
+              <ul className="flex gap-2 transition-all duration-300 [@media(hover:hover)]:-translate-x-2 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/visit:translate-x-0 [@media(hover:hover)]:group-focus-within/visit:opacity-100 [@media(hover:hover)]:group-hover/visit:translate-x-0 [@media(hover:hover)]:group-hover/visit:opacity-100">
+                {[
+                  { href: "/visit", label: "In person" },
+                  { href: "/visit/tour", label: "Virtual tour" },
+                ].map((o) => (
+                  <li key={o.href} className="flex-1 sm:flex-none">
+                    <Link
+                      href={o.href}
+                      className="flex h-12 items-center justify-center whitespace-nowrap rounded-full border border-paper/40 px-5 text-[13px] font-semibold uppercase tracking-[0.06em] text-paper hover:border-paper hover:bg-paper hover:text-ink"
+                    >
+                      {o.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 

@@ -26,8 +26,15 @@ test("home: the rail (size asked once, buy or bag from the card, search) and Des
     await expect(rail.getByRole("button", { name: "My size is M. Change it" })).toBeVisible({ timeout: 1000 });
   }).toPass();
   const hoodie = first.getByRole("listitem").filter({ hasText: "Everyday Hoodie" });
-  // Buy now goes straight to the checkout for that size...
-  await expect(hoodie.getByRole("link", { name: "Buy now" })).toHaveAttribute("href", /\/buy\/everyday-hoodie\?sku=/);
+  // Buy now opens the payment form in a pop-up, on this page...
+  await hoodie.getByRole("button", { name: "Buy now" }).click();
+  const pay = page.getByRole("dialog");
+  await expect(pay.getByText(/Everyday Hoodie · .* · M · Rs/)).toBeVisible();
+  await expect(pay.getByLabel("Mobile number")).toBeVisible();
+  await expect(pay.getByRole("button", { name: /^Pay Rs/ })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+  await page.keyboard.press("Escape");
+  await expect(pay).toHaveCount(0);
   // ...and the bag button adds it without leaving, then the bag's total shows.
   await hoodie.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
   await expect(hoodie.getByRole("button", { name: "Everyday Hoodie is in your bag" })).toBeVisible();
@@ -62,6 +69,8 @@ test("home: the rail (size asked once, buy or bag from the card, search) and Des
   await rail.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(budget).toHaveAttribute("aria-pressed", "false");
   await expect(rail.getByRole("link", { name: "Shop all" }).last()).toHaveAttribute("href", "/shop?size=M");
+  // Each section's Show all opens everything of that kind in the shop.
+  await expect(rail.getByRole("link", { name: /^Show all/ }).first()).toHaveAttribute("href", /\/shop\?category=tees,hoodies.*size=M/);
 
   // The size can be forgotten again.
   await rail.getByRole("button", { name: "My size is M. Change it" }).click();

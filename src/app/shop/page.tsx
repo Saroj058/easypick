@@ -96,7 +96,9 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   if (f.new) list = list.filter((p) => p.isNew);
   if (f.vault) list = list.filter((p) => p.vault);
   if (f.brand) list = list.filter((p) => p.brand?.toLowerCase() === f.brand?.toLowerCase());
-  if (f.category) list = list.filter((p) => p.category === f.category);
+  // One kind, or several from a rail section (tees,hoodies,co-ords).
+  const kinds = (f.category?.split(",") ?? []).filter((c): c is Category => c in categoryLabels);
+  if (kinds.length) list = list.filter((p) => kinds.includes(p.category));
   if (f.fit) list = list.filter((p) => p.fit === f.fit);
   if (f.colour) list = list.filter((p) => p.colours.some((c) => c.name === f.colour));
   // One-size pieces (caps) fit every size, the same as on the home rail.
@@ -120,7 +122,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   return (
     <div className="container-ep pb-24 pt-10 md:pt-16">
       <h1 className="display text-[40px] md:text-[72px]">
-        {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.category ? categoryLabels[f.category as Category] ?? "Shop all" : "Shop all"}
+        {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
       </h1>
       {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
 

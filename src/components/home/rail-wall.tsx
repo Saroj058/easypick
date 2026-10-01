@@ -3,20 +3,27 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 
-import { showBagToast, useAddToBag } from "@/components/bag-gate";
+import { CheckoutForm } from "@/app/checkout/checkout-form";
+import { useAddToBag } from "@/components/bag-gate";
 import { useFitProfile } from "@/components/fit-finder";
 import { useBag } from "@/components/bag-provider";
 import { Barcode } from "@/components/hang-tag";
-import { BagIcon, HeartIcon } from "@/components/icons";
+import { BagIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
-import { toggleSaved, useList } from "@/components/saved";
 import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock";
 import { FlowButton } from "@/components/ui/flow-button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { MY_SIZES, setMySize, useMySize } from "@/lib/my-size";
 import { searchProducts } from "@/lib/search";
 import type {
+  BagLine,
   Category,
   Measurements,
   Product,
@@ -194,20 +201,21 @@ function Piece({
   mySize,
   priority,
   onAdded,
+  onBuy,
 }: {
   piece: RailPiece;
   mySize: string | null;
   priority: boolean;
   onAdded: (line: { sku: string; name: string }) => void;
+  /** Buy now: pay for this one piece, in the pop-up. */
+  onBuy: (line: BagLine) => void;
 }) {
   const addToBag = useAddToBag();
   const bag = useBag();
   const profile = useFitProfile();
-  const saved = useList("saved").includes(piece.slug);
   const [colourName, setColourName] = useState<string | null>(null);
   const [picked, setPicked] = useState<Size | null>(null);
   const [open, setOpen] = useState(false); // the size row
-  const [showBack, setShowBack] = useState(false);
   const [tagOpen, setTagOpen] = useState(false); // the back of the tag: measurements
 
   const colour =
@@ -290,7 +298,7 @@ function Piece({
             aria-label={piece.name}
           >
             <ProductImage
-              image={showBack && piece.back ? piece.back : piece.image}
+              image={piece.image}
               category={piece.category}
               colourHex={colour.hex}
               decorative
@@ -298,40 +306,6 @@ function Piece({
               sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 62vw"
             />
           </Link>
-          {piece.back && (
-            <button
-              type="button"
-              onClick={() => setShowBack(!showBack)}
-              aria-pressed={showBack}
-              aria-label={`Show the back of ${piece.name}`}
-              className="absolute right-1 top-1 grid h-11 min-w-11 place-items-center"
-            >
-              <span className="flex h-8 items-center rounded-full bg-paper/85 px-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ring-1 ring-ink/10">
-                {showBack ? "Front" : "Back"}
-              </span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              toggleSaved(piece.slug);
-              showBagToast(
-                saved
-                  ? `Removed ${piece.name} from Saved.`
-                  : `Saved ${piece.name}. Find it under Saved.`,
-              );
-            }}
-            aria-pressed={saved}
-            aria-label={`Save ${piece.name}`}
-            className="absolute bottom-1 left-1 grid h-11 w-11 place-items-center"
-          >
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-paper/85 ring-1 ring-ink/10">
-              <HeartIcon
-                filled={saved}
-                className={`h-4 w-4 ${saved ? "text-[#d70015]" : ""}`}
-              />
-            </span>
-          </button>
           {/* The tag is the store: its front is the price, its back the measurements in cm. */}
           <button
             type="button"
@@ -508,12 +482,24 @@ function Piece({
             </button>
           )}
           {variant ? (
-            <Link
-              href={`/buy/${piece.slug}?sku=${encodeURIComponent(variant.sku)}`}
-              className={`btn btn-ink h-12 min-h-0 min-w-0 flex-1 px-2 text-[13px]`}
+            <button
+              type="button"
+              onClick={() =>
+                size &&
+                onBuy({
+                  slug: piece.slug,
+                  sku: variant.sku,
+                  name: piece.name,
+                  size,
+                  colour: colour.name,
+                  price: piece.price,
+                  qty: 1,
+                })
+              }
+              className="btn btn-ink h-12 min-h-0 min-w-0 flex-1 px-2 text-[13px]"
             >
               Buy now
-            </Link>
+            </button>
           ) : (
             <button
               type="button"
@@ -579,8 +565,8 @@ export function RailWall({
   /** The last piece added here, for the bar's Undo. */
   const [last, setLast] = useState<{ sku: string; name: string } | null>(null);
   const [addedHere, setAddedHere] = useState(false);
-  /** Sections opened with their Show all button. */
-  const [openAll, setOpenAll] = useState<string[]>([]);
+  /** The piece being bought in the pop-up. */
+  const [buying, setBuying] = useState<BagLine | null>(null);
   const profile = useFitProfile();
 
   const q = query.trim();
@@ -619,14 +605,6 @@ export function RailWall({
     : 0;
   const withSize = (href: string) =>
     mySize ? `${href}${href.includes("?") ? "&" : "?"}size=${mySize}` : href;
-  const range = (list: RailPiece[]) => {
-    const prices = list.map((p) => p.price);
-    const lo = Math.min(...prices);
-    const hi = Math.max(...prices);
-    return lo === hi
-      ? formatPrice(lo)
-      : `${formatPrice(lo)} to ${hi.toLocaleString("en-IN")}`;
-  };
   const clear = () => {
     setQuery("");
     writeView({ sort, budget: null });
@@ -832,10 +810,8 @@ export function RailWall({
       )}
 
       {wall.map((s, i) => {
-        // A rail shows four pieces; Show all opens the rest of the section in place.
-        const hasMore = !q && s.show.length > 4;
-        const isOpen = hasMore && openAll.includes(s.key);
-        const shown = isOpen || q ? s.show : s.show.slice(0, 4);
+        // A rail shows four pieces; Show all goes to everything of that kind in the shop.
+        const shown = q ? s.show : s.show.slice(0, 4);
         return (
           <section
             key={s.key}
@@ -857,38 +833,17 @@ export function RailWall({
               <span className={`${mono} hidden text-steel-dark sm:block`}>
                 {s.caption}
               </span>
-              <span className="ml-auto shrink-0 text-right font-mono text-[11px] uppercase tracking-[0.12em] text-steel-dark">
-                {s.show.length} {s.show.length === 1 ? "piece" : "pieces"}
-                <span className="hidden sm:inline"> · </span>
-                <br className="sm:hidden" />
-                <span className="text-ink">{range(s.show)}</span>
-              </span>
-              {/* Show all: opens the rest of this section here, or the shop when everything is already on the rail. */}
-              {!q &&
-                (hasMore ? (
-                  <button
-                    type="button"
-                    aria-expanded={isOpen}
-                    onClick={() =>
-                      setOpenAll(
-                        isOpen
-                          ? openAll.filter((k) => k !== s.key)
-                          : [...openAll, s.key],
-                      )
-                    }
-                    className="-my-1.5 flex h-11 shrink-0 items-center border-l border-mist pl-3 text-[13px] font-semibold uppercase tracking-[0.04em] underline-offset-4 hover:underline"
-                  >
-                    {isOpen ? "Show fewer" : `Show all ${s.show.length}`}
-                  </button>
-                ) : (
-                  <Link
-                    href={withSize(s.href)}
-                    aria-label={`Show all ${s.label.toLowerCase()} in the shop`}
-                    className="-my-1.5 flex h-11 shrink-0 items-center gap-1.5 border-l border-mist pl-3 text-[13px] font-semibold uppercase tracking-[0.04em] underline-offset-4 hover:underline"
-                  >
+              {!q && (
+                <Link
+                  href={withSize(s.href)}
+                  aria-label={`Show all ${s.label.toLowerCase()}`}
+                  className="group -my-1.5 ml-auto flex h-11 shrink-0 items-center"
+                >
+                  <span className="flex h-8 items-center gap-1.5 border border-ink px-3 text-[12px] font-semibold uppercase tracking-[0.06em] group-hover:bg-ink group-hover:text-paper">
                     Show all <Arrow />
-                  </Link>
-                ))}
+                  </span>
+                </Link>
+              )}
             </div>
 
             {/* The section's rail, with the pieces hanging from it. Phones swipe along it. */}
@@ -903,6 +858,7 @@ export function RailWall({
                       piece={p}
                       mySize={mySize}
                       priority={i === 0 && n < 2}
+                      onBuy={setBuying}
                       onAdded={(line) => {
                         setAddedHere(true);
                         setLast(line);
@@ -910,31 +866,6 @@ export function RailWall({
                     />
                   </li>
                 ))}
-                {/* The end of the rail: on to the rest of this kind in the shop. */}
-                {!q && (
-                  <li
-                    className={`w-[44%] max-w-[200px] shrink-0 snap-start md:w-auto md:max-w-none ${s.total > shown.length ? "" : shown.length % 4 === 0 ? "lg:hidden" : shown.length % 3 === 0 ? "md:hidden lg:block" : ""}`}
-                  >
-                    <Link
-                      href={withSize(s.href)}
-                      className="group flex aspect-[4/5] flex-col justify-between border border-mist p-4 hover:border-ink"
-                    >
-                      <span className={`${mono} text-steel-dark`}>
-                        End of rail {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span>
-                        <span className="block font-display text-[26px] uppercase leading-[0.95] tracking-[0.02em] md:text-[32px]">
-                          {s.total > shown.length ? `All ${s.total}` : "See"}{" "}
-                          {s.label.toLowerCase()}
-                        </span>
-                        <span className="mt-3 flex items-center gap-2 text-[14px] font-semibold">
-                          In the shop{" "}
-                          <Arrow className="transition-transform duration-200 group-hover:translate-x-1" />
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                )}
               </ul>
             </div>
           </section>
@@ -1007,6 +938,28 @@ export function RailWall({
           </div>
         </div>
       )}
+
+      {/* Buy now: the piece and the payment form in a pop-up, without leaving the page. */}
+      <Sheet open={buying !== null} onOpenChange={(o) => !o && setBuying(null)}>
+        <SheetContent
+          side="right"
+          className="w-full overflow-y-auto border-mist bg-paper p-5 pt-6 sm:max-w-md"
+        >
+          <SheetTitle className="display text-[34px] leading-none">
+            Buy now
+          </SheetTitle>
+          {buying && (
+            <>
+              <SheetDescription className="mt-2 text-[14px] text-steel-dark">
+                {buying.name} · {buying.colour}
+                {buying.size === "ONE" ? "" : ` · ${buying.size}`} ·{" "}
+                {formatPrice(buying.price)}
+              </SheetDescription>
+              <CheckoutForm buyNow={buying} />
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
