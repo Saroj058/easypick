@@ -233,17 +233,15 @@ export default async function HomePage() {
       <SelfCheckout />
 
       {/* Track an order: no account needed */}
-      <section aria-labelledby="track-title" className="border-t border-mist py-14 md:py-20">
-        <div className="container-ep grid gap-8 lg:grid-cols-12 lg:items-end">
-          <div className="lg:col-span-4">
-            <h2 id="track-title" className="display display-h2">
+      <section aria-labelledby="track-title" className="border-t border-mist py-7 md:py-8">
+        <div className="container-ep grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-end lg:gap-10">
+          <div className="lg:pb-2.5">
+            <h2 id="track-title" className="text-xl font-bold">
               Track an order.
             </h2>
-            <p className="mt-3 max-w-[36ch] text-steel-dark">No account needed. Use the order number from your SMS or receipt and the phone you ordered with.</p>
+            <p className="text-[13px] text-steel-dark">No account needed.</p>
           </div>
-          <div className="lg:col-span-7 lg:col-start-6">
-            <TrackForm compact id="home-track" />
-          </div>
+          <TrackForm compact id="home-track" />
         </div>
       </section>
 

@@ -193,11 +193,14 @@ function TrailArrow({ up }: { up: boolean }) {
 
 export function SelfCheckout() {
   return (
-    <section aria-labelledby="checkout-title" className="overflow-hidden py-14 md:py-20">
+    <section aria-labelledby="checkout-title" className="overflow-hidden bg-photo pb-14 md:pb-20">
+      {/* Continues the Our store section above: same background, joined by a dashed line. */}
       <div className="container-ep">
+        <div className="mb-12 border-t border-dashed border-steel md:mb-16" aria-hidden />
         {/* Wide screens: words on the left edge, the kiosk in the middle, the steps on the right edge. */}
         <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
           <div className="lg:max-w-[420px]" data-reveal>
+            <p className="mb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-steel-dark">Inside the store · self-checkout</p>
             <h2 id="checkout-title" className="display text-[clamp(2.5rem,1.9rem+2.4vw,4rem)] leading-[0.92]">
               Pick it.
               <br />
@@ -210,7 +213,7 @@ export function SelfCheckout() {
             </p>
             <ul className="mt-6 flex flex-wrap gap-2">
               {PROMISES.map((t) => (
-                <li key={t} className="flex h-10 items-center gap-2 border border-ink px-3 text-[14px] font-semibold">
+                <li key={t} className="flex h-10 items-center gap-2 border border-ink bg-paper px-3 text-[14px] font-semibold">
                   <span className="h-2 w-2 rounded-full border border-ink bg-volt" aria-hidden />
                   {t}
                 </li>

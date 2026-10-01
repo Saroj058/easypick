@@ -14,10 +14,12 @@ export function TrackForm({ compact = false, id = "track" }: { compact?: boolean
   const [state, action, pending] = useActionState<TrackState, FormData>(trackOrder, { status: "idle" });
   // The form resets after each try; keep what they typed.
   const typed = state.status === "error" ? state : { number: "", phone: "" };
+  // The home page strip is small: shorter fields, a quiet button, and no empty line kept for errors.
+  const field = compact ? "mt-1.5 h-11 w-full rounded-[2px] border border-mist bg-paper px-3 text-[15px] outline-none focus:border-ink" : input;
   return (
-    <form action={action} className={compact ? "grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end" : "mt-10 space-y-6"}>
+    <form action={action} className={compact ? "grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end" : "mt-10 space-y-6"}>
       <div>
-        <label htmlFor={`${id}-number`} className="block text-sm font-semibold">
+        <label htmlFor={`${id}-number`} className={`block font-semibold ${compact ? "text-[13px]" : "text-sm"}`}>
           Order number
         </label>
         <input
@@ -29,11 +31,11 @@ export function TrackForm({ compact = false, id = "track" }: { compact?: boolean
           autoCapitalize="characters"
           required
           aria-describedby={`${id}-error`}
-          className={`${input} font-mono uppercase`}
+          className={`${field} font-mono uppercase`}
         />
       </div>
       <div>
-        <label htmlFor={`${id}-phone`} className="block text-sm font-semibold">
+        <label htmlFor={`${id}-phone`} className={`block font-semibold ${compact ? "text-[13px]" : "text-sm"}`}>
           Mobile number
         </label>
         <input
@@ -47,13 +49,13 @@ export function TrackForm({ compact = false, id = "track" }: { compact?: boolean
           placeholder="98XXXXXXXX"
           required
           aria-describedby={`${id}-error`}
-          className={`${input} font-mono`}
+          className={`${field} font-mono`}
         />
       </div>
-      <button type="submit" disabled={pending} className={`btn btn-volt ${compact ? "w-full md:w-auto" : "w-full"}`}>
+      <button type="submit" disabled={pending} className={compact ? "h-11 w-full rounded-[2px] border border-ink bg-paper px-5 text-[14px] font-semibold hover:bg-ink hover:text-paper disabled:opacity-60 md:w-auto" : "btn btn-volt w-full"}>
         {pending ? "Checking…" : compact ? "Track order" : "Check status"}
       </button>
-      <p id={`${id}-error`} role="alert" className={`min-h-5 text-[14px] text-error-light ${compact ? "md:col-span-3" : ""}`}>
+      <p id={`${id}-error`} role="alert" className={`text-[14px] text-error-light ${compact ? "md:col-span-3" : "min-h-5"}`}>
         {state.status === "error" ? state.message : ""}
       </p>
     </form>

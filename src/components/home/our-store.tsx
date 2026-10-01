@@ -75,7 +75,7 @@ export function OurStore({ info }: { info: StoreInfo }) {
   const directions = info.mapUrl;
 
   return (
-    <section aria-labelledby="store-title" className="section bg-photo">
+    <section aria-labelledby="store-title" className="bg-photo pb-12 pt-16 md:pb-16 md:pt-24">
       <div className="container-ep grid items-center gap-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-7" data-reveal>
           <Shopfront />
