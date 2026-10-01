@@ -12,26 +12,62 @@ function tag(p: Product) {
   return p.original ? "ORIGINAL" : "";
 }
 
-export function Vault({ products }: { products: Product[] }) {
-  const pieces = products.filter((p) => p.vault && (p.status === "live" || p.status === "sold_out"));
-  if (pieces.length === 0) {
-    return (
-      <section aria-labelledby="vault-title" className="on-dark bg-ink py-10 text-[#f2efe8] md:py-14">
-        <div className="container-ep flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+/**
+ * The same section before the owner has marked any pieces for the Vault: the heading, the brand
+ * row and four places, all empty and saying so. Nothing here can be bought or mistaken for stock.
+ */
+function VaultWaiting() {
+  return (
+    <section aria-labelledby="vault-title" className="on-dark section bg-ink text-[#f2efe8]">
+      <div className="container-ep flex flex-col gap-10">
+        <div className="flex items-end justify-between gap-6">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-steel">Not open yet</p>
-            <h2 id="vault-title" className="display display-h1 mt-2 tracking-[0.02em]">
+            <h2 id="vault-title" className="display display-h1 tracking-[0.02em]">
               The Vault
             </h2>
-            <p className="mt-2.5 max-w-[46ch] text-[17px] text-[#aeaba3]">Rare, verified-genuine sneakers. One of each, never restocked. The first pairs aren&apos;t in yet.</p>
+            <p className="mt-2.5 text-[17px] text-[#aeaba3]">Original brands and numbered pieces.</p>
           </div>
-          <Link href="/alerts" className="btn btn-volt shrink-0">
-            Get drop alerts
+          <Link href="/alerts" className="shrink-0 text-[15px] font-semibold uppercase tracking-[0.08em] underline-offset-4 hover:underline">
+            Get the alert
           </Link>
         </div>
-      </section>
-    );
-  }
+
+        <div aria-hidden className="no-scrollbar -mx-4 flex overflow-x-auto border-y border-[#2c2c2e] md:mx-0 md:grid md:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div key={n} className="flex h-[88px] min-w-[140px] shrink-0 flex-col items-center justify-center gap-1 border-r border-[#1f1f22] md:min-w-0">
+              <span className="font-display text-[28px] uppercase tracking-[0.04em] text-[#3a3a3c]">Brand</span>
+              <span className="font-mono text-[11px] text-steel">0{n}</span>
+            </div>
+          ))}
+        </div>
+
+        <ul className="no-scrollbar -mx-4 flex snap-x gap-5 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0">
+          {[1, 2, 3, 4].map((n) => (
+            <li key={n} className="w-[64vw] max-w-[280px] shrink-0 snap-start md:w-auto md:max-w-none">
+              <div className="flex flex-col gap-3">
+                <span className="grid aspect-[4/5] place-items-center bg-[#151517]">
+                  <svg width="96" height="96" viewBox="0 0 48 48" fill="none" stroke="#3a3a3c" strokeWidth="1" strokeLinejoin="round" aria-hidden>
+                    <path d="M5 31c0-3 2-4 5-4l7-9 4 3 4-2 6 7c5 1 12 2 12 6v2H5z" />
+                    <path d="M5 33h38M19 20l3 4M23 18l3 4" />
+                  </svg>
+                </span>
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className="text-[12px] uppercase tracking-[0.16em] text-steel">Not in yet</span>
+                  <span className="font-mono text-[11px] tracking-[0.08em] text-steel">0{n} / 04</span>
+                </span>
+                <span className="text-base text-[#aeaba3]">A place is kept for the first pairs.</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+export function Vault({ products }: { products: Product[] }) {
+  const pieces = products.filter((p) => p.vault && (p.status === "live" || p.status === "sold_out"));
+  if (pieces.length === 0) return <VaultWaiting />;
 
   const brands = Array.from(
     pieces.reduce((m, p) => (p.brand ? m.set(p.brand, (m.get(p.brand) ?? 0) + 1) : m), new Map<string, number>()),

@@ -41,12 +41,6 @@ function Hanger({ category }: { category: Category }) {
   );
 }
 
-function sizesLeft(p: Product) {
-  const totals = new Map<string, number>();
-  for (const v of p.variants) totals.set(v.size, (totals.get(v.size) ?? 0) + v.stock);
-  return [...totals.entries()].filter(([s]) => s !== "ONE");
-}
-
 /**
  * A clothing rail with one piece of each kind. Tap or hover a piece to bring it
  * forward and read its tag: fixed price and measurements in cm.
@@ -57,25 +51,19 @@ export function HeroRack({ pieces, dropLabel }: { pieces: RackPiece[]; dropLabel
   const sel = pieces[active];
   if (!sel) return null;
   const m = sel.product.measurements.M;
-  const sizes = sizesLeft(sel.product);
 
   return (
     <>
-      <p className="index absolute left-4 top-4 z-20 text-paper/70 md:left-6 md:top-6">
-        EP / {dropLabel} / {String(active + 1).padStart(2, "0")} of {String(pieces.length).padStart(2, "0")}
-      </p>
-      <p className="index absolute right-4 top-4 z-20 hidden text-paper/75 md:right-6 md:top-6 md:block">Tap a piece</p>
-
       {/* The rail */}
-      <div className="absolute inset-x-0 top-[15%] h-[3px] bg-paper/25" aria-hidden />
+      <div className="absolute inset-x-0 top-[9%] h-[3px] bg-paper/25" aria-hidden />
 
-      <ul className="absolute inset-x-0 top-[15%] flex items-start justify-center" aria-label="Pieces on the rail">
+      <ul className="absolute inset-x-0 top-[9%] flex items-start justify-center" aria-label="Pieces on the rail">
         {pieces.map(({ product, colour }, i) => {
           const on = i === active;
           return (
             <li
               key={product.id}
-              className={`relative -mx-[35px] w-[150px] shrink-0 md:-mx-[36px] md:w-[170px] lg:-mx-[47px] lg:w-[190px] ${i >= 4 ? "hidden md:block" : ""} ${on ? "z-10" : ""}`}
+              className={`relative -mx-[44px] w-[176px] shrink-0 md:-mx-[52px] md:w-[216px] lg:-mx-[70px] lg:w-[262px] ${i >= 4 ? "hidden md:block" : ""} ${on ? "z-10" : ""}`}
             >
               <button
                 type="button"
@@ -101,32 +89,19 @@ export function HeroRack({ pieces, dropLabel }: { pieces: RackPiece[]; dropLabel
         {sel.product.name}, {sel.colour.name}, {formatPrice(sel.product.salePrice ?? sel.product.price)}
       </p>
 
-      {/* Full tag on larger screens */}
-      <div className="absolute bottom-6 right-6 z-20 hidden w-[200px] md:block lg:bottom-8 lg:right-8">
-        <div className="origin-top rotate-[3deg]">
+      {/* The piece's tag (small) and the way to it, on larger screens */}
+      <div className="absolute bottom-5 right-5 z-20 hidden md:block lg:bottom-6 lg:right-6">
+        <div className="origin-bottom-right rotate-[3deg] scale-[0.66]">
           <HangTag key={sel.product.id} product={sel.product} colour={sel.colour.name} className="animate-fade-up" />
         </div>
       </div>
-      <div className="absolute bottom-6 left-6 z-20 hidden md:block lg:bottom-8 lg:left-8">
-        <p className="text-lg font-semibold">{sel.product.name}</p>
-        <p className="index mt-1 text-paper/70">
-          {sel.colour.name} · {sel.product.fit} fit
-        </p>
-        {sizes.length > 0 && (
-          <p className="mt-4 flex gap-3 font-mono text-[13px] text-paper/80" aria-label="Sizes left">
-            {sizes.map(([s, n]) => (
-              <span key={s} className={n === 0 ? "text-paper/60 line-through" : ""}>
-                {s}
-                {n > 0 && n <= 3 && <sup className="ml-px text-[9px] text-volt">{n}</sup>}
-              </span>
-            ))}
-          </p>
-        )}
-        <Link href={`/product/${sel.product.slug}`} className="group mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
-          View piece
-          <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-        </Link>
-      </div>
+      <Link
+        href={`/product/${sel.product.slug}`}
+        className="group absolute bottom-5 left-5 z-20 hidden min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em] md:inline-flex lg:bottom-6 lg:left-6"
+      >
+        View {sel.product.name}
+        <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+      </Link>
 
       {/* Compact tag on phones */}
       <Link

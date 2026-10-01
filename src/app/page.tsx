@@ -56,10 +56,6 @@ function pickRack(products: Product[]): RackPiece[] {
   });
 }
 
-function timeNpt(iso: string) {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
-}
-
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const orgLd = {
@@ -86,7 +82,6 @@ export default async function HomePage() {
   const onRack = dropProducts.filter((p) => p.status !== "scheduled");
   const stats = getHomeStats(onRack, current?.pieceCount ?? null);
   const rack = pickRack(products);
-  const leftPct = stats.piecesTotal ? Math.round((stats.piecesLeft / stats.piecesTotal) * 100) : 0;
 
   const offers = products.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -154,7 +149,6 @@ export default async function HomePage() {
               <p className="display mt-3 text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] leading-[0.95]">
                 Price shown. <span className="whitespace-nowrap text-paper/60">No DM needed.</span>
               </p>
-              <p className="mt-2 text-[15px] text-paper/75">One price for everyone, printed on every tag. VAT included.</p>
             </div>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn btn-volt">
@@ -166,41 +160,13 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Data rail */}
-          <dl className="grid grid-cols-3 border-t border-paper/15 pt-5 lg:col-span-12 lg:row-start-2">
-            <div className="pr-3">
-              <dt className="index text-paper/70">Pieces left</dt>
-              <dd className="mt-2 font-mono text-[28px] font-semibold leading-none tabular-nums md:text-[40px]">
-                {stats.piecesLeft}
-                <span className="text-[15px] font-normal text-paper/70 md:text-lg"> / {stats.piecesTotal}</span>
-              </dd>
-              <dd className="mt-3 h-0.5 max-w-[180px] bg-paper/15" aria-hidden>
-                <div className="h-full bg-volt" style={{ width: `${leftPct}%` }} />
-              </dd>
+          {/* At the end: only the countdown to the next drop */}
+          {next && (
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-paper/15 pt-5 lg:col-span-12 lg:row-start-2">
+              <p className="index text-paper/70">Drop {next.slug} opens in</p>
+              <Countdown to={next.releaseAt} label={next.name} size="sm" />
             </div>
-            <div className="border-l border-paper/15 px-3 md:px-6">
-              <dt className="index text-paper/70">Styles</dt>
-              <dd className="mt-2 font-mono text-[28px] font-semibold leading-none tabular-nums md:text-[40px]">
-                {stats.styles}
-                <span className="hidden text-[15px] font-normal text-paper/70 sm:inline md:text-lg"> · {stats.colourways} colours</span>
-              </dd>
-            </div>
-            <div className="border-l border-paper/15 pl-3 md:pl-6">
-              <dt className="index text-paper/70">{next ? `Until Drop ${next.slug}` : "Price range"}</dt>
-              <dd className="mt-2">
-                {next ? (
-                  <Countdown to={next.releaseAt} label={next.name} size="sm" />
-                ) : (
-                  <span className="font-mono text-[20px] font-semibold tabular-nums md:text-[28px]">
-                    {formatPrice(stats.priceFrom)}–{stats.priceTo.toLocaleString("en-IN")}
-                  </span>
-                )}
-              </dd>
-            </div>
-            <div className="col-span-3 mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-paper/60">
-              Stock as of {timeNpt(stats.asOf)} NPT · counted by RFID
-            </div>
-          </dl>
+          )}
         </div>
       </section>
 
