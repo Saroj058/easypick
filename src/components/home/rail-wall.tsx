@@ -248,7 +248,7 @@ function Piece({
   } else if (wanted) {
     note = `No ${wanted} · comes in ${inStock.map((x) => x.size).join(", ")}`;
     strong = true;
-  } else note = inStock.map((x) => x.size).join(" · ");
+  } // No size chosen yet: the size buttons below already list them, so the line says nothing.
 
   function add() {
     if (!variant || !size) return;
@@ -579,6 +579,8 @@ export function RailWall({
   /** The last piece added here, for the bar's Undo. */
   const [last, setLast] = useState<{ sku: string; name: string } | null>(null);
   const [addedHere, setAddedHere] = useState(false);
+  /** Sections opened with their Show all button. */
+  const [openAll, setOpenAll] = useState<string[]>([]);
   const profile = useFitProfile();
 
   const q = query.trim();
@@ -830,7 +832,10 @@ export function RailWall({
       )}
 
       {wall.map((s, i) => {
-        const shown = s.show.slice(0, 4);
+        // A rail shows four pieces; Show all opens the rest of the section in place.
+        const hasMore = !q && s.show.length > 4;
+        const isOpen = hasMore && openAll.includes(s.key);
+        const shown = isOpen || q ? s.show : s.show.slice(0, 4);
         return (
           <section
             key={s.key}
@@ -858,6 +863,32 @@ export function RailWall({
                 <br className="sm:hidden" />
                 <span className="text-ink">{range(s.show)}</span>
               </span>
+              {/* Show all: opens the rest of this section here, or the shop when everything is already on the rail. */}
+              {!q &&
+                (hasMore ? (
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    onClick={() =>
+                      setOpenAll(
+                        isOpen
+                          ? openAll.filter((k) => k !== s.key)
+                          : [...openAll, s.key],
+                      )
+                    }
+                    className="-my-1.5 flex h-11 shrink-0 items-center border-l border-mist pl-3 text-[13px] font-semibold uppercase tracking-[0.04em] underline-offset-4 hover:underline"
+                  >
+                    {isOpen ? "Show fewer" : `Show all ${s.show.length}`}
+                  </button>
+                ) : (
+                  <Link
+                    href={withSize(s.href)}
+                    aria-label={`Show all ${s.label.toLowerCase()} in the shop`}
+                    className="-my-1.5 flex h-11 shrink-0 items-center gap-1.5 border-l border-mist pl-3 text-[13px] font-semibold uppercase tracking-[0.04em] underline-offset-4 hover:underline"
+                  >
+                    Show all <Arrow />
+                  </Link>
+                ))}
             </div>
 
             {/* The section's rail, with the pieces hanging from it. Phones swipe along it. */}
@@ -882,7 +913,7 @@ export function RailWall({
                 {/* The end of the rail: on to the rest of this kind in the shop. */}
                 {!q && (
                   <li
-                    className={`w-[44%] max-w-[200px] shrink-0 snap-start md:w-auto md:max-w-none ${shown.length >= 4 ? "lg:hidden" : shown.length === 3 ? "md:hidden lg:block" : ""}`}
+                    className={`w-[44%] max-w-[200px] shrink-0 snap-start md:w-auto md:max-w-none ${s.total > shown.length ? "" : shown.length % 4 === 0 ? "lg:hidden" : shown.length % 3 === 0 ? "md:hidden lg:block" : ""}`}
                   >
                     <Link
                       href={withSize(s.href)}

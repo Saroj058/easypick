@@ -274,7 +274,7 @@
       filter: drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.5)) drop-shadow(0 9px 12px rgba(0, 0, 0, 0.2));
     }
   }
-  /* The hero's promise: a DM that is struck out as the page arrives, and the tag that drops in to answer it. */
+  /* The hero's promise: a DM that is struck out as the page arrives. */
   .dm-strike {
     position: relative;
   }
@@ -292,10 +292,6 @@
   .dm-note {
     animation: dm-fade 300ms 1300ms ease-out both;
   }
-  .hero-tag {
-    --hole: var(--color-ink);
-    animation: tag-drop 900ms 1250ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
-  }
   @keyframes dm-strike {
     from {
       transform: scaleX(0);
@@ -310,23 +306,6 @@
     }
     to {
       opacity: 1;
-    }
-  }
-  @keyframes tag-drop {
-    0% {
-      opacity: 0;
-      transform: translateY(-14px) rotate(-14deg);
-    }
-    45% {
-      opacity: 1;
-      transform: translateY(0) rotate(7deg);
-    }
-    70% {
-      transform: rotate(-6deg);
-    }
-    100% {
-      opacity: 1;
-      transform: rotate(-3deg);
     }
   }
   @keyframes tag-swing {

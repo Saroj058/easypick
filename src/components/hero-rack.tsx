@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { formatPrice } from "@/lib/format";
-import type { Category, Product } from "@/lib/types";
-import { HangTag } from "./hang-tag";
+import type { Category, Product, Size } from "@/lib/types";
 import { ArrowIcon } from "./icons";
 import { GarmentSvg } from "./product-image";
 
@@ -25,6 +24,8 @@ const fit: Record<Category, { w: string; tuck: string }> = {
   accessories: { w: "w-[74%]", tuck: "-mt-[28%]" },
 };
 
+const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
+
 function Hanger({ category }: { category: Category }) {
   const clip = category === "bottoms";
   const hookOnly = category === "accessories";
@@ -42,38 +43,35 @@ function Hanger({ category }: { category: Category }) {
 }
 
 /**
- * A clothing rail with one piece of each kind. Tap or hover a piece to bring it
- * forward and read its tag: fixed price and measurements in cm.
+ * A two-storey shelf: tops on the upper rail, bottoms and extras on the lower one, up to
+ * seven pieces each. Tap or hover a piece to bring it forward; its colour and the sizes it
+ * comes in show at the bottom left.
  */
-export function HeroRack({ pieces, dropLabel }: { pieces: RackPiece[]; dropLabel: string }) {
-  // Start on a lighter piece so the first thing you see reads clearly on graphite.
-  const [active, setActive] = useState(Math.min(1, pieces.length - 1));
-  const sel = pieces[active];
+export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[] }) {
+  const all = [...top, ...bottom];
+  // Start on a piece near the middle of the upper rail.
+  const [active, setActive] = useState(Math.min(Math.floor(top.length / 2), Math.max(all.length - 1, 0)));
+  const sel = all[active];
   if (!sel) return null;
-  const m = sel.product.measurements.M;
+  const sizes = sel.product.variants.filter((v) => v.colour === sel.colour.name).sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
+  const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
 
-  return (
+  const storey = (pieces: RackPiece[], offset: number, at: string, label: string) => (
     <>
-      {/* The rail */}
-      <div className="absolute inset-x-0 top-[9%] h-[3px] bg-paper/25" aria-hidden />
-
-      <ul className="absolute inset-x-0 top-[9%] flex items-start justify-center" aria-label="Pieces on the rail">
-        {pieces.map(({ product, colour }, i) => {
+      <div className={`absolute inset-x-0 ${at} h-[3px] bg-paper/25`} aria-hidden />
+      <ul className={`absolute inset-x-0 ${at} flex items-start justify-center`} aria-label={label}>
+        {pieces.map(({ product, colour }, n) => {
+          const i = offset + n;
           const on = i === active;
           return (
-            <li
-              key={product.id}
-              className={`relative -mx-[44px] w-[176px] shrink-0 md:-mx-[52px] md:w-[216px] lg:-mx-[70px] lg:w-[262px] ${i >= 4 ? "hidden md:block" : ""} ${on ? "z-10" : ""}`}
-            >
+            <li key={product.id} className={`relative -mx-[22px] w-[96px] shrink-0 sm:-mx-[26px] sm:w-[120px] xl:-mx-[30px] xl:w-[150px] ${on ? "z-10" : ""}`}>
               <button
                 type="button"
                 onClick={() => setActive(i)}
                 onMouseEnter={() => setActive(i)}
                 aria-pressed={on}
                 aria-label={`${product.name}, ${colour.name}, ${formatPrice(product.salePrice ?? product.price)}`}
-                className={`-mt-[7px] flex w-full flex-col items-center transition-[opacity,transform] duration-300 ${
-                  on ? "translate-y-1 opacity-100" : "opacity-45 hover:opacity-75"
-                }`}
+                className={`-mt-[7px] flex w-full flex-col items-center transition-[opacity,transform] duration-300 ${on ? "translate-y-1 opacity-100" : "opacity-55 hover:opacity-80"}`}
               >
                 <Hanger category={product.category} />
                 <span className={`block ${fit[product.category].w} ${fit[product.category].tuck}`}>
@@ -84,35 +82,66 @@ export function HeroRack({ pieces, dropLabel }: { pieces: RackPiece[]; dropLabel
           );
         })}
       </ul>
+    </>
+  );
+
+  return (
+    <>
+      {storey(top, 0, "top-[6%]", "Tops on the upper rail")}
+      {storey(bottom, top.length, "top-[44%] md:top-[47%]", "Bottoms and extras on the lower rail")}
 
       <p className="sr-only" aria-live="polite">
         {sel.product.name}, {sel.colour.name}, {formatPrice(sel.product.salePrice ?? sel.product.price)}
       </p>
 
-      {/* The piece's tag (small) and the way to it, on larger screens */}
-      <div className="absolute bottom-5 right-5 z-20 hidden md:block lg:bottom-6 lg:right-6">
-        <div className="origin-bottom-right rotate-[3deg] scale-[0.66]">
-          <HangTag key={sel.product.id} product={sel.product} colour={sel.colour.name} className="animate-fade-up" />
+      {/* The chosen piece: its colour and sizes on the left, the way to it on the right (larger screens) */}
+      <div className="absolute inset-x-5 bottom-5 z-20 hidden items-end justify-between gap-6 md:flex lg:inset-x-6 lg:bottom-6">
+        <div className="min-w-0">
+          <p className="flex items-baseline gap-3">
+            <span className="truncate text-lg font-semibold">{sel.product.name}</span>
+            <span className="shrink-0 font-mono text-[15px] tabular-nums text-paper/80">{formatPrice(sel.product.salePrice ?? sel.product.price)}</span>
+          </p>
+          <p className="mt-2 flex items-center gap-2 text-[14px] text-paper/80">
+            <span aria-hidden className="h-3.5 w-3.5 rounded-full border border-paper/40" style={{ background: sel.colour.hex }} />
+            {sel.colour.name}
+          </p>
+          <p className="mt-2 flex gap-3 font-mono text-[13px] text-paper/85">
+            <span className="sr-only">Sizes: </span>
+            {oneSize
+              ? "One size"
+              : sizes.map((v) =>
+                  v.stock > 0 ? (
+                    <span key={v.sku}>
+                      {v.size}
+                      {v.stock <= 3 && <sup className="ml-px text-[9px] text-paper/70">{v.stock}</sup>}
+                    </span>
+                  ) : (
+                    <s key={v.sku} className="text-paper/60">
+                      {v.size}
+                      <span className="sr-only"> sold out</span>
+                    </s>
+                  ),
+                )}
+          </p>
         </div>
+        <Link href={`/product/${sel.product.slug}`} className="group inline-flex min-h-11 shrink-0 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
+          View piece
+          <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+        </Link>
       </div>
-      <Link
-        href={`/product/${sel.product.slug}`}
-        className="group absolute bottom-5 left-5 z-20 hidden min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em] md:inline-flex lg:bottom-6 lg:left-6"
-      >
-        View {sel.product.name}
-        <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-      </Link>
 
-      {/* Compact tag on phones */}
-      <Link
-        href={`/product/${sel.product.slug}`}
-        className="absolute inset-x-3 bottom-3 z-20 flex min-h-14 items-center gap-3 bg-paper px-4 py-2 text-ink md:hidden"
-      >
+      {/* Compact bar on phones */}
+      <Link href={`/product/${sel.product.slug}`} className="absolute inset-x-3 bottom-3 z-20 flex min-h-14 items-center gap-3 bg-paper px-4 py-2 text-ink md:hidden">
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-semibold">{sel.product.name}</span>
-          <span className="block font-mono text-[11px] uppercase tracking-[0.08em] text-steel-dark">
+          <span className="block truncate font-mono text-[11px] uppercase tracking-[0.08em] text-steel-dark">
             {sel.colour.name}
-            {m?.chest ? ` · M · chest ${m.chest} cm` : m?.waist ? ` · M · waist ${m.waist} cm` : ""}
+            {oneSize
+              ? " · one size"
+              : ` · ${sizes
+                  .filter((v) => v.stock > 0)
+                  .map((v) => v.size)
+                  .join(" ")}`}
           </span>
         </span>
         <span className="font-mono text-[18px] font-semibold tabular-nums">{formatPrice(sel.product.salePrice ?? sel.product.price)}</span>

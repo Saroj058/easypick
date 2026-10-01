@@ -34,24 +34,28 @@ function luminance(hex: string) {
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 }
 
-const RACK_ORDER: Category[] = ["jackets", "hoodies", "tees", "co-ords", "bottoms", "accessories"];
+const STOREY = 7;
+/** The two storeys of the hero's shelf: what hangs on the upper rail, and on the lower one. */
+const UPPER: Category[] = ["tees", "hoodies", "co-ords", "jackets"];
+const LOWER: Category[] = ["bottoms", "accessories"];
 
 /**
- * One of each kind for the hero rail, in a colour not already used so the rail
- * reads as a range. Two bottoms (jogger + jeans) when available.
+ * Up to seven live pieces for one storey, kinds mixed along the rail, each in a colour that
+ * differs from its neighbour where the piece has a choice, so the rail reads as a range.
  */
-function pickRack(products: Product[]): RackPiece[] {
+function pickStorey(products: Product[], kinds: Category[]): RackPiece[] {
   const live = products.filter((p) => p.status === "live");
+  const byKind = kinds.map((k) => live.filter((p) => p.category === k));
   const chosen: Product[] = [];
-  for (const c of RACK_ORDER) {
-    const inCat = live.filter((p) => p.category === c);
-    chosen.push(...inCat.slice(0, c === "bottoms" ? 2 : 1));
+  // One of each kind in turn, until the rail is full or the kinds run out.
+  for (let round = 0; chosen.length < STOREY && byKind.some((list) => list.length > round); round++) {
+    for (const list of byKind) if (list[round] && chosen.length < STOREY) chosen.push(list[round]);
   }
-  const used = new Set<string>();
-  return chosen.slice(0, 6).map((product) => {
+  let last = "";
+  return chosen.map((product) => {
     const colours = [...product.colours].sort((a, b) => luminance(b.hex) - luminance(a.hex));
-    const colour = colours.find((c) => !used.has(c.name)) ?? colours[0];
-    used.add(colour.name);
+    const colour = colours.find((c) => c.name !== last) ?? colours[0];
+    last = colour.name;
     return { product, colour };
   });
 }
@@ -81,7 +85,8 @@ export default async function HomePage() {
   const dropProducts = drop ? products.filter((p) => p.dropSlug === drop.slug) : products;
   const onRack = dropProducts.filter((p) => p.status !== "scheduled");
   const stats = getHomeStats(onRack, current?.pieceCount ?? null);
-  const rack = pickRack(products);
+  const upper = pickStorey(products, UPPER);
+  const lower = pickStorey(products, LOWER);
 
   const offers = products.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -96,7 +101,7 @@ export default async function HomePage() {
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
           <div className="relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-graphite md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
-            <HeroRack pieces={rack} dropLabel={drop ? `Drop ${drop.slug}` : "Core"} />
+            <HeroRack top={upper} bottom={lower} />
           </div>
 
           {/* Words */}
@@ -126,24 +131,14 @@ export default async function HomePage() {
                 </>
               )}
             </h1>
-            {/* The promise: the message people send other shops, struck out, and the tag that answers it. */}
+            {/* The promise: the message people send other shops, struck out before it is sent. */}
             <div className="group mt-6 max-w-[440px]">
-              <div aria-hidden className="flex items-start gap-3">
-                <div className="flex flex-col items-start gap-1.5 pt-1">
+              <div aria-hidden className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                   <span className="dm-bubble rounded-[18px] rounded-bl-[5px] bg-[#2c2c2e] px-3.5 py-2 text-[15px] leading-5 text-paper/70">
                     <span className="dm-strike">bro price?</span>
                   </span>
                   <span className="dm-note pl-1 font-mono text-[10px] uppercase tracking-[0.14em] text-paper/60">Not sent</span>
-                </div>
-                <div className="tag-hang hero-tag flex flex-col items-center">
-                  <span className="h-2 w-2 rounded-full border border-paper/70" />
-                  <span className="h-4 w-px bg-paper/70" />
-                  <div className="hang-tag px-3.5 pb-2.5 pt-6 font-mono">
-                    <p className="whitespace-nowrap text-[19px] font-semibold leading-none tabular-nums">{formatPrice(stats.priceFrom)}</p>
-                    <p className="mt-1.5 whitespace-nowrap text-[9px] uppercase leading-none tracking-[0.12em] text-steel-dark">
-                      to {stats.priceTo.toLocaleString("en-IN")} · fixed
-                    </p>
-                  </div>
                 </div>
               </div>
               <p className="display mt-3 text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] leading-[0.95]">
