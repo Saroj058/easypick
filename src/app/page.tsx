@@ -12,9 +12,10 @@ import { Vault } from "@/components/home/vault";
 import { ProductCard } from "@/components/product-card";
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
+import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { SelfCheckout } from "@/components/self-checkout";
 import { getStoreInfo } from "@/lib/store-info";
-import { formatPrice } from "@/lib/format";
+import { formatDropTime, formatPrice } from "@/lib/format";
 import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
 import { site } from "@/lib/site";
@@ -105,22 +106,44 @@ export default async function HomePage() {
 
           {/* Words */}
           <div className="flex flex-col justify-end lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:justify-center lg:pb-10">
-            <h1 id="hero-title" className="display text-[clamp(2.5rem,1.5rem+4.2vw,4.75rem)] leading-[0.92] tracking-[-0.015em]">
-              Shopping shouldn&apos;t feel like negotiation.
-              <span className="mt-3 block text-[0.62em] leading-[0.95] text-paper/60">That&apos;s why we built Easypick.</span>
+            <p className="eyebrow flex items-center gap-2 text-paper/80">
+              <span className="h-1.5 w-1.5 bg-volt" aria-hidden />
+              {current ? `${current.name} · Out now · Kathmandu` : next ? `${next.name} · ${formatDropTime(next.releaseAt)}` : "Kathmandu"}
+            </p>
+            <h1 id="hero-title" className="display display-hero mt-4">
+              {current ? (
+                <>
+                  Drop {current.slug}.
+                  <br />
+                  Out now.
+                </>
+              ) : next ? (
+                <>
+                  Drop {next.slug}.
+                  <br />
+                  {formatDropTime(next.releaseAt).split(",")[0]}.
+                </>
+              ) : (
+                <>
+                  Pick it.
+                  <br />
+                  Wear it.
+                </>
+              )}
             </h1>
-            <ul className="mt-6 space-y-1.5 text-[16px] text-paper/85 sm:text-[17px]">
-              {["Fixed prices.", "Automated checkout.", "Same price online and in-store."].map((line) => (
-                <li key={line} className="flex items-center gap-3">
-                  <span aria-hidden className="h-1.5 w-1.5 shrink-0 bg-volt" />
-                  {line}
-                </li>
-              ))}
-            </ul>
+            {/* Why the store exists, in the owner's words */}
+            <div className="mt-6 max-w-[460px]">
+              <p className="display text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] leading-[0.95]">
+                Shopping shouldn&apos;t feel like negotiation. <span className="text-paper/60">That&apos;s why we built Easypick.</span>
+              </p>
+              <p className="mt-3 text-[15px] leading-relaxed text-paper/80 sm:text-[16px]">
+                Fixed prices. Automated checkout.
+                <br />
+                Same price online and in-store.
+              </p>
+            </div>
             <div className="mt-7">
-              <Link href="/visit" className="btn btn-outline w-full sm:w-auto">
-                Visit store
-              </Link>
+              <InteractiveHoverButton href="/visit" text="Visit store" className="w-full sm:w-auto" />
             </div>
           </div>
 
