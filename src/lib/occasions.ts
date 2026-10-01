@@ -1,4 +1,4 @@
-// "Wear it to…": a ready fit for each occasion, picked from what's live on the rack.
+// "Designer Fits": a ready fit for each occasion, picked from what's live on the rack.
 // Each look is three pieces; colours lean dark or light to suit the occasion.
 
 import type { Category, Product, Size } from "./types";

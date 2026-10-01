@@ -188,7 +188,7 @@ export default async function HomePage() {
       {/* Price shown. No DM needed. */}
       <PriceShown products={products} />
 
-      {/* Wear it to…: a ready fit per occasion */}
+      {/* Designer Fits: a ready fit per occasion */}
       {looks.length > 0 && (
         <section aria-labelledby="occasion-title" className="section">
           <div className="container-ep">

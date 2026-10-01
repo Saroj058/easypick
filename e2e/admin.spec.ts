@@ -93,7 +93,7 @@ test("the owner puts a piece in The Vault and it shows on the home page", async 
   await expect(page.getByText("Saved.")).toBeVisible();
 });
 
-test("the owner sets a Wear it to… look and the home page uses it", async ({ page }) => {
+test("the owner sets a Designer Fits look and the home page uses it", async ({ page }) => {
   await ownerSignIn(page);
 
   await page.goto("/admin/looks");
@@ -112,7 +112,7 @@ test("the owner sets a Wear it to… look and the home page uses it", async ({ p
   await expect(page.getByText(/Saved\. The home page shows these looks/)).toBeVisible();
 
   await page.goto("/");
-  const fits = page.getByRole("region", { name: "Wear it to…" });
+  const fits = page.getByRole("region", { name: "Designer Fits" });
   await expect(fits.getByRole("radio", { name: "Party" })).toBeVisible();
   await expect(fits.getByText("Everyday Hoodie").filter({ visible: true }).first()).toBeVisible(); // the phone layout holds a hidden copy
   await expect(fits.getByText("Relaxed Straight Jean").filter({ visible: true }).first()).toBeVisible(); // the phone layout holds a hidden copy

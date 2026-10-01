@@ -12,7 +12,7 @@ test("home, shop and a product page load @phone", async ({ page }) => {
   await expect(page.getByText(/Free pickup at the store/)).toBeVisible();
 });
 
-test("home: the rail, My size and Wear it to… @phone", async ({ page }) => {
+test("home: the rail, My size and Designer Fits @phone", async ({ page }) => {
   await page.goto("/");
   const rail = page.getByRole("region", { name: "The rail" });
   await expect(rail.locator("#rail-grid > li:not([hidden])").first()).toBeVisible();
@@ -25,7 +25,7 @@ test("home: the rail, My size and Wear it to… @phone", async ({ page }) => {
   expect(sizes.every((s) => s.split(" ").some((x) => x === "XL" || x === "ONE"))).toBe(true);
   await rail.getByRole("button", { name: "XL", exact: true }).click();
 
-  const fits = page.getByRole("region", { name: "Wear it to…" });
+  const fits = page.getByRole("region", { name: "Designer Fits" });
   await fits.scrollIntoViewIfNeeded();
   await fits.getByRole("radio", { name: /Casual/ }).click();
   await expect(fits.getByRole("radio", { name: /Casual/ })).toHaveAttribute("aria-checked", "true");

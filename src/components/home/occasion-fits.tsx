@@ -12,7 +12,7 @@ import { formatPrice } from "@/lib/format";
 import { fitSlot, type Look, type LookPiece } from "@/lib/occasions";
 import type { Size } from "@/lib/types";
 
-// "Wear it to…" as a fit check: a scrolling list of occasions at the side, and the outfit drawn
+// "Designer Fits" as a fit check: a scrolling list of occasions at the side, and the outfit drawn
 // the way it's worn (jacket over tee over joggers) on a grey stage, each piece tied to a hang
 // tag with its name, price and sizes. Numbers on the garments match the numbers on the tags.
 
@@ -159,9 +159,9 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
     <div>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between md:gap-8">
         <h2 id="occasion-title" className="display display-h1">
-          Wear it to…
+          Designer Fits
         </h2>
-        <p className="max-w-[34ch] text-steel-dark md:pb-2 md:text-right">Fit combinations according to top designers.</p>
+        <p className="max-w-[34ch] text-steel-dark md:pb-2 md:text-right">Curated combinations for every occasion.</p>
       </div>
 
       <div className="mt-6 xl:mt-8 xl:grid xl:grid-cols-[224px_minmax(0,1fr)] xl:gap-3">

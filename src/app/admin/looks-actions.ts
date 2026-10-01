@@ -8,7 +8,7 @@ import { OCCASIONS, type SavedLooks } from "@/lib/occasions";
 import { logStaff, requireOwner } from "@/lib/staff";
 import type { SaveState } from "./actions";
 
-/** Owner only: the pieces for each "Wear it to…" look on the home page. Empty slots are picked automatically. */
+/** Owner only: the pieces for each "Designer Fits" look on the home page. Empty slots are picked automatically. */
 export async function saveLooksForm(_prev: SaveState, form: FormData): Promise<SaveState> {
   const me = await requireOwner();
   const looks: SavedLooks = {};

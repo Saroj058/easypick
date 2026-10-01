@@ -6,7 +6,7 @@ import { unstable_cache } from "next/cache";
 import { getDb, schema } from "./db";
 import type { SavedLooks } from "./occasions";
 
-// The owner's "Wear it to…" looks, set in /admin/looks and kept as one JSON value in the meta table.
+// The owner's "Designer Fits" looks, set in /admin/looks and kept as one JSON value in the meta table.
 // An occasion left empty is picked automatically from the rack.
 
 const KEY = "looks";
