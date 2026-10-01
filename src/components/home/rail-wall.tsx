@@ -10,6 +10,7 @@ import { Barcode } from "@/components/hang-tag";
 import { BagIcon, HeartIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { toggleSaved, useList } from "@/components/saved";
+import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock";
 import { FlowButton } from "@/components/ui/flow-button";
 import { hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
@@ -725,34 +726,14 @@ export function RailWall({
         )}
 
         <div className="flex gap-2">
-          <div className="relative min-w-0 flex-1 lg:w-64 lg:flex-none">
-            <label htmlFor="rail-search" className="sr-only">
-              Search the rail
-            </label>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-steel-dark"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="M20 20l-3.5-3.5" />
-            </svg>
-            <input
-              id="rail-search"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search the rail"
-              autoComplete="off"
-              enterKeyHint="search"
-              className="h-11 w-full rounded-none border border-mist bg-paper pl-9 pr-3 text-base outline-none placeholder:text-steel-dark focus:border-ink"
-            />
-          </div>
+          {/* Search: a round button that opens into a field and filters the rail as they type. */}
+          <ExpandingSearchDock
+            value={query}
+            onChange={setQuery}
+            label="Search the rail"
+            placeholder="Search the rail"
+            className="min-w-0 flex-1 lg:w-80 lg:flex-none"
+          />
           {budgets.length > 0 && (
             <button
               type="button"

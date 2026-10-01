@@ -44,11 +44,15 @@ test("home: the rail (size asked once, buy or bag from the card, search) and Des
   await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
 
   // Search narrows the rail as you type, forgiving of spelling.
-  await rail.getByLabel("Search the rail").fill("hudi");
+  await rail.getByRole("button", { name: "Search the rail" }).click(); // the round button opens into a field
+  await rail.getByRole("textbox", { name: "Search the rail" }).fill("hudi");
   await expect(rail.getByRole("status").first()).toContainText(/of \d+ match "hudi"/);
   await expect(rail.getByRole("listitem").filter({ hasText: "Everyday Hoodie" })).toBeVisible();
   await rail.getByRole("button", { name: "Clear", exact: true }).click();
-  await expect(rail.getByLabel("Search the rail")).toHaveValue("");
+  await expect(rail.getByRole("textbox", { name: "Search the rail" })).toHaveValue("");
+  // The cross folds the field back into the round button.
+  await rail.getByRole("button", { name: "Close search" }).click();
+  await expect(rail.getByRole("button", { name: "Search the rail" })).toBeVisible();
 
   // Budget and order sit behind Filter.
   await rail.getByRole("button", { name: "Filter" }).click();
