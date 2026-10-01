@@ -44,12 +44,15 @@ function anchor(slot: SlotKey, side: "left" | "right", layered: boolean): { x: n
   return { x: x(36), y: 78 };
 }
 
+/** The wide-screen stage: its height, the figure's top and width, and how far from the centre line the tags start. */
+const STAGE = { h: 460, top: 58, w: 216, tagAt: 156 };
+
 const badge = "grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-ink bg-volt font-mono text-[11px] font-semibold leading-none text-ink";
 
 function Sizes({ piece, size, onPick }: { piece: LookPiece; size: Size | null; onPick: (s: Size) => void }) {
-  if (piece.sizes.length === 1 && piece.sizes[0].size === "ONE") return <p className="mt-3 font-mono text-[12px] text-steel-dark">One size</p>;
+  if (piece.sizes.length === 1 && piece.sizes[0].size === "ONE") return <p className="mt-2 font-mono text-[12px] text-steel-dark">One size</p>;
   return (
-    <div role="radiogroup" aria-label={`Size for ${piece.name}`} className="mt-3 flex flex-wrap gap-1 sm:gap-1.5">
+    <div role="radiogroup" aria-label={`Size for ${piece.name}`} className="mt-2 flex flex-wrap gap-1 sm:gap-1.5">
       {piece.sizes.map((s) => {
         const out = s.stock <= 0;
         const on = size === s.size;
@@ -62,7 +65,7 @@ function Sizes({ piece, size, onPick }: { piece: LookPiece; size: Size | null; o
             aria-label={`${s.size}${out ? ", sold out" : ""}`}
             disabled={out}
             onClick={() => onPick(s.size)}
-            className={`h-11 min-w-9 border px-1.5 font-mono text-[13px] font-semibold sm:min-w-11 sm:px-2 ${
+            className={`h-10 min-w-9 border px-1.5 font-mono text-[13px] font-semibold sm:min-w-10 sm:px-2 xl:h-9 xl:min-w-9 ${
               on ? "border-ink bg-ink text-paper" : out ? "border-mist bg-photo text-[#aeaeb2] line-through" : "border-mist hover:border-ink"
             }`}
           >
@@ -119,7 +122,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
     setAdded(false);
   };
   /** The up and down buttons beside the list (it also scrolls by touch, wheel and keys). */
-  const scrollList = (dir: 1 | -1) => listRef.current?.scrollBy({ top: dir * 232, left: dir * 240, behavior: "smooth" });
+  const scrollList = (dir: 1 | -1) => listRef.current?.scrollBy({ top: dir * 176, left: dir * 240, behavior: "smooth" });
 
   const figure = (
     <div key={look.key} aria-hidden className="relative aspect-[3/5] w-full animate-fade-up">
@@ -140,7 +143,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
   );
 
   const tag = (w: (typeof worn)[number]) => (
-    <div className="relative border border-mist bg-paper p-3 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.5)] sm:p-4">
+    <div className="relative border border-mist bg-paper p-3 shadow-[0_10px_24px_-18px_rgba(0,0,0,0.5)] sm:p-4 xl:p-3">
       <div className="flex items-center gap-2">
         <span className={badge} aria-hidden>
           {w.n}
@@ -148,7 +151,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
         <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-steel-dark">{w.piece.colour}</span>
         <span className="ml-auto font-mono text-[14px] tabular-nums">{formatPrice(w.piece.price)}</span>
       </div>
-      <Link href={`/product/${w.piece.slug}`} className="mt-2 block text-[15px] font-semibold leading-tight sm:text-[17px] decoration-1 underline-offset-4 hover:underline">
+      <Link href={`/product/${w.piece.slug}`} className="mt-1.5 block text-[15px] font-semibold leading-tight decoration-1 sm:text-[17px] xl:text-[15px] underline-offset-4 hover:underline">
         {w.piece.name}
       </Link>
       <Sizes piece={w.piece} size={sizeOf(w.piece)} onPick={pick(w.piece)} />
@@ -158,18 +161,18 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
   return (
     <div>
       {/* Two ways in: pick a ready-made fit below, or build your own (top right). */}
-      <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-8">
         <div>
-          <h2 id="occasion-title" className="display display-h1">
+          <h2 id="occasion-title" className="display text-[clamp(2.25rem,1.6rem+2.4vw,3.75rem)] leading-[0.92]">
             Designer Fits
           </h2>
-          <p className="mt-2 text-steel-dark">Curated combinations for every occasion.</p>
+          <p className="mt-1.5 text-[15px] text-steel-dark">Curated combinations for every occasion.</p>
         </div>
-        <div className="md:w-[340px] md:shrink-0">
-          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Or make it yours</p>
+        <div className="md:w-[320px] md:shrink-0">
+          <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Or make it yours</p>
           <Link
             href={`/fit?${encodeFit(fit)}`}
-            className="group flex h-[60px] w-full items-center justify-between gap-3 whitespace-nowrap rounded-[2px] border border-ink bg-volt px-5 text-[15px] font-semibold uppercase tracking-[0.04em] text-ink transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#0a0a0a]"
+            className="group flex h-12 w-full items-center justify-between gap-3 whitespace-nowrap rounded-[2px] border border-ink bg-volt px-4 text-[14px] font-semibold uppercase tracking-[0.04em] text-ink transition-shadow duration-200 hover:shadow-[4px_4px_0_0_#0a0a0a]"
           >
             <span className="flex items-center gap-3">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -184,16 +187,16 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
         </div>
       </div>
 
-      <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark xl:mt-10">Ready-made · pick an occasion</p>
+      <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Ready-made · pick an occasion</p>
 
-      <div className="mt-3 xl:grid xl:grid-cols-[224px_minmax(0,1fr)] xl:gap-3">
+      <div className="mt-2 xl:grid xl:grid-cols-[208px_minmax(0,1fr)] xl:gap-3">
         {/* The occasions: a list down the side on wide screens, a row to swipe on small ones. */}
-        <div className="relative xl:h-[640px]">
+        <div className="relative xl:h-[460px]">
           <div
             ref={listRef}
             role="radiogroup"
             aria-labelledby="occasion-title"
-            className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 xl:h-full xl:flex-col xl:gap-1.5 xl:overflow-y-auto xl:overflow-x-hidden xl:py-11"
+            className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 xl:h-full xl:flex-col xl:gap-1 xl:overflow-y-auto xl:overflow-x-hidden xl:py-10"
           >
             {looks.map((l, i) => {
               const on = l.key === look.key;
@@ -208,7 +211,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
                     setAdded(false);
                     e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
                   }}
-                  className={`flex h-12 shrink-0 items-center gap-3 whitespace-nowrap border px-4 text-left text-[15px] font-semibold xl:w-full ${
+                  className={`flex h-11 shrink-0 items-center gap-3 whitespace-nowrap border px-4 text-left text-[15px] font-semibold xl:h-10 xl:w-full xl:text-[14px] ${
                     on ? "border-ink bg-ink text-paper" : "border-mist bg-paper hover:border-ink"
                   }`}
                 >
@@ -226,7 +229,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
             type="button"
             onClick={() => scrollList(-1)}
             aria-label="Earlier occasions"
-            className="absolute inset-x-0 top-0 hidden h-10 items-center justify-center border border-mist bg-paper hover:border-ink xl:flex"
+            className="absolute inset-x-0 top-0 hidden h-9 items-center justify-center border border-mist bg-paper hover:border-ink xl:flex"
           >
             <Chevron up />
           </button>
@@ -234,7 +237,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
             type="button"
             onClick={() => scrollList(1)}
             aria-label="More occasions"
-            className="absolute inset-x-0 bottom-0 hidden h-10 items-center justify-center gap-2 border border-mist bg-paper text-[13px] font-semibold hover:border-ink xl:flex"
+            className="absolute inset-x-0 bottom-0 hidden h-9 items-center justify-center gap-2 border border-mist bg-paper text-[13px] font-semibold hover:border-ink xl:flex"
           >
             {looks.length} fits <Chevron />
           </button>
@@ -252,17 +255,18 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
           </div>
 
           {/* Wide screens: the figure in the middle, each tag tied to its garment by a line. */}
-          <div className="relative hidden h-[640px] bg-photo xl:block">
-            <p className="absolute left-5 top-4 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
+          <div className="relative hidden bg-photo xl:block" style={{ height: STAGE.h }}>
+            <p className="absolute left-4 top-3 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
               The {look.label.toLowerCase()} fit · {look.pieces.length} pieces
             </p>
-            <div className="absolute left-1/2 top-[84px] w-[300px] -translate-x-1/2">{figure}</div>
+            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: STAGE.top, width: STAGE.w }}>
+              {figure}
+            </div>
             {worn.map((w) => {
               const a = anchor(w.slot, w.side, layered);
-              // The figure box is 300×500 with its top 84px down the stage; tags start 200px from the centre line.
-              const y = 84 + (a.y / 100) * 500;
-              const fromCentre = Math.abs(a.x - 50) * 3 + 12; // px from the centre line to just past the number
-              const line = { top: y, width: 200 - fromCentre };
+              const y = STAGE.top + (a.y / 100) * STAGE.w * (5 / 3); // the figure box is 3:5
+              const fromCentre = Math.abs(a.x - 50) * (STAGE.w / 100) + 12; // px from the centre line to just past the number
+              const line = { top: y, width: STAGE.tagAt - fromCentre };
               return (
                 <div key={w.slot}>
                   <span
@@ -270,7 +274,7 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
                     className="absolute h-px bg-ink/50"
                     style={w.side === "left" ? { ...line, right: `calc(50% + ${fromCentre}px)` } : { ...line, left: `calc(50% + ${fromCentre}px)` }}
                   />
-                  <div className="absolute w-[250px]" style={w.side === "left" ? { top: y - 28, right: "calc(50% + 200px)" } : { top: y - 28, left: "calc(50% + 200px)" }}>
+                  <div className="absolute w-[224px]" style={w.side === "left" ? { top: y - 26, right: `calc(50% + ${STAGE.tagAt}px)` } : { top: y - 26, left: `calc(50% + ${STAGE.tagAt}px)` }}>
                     {tag(w)}
                   </div>
                 </div>
@@ -281,19 +285,19 @@ export function OccasionFits({ looks }: { looks: Look[] }) {
       </div>
 
       {/* One bar: what the ready-made fit costs, and the button to take it. */}
-      <div className="mt-0 flex flex-col gap-4 border border-mist p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between xl:mt-3">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
+      <div className="flex flex-col gap-3 border border-mist p-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 xl:mt-2">
+        <p className="flex items-baseline gap-3">
+          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
             The {look.label.toLowerCase()} fit · {look.pieces.length} pieces
-          </p>
-          <p className="mt-1 font-mono text-[32px] font-semibold leading-none tabular-nums">{formatPrice(total)}</p>
-        </div>
+          </span>
+          <span className="font-mono text-[24px] font-semibold leading-none tabular-nums">{formatPrice(total)}</span>
+        </p>
         <button
           type="button"
           onClick={addAll}
           disabled={!ready}
           aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
-          className="btn btn-ink h-[60px] w-full lg:w-[360px]"
+          className="btn btn-ink h-12 min-h-0 w-full sm:w-[280px]"
         >
           {added ? "Added to your bag" : "Add the fit"}
         </button>

@@ -190,7 +190,7 @@ export default async function HomePage() {
 
       {/* Designer Fits: a ready fit per occasion */}
       {looks.length > 0 && (
-        <section aria-labelledby="occasion-title" className="section">
+        <section aria-labelledby="occasion-title" className="py-10 md:py-14">
           <div className="container-ep">
             <OccasionFits looks={looks} />
           </div>
