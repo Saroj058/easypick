@@ -190,7 +190,7 @@ export default async function HomePage() {
 
       {/* Wear it to…: a ready fit per occasion */}
       {looks.length > 0 && (
-        <section aria-labelledby="occasion-title" className="section bg-photo">
+        <section aria-labelledby="occasion-title" className="section">
           <div className="container-ep">
             <OccasionFits looks={looks} />
           </div>
@@ -226,11 +226,11 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Self-checkout: the kiosk, the steps, and the Nepali line */}
-      <SelfCheckout />
-
       {/* Our store: the physical shop */}
       <OurStore info={await getStoreInfo()} />
+
+      {/* Self-checkout: the kiosk, the steps, and the Nepali line */}
+      <SelfCheckout />
 
       {/* Track an order: no account needed */}
       <section aria-labelledby="track-title" className="border-t border-mist py-14 md:py-20">

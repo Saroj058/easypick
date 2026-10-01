@@ -193,10 +193,11 @@ function TrailArrow({ up }: { up: boolean }) {
 
 export function SelfCheckout() {
   return (
-    <section aria-labelledby="checkout-title" className="overflow-hidden py-12 md:py-16">
+    <section aria-labelledby="checkout-title" className="overflow-hidden py-14 md:py-20">
       <div className="container-ep">
-        <div className="grid gap-10 lg:grid-cols-12 lg:items-center lg:gap-6">
-          <div className="lg:col-span-5" data-reveal>
+        {/* Wide screens: words on the left edge, the kiosk in the middle, the steps on the right edge. */}
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+          <div className="lg:max-w-[420px]" data-reveal>
             <h2 id="checkout-title" className="display text-[clamp(2.5rem,1.9rem+2.4vw,4rem)] leading-[0.92]">
               Pick it.
               <br />
@@ -217,7 +218,7 @@ export function SelfCheckout() {
             </ul>
           </div>
 
-          <div className="flex items-center justify-center gap-3 sm:gap-5 lg:col-span-7" data-reveal>
+          <div className="flex items-center justify-center gap-3 sm:gap-6 lg:contents">
             <Kiosk />
             <div className="flex w-[128px] flex-col gap-4 sm:w-[210px] sm:gap-6">
               <div className="w-[64px] self-start sm:w-[88px]">
@@ -247,7 +248,7 @@ export function SelfCheckout() {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-dashed border-steel pt-4 md:pt-5">
+        <div className="mt-10 border-t border-dashed border-steel pt-6 md:mt-14 md:pt-8">
           <p
             lang="ne"
             className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 text-center font-baloo text-[16px] font-bold leading-relaxed md:text-[19px] lg:flex-nowrap lg:text-[21px]"
