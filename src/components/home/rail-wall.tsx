@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import {
+  Children,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useAddToBag } from "@/components/bag-gate";
@@ -542,6 +548,132 @@ function Piece({
   );
 }
 
+/** Every card on a rail is the same width: about two and a half to a phone screen, three to a tablet, four to a desktop. */
+const card =
+  "w-[62%] max-w-[260px] shrink-0 snap-start md:w-[calc((100%-2rem)/3)] md:max-w-none lg:w-[calc((100%-3rem)/4)]";
+
+/**
+ * One section of the wall: its shelf label, and its pieces in a single row that slides sideways.
+ * The row snaps card by card; phones swipe it, and wider screens also get arrows on the label.
+ * It keeps going to the right as pieces are added.
+ */
+function Shelf({
+  index,
+  id,
+  label,
+  caption,
+  showAll,
+  children,
+}: {
+  index: number;
+  id: string;
+  label: string;
+  caption: string;
+  /** Where "Show all" goes; none while searching. */
+  showAll: string | null;
+  children: React.ReactNode;
+}) {
+  const row = useRef<HTMLUListElement>(null);
+  const [edge, setEdge] = useState({ start: true, end: true });
+  const count = Children.count(children);
+
+  // Which arrows have somewhere to go.
+  useEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const measure = () =>
+      setEdge({
+        start: el.scrollLeft <= 2,
+        end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2,
+      });
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [count]);
+
+  /** One screenful along; the snap lines it up on a card. */
+  const slide = (dir: 1 | -1) =>
+    row.current?.scrollBy({
+      left: dir * row.current.clientWidth,
+      behavior: "smooth",
+    });
+  const arrow =
+    "grid h-11 w-11 place-items-center border border-ink bg-paper hover:bg-ink hover:text-paper disabled:border-mist disabled:bg-transparent disabled:text-[#8e8e93]";
+
+  return (
+    <section
+      id={`rail-${id}`}
+      aria-labelledby={`rail-${id}-title`}
+      className={`scroll-mt-24 ${index === 0 ? "pt-4" : "pt-8 md:pt-10"}`}
+    >
+      {/* The shelf label: section number, what hangs here, the arrows and Show all. */}
+      <div className="flex min-h-11 items-center gap-3 border-t-2 border-ink bg-photo px-3 py-1.5">
+        <span className="grid h-5 min-w-6 place-items-center bg-ink px-1 font-mono text-[11px] font-semibold text-paper">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <h3
+          id={`rail-${id}-title`}
+          className="font-display text-[20px] uppercase leading-none tracking-[0.02em] md:text-[22px]"
+        >
+          {label}
+        </h3>
+        <span className={`${mono} hidden text-steel-dark sm:block`}>
+          {caption}
+        </span>
+        <div className="-my-1.5 ml-auto flex shrink-0 items-center gap-3">
+          {showAll && (
+            <Link
+              href={showAll}
+              aria-label={`Show all ${label.toLowerCase()}`}
+              className="group flex h-11 items-center"
+            >
+              <span className="flex h-8 items-center gap-1.5 border border-ink px-3 text-[12px] font-semibold uppercase tracking-[0.06em] group-hover:bg-ink group-hover:text-paper">
+                Show all <Arrow />
+              </span>
+            </Link>
+          )}
+          {!(edge.start && edge.end) && (
+            <div className="hidden md:flex">
+              <button
+                type="button"
+                onClick={() => slide(-1)}
+                disabled={edge.start}
+                aria-label={`Earlier ${label.toLowerCase()}`}
+                className={arrow}
+              >
+                <Arrow className="rotate-180" />
+              </button>
+              <button
+                type="button"
+                onClick={() => slide(1)}
+                disabled={edge.end}
+                aria-label={`More ${label.toLowerCase()}`}
+                className={`${arrow} -ml-px`}
+              >
+                <Arrow />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* The section's rail, with the pieces hanging from it in one row. */}
+      <div className="mt-5 border-t-2 border-ink">
+        <ul
+          ref={row}
+          className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto scroll-smooth px-4 pb-1 md:mx-0 md:gap-4 md:scroll-px-0 md:px-0"
+        >
+          {children}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 export function RailWall({
   sections,
   budgets,
@@ -806,68 +938,31 @@ export function RailWall({
         </p>
       )}
 
-      {wall.map((s, i) => {
-        // A rail shows four pieces; Show all goes to everything of that kind in the shop.
-        const shown = q ? s.show : s.show.slice(0, 4);
-        return (
-          <section
-            key={s.key}
-            id={`rail-${s.key}`}
-            aria-labelledby={`rail-${s.key}-title`}
-            className={`scroll-mt-24 ${i === 0 ? "pt-4" : "pt-8 md:pt-10"}`}
-          >
-            {/* The shelf label: section number, what hangs here, how many and for how much. */}
-            <div className="flex min-h-11 items-center gap-3 border-t-2 border-ink bg-photo px-3 py-1.5">
-              <span className="grid h-5 min-w-6 place-items-center bg-ink px-1 font-mono text-[11px] font-semibold text-paper">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <h3
-                id={`rail-${s.key}-title`}
-                className="font-display text-[20px] uppercase leading-none tracking-[0.02em] md:text-[22px]"
-              >
-                {s.label}
-              </h3>
-              <span className={`${mono} hidden text-steel-dark sm:block`}>
-                {s.caption}
-              </span>
-              {!q && (
-                <Link
-                  href={withSize(s.href)}
-                  aria-label={`Show all ${s.label.toLowerCase()}`}
-                  className="group -my-1.5 ml-auto flex h-11 shrink-0 items-center"
-                >
-                  <span className="flex h-8 items-center gap-1.5 border border-ink px-3 text-[12px] font-semibold uppercase tracking-[0.06em] group-hover:bg-ink group-hover:text-paper">
-                    Show all <Arrow />
-                  </span>
-                </Link>
-              )}
-            </div>
-
-            {/* The section's rail, with the pieces hanging from it. Phones swipe along it. */}
-            <div className="mt-5 border-t-2 border-ink">
-              <ul className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-3 md:gap-x-4 md:gap-y-10 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-4">
-                {shown.map((p, n) => (
-                  <li
-                    key={p.id}
-                    className="w-[62%] max-w-[260px] shrink-0 snap-start md:w-auto md:max-w-none"
-                  >
-                    <Piece
-                      piece={p}
-                      mySize={mySize}
-                      priority={i === 0 && n < 2}
-                      onBuy={setBuying}
-                      onAdded={(line) => {
-                        setAddedHere(true);
-                        setLast(line);
-                      }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        );
-      })}
+      {wall.map((s, i) => (
+        <Shelf
+          key={s.key}
+          index={i}
+          id={s.key}
+          label={s.label}
+          caption={s.caption}
+          showAll={q ? null : withSize(s.href)}
+        >
+          {s.show.map((p, n) => (
+            <li key={p.id} className={card}>
+              <Piece
+                piece={p}
+                mySize={mySize}
+                priority={i === 0 && n < 2}
+                onBuy={setBuying}
+                onAdded={(line) => {
+                  setAddedHere(true);
+                  setLast(line);
+                }}
+              />
+            </li>
+          ))}
+        </Shelf>
+      ))}
 
       {wall.length === 0 && (
         <div className="py-14 text-center">

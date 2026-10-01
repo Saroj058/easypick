@@ -69,6 +69,11 @@ test("home: the rail (size asked once, buy or bag from the card, search) and Des
   await rail.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(budget).toHaveAttribute("aria-pressed", "false");
   await expect(rail.getByRole("link", { name: "Shop all" }).last()).toHaveAttribute("href", "/shop?size=M");
+  // Each section is one row that slides sideways: every card the same size, arrows on the label.
+  const row = first.getByRole("list");
+  expect(await row.evaluate((el) => getComputedStyle(el).flexWrap)).toBe("nowrap");
+  const sizes = await row.getByRole("listitem").evaluateAll((els) => els.map((e) => `${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`));
+  expect(new Set(sizes).size).toBe(1);
   // Each section's Show all opens everything of that kind in the shop.
   await expect(rail.getByRole("link", { name: /^Show all/ }).first()).toHaveAttribute("href", /\/shop\?category=tees,hoodies.*size=M/);
 
