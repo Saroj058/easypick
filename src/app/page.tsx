@@ -5,7 +5,7 @@ import { Countdown } from "@/components/countdown";
 import { HeroRack, type RackPiece } from "@/components/hero-rack";
 import { OccasionFits } from "@/components/home/occasion-fits";
 import { OurStore } from "@/components/home/our-store";
-import { PriceShown } from "@/components/home/price-shown";
+import { DeliveryStrip } from "@/components/home/price-shown";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
 
@@ -131,9 +131,31 @@ export default async function HomePage() {
                 </>
               )}
             </h1>
-            <p className="mt-5 max-w-[36ch] text-[15px] text-paper/80 sm:text-[17px]">
-              Tees, hoodies, jackets, jeans and caps. {formatPrice(stats.priceFrom)} to {formatPrice(stats.priceTo)}, price on every tag.
-            </p>
+            {/* The promise: the message people send other shops, struck out, and the tag that answers it. */}
+            <div className="group mt-6 max-w-[440px]">
+              <div aria-hidden className="flex items-start gap-3">
+                <div className="flex flex-col items-start gap-1.5 pt-1">
+                  <span className="dm-bubble rounded-[18px] rounded-bl-[5px] bg-[#2c2c2e] px-3.5 py-2 text-[15px] leading-5 text-paper/70">
+                    <span className="dm-strike">bro price?</span>
+                  </span>
+                  <span className="dm-note pl-1 font-mono text-[10px] uppercase tracking-[0.14em] text-paper/60">Not sent</span>
+                </div>
+                <div className="tag-hang hero-tag flex flex-col items-center">
+                  <span className="h-2 w-2 rounded-full border border-paper/70" />
+                  <span className="h-4 w-px bg-paper/70" />
+                  <div className="hang-tag px-3.5 pb-2.5 pt-6 font-mono">
+                    <p className="whitespace-nowrap text-[19px] font-semibold leading-none tabular-nums">{formatPrice(stats.priceFrom)}</p>
+                    <p className="mt-1.5 whitespace-nowrap text-[9px] uppercase leading-none tracking-[0.12em] text-steel-dark">
+                      to {stats.priceTo.toLocaleString("en-IN")} · fixed
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <p className="display mt-3 text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] leading-[0.95]">
+                Price shown. <span className="whitespace-nowrap text-paper/60">No DM needed.</span>
+              </p>
+              <p className="mt-2 text-[15px] text-paper/75">One price for everyone, printed on every tag. VAT included.</p>
+            </div>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn btn-volt">
                 {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
@@ -185,8 +207,8 @@ export default async function HomePage() {
       {/* The rail: products first, with quick filters and "My size" */}
       <Rail products={products} />
 
-      {/* Price shown. No DM needed. */}
-      <PriceShown products={products} />
+      {/* Delivery, payment and the size swap, in one line */}
+      <DeliveryStrip />
 
       {/* Designer Fits: a ready fit per occasion */}
       {looks.length > 0 && (
