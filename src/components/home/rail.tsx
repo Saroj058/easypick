@@ -112,7 +112,7 @@ export function Rail({ products }: { products: Product[] }) {
           sections={sections}
           budgets={budgets}
           pieces={live.length}
-          facts={["Fixed price", "Pay with eSewa", "Free pickup", `Delivery ${formatPrice(site.delivery.flatFee)}`]}
+          facts={[{ text: "Fixed price" }, { text: "Pay with eSewa" }, { text: "Free pickup" }, { text: `Delivery ${formatPrice(site.delivery.flatFee)}` }, { text: "7-day size swap", href: "/returns" }]}
         />
       </div>
     </section>

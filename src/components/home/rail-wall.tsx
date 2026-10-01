@@ -551,7 +551,7 @@ export function RailWall({
   sections: RailSection[];
   budgets: number[];
   pieces: number;
-  facts: string[];
+  facts: { text: string; href?: string }[];
 }) {
   const mySize = useMySize();
   const bag = useBag();
@@ -628,15 +628,12 @@ export function RailWall({
         >
           The rail
         </h2>
-        <div className="hidden sm:block">
-          <FlowButton href={withSize("/shop")} text="Shop all" />
-        </div>
+        <FlowButton
+          href={withSize("/shop")}
+          text="Shop all"
+          className="shrink-0"
+        />
       </div>
-      {/* What every customer wants to know before buying. */}
-      <p className={`${mono} mt-3 leading-[1.7] text-steel-dark`}>
-        {facts.join(" · ")}
-      </p>
-
       {/* Asked once: their size. Then search and filter, kept small. */}
       <div className="mt-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
         {asking ? (
@@ -888,23 +885,23 @@ export function RailWall({
         </div>
       )}
 
-      {/* The floor: the end of the wall. */}
-      <div className="mt-10 md:mt-12">
-        <div
-          aria-hidden
-          className="h-2 bg-[repeating-linear-gradient(135deg,var(--color-ink)_0_1px,transparent_1px_6px)]"
-        />
-        <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-          <p className={`${mono} text-steel-dark`}>
-            End of the wall · fixed prices, as on the tag
-          </p>
-          <FlowButton
-            href={withSize("/shop")}
-            text="Shop all"
-            className="w-full sm:w-auto"
-          />
-        </div>
-      </div>
+      {/* Under the rail: what every customer wants to know before buying, in one line. */}
+      <ul className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-2 border-y border-mist py-4 text-[15px] font-semibold md:mt-12 md:justify-between">
+        {facts.map((f) => (
+          <li key={f.text}>
+            {f.href ? (
+              <Link
+                href={f.href}
+                className="underline-offset-4 hover:underline"
+              >
+                {f.text}
+              </Link>
+            ) : (
+              f.text
+            )}
+          </li>
+        ))}
+      </ul>
 
       {/* After the first add here: what's in the bag so far, the way to it, and a way back. Stays in reach while the rail is on screen. */}
       {addedHere && bag.ready && bag.count > 0 && (

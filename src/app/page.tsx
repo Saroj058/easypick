@@ -5,7 +5,6 @@ import { Countdown } from "@/components/countdown";
 import { HeroRack, type RackPiece } from "@/components/hero-rack";
 import { OccasionFits } from "@/components/home/occasion-fits";
 import { OurStore } from "@/components/home/our-store";
-import { DeliveryStrip } from "@/components/home/price-shown";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
 
@@ -182,8 +181,6 @@ export default async function HomePage() {
       {/* The rail: products first, with quick filters and "My size" */}
       <Rail products={range} />
 
-      {/* Delivery, payment and the size swap, in one line */}
-      <DeliveryStrip />
 
       {/* Designer Fits: a ready fit per occasion */}
       {looks.length > 0 && (
