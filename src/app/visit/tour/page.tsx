@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import { WalkTour } from "@/components/walk-tour";
 import { formatPrice } from "@/lib/format";
@@ -7,15 +7,17 @@ import { TOUR_STOPS } from "@/lib/tour-plan";
 
 export const metadata: Metadata = {
   title: "Walk the store",
-  description: "A one-minute film through Easypick in Kathmandu: the racks, the fitting rooms, the self-checkout kiosk and the way out. The store as planned, built in 3D before it is fitted out.",
+  description: "Scroll to walk through Easypick in Kathmandu: the racks, the fitting rooms, the self-checkout kiosk and the way out. The store as planned, built in 3D before it is fitted out.",
   alternates: { canonical: "/visit/tour" },
 };
+// The tour fills the window, edge to edge and dark, so the browser's own bars go dark with it.
+export const viewport: Viewport = { themeColor: "#0a0a0a" };
 // Only the tag and the kiosk's bill come from the catalogue, so the page can be cached.
 export const revalidate = 300;
 
 const cm = (v?: number) => (v ? `${v} cm` : null);
 
-// The tour is the film and nothing else: no intro above it, no block below it.
+// The tour is the walk and nothing else: no site header, no footer (see ShopChrome), no intro, no block below it.
 export default async function TourPage() {
   const [products, timeline] = await Promise.all([getProducts(), getDropTimeline()]);
   const live = products.filter((p) => p.status === "live" && !p.vault);

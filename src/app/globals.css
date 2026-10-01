@@ -923,3 +923,35 @@
     animation: none !important;
   }
 }
+
+/* The virtual tour: each row of a stop's line rises into place from behind its own edge, and the
+   scroll hint is a line that keeps falling. */
+.tour-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+}
+.tour-line > span {
+  display: block;
+  animation: tour-line 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes tour-line {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: none;
+  }
+}
+.tour-hint {
+  animation: tour-hint 1800ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes tour-hint {
+  0% {
+    transform: translateY(-100%);
+  }
+  70%,
+  100% {
+    transform: translateY(100%);
+  }
+}

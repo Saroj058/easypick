@@ -1,60 +1,74 @@
 import { expect, test } from "@playwright/test";
 
-// The tour is a film on a clock. Headless Chrome draws WebGL in software (slowly), so these tests
-// jump between chapters with the buttons instead of waiting for the film to get there.
+// The tour is the page's scroll: the store fills the window and scrolling walks through it.
+// Headless Chrome draws WebGL in software (slowly), so these tests go from stop to stop with the
+// buttons and give the walk time to arrive.
 
-test("walk the store: the film plays, pauses and jumps between its chapters @phone", async ({ page }, info) => {
+test("walk the store: full screen, the scroll is the walk, and it can walk itself @phone", async ({ page }, info) => {
   test.setTimeout(240_000);
   const errors: string[] = [];
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/visit/tour");
   const tour = page.getByRole("region", { name: "Virtual tour" });
-  // Nothing but the film: no intro, no end block.
-  await expect(page.getByText(/Scroll to walk in/)).toHaveCount(0);
-  await expect(page.getByText(/END OF THE WALK|Get the opening-day SMS|Share the tour|Walk it again/)).toHaveCount(0);
 
-  // The 3D canvas loads and the film starts by itself.
+  // Nothing but the tour: no site header, no footer, no tab bar. The way out is the cross.
+  await expect(page.getByRole("banner")).toHaveCount(0);
+  await expect(page.getByRole("contentinfo")).toHaveCount(0);
+  await expect(tour.getByRole("link", { name: "Close the tour" })).toHaveAttribute("href", "/visit");
+
+  // The 3D canvas loads and waits at the street: nothing moves until you scroll.
   await expect(tour.locator("canvas")).toBeVisible({ timeout: 60_000 });
-  await expect(tour).toHaveAttribute("data-tour-state", "playing", { timeout: 60_000 });
+  await expect(tour).toHaveAttribute("data-tour-state", "ready", { timeout: 60_000 });
   await expect(tour).toHaveAttribute("data-chapter", "street");
-  await page.screenshot({ path: `test-results/shots/film-0-street-${info.project.name}.png` });
+  await expect(tour.getByText("Scroll to walk in")).toBeVisible();
+  await page.screenshot({ path: `test-results/shots/tour-0-street-${info.project.name}.png` });
 
-  // The button pauses and plays.
-  await tour.getByRole("button", { name: "Pause" }).click();
-  await expect(tour).toHaveAttribute("data-tour-state", "paused");
-  await tour.getByRole("button", { name: "Play", exact: true }).click();
-  await expect(tour).toHaveAttribute("data-tour-state", "playing");
+  // Scrolling the page walks in.
+  await page.evaluate(() => window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * 0.21, behavior: "instant" }));
+  await expect(tour).toHaveAttribute("data-chapter", "enter", { timeout: 30_000 });
+  await expect(tour.getByText("Just looking?").first()).toBeVisible();
 
-  // Each chapter button jumps there, and the caption follows.
-  const captions: [string, string, RegExp][] = [
-    ["Pick", "pick", /Fixed price\. Size in cm\./],
-    ["Try", "try", /Take a token/],
-    ["Pay", "pay", /Scan with eSewa/],
-    ["Pickup", "pickup", /Collect here/],
-    ["Out", "out", /Pick it\. Pay it\. Wear it\./],
+  // Each stop's button goes there, and the line follows.
+  const captions: [string, string, string][] = [
+    ["Pick", "pick", "Fixed price."],
+    ["Try", "try", "Take a token."],
+    ["Pay", "pay", "Scan with eSewa."],
+    ["Pickup", "pickup", "Collect here."],
+    ["Out", "out", "Wear it."],
   ];
   for (const [name, id, caption] of captions) {
     await tour.getByRole("button", { name: new RegExp(`^Stop \\d: ${name}$`) }).click();
-    await expect(tour).toHaveAttribute("data-chapter", id);
+    await expect(tour).toHaveAttribute("data-chapter", id, { timeout: 30_000 });
     await expect(tour.getByText(caption).first()).toBeVisible();
     await page.waitForTimeout(1500);
-    await page.screenshot({ path: `test-results/shots/film-${id}-${info.project.name}.png` });
+    await page.screenshot({ path: `test-results/shots/tour-${id}-${info.project.name}.png` });
   }
+
+  // The end of the walk says where to go next.
+  await expect(tour).toHaveAttribute("data-tour-state", "ended", { timeout: 30_000 });
+  await expect(tour.getByRole("link", { name: "Visit the store" })).toHaveAttribute("href", "/visit");
+  await expect(tour.getByRole("link", { name: "Shop the drop" })).toHaveAttribute("href", "/shop");
+
+  // It can walk itself, from the street again, and pauses when asked.
+  await tour.getByRole("button", { name: "Walk it again" }).click();
+  await expect(tour).toHaveAttribute("data-tour-state", "playing");
+  await expect(tour).toHaveAttribute("data-chapter", "street");
+  await tour.getByRole("button", { name: "Pause" }).click();
+  await expect(tour).not.toHaveAttribute("data-tour-state", "playing");
   expect(errors.filter((e) => !/Download the React DevTools|favicon/.test(e))).toEqual([]);
 });
 
-test("walk the store: with motion turned off nothing plays on its own, and the stops are stepped through", async ({ browser }) => {
+test("walk the store: with motion turned off nothing walks by itself, and the stops are stepped through", async ({ browser }) => {
   test.setTimeout(120_000);
   const ctx = await browser.newContext({ reducedMotion: "reduce" });
   const page = await ctx.newPage();
   await page.goto("/visit/tour");
   const tour = page.getByRole("region", { name: "Virtual tour" });
   await expect(tour.getByRole("button", { name: "Next stop" })).toBeVisible({ timeout: 60_000 });
-  await expect(tour.getByRole("button", { name: "Pause" })).toHaveCount(0);
-  await expect(tour).not.toHaveAttribute("data-tour-state", "playing");
+  await expect(tour.getByRole("button", { name: /Walk it for me|Pause/ })).toHaveCount(0);
   await tour.getByRole("button", { name: "Next stop" }).click();
   await expect(tour).toHaveAttribute("data-chapter", "enter");
-  await expect(tour.getByText("Just looking? Perfect.").first()).toBeVisible();
+  await expect(tour.getByText("Just looking?").first()).toBeVisible();
   await ctx.close();
 });
