@@ -162,23 +162,15 @@ export function Vault({ products }: { products: Product[] }) {
           </nav>
         )}
 
-        {/* Featured: the word on the left, five pieces beside it. */}
-        <div className="grid gap-5 lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-6">
-          <div className="flex items-baseline justify-between gap-4 lg:flex-col lg:justify-between lg:border-r lg:border-[#2c2c2e] lg:pr-6">
-            <div>
-              <h3 className="font-display text-[34px] uppercase leading-none tracking-[0.03em] lg:text-[40px]">Featured</h3>
-              <p className="mt-2 hidden font-mono text-[11px] uppercase tracking-[0.14em] text-steel lg:block">
-                {featured.length} of {pieces.length} {pieces.length === 1 ? "piece" : "pieces"}
-              </p>
-            </div>
-            <Link href={vaultHref()} className="flex min-h-11 shrink-0 items-center text-[13px] font-semibold uppercase tracking-[0.08em] underline underline-offset-4">
-              Show all
-            </Link>
-          </div>
-          <ul className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0">
+        {/* Featured: the word runs up the left side, five pieces beside it. (Enter, above, is the way to all of them.) */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 lg:gap-6">
+          <h3 className="rotate-180 self-stretch border-l border-[#2c2c2e] pl-3 text-center font-display text-[30px] uppercase leading-none tracking-[0.14em] [writing-mode:vertical-rl] lg:pl-5 lg:text-[40px]">
+            Featured
+          </h3>
+          <ul className="no-scrollbar -mr-4 flex snap-x gap-4 overflow-x-auto pr-4 md:mr-0 md:grid md:grid-cols-5 md:overflow-visible md:pr-0">
             {featured.map((p) => (
-              <li key={p.id} className="w-[56vw] max-w-[240px] shrink-0 snap-start md:w-auto md:max-w-none">
-                <VaultCard piece={p} sizes="(min-width: 768px) 18vw, 56vw" />
+              <li key={p.id} className="w-[52vw] max-w-[240px] shrink-0 snap-start md:w-auto md:max-w-none">
+                <VaultCard piece={p} sizes="(min-width: 768px) 18vw, 52vw" />
               </li>
             ))}
           </ul>
