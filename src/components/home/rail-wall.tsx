@@ -8,6 +8,7 @@ import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useAddToBag } from "@/components/bag-gate";
 import { useFitProfile } from "@/components/fit-finder";
 import { useBag } from "@/components/bag-provider";
+import { PriceTag } from "@/components/hang-tag";
 import { BagIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
@@ -530,18 +531,26 @@ function Shelf({
         label={label}
         onSelect={setActive}
         onActivate={(i) => router.push(`/product/${pieces[i].slug}`)}
-        cardClassName="[&_img]:pointer-events-none"
+        cardClassName="group [&_img]:pointer-events-none"
         className="-mx-4 w-auto md:mx-0"
         renderSlide={(i) => (
-          <ProductImage
-            image={pieces[i].image}
-            category={pieces[i].category}
-            colourHex={pieces[i].colours[0].hex}
-            decorative
-            priority={index === 0 && i < 2}
-            sizes="(min-width: 1280px) 300px, (min-width: 800px) 24vw, 190px"
-            className="h-full"
-          />
+          <>
+            <ProductImage
+              image={pieces[i].image}
+              category={pieces[i].category}
+              colourHex={pieces[i].colours[0].hex}
+              decorative
+              priority={index === 0 && i < 2}
+              sizes="(min-width: 1280px) 300px, (min-width: 800px) 24vw, 190px"
+              className="h-full"
+            />
+            {/* The price, on a tag tied to the top of the card. */}
+            <PriceTag
+              price={formatPrice(pieces[i].price)}
+              sku={pieces[i].colours[0].sizes[0]?.sku ?? pieces[i].id}
+              className="absolute right-3 top-0 md:right-4"
+            />
+          </>
         )}
       />
 

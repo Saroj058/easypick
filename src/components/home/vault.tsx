@@ -175,6 +175,7 @@ export function Vault({ products }: { products: Product[] }) {
               brand: p.brand ?? "",
               tag: tag(p),
               price: p.status === "sold_out" ? "Sold" : formatPrice(p.salePrice ?? p.price),
+              sku: p.variants[0]?.sku ?? p.id,
               image: p.images[0] ?? { src: null, alt: p.name, kind: "front" },
               category: p.category,
               hex: p.colours[0]?.hex ?? "#2b2b2e",

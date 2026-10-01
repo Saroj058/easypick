@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { PriceTag } from "@/components/hang-tag";
 import { ProductImage } from "@/components/product-image";
 import { StackedCarousel } from "@/components/ui/stacked-carousel";
 import type { Category, ProductImage as Img } from "@/lib/types";
@@ -16,6 +17,8 @@ export interface FeaturedPiece {
   /** "ORIGINAL", "07 / 20" or empty. */
   tag: string;
   price: string;
+  /** A code for the tag's barcode. */
+  sku: string;
   image: Img;
   category: Category;
   hex: string;
@@ -34,7 +37,7 @@ export function VaultFeatured({ pieces }: { pieces: FeaturedPiece[] }) {
         label="Featured pieces"
         onSelect={setFront}
         onActivate={(i) => router.push(`/product/${pieces[i].slug}`)}
-        cardClassName="bg-[#151517]"
+        cardClassName="group bg-[#151517]"
         renderCard={(i) => {
           const p = pieces[i];
           return (
@@ -42,12 +45,11 @@ export function VaultFeatured({ pieces }: { pieces: FeaturedPiece[] }) {
               <ProductImage image={p.image} category={p.category} colourHex={p.hex} decorative sizes="(min-width: 1024px) 256px, (min-width: 640px) 224px, 176px" className="h-full [&_img]:pointer-events-none" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
               <span className="absolute right-3 top-3 bg-[#f2efe8] px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink">{p.brand}</span>
+              {/* The price, on a tag tied to the top of the card. */}
+              <PriceTag price={p.price} sku={p.sku} className="absolute left-3 top-0" />
               <div className="absolute inset-x-3 bottom-3 text-[#f2efe8]">
                 <p className="text-[15px] font-semibold leading-tight">{p.name}</p>
-                <p className="mt-1 flex items-baseline justify-between gap-2 font-mono text-[13px] tabular-nums">
-                  {p.price}
-                  {p.tag && <span className="text-[10px] tracking-[0.08em] text-[#aeaba3]">{p.tag}</span>}
-                </p>
+                {p.tag && <p className="mt-1 font-mono text-[10px] tracking-[0.08em] text-[#aeaba3]">{p.tag}</p>}
               </div>
             </>
           );
