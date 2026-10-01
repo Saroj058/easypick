@@ -15,7 +15,6 @@ import { categoryLabels, site } from "@/lib/site";
 import { jsonLd as toJsonLd } from "@/lib/json-ld";
 import { getDrop, getProduct, getProducts } from "@/lib/store";
 import type { Size } from "@/lib/types";
-import { FestivalNotice } from "@/components/festival-notice";
 
 export const revalidate = 300;
 
@@ -167,7 +166,6 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                 <p className="mt-2 text-steel-dark">{product.shortDescription}</p>
                 {product.story && <p className="mt-4 max-w-[46ch] whitespace-pre-line text-[15px] leading-relaxed">{product.story}</p>}
               </div>
-              <FestivalNotice className="mt-4" />
 
               <div className="mt-6">
                 <BuyPanel

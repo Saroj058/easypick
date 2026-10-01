@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { FestivalNotice } from "@/components/festival-notice";
 import { ProductCard } from "@/components/product-card";
 import { sellable } from "@/lib/inventory";
 import { categoryLabels } from "@/lib/site";
@@ -63,7 +62,6 @@ export function Rail({ products }: { products: Product[] }) {
           </Link>
         </nav>
 
-        <FestivalNotice className="mt-6 max-w-2xl" />
 
         <ul id="rail-grid" className="mt-8 grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
           {pool.map((p, i) => (

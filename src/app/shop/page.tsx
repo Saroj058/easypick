@@ -7,7 +7,6 @@ import { ProductGrid } from "@/components/product-card";
 import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import type { Category, Fit, Product } from "@/lib/types";
-import { FestivalNotice } from "@/components/festival-notice";
 
 export const metadata: Metadata = {
   title: "Shop all",
@@ -123,7 +122,6 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
         {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.category ? categoryLabels[f.category as Category] ?? "Shop all" : "Shop all"}
       </h1>
       {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
-      <FestivalNotice className="mt-4 max-w-2xl" />
 
       <div className="mt-8 space-y-3">
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">

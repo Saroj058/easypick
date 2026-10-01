@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { Countdown } from "@/components/countdown";
-import { FestivalNotice } from "@/components/festival-notice";
 import { ProductCard } from "@/components/product-card";
 import { RefreshAt } from "@/components/refresh-at";
 import { ShareDrop } from "@/components/share-drop";
@@ -112,7 +111,6 @@ export default async function DropPage({ params }: PageProps<"/drop/[slug]">) {
           </section>
         )}
 
-        <FestivalNotice className="mb-8 max-w-2xl" />
 
         <h2 className="sr-only">The pieces</h2>
         <ul className="grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
