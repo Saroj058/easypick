@@ -455,7 +455,6 @@ function Shelf({
   index,
   id,
   label,
-  caption,
   showAll,
   pieces,
   mySize,
@@ -465,7 +464,6 @@ function Shelf({
   index: number;
   id: string;
   label: string;
-  caption: string;
   /** Where "Show all" goes; none while searching. */
   showAll: string | null;
   pieces: RailPiece[];
@@ -484,41 +482,33 @@ function Shelf({
     <section
       id={`rail-${id}`}
       aria-labelledby={`rail-${id}-title`}
-      className={`scroll-mt-24 ${index === 0 ? "pt-4" : "pt-8 md:pt-10"}`}
+      className={`scroll-mt-24 ${index === 0 ? "pt-8" : "pt-10 md:pt-14"}`}
     >
-      {/* The shelf label: section number, what hangs here, which piece is at the centre, and Show all. */}
-      <div className="flex min-h-11 items-center gap-3 border-t-2 border-ink bg-photo px-3 py-1.5">
-        <span className="grid h-5 min-w-6 place-items-center bg-ink px-1 font-mono text-[11px] font-semibold text-paper">
-          {String(index + 1).padStart(2, "0")}
-        </span>
+      {/* The section's name, set large, with how many pieces hang here; Show all on the right. */}
+      <div className="flex items-end justify-between gap-4">
         <h3
           id={`rail-${id}-title`}
-          className="font-display text-[20px] uppercase leading-none tracking-[0.02em] md:text-[22px]"
+          className="display flex min-w-0 items-start gap-2 text-[34px] leading-[0.86] md:text-[44px]"
         >
           {label}
-        </h3>
-        <span className={`${mono} hidden text-steel-dark sm:block`}>
-          {caption}
-        </span>
-        <div className="-my-1.5 ml-auto flex shrink-0 items-center gap-3">
-          <span className="font-mono text-[11px] tabular-nums tracking-[0.12em] text-steel-dark">
-            <span className="text-ink">
-              {String(Math.min(active, pieces.length - 1) + 1).padStart(2, "0")}
-            </span>{" "}
-            / {String(pieces.length).padStart(2, "0")}
+          <span
+            className="pt-0.5 font-mono text-[12px] font-normal leading-none tracking-[0.08em] text-steel-dark"
+            aria-label={`${pieces.length} pieces`}
+          >
+            {pieces.length}
           </span>
-          {showAll && (
-            <Link
-              href={showAll}
-              aria-label={`Show all ${label.toLowerCase()}`}
-              className="group flex h-11 items-center"
-            >
-              <span className="flex h-8 items-center gap-1.5 border border-ink px-3 text-[12px] font-semibold uppercase tracking-[0.06em] group-hover:bg-ink group-hover:text-paper">
-                Show all <Arrow />
-              </span>
-            </Link>
-          )}
-        </div>
+        </h3>
+        {showAll && (
+          <Link
+            href={showAll}
+            aria-label={`Show all ${label.toLowerCase()}`}
+            className="group flex h-11 shrink-0 items-end pb-1"
+          >
+            <span className="flex items-center gap-1.5 border-b-[1.5px] border-ink pb-1 text-[12px] font-semibold uppercase tracking-[0.07em] group-hover:border-transparent">
+              Show all <Arrow />
+            </span>
+          </Link>
+        )}
       </div>
 
       <CoverflowCarousel
@@ -554,6 +544,14 @@ function Shelf({
           </>
         )}
       />
+
+      {/* Which piece is at the centre, out of how many. */}
+      <p className="mb-3 text-center font-mono text-[11px] tabular-nums tracking-[0.14em] text-steel-dark">
+        <span className="font-semibold text-ink">
+          {String(Math.min(active, pieces.length - 1) + 1).padStart(2, "0")}
+        </span>{" "}
+        / {String(pieces.length).padStart(2, "0")}
+      </p>
 
       <div aria-live="polite">
         <PieceControls
@@ -839,7 +837,6 @@ export function RailWall({
           index={i}
           id={s.key}
           label={s.label}
-          caption={s.caption}
           showAll={q ? null : withSize(s.href)}
           pieces={s.show}
           mySize={mySize}
