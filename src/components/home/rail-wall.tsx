@@ -249,17 +249,10 @@ function PieceControls({
           {piece.name}
         </Link>
       </h4>
-      <p className="mt-1 font-mono text-[15px] tabular-nums">
-        {piece.was && (
-          <s className="mr-2 text-steel-dark">
-            <span className="sr-only">was </span>
-            {piece.was.toLocaleString("en-IN")}
-          </s>
-        )}
-        {formatPrice(piece.price)}
-        <span className="ml-2 font-sans text-[13px] text-steel-dark">
-          fixed price
-        </span>
+      {/* The price is on the card's hang tag; this says it for screen readers, which the tag is hidden from. */}
+      <p className="sr-only">
+        {piece.was && `was ${formatPrice(piece.was)}, `}
+        {formatPrice(piece.price)}, fixed price
       </p>
 
       {/* Colour, and whether it comes in their size. */}
@@ -570,12 +563,10 @@ export function RailWall({
   sections,
   budgets,
   pieces: total,
-  facts,
 }: {
   sections: RailSection[];
   budgets: number[];
   pieces: number;
-  facts: { text: string; href?: string }[];
 }) {
   const mySize = useMySize();
   const bag = useBag();
@@ -873,24 +864,6 @@ export function RailWall({
           </button>
         </div>
       )}
-
-      {/* Under the rail: what every customer wants to know before buying, in one line. */}
-      <ul className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-2 border-y border-mist py-4 text-[15px] font-semibold md:mt-12 md:justify-between">
-        {facts.map((f) => (
-          <li key={f.text}>
-            {f.href ? (
-              <Link
-                href={f.href}
-                className="underline-offset-4 hover:underline"
-              >
-                {f.text}
-              </Link>
-            ) : (
-              f.text
-            )}
-          </li>
-        ))}
-      </ul>
 
       {/* After the first add here: what's in the bag so far, the way to it, and a way back. Stays in reach while the rail is on screen. */}
       {addedHere && bag.ready && bag.count > 0 && (

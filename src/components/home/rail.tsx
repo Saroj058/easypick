@@ -1,6 +1,4 @@
 import { sellable } from "@/lib/inventory";
-import { formatPrice } from "@/lib/format";
-import { site } from "@/lib/site";
 import type { Category, Product, Size } from "@/lib/types";
 import { RailWall, type RailColour, type RailPiece, type RailSection } from "./rail-wall";
 
@@ -112,7 +110,6 @@ export function Rail({ products }: { products: Product[] }) {
           sections={sections}
           budgets={budgets}
           pieces={live.length}
-          facts={[{ text: "Fixed price" }, { text: "Pay with eSewa" }, { text: "Free pickup" }, { text: `Delivery ${formatPrice(site.delivery.flatFee)}` }, { text: "7-day size swap", href: "/returns" }]}
         />
       </div>
     </section>
