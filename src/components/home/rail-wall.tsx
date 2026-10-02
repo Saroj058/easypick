@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useAddToBag } from "@/components/bag-gate";
@@ -239,6 +239,32 @@ function PieceControls({
   const cm = Object.entries(
     (tagSize && piece.measurements[tagSize]) || {},
   ).filter(([, v]) => typeof v === "number");
+  // With no size chosen there is no one size to show: every size is laid out side by side instead.
+  const chart = colour.sizes
+    .map((x) => ({
+      size: x.size,
+      left: x.left,
+      cm: Object.entries(piece.measurements[x.size] ?? {}).filter(
+        ([, v]) => typeof v === "number",
+      ),
+    }))
+    .filter((x) => x.cm.length > 0);
+  const allSizes = !oneSize && size === null && chart.length > 1;
+  const pop = useRef<HTMLDivElement>(null);
+  // The card of all sizes closes on Escape and on a tap anywhere else.
+  useEffect(() => {
+    if (!showCm || !allSizes) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setShowCm(false);
+    const onDown = (e: PointerEvent) =>
+      !pop.current?.parentElement?.contains(e.target as Node) &&
+      setShowCm(false);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, [showCm, allSizes]);
 
   return (
     <div className="mx-auto w-full max-w-[360px] text-center">
@@ -401,7 +427,7 @@ function PieceControls({
 
       {/* The back of the tag: the garment's measurements in cm. */}
       {cm.length > 0 && (
-        <>
+        <div className="relative">
           <button
             type="button"
             onClick={() => setShowCm(!showCm)}
@@ -410,7 +436,101 @@ function PieceControls({
           >
             Measurements in cm
           </button>
-          {showCm && (
+          {showCm && allSizes && (
+            // No size chosen: a card pops out with every size side by side. Tapping one picks it.
+            <div
+              ref={pop}
+              role="group"
+              aria-label="All sizes in cm"
+              className="absolute left-1/2 top-full z-40 w-[min(calc(100vw-32px),540px)] -translate-x-1/2 animate-fade-up border border-ink bg-paper p-3 text-left shadow-[0_22px_44px_-18px_rgba(0,0,0,0.5)] md:p-4"
+            >
+              <div className="flex items-center justify-between">
+                <p className={`${mono} text-steel-dark`}>
+                  All sizes · cm · tap yours
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowCm(false)}
+                  aria-label="Close measurements"
+                  className="-my-2 -mr-2 grid h-11 w-11 place-items-center"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    aria-hidden
+                  >
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+              <div
+                className="mt-2 grid gap-2"
+                style={{
+                  gridTemplateColumns: `repeat(${chart.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {chart.map((c) => {
+                  const body = (
+                    <>
+                      <span className="flex items-baseline justify-between">
+                        <span className="font-display text-[26px] uppercase leading-none">
+                          {c.size}
+                        </span>
+                        {c.left === 0 && (
+                          <span className="font-mono text-[9px] uppercase tracking-[0.08em]">
+                            Sold out
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-2 block border-t border-dashed border-steel pt-1.5 font-mono text-[11px] tabular-nums md:text-[12px]">
+                        {c.cm.map(([k, v]) => (
+                          <span
+                            key={k}
+                            className="flex flex-wrap justify-between gap-x-1 py-0.5"
+                          >
+                            <span className="capitalize text-steel-dark">
+                              {k}
+                            </span>
+                            <span className="font-semibold">{v}</span>
+                          </span>
+                        ))}
+                      </span>
+                    </>
+                  );
+                  return c.left > 0 ? (
+                    <button
+                      key={c.size}
+                      type="button"
+                      onClick={() => setPicked(c.size)}
+                      aria-label={`Size ${c.size}: ${c.cm.map(([k, v]) => `${k} ${v}`).join(", ")} cm. Pick it`}
+                      className="border border-mist p-2 text-left hover:border-ink hover:bg-photo md:p-3"
+                    >
+                      {body}
+                    </button>
+                  ) : (
+                    <div
+                      key={c.size}
+                      className="border border-mist p-2 text-[#8e8e93] md:p-3"
+                    >
+                      {body}
+                    </div>
+                  );
+                })}
+              </div>
+              <Link
+                href="/size-guide"
+                className="-mb-2 mt-1 flex h-11 items-center text-[13px] underline underline-offset-4"
+              >
+                Compare with one you own
+              </Link>
+            </div>
+          )}
+          {showCm && !allSizes && (
             <div className="border border-mist p-3 text-left font-mono text-[12px]">
               <p className={`${mono} text-steel-dark`}>
                 {tagSize === "ONE" ? "One size" : `Size ${tagSize}`} · cm
@@ -434,7 +554,7 @@ function PieceControls({
               </Link>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

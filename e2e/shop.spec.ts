@@ -87,6 +87,14 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search) and 
   await rail.getByRole("button", { name: "My size is M. Change it" }).click();
   await rail.getByRole("button", { name: "Forget my size" }).click();
   await expect(ask.getByRole("button", { name: "M", exact: true })).toHaveAttribute("aria-pressed", "false");
+  // With no size chosen, the measurements pop out as one card with every size side by side; tapping one picks it.
+  await first.getByRole("button", { name: "Measurements in cm" }).click();
+  const chart = first.getByRole("group", { name: "All sizes in cm" });
+  await expect(chart).toBeVisible();
+  await expect(chart.getByText("Chest").first()).toBeVisible();
+  await chart.getByRole("button", { name: /^Size L:/ }).click();
+  await expect(chart).toHaveCount(0);
+  await expect(first.getByText(/Size L · cm/)).toBeVisible();
 
   const fits = page.getByRole("region", { name: "Designer Fits" });
   await fits.scrollIntoViewIfNeeded();
