@@ -14,6 +14,7 @@ import { ProductImage } from "@/components/product-image";
 import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
 import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock";
 import { FlowButton } from "@/components/ui/flow-button";
+import { ShinyLink } from "@/components/ui/shiny-button";
 import {
   Sheet,
   SheetContent,
@@ -492,15 +493,12 @@ function Shelf({
           </span>
         </h3>
         {showAll && (
-          <Link
+          <ShinyLink
             href={showAll}
             aria-label={`Show all ${label.toLowerCase()}`}
-            className="group flex h-11 shrink-0 items-end pb-1"
           >
-            <span className="flex items-center gap-1.5 border-b-[1.5px] border-ink pb-1 text-[12px] font-semibold uppercase tracking-[0.07em] group-hover:border-transparent">
-              Show all <Arrow />
-            </span>
-          </Link>
+            Show all <Arrow />
+          </ShinyLink>
         )}
       </div>
 
