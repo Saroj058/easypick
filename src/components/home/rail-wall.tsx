@@ -635,6 +635,9 @@ export function RailWall({
   };
   const bagTotal = bag.lines.reduce((n, l) => n + l.price * l.qty, 0);
   const asking = !mySize || changing;
+  /** The search field is open (or holds a search): on a phone it needs the size's place in the row. */
+  const [searching, setSearching] = useState(false);
+  const searchOpen = searching || query !== "";
   const undoLine = last ? bag.lines.find((l) => l.sku === last.sku) : undefined;
   function undo() {
     if (!undoLine) return;
@@ -645,29 +648,32 @@ export function RailWall({
 
   return (
     <div>
-      <div className="flex items-end justify-between gap-6">
+      {/* One line over a rule: the name, their size (asked once), search, Filter and Shop all. On a phone it is two rows. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-ink pb-4 lg:flex-nowrap">
         <h2
           id="rail-title"
-          className="display text-[clamp(2.25rem,1.6rem+2.4vw,3.75rem)] leading-[0.92]"
+          className="display order-1 text-[38px] leading-[0.9] md:text-[44px]"
         >
           The rail
         </h2>
-        <FlowButton
-          href={withSize("/shop")}
-          text="Shop all"
-          className="shrink-0"
+        <div className="order-2 ml-auto shrink-0 lg:order-last lg:ml-0">
+          <FlowButton href={withSize("/shop")} text="Shop all" />
+        </div>
+        <span aria-hidden className="order-3 h-0 basis-full lg:hidden" />
+        <span
+          aria-hidden
+          className="order-4 hidden h-8 w-px shrink-0 bg-mist lg:block"
         />
-      </div>
-      {/* Asked once: their size. Then search and filter, kept small. */}
-      <div className="mt-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+
+        {/* On a phone the open search field takes this row, so the size steps aside until it folds away. */}
         {asking ? (
           <div
             role="group"
             aria-label="Your size"
-            className="flex flex-wrap items-center gap-x-3 gap-y-1"
+            className={`order-5 shrink-0 items-center gap-x-3 ${searchOpen ? "hidden lg:flex" : "flex"}`}
           >
-            <p className="text-[15px] font-semibold">Your size?</p>
-            <div className="flex">
+            <p className={`${mono} hidden text-steel-dark lg:block`}>Size</p>
+            <div className="flex gap-1.5">
               {MY_SIZES.map((s) => (
                 <button
                   key={s}
@@ -677,7 +683,7 @@ export function RailWall({
                     setMySize(s);
                     setChanging(false);
                   }}
-                  className={`${cell} w-11 ${mySize === s ? cellOn : cellOff}`}
+                  className={`grid h-11 w-11 place-items-center rounded-full border font-mono text-[12px] font-semibold ${mySize === s ? "border-ink bg-ink text-paper" : "border-ink/60 hover:border-ink hover:bg-ink hover:text-paper"}`}
                 >
                   {s}
                 </button>
@@ -685,11 +691,9 @@ export function RailWall({
             </div>
             <Link
               href="/size-guide"
-              className="flex h-11 items-center text-[13px] text-steel-dark underline underline-offset-4"
+              className="hidden h-11 items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 xl:flex"
             >
-              {hasFit(profile)
-                ? "Your measurements pick the size on each piece"
-                : "Not sure? Check in cm"}
+              {hasFit(profile) ? "Picked from your measurements" : "Check in cm"}
             </Link>
             {mySize && (
               <button
@@ -698,77 +702,83 @@ export function RailWall({
                   setMySize(null);
                   setChanging(false);
                 }}
-                className="h-11 px-1 text-[13px] font-semibold underline underline-offset-4"
+                aria-label="Forget my size"
+                className="h-11 whitespace-nowrap px-1 text-[13px] font-semibold underline underline-offset-4"
               >
-                Forget my size
+                Forget
               </button>
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div
+            className={`order-5 shrink-0 items-center gap-3 ${searchOpen ? "hidden lg:flex" : "flex"}`}
+          >
             <button
               type="button"
               onClick={() => setChanging(true)}
               aria-label={`My size is ${mySize}. Change it`}
-              className={`${box} shrink-0 gap-2 border-ink px-3`}
+              className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-ink pl-1.5 pr-4 text-[13px] font-semibold"
             >
-              <span className="grid h-6 min-w-6 place-items-center bg-volt px-1 font-mono text-[12px] text-ink">
+              <span className="grid h-8 min-w-8 place-items-center rounded-full bg-ink px-1 font-mono text-[12px] text-paper">
                 {mySize}
               </span>
               Change
             </button>
-            <p className="text-[13px] text-steel-dark">
+            <p className="hidden whitespace-nowrap text-[13px] text-steel-dark xl:block">
               <span className="font-semibold text-ink">
                 {inMySize} of {total}
               </span>{" "}
-              come in {mySize}. It&apos;s picked for you.
+              come in {mySize}
             </p>
           </div>
         )}
 
-        <div className="flex gap-2">
-          {/* Search: a round button that opens into a field and filters the rail as they type. */}
-          <ExpandingSearchDock
-            value={query}
-            onChange={setQuery}
-            label="Search the rail"
-            placeholder="Search the rail"
-            className="min-w-0 flex-1 lg:w-80 lg:flex-none"
-          />
-          {budgets.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setFilterOpen(!filterOpen)}
-              aria-expanded={filterOpen}
-              aria-controls="rail-filter"
-              className={`${box} shrink-0 gap-2 px-3 ${filterOpen || budget || sort === "price" ? "border-ink" : "border-mist hover:border-ink"}`}
+        {/* Search: a round button that opens into a field and filters the rail as they type. */}
+        <ExpandingSearchDock
+          value={query}
+          onChange={setQuery}
+          onOpenChange={setSearching}
+          label="Search the rail"
+          placeholder="Search the rail"
+          className="order-6 min-w-0 flex-1"
+        />
+        {budgets.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilterOpen(!filterOpen)}
+            aria-label="Filter"
+            aria-expanded={filterOpen}
+            aria-controls="rail-filter"
+            className={`${box} relative order-7 w-11 shrink-0 gap-2 rounded-full sm:w-auto sm:px-4 ${filterOpen || budget || sort === "price" ? "border-ink" : "border-mist hover:border-ink"}`}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+              <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+              <circle cx="16" cy="7" r="2" />
+              <circle cx="8" cy="17" r="2" />
+            </svg>
+            <span className="hidden sm:inline">Filter</span>
+            {(budget || sort === "price") && (
+              <span
                 aria-hidden
-              >
-                <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
-                <circle cx="16" cy="7" r="2" />
-                <circle cx="8" cy="17" r="2" />
-              </svg>
-              Filter
-              {(budget || sort === "price") && (
-                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-ink" />
-              )}
-            </button>
-          )}
-        </div>
+                className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-ink sm:static"
+              />
+            )}
+          </button>
+        )}
       </div>
 
       {filterOpen && (
         <div
           id="rail-filter"
-          className="mt-2 flex flex-wrap items-end gap-x-5 gap-y-3 border border-mist p-3"
+          className="mt-3 flex flex-wrap items-end gap-x-5 gap-y-3 border border-mist p-3"
         >
           <div role="group" aria-label="Budget">
             <p className={`${mono} mb-1.5 text-steel-dark`}>Under Rs</p>

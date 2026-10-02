@@ -14,6 +14,7 @@ export function ExpandingSearchDock({
   onChange,
   label,
   placeholder = "Search...",
+  onOpenChange,
   className = "",
 }: {
   value: string;
@@ -21,6 +22,8 @@ export function ExpandingSearchDock({
   /** What it searches, for screen readers: "Search the rail". */
   label: string;
   placeholder?: string;
+  /** Told when the field opens and folds away, for a parent that makes room for it. */
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }) {
   const [opened, setOpened] = useState(false);
@@ -29,6 +32,7 @@ export function ExpandingSearchDock({
 
   function collapse() {
     setOpened(false);
+    onOpenChange?.(false);
     onChange("");
   }
 
@@ -43,7 +47,10 @@ export function ExpandingSearchDock({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ duration: 0.12 }}
-            onClick={() => setOpened(true)}
+            onClick={() => {
+              setOpened(true);
+              onOpenChange?.(true);
+            }}
             aria-label={label}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-mist bg-paper transition-colors hover:border-ink"
           >
