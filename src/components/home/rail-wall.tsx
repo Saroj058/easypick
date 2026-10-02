@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useAddToBag } from "@/components/bag-gate";
@@ -131,6 +131,8 @@ const box =
   "flex h-11 items-center justify-center border text-[13px] font-semibold";
 const cell = `${box} -ml-px font-mono first:ml-0`;
 const cellOn = "z-10 border-ink bg-ink text-paper";
+/** The shadow under a card that floats over the page. */
+const floating = "shadow-[0_18px_40px_-18px_rgba(0,0,0,0.45)]";
 const cellOff = "border-mist bg-paper hover:z-10 hover:border-ink";
 const cellOut = "border-mist bg-photo text-[#8e8e93] line-through";
 
@@ -171,6 +173,7 @@ function PieceControls({
   const [picked, setPicked] = useState<Size | null>(null);
   const [open, setOpen] = useState(false); // the size row
   const [showCm, setShowCm] = useState(false); // the back of the tag: measurements
+  const [peekCm, setPeekCm] = useState(false); // the same, while the mouse is over the link
 
   const colour =
     piece.colours.find((c) => c.name === colourName) ?? piece.colours[0];
@@ -250,21 +253,6 @@ function PieceControls({
     }))
     .filter((x) => x.cm.length > 0);
   const allSizes = !oneSize && size === null && chart.length > 1;
-  const pop = useRef<HTMLDivElement>(null);
-  // The card of all sizes closes on Escape and on a tap anywhere else.
-  useEffect(() => {
-    if (!showCm || !allSizes) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setShowCm(false);
-    const onDown = (e: PointerEvent) =>
-      !pop.current?.parentElement?.contains(e.target as Node) &&
-      setShowCm(false);
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onDown);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onDown);
-    };
-  }, [showCm, allSizes]);
 
   return (
     <div className="mx-auto w-full max-w-[360px] text-center">
@@ -426,8 +414,13 @@ function PieceControls({
       </div>
 
       {/* The back of the tag: the garment's measurements in cm. */}
+      {/* A click opens it in the page and keeps it open; a mouse over the link shows it floating until the mouse leaves. */}
       {cm.length > 0 && (
-        <div className="relative">
+        <div
+          className="relative"
+          onPointerEnter={(e) => e.pointerType === "mouse" && setPeekCm(true)}
+          onPointerLeave={() => setPeekCm(false)}
+        >
           <button
             type="button"
             onClick={() => setShowCm(!showCm)}
@@ -436,70 +429,39 @@ function PieceControls({
           >
             Measurements in cm
           </button>
-          {showCm && allSizes && (
-            // No size chosen: a card pops out with every size side by side. Tapping one picks it.
+          {(showCm || peekCm) && allSizes && (
+            // No size chosen: the same small card, one for each size, side by side. Tapping one picks it.
             <div
-              ref={pop}
               role="group"
               aria-label="All sizes in cm"
-              className="absolute left-1/2 top-full z-40 w-[min(calc(100vw-32px),540px)] -translate-x-1/2 animate-fade-up border border-ink bg-paper p-3 text-left shadow-[0_22px_44px_-18px_rgba(0,0,0,0.5)] md:p-4"
+              className={`left-1/2 w-max max-w-[calc(100vw-32px)] -translate-x-1/2 animate-fade-up ${showCm ? "relative" : `absolute top-full z-40 bg-paper p-2 ${floating}`}`}
             >
-              <div className="flex items-center justify-between">
-                <p className={`${mono} text-steel-dark`}>
-                  All sizes · cm · tap yours
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowCm(false)}
-                  aria-label="Close measurements"
-                  className="-my-2 -mr-2 grid h-11 w-11 place-items-center"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    aria-hidden
-                  >
-                    <path d="M6 6l12 12M18 6L6 18" />
-                  </svg>
-                </button>
-              </div>
               <div
-                className="mt-2 grid gap-2"
+                className="grid gap-1.5 sm:gap-2"
                 style={{
-                  gridTemplateColumns: `repeat(${chart.length}, minmax(0, 1fr))`,
+                  gridTemplateColumns: `repeat(${chart.length}, minmax(0, 124px))`,
                 }}
               >
                 {chart.map((c) => {
                   const body = (
                     <>
-                      <span className="flex items-baseline justify-between">
-                        <span className="font-display text-[26px] uppercase leading-none">
-                          {c.size}
-                        </span>
-                        {c.left === 0 && (
-                          <span className="font-mono text-[9px] uppercase tracking-[0.08em]">
-                            Sold out
-                          </span>
-                        )}
+                      <span className={`${mono} block text-steel-dark`}>
+                        <span className="hidden sm:inline">Size </span>
+                        {c.size} · cm
                       </span>
-                      <span className="mt-2 block border-t border-dashed border-steel pt-1.5 font-mono text-[11px] tabular-nums md:text-[12px]">
+                      <span className="mt-2 block border-t border-dashed border-steel pt-1.5 font-mono text-[11px] tabular-nums sm:text-[12px]">
                         {c.cm.map(([k, v]) => (
-                          <span
-                            key={k}
-                            className="flex flex-wrap justify-between gap-x-1 py-0.5"
-                          >
-                            <span className="capitalize text-steel-dark">
-                              {k}
-                            </span>
+                          <span key={k} className="flex justify-between py-0.5">
+                            <span className="capitalize">{k}</span>
                             <span className="font-semibold">{v}</span>
                           </span>
                         ))}
                       </span>
+                      {c.left === 0 && (
+                        <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.08em]">
+                          Sold out
+                        </span>
+                      )}
                     </>
                   );
                   return c.left > 0 ? (
@@ -508,14 +470,14 @@ function PieceControls({
                       type="button"
                       onClick={() => setPicked(c.size)}
                       aria-label={`Size ${c.size}: ${c.cm.map(([k, v]) => `${k} ${v}`).join(", ")} cm. Pick it`}
-                      className="border border-mist p-2 text-left hover:border-ink hover:bg-photo md:p-3"
+                      className="border border-mist p-2 text-left hover:border-ink sm:p-3"
                     >
                       {body}
                     </button>
                   ) : (
                     <div
                       key={c.size}
-                      className="border border-mist p-2 text-[#8e8e93] md:p-3"
+                      className="border border-mist p-2 text-left text-[#8e8e93] sm:p-3"
                     >
                       {body}
                     </div>
@@ -524,14 +486,16 @@ function PieceControls({
               </div>
               <Link
                 href="/size-guide"
-                className="-mb-2 mt-1 flex h-11 items-center text-[13px] underline underline-offset-4"
+                className="mx-auto flex h-11 w-max items-center text-[13px] underline underline-offset-4"
               >
                 Compare with one you own
               </Link>
             </div>
           )}
-          {showCm && !allSizes && (
-            <div className="border border-mist p-3 text-left font-mono text-[12px]">
+          {(showCm || peekCm) && !allSizes && (
+            <div
+              className={`border border-mist p-3 text-left font-mono text-[12px] ${showCm ? "" : `absolute inset-x-0 top-full z-40 animate-fade-up bg-paper ${floating}`}`}
+            >
               <p className={`${mono} text-steel-dark`}>
                 {tagSize === "ONE" ? "One size" : `Size ${tagSize}`} · cm
               </p>
@@ -602,11 +566,11 @@ function Shelf({
       <div className="flex items-end justify-between gap-4">
         <h3
           id={`rail-${id}-title`}
-          className="display flex min-w-0 items-start gap-2 text-[34px] leading-[0.86] md:text-[44px]"
+          className="display min-w-0 text-[34px] leading-[0.86] md:text-[44px]"
         >
           {label}
           <span
-            className="pt-0.5 font-mono text-[12px] font-normal leading-none tracking-[0.08em] text-steel-dark"
+            className="ml-2 inline-block pt-0.5 align-top font-mono text-[12px] font-normal leading-none tracking-[0.08em] text-steel-dark"
             aria-label={`${pieces.length} pieces`}
           >
             {pieces.length}
