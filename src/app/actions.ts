@@ -83,7 +83,7 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
     address = { area, landmark, details };
   }
 
-  // The bag is for account holders. "Buy now" is one piece and needs no account.
+  // The bag is for account holders. "Buy now" (one piece, or one Designer Fit) needs no account.
   const buyNow = form.get("mode") === "buy_now";
   let rawBag: unknown;
   try {
@@ -95,7 +95,7 @@ export async function placeOrder(_prev: CheckoutState, form: FormData): Promise<
   const bag = mergeBag(rawBag, { buyNow });
   if (!bag.ok) return { status: "error", message: bag.message };
   const user = await getCurrentUser();
-  if (!buyNow && !user) return { status: "error", message: "Log in to check out your bag, or use Buy now on a single piece." };
+  if (!buyNow && !user) return { status: "error", message: "Log in to check out your bag, or use Buy now on a piece or a fit." };
 
   // Unpaid orders hold stock for 15 minutes, so nobody may hold the whole shop:
   // a few tries per visitor and number, and only a couple of unpaid orders open at once.

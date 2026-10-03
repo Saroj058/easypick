@@ -67,12 +67,13 @@ function subscribeGuest(fn: () => void) {
 
 const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
 
-/** Checks out the bag (the phone code was confirmed on the way in), or one piece with `buyNow` (no code needed). */
-export function CheckoutForm({ buyNow }: { buyNow?: BagLine }) {
+/** Checks out the bag (the phone code was confirmed on the way in), or with `buyNow` one piece or a whole fit (no code needed). */
+export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
   const bag = useBag();
-  const lines = buyNow ? [buyNow] : bag.lines;
-  const ready = buyNow ? true : bag.ready;
-  const subtotal = buyNow ? buyNow.price * buyNow.qty : bag.subtotal;
+  const now = buyNow ? (Array.isArray(buyNow) ? buyNow : [buyNow]) : null;
+  const lines = now ?? bag.lines;
+  const ready = now ? true : bag.ready;
+  const subtotal = now ? now.reduce((n, l) => n + l.price * l.qty, 0) : bag.subtotal;
   const me = useMe();
   // Only used while signed out.
   const stored = useSyncExternalStore(subscribeGuest, readGuest, () => null);

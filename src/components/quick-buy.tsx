@@ -46,7 +46,18 @@ const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
  * Quick buy (top right of the photo): a small picker with the first colour and the best
  * available size already chosen, then straight to the Buy now checkout.
  */
-export function QuickBuy({ product, className = "" }: { product: Product; className?: string }) {
+export function QuickBuy({
+  product,
+  className = "",
+  trigger,
+  tabIndex,
+}: {
+  product: Product;
+  className?: string;
+  /** What the button shows instead of the round bag on a photo (and then `className` styles the whole button). */
+  trigger?: React.ReactNode;
+  tabIndex?: number;
+}) {
   const suggested = useCardVariant(product);
   const profile = useFitProfile();
   const addToBag = useAddToBag();
@@ -77,12 +88,18 @@ export function QuickBuy({ product, className = "" }: { product: Product; classN
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <button type="button" aria-label={`Quick buy: ${product.name}`} className={`flex h-11 min-w-11 items-center justify-end outline-none ${className}`}>
-          <span className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 hover:bg-ink hover:text-paper ${glass}`}>
-            <BagIcon className="h-4 w-4" />
-            <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] md:[@media(hover:hover)]:inline">Quick buy</span>
-          </span>
-        </button>
+        {trigger ? (
+          <button type="button" aria-label={`Quick buy: ${product.name}`} tabIndex={tabIndex} className={className}>
+            {trigger}
+          </button>
+        ) : (
+          <button type="button" aria-label={`Quick buy: ${product.name}`} tabIndex={tabIndex} className={`flex h-11 min-w-11 items-center justify-end outline-none ${className}`}>
+            <span className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 hover:bg-ink hover:text-paper ${glass}`}>
+              <BagIcon className="h-4 w-4" />
+              <span className="hidden text-[11px] font-semibold uppercase tracking-[0.08em] md:[@media(hover:hover)]:inline">Quick buy</span>
+            </span>
+          </button>
+        )}
       </SheetTrigger>
       <SheetContent side="bottom" className="max-h-[88dvh] overflow-y-auto rounded-t-[14px] border-mist bg-paper px-4 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto max-w-md">

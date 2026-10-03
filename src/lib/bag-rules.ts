@@ -5,6 +5,8 @@
 export const MAX_PER_SKU = 5;
 export const MAX_PIECES = 15;
 const MAX_LINES = 30;
+/** Buy now (no account) is one piece, or one Designer Fit: one of each of up to four pieces. */
+export const MAX_BUY_NOW = 4;
 
 export interface BagRequestLine {
   slug: string;
@@ -15,14 +17,14 @@ export interface BagRequestLine {
 
 export type BagCheck = { ok: true; lines: BagRequestLine[] } | { ok: false; message: string };
 
-/** Reads the bag JSON lines, merges them by SKU and applies the limits. `buyNow` keeps only one piece of the first line. */
+/** Reads the bag JSON lines, merges them by SKU and applies the limits. `buyNow` keeps one piece of each of the first four lines. */
 export function mergeBag(raw: unknown, opts: { buyNow?: boolean } = {}): BagCheck {
   const empty: BagCheck = { ok: false, message: "Your bag is empty." };
   if (!Array.isArray(raw) || raw.length === 0) return empty;
   if (raw.length > MAX_LINES) return { ok: false, message: `You can order up to ${MAX_PIECES} pieces at once.` };
 
   const merged = new Map<string, BagRequestLine>();
-  for (const item of opts.buyNow ? raw.slice(0, 1) : raw) {
+  for (const item of opts.buyNow ? raw.slice(0, MAX_BUY_NOW) : raw) {
     if (!item || typeof item !== "object") return empty;
     const { slug, sku, name, qty } = item as Record<string, unknown>;
     if (typeof slug !== "string" || typeof sku !== "string" || !slug || !sku || slug.length > 120 || sku.length > 60) return empty;

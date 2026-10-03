@@ -72,8 +72,11 @@ describe("bag limits", () => {
     expect(mergeBag(four).ok).toBe(false);
     expect(mergeBag(four.slice(0, 3).concat(line("D", MAX_PIECES - 12))).ok).toBe(true);
   });
-  it("Buy now is one piece of the first line", () => {
-    expect(mergeBag([line("A", 5), line("B", 2)], { buyNow: true })).toEqual({ ok: true, lines: [line("A", 1)] });
+  it("Buy now is one of each piece, up to a four-piece fit", () => {
+    expect(mergeBag([line("A", 5)], { buyNow: true })).toEqual({ ok: true, lines: [line("A", 1)] });
+    expect(mergeBag([line("A", 5), line("B", 2)], { buyNow: true })).toEqual({ ok: true, lines: [line("A", 1), line("B", 1)] });
+    const six = ["A", "B", "C", "D", "E", "F"].map((s) => line(s, 1));
+    expect(mergeBag(six, { buyNow: true })).toEqual({ ok: true, lines: six.slice(0, 4) });
   });
   it("rejects junk", () => {
     for (const bad of [null, [], "x", [{}], [{ slug: "t", sku: 1, qty: 1 }], [line("A", 0)], [line("A", -2)], [line("A", Number.NaN)]]) {

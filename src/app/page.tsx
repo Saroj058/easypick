@@ -245,6 +245,7 @@ export default async function HomePage() {
                 image: p.images[0] ?? { src: null, alt: p.name, kind: "front" },
                 category: p.category,
                 hex: p.colours[0]?.hex ?? "#2b2b2e",
+                product: p,
               }))}
             />
           </div>

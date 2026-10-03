@@ -7,8 +7,9 @@ import * as React from "react";
 
 import { PriceTag } from "@/components/hang-tag";
 import { ProductImage } from "@/components/product-image";
+import { QuickBuy } from "@/components/quick-buy";
 import { cn } from "@/lib/utils";
-import type { Category, ProductImage as Img } from "@/lib/types";
+import type { Category, Product, ProductImage as Img } from "@/lib/types";
 
 // An offer on the left (what it is, how much, where to see all of it) and the pieces on offer in
 // a row on the right. The row keeps moving along by itself, without a break and without an end
@@ -31,6 +32,8 @@ export interface OfferItem {
   image: Img;
   category: Category;
   hex: string;
+  /** The whole piece, for Quick buy. */
+  product?: Product;
 }
 
 export interface OffersCarouselProps {
@@ -48,7 +51,9 @@ export interface OffersCarouselProps {
 /** `copy` marks the second set of cards, there only so the row has no end: hidden from screen readers and the Tab key. */
 function ItemCard({ item, copy = false }: { item: OfferItem; copy?: boolean }) {
   return (
-    <motion.li aria-hidden={copy || undefined} className="group w-[62%] max-w-[240px] shrink-0 snap-start sm:w-56" whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+    <motion.li aria-hidden={copy || undefined} className="group relative w-[62%] max-w-[240px] shrink-0 snap-start sm:w-56" whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+      {/* Quick buy on the photo, as on every product card (outside the link: a button can't sit inside one). */}
+      {item.product && <QuickBuy product={item.product} tabIndex={copy ? -1 : undefined} className="absolute right-1 top-1 z-10" />}
       <Link href={item.href} tabIndex={copy ? -1 : undefined} className="block">
         <div className="relative">
           <div className="relative overflow-hidden">

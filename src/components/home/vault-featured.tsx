@@ -6,8 +6,9 @@ import { useState } from "react";
 
 import { PriceTag } from "@/components/hang-tag";
 import { ProductImage } from "@/components/product-image";
+import { QuickBuy } from "@/components/quick-buy";
 import { StackedCarousel } from "@/components/ui/stacked-carousel";
-import type { Category, ProductImage as Img } from "@/lib/types";
+import type { Category, Product, ProductImage as Img } from "@/lib/types";
 
 export interface FeaturedPiece {
   slug: string;
@@ -22,6 +23,8 @@ export interface FeaturedPiece {
   image: Img;
   category: Category;
   hex: string;
+  /** The whole piece, for Quick buy. */
+  product: Product;
 }
 
 /** The Vault's featured pieces as a fanned stack: flick through them, tap the front one to open it. */
@@ -58,14 +61,21 @@ export function VaultFeatured({ pieces }: { pieces: FeaturedPiece[] }) {
         }}
       />
       {/* The front piece, in words, with a plain link to it. */}
-      <p aria-live="polite" className="mt-2 flex min-h-11 flex-wrap items-center justify-center gap-x-3 text-center text-[15px]">
+      <div aria-live="polite" className="mt-2 flex min-h-11 flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-[15px]">
         <span className="text-[#aeaba3]">
           {piece.brand} · {piece.name} · <span className="font-mono tabular-nums">{piece.price}</span>
         </span>
+        {/* Buy it from here: the size picker, then the checkout. */}
+        <QuickBuy
+          key={piece.slug}
+          product={piece.product}
+          className="flex h-11 items-center rounded-full bg-[#f2efe8] px-5 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink hover:bg-paper"
+          trigger="Quick buy"
+        />
         <Link href={`/product/${piece.slug}`} className="flex h-11 items-center font-semibold uppercase tracking-[0.08em] text-[13px] underline underline-offset-4">
           View piece
         </Link>
-      </p>
+      </div>
     </div>
   );
 }

@@ -3,18 +3,20 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 
+import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useAddToBag } from "@/components/bag-gate";
 import { encodeFit, type Fit, type SlotKey } from "@/components/fit-builder";
 import { useFitProfile } from "@/components/fit-finder";
 import { GarmentSvg } from "@/components/product-image";
 import { FlowButton } from "@/components/ui/flow-button";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { fitSlot, type Look, type LookPiece } from "@/lib/occasions";
-import type { Size } from "@/lib/types";
+import type { BagLine, Size } from "@/lib/types";
 
-// "Designer Fits" as a fit check: the occasions down the side, the fits inside the chosen
-// occasion as tabs (Party: night out, house party, birthday), and the outfit drawn
+// "Designer Fits" as a fit check: the occasions down the side with the fits of the chosen one
+// listed under it (Party: night out, house party, birthday; tabs on smaller screens), and the outfit drawn
 // the way it's worn (jacket over tee over joggers) on a grey stage, each piece tied to a hang
 // tag with its name, price and sizes. Numbers on the garments match the numbers on the tags.
 
@@ -93,6 +95,8 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [picked, setPicked] = useState<Record<string, Size | null>>({});
   const [added, setAdded] = useState(false);
+  /** The fit being bought with Quick buy, in the checkout pop-up. */
+  const [buying, setBuying] = useState<BagLine[] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // Occasions in the order they come, each with its fits.
@@ -117,12 +121,16 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
   }).map((w, i) => ({ ...w, n: i + 1, side: (i % 2 === 0 ? "left" : "right") as "left" | "right" }));
   const layered = worn.some((w) => w.slot === "layer");
 
-  function addAll() {
-    const items = look.pieces.flatMap((p) => {
+  /** One of each piece, in the size picked on its tag. */
+  const lines = (): BagLine[] =>
+    look.pieces.flatMap((p) => {
       const size = sizeOf(p);
       const v = p.sizes.find((x) => x.size === size && x.stock > 0);
-      return v && size ? [{ slug: p.slug, sku: v.sku, name: p.name, size, colour: p.colour, price: p.price }] : [];
+      return v && size ? [{ slug: p.slug, sku: v.sku, name: p.name, size, colour: p.colour, price: p.price, qty: 1 }] : [];
     });
+
+  function addAll() {
+    const items = lines().map(({ qty: _qty, ...line }) => line);
     if (items.length && addToBagOrLogin(items)) setAdded(true);
   }
 
@@ -223,7 +231,7 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
           >
             {groups.map((l, i) => {
               const on = l.key === current.key;
-              return (
+              return [
                 <button
                   key={l.key}
                   type="button"
@@ -245,8 +253,32 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
                   <span aria-hidden className={`ml-auto hidden font-mono text-[11px] font-normal xl:block ${on ? "text-paper/60" : "text-steel-dark"}`}>
                     {l.fits.length} {l.fits.length === 1 ? "fit" : "fits"}
                   </span>
-                </button>
-              );
+                </button>,
+                // Wide screens: the chosen occasion's fits open under it (smaller screens have them as tabs over the stage).
+                on && l.fits.length > 1 && (
+                  <div key={`${l.key}-fits`} role="radiogroup" aria-label={`${l.label} fits`} className="hidden animate-fade-up flex-col border-l-2 border-ink pl-1 xl:flex">
+                    {l.fits.map((f) => {
+                      const sel = f.key === look.key;
+                      return (
+                        <button
+                          key={f.key}
+                          type="button"
+                          role="radio"
+                          aria-checked={sel}
+                          onClick={() => {
+                            setChosen((m) => ({ ...m, [l.key]: f.key }));
+                            setAdded(false);
+                          }}
+                          className={`flex h-10 w-full items-center gap-2 px-3 text-left text-[14px] ${sel ? "font-semibold text-ink" : "text-steel-dark hover:text-ink"}`}
+                        >
+                          <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${sel ? "bg-ink" : "bg-mist"}`} />
+                          {f.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ),
+              ];
             })}
           </div>
           {/* Scroll buttons, only when the list is longer than the stage is tall. */}
@@ -275,7 +307,14 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
         <div>
           {/* The fits inside this occasion, and whose pick this one is. */}
           <div className="mt-2 flex h-11 items-center justify-between gap-3 border border-mist xl:mt-0 xl:border-b-0">
-            {fitTabs || <p className="px-4 text-[14px] font-semibold">{look.label}</p>}
+            {fitTabs ? (
+              <>
+                <div className="min-w-0 xl:hidden">{fitTabs}</div>
+                <p className="hidden px-4 text-[14px] font-semibold xl:block">{look.label}</p>
+              </>
+            ) : (
+              <p className="px-4 text-[14px] font-semibold">{look.label}</p>
+            )}
             <p className="hidden shrink-0 pr-4 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark sm:block">
               {look.curated ? "Designer's pick · " : ""}
               {look.pieces.length} pieces
@@ -319,24 +358,48 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
         </div>
       </div>
 
-      {/* One bar: what the ready-made fit costs, and the button to take it. */}
-      <div className="flex flex-col gap-3 border border-mist p-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 xl:mt-2">
-        <p className="flex items-baseline gap-3">
-          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
-            {named} · {look.pieces.length} pieces
-          </span>
-          <span className="font-mono text-[24px] font-semibold leading-none tabular-nums">{formatPrice(total)}</span>
+      {/* One bar: which fit this is on the left; on the right, buy it now, what it costs, or add it to the bag. */}
+      <div className="flex flex-col gap-3 border border-mist p-3 md:flex-row md:items-center md:justify-between md:px-5 xl:mt-2">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">
+          {named} · {look.pieces.length} pieces
         </p>
-        <button
-          type="button"
-          onClick={addAll}
-          disabled={!ready}
-          aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
-          className="btn btn-ink h-12 min-h-0 w-full sm:w-[280px]"
-        >
-          {added ? "Added to your bag" : "Add the fit"}
-        </button>
+        <div className="flex flex-wrap items-center gap-3 md:flex-nowrap">
+          <button
+            type="button"
+            onClick={() => setBuying(lines())}
+            disabled={!ready}
+            aria-label={`Quick buy the fit · ${formatPrice(total)}`}
+            className="btn btn-outline h-12 min-h-0 px-5"
+          >
+            Quick buy
+          </button>
+          <span className="ml-auto font-mono text-[24px] font-semibold leading-none tabular-nums md:ml-0">{formatPrice(total)}</span>
+          <button
+            type="button"
+            onClick={addAll}
+            disabled={!ready}
+            aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
+            className="btn btn-ink h-12 min-h-0 w-full md:w-[240px]"
+          >
+            {added ? "Added to your bag" : "Add the fit"}
+          </button>
+        </div>
       </div>
+
+      {/* Quick buy: the whole fit in one order, paid here, no account needed. */}
+      <Sheet open={buying !== null} onOpenChange={(o) => !o && setBuying(null)}>
+        <SheetContent side="right" className="w-full overflow-y-auto border-mist bg-paper p-5 pt-6 sm:max-w-md">
+          <SheetTitle className="display text-[34px] leading-none">Buy the fit</SheetTitle>
+          {buying && (
+            <>
+              <SheetDescription className="mt-2 text-[14px] text-steel-dark">
+                {named} · {buying.map((l) => (l.size === "ONE" ? l.name : `${l.name} ${l.size}`)).join(", ")}
+              </SheetDescription>
+              <CheckoutForm buyNow={buying} />
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

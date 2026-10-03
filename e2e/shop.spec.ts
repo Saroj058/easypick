@@ -99,7 +99,8 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search) and 
   const fits = page.getByRole("region", { name: "Designer Fits" });
   await fits.scrollIntoViewIfNeeded();
   // An occasion, then one of the fits inside it.
-  const occasions = fits.getByRole("radiogroup").first().getByRole("radio");
+  // (Only the occasions themselves: on a wide screen the chosen one's fits are listed under it.)
+  const occasions = fits.getByRole("radiogroup", { name: "Designer Fits" }).locator(':scope > [role="radio"]');
   await occasions.nth(1).click();
   await expect(occasions.nth(1)).toHaveAttribute("aria-checked", "true");
   const inside = fits.getByRole("radiogroup", { name: /fits$/ }).getByRole("radio");
@@ -108,6 +109,12 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search) and 
     await expect(inside.nth(1)).toHaveAttribute("aria-checked", "true");
   }
   await expect(fits.getByRole("button", { name: /Add the fit · Rs/ })).toBeEnabled();
+  // Quick buy takes the whole fit to the checkout in a pop-up, no account needed.
+  await fits.getByRole("button", { name: /^Quick buy the fit · Rs/ }).click();
+  const buyFit = page.getByRole("dialog", { name: "Buy the fit" });
+  await expect(buyFit.getByRole("button", { name: /^Pay Rs/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(buyFit).toHaveCount(0);
   await fits.getByRole("link", { name: "Build your own fit" }).click();
   await page.waitForURL(/\/fit\?.*(top|bottom)=/, { timeout: 60_000 }); // the first visit compiles /fit in dev
 });
