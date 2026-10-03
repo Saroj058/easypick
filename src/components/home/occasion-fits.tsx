@@ -359,8 +359,8 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
         </div>
       </div>
 
-      {/* Under the stage, in white: Add the fit with what it all comes to on the left, Quick buy on the right. */}
-      <div className="flex flex-col gap-3 border border-mist bg-paper p-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 xl:mt-2">
+      {/* Under the stage, in white and centred: Add the fit, what it all comes to, then Quick buy. */}
+      <div className="flex flex-col gap-3 border border-mist bg-paper p-3 sm:flex-row sm:items-center sm:justify-center sm:gap-8 sm:px-5 xl:mt-2">
         <div className="flex items-center justify-between gap-4 sm:justify-start sm:gap-6">
           <button
             type="button"
