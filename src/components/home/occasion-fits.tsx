@@ -88,7 +88,7 @@ const Chevron = ({ up = false }: { up?: boolean }) => (
   </svg>
 );
 
-export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boolean }) {
+export function OccasionFits({ looks }: { looks: Look[]; curated?: boolean }) {
   const addToBagOrLogin = useAddToBag();
   const profile = useFitProfile();
   const [group, setGroup] = useState(looks[0]?.group);
@@ -213,7 +213,6 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
           <h2 id="occasion-title" className="display text-[clamp(2.25rem,1.6rem+2.4vw,3.75rem)] leading-[0.92]">
             Designer Fits
           </h2>
-          <p className="mt-1.5 text-[15px] text-steel-dark">{curated ? "Curated combinations for every occasion." : "Ready-made combinations for every occasion."}</p>
         </div>
         {/* Opens the builder with the fit on show, ready to swap pieces. */}
         <FlowButton href={`/fit?${encodeFit(fit)}`} text="Build your own fit" className="w-full md:w-auto md:shrink-0" />
