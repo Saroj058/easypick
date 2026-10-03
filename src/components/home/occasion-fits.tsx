@@ -356,36 +356,33 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
               );
             })}
           </div>
-        </div>
-      </div>
 
-      {/* Under the stage, in white and centred: Add the fit, what it all comes to, then Quick buy. */}
-      <div className="flex flex-col gap-3 border border-mist bg-paper p-3 sm:flex-row sm:items-center sm:justify-center sm:gap-8 sm:px-5 xl:mt-2">
-        <div className="flex items-center justify-between gap-4 sm:justify-start sm:gap-6">
-          <button
-            type="button"
-            onClick={addAll}
-            disabled={!ready}
-            aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
-            className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-ink px-6 text-[14px] font-semibold uppercase tracking-[0.06em] text-paper transition-colors hover:bg-[#2c2c2e] disabled:opacity-40 sm:min-w-52"
-          >
-            {added ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
-                <path d="M5 12l5 5 9-10" />
-              </svg>
-            ) : (
-              <BagIcon className="h-4 w-4" />
-            )}
-            {added ? "In your bag" : "Add the fit"}
-          </button>
-          <p className="flex flex-col items-end gap-1 sm:items-start">
-            <span className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.16em] text-steel-dark">
-              Fit total<span className="hidden sm:inline"> · {look.pieces.length} pieces</span>
-            </span>
-            <span className="font-mono text-[26px] font-semibold leading-none tabular-nums">{formatPrice(total)}</span>
-          </p>
+          {/* The card's footer, the same width as the stage: Add the fit on the left, what the fit
+              comes to in the middle, Quick buy on the right. On a phone the total sits above the two. */}
+          <div className="grid grid-cols-2 items-center gap-x-2 gap-y-3 border border-t-0 border-mist bg-paper p-3 sm:grid-cols-[1fr_auto_1fr] sm:gap-x-6 sm:px-5">
+            <button
+              type="button"
+              onClick={addAll}
+              disabled={!ready}
+              aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
+              className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-ink px-4 text-[13px] font-semibold uppercase tracking-[0.06em] text-paper transition-colors hover:bg-[#2c2c2e] disabled:opacity-40 sm:min-w-48 sm:justify-self-start sm:px-6 sm:text-[14px]"
+            >
+              {added ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+                  <path d="M5 12l5 5 9-10" />
+                </svg>
+              ) : (
+                <BagIcon className="h-4 w-4" />
+              )}
+              {added ? "In your bag" : "Add the fit"}
+            </button>
+            <p className="order-first col-span-2 flex flex-col items-center gap-1 sm:order-none sm:col-span-1">
+              <span className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.16em] text-steel-dark">Fit total · {look.pieces.length} pieces</span>
+              <span className="font-mono text-[26px] font-semibold leading-none tabular-nums">{formatPrice(total)}</span>
+            </p>
+            <FlowButton onClick={() => setBuying(lines())} disabled={!ready} text="Quick buy" aria-label={`Quick buy the fit · ${formatPrice(total)}`} className="w-full px-4 sm:w-auto sm:min-w-48 sm:justify-self-end sm:px-9" />
+          </div>
         </div>
-        <FlowButton onClick={() => setBuying(lines())} disabled={!ready} text="Quick buy" aria-label={`Quick buy the fit · ${formatPrice(total)}`} className="w-full sm:w-auto sm:min-w-48" />
       </div>
 
       {/* Quick buy: the whole fit in one order, paid here, no account needed. */}
