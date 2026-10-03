@@ -955,3 +955,16 @@
     transform: translateY(100%);
   }
 }
+
+/* The tour's loading screen: the mark turns like a coin. */
+.tour-spin {
+  animation: tour-spin 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes tour-spin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}

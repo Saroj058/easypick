@@ -28,6 +28,12 @@ export interface Fonts {
   sans: string;
 }
 
+/** The Easypick logo (mark and wordmark), in white and in ink, loaded before the store is built. */
+export interface Logos {
+  white: HTMLImageElement | null;
+  ink: HTMLImageElement | null;
+}
+
 // ---------- Colours (art direction: ink, white, concrete, steel, birch. Lime only on the logo dot, "Paid" and the gate) ----------
 const C = {
   ink: "#0a0a0a",
@@ -78,10 +84,20 @@ function zoneSign(f: Fonts, num: string, word: string) {
   });
 }
 
-function fasciaSign(f: Fonts) {
+/** The logo drawn to fit a box, centred; false if the image isn't there. */
+function drawLogo(g: CanvasRenderingContext2D, img: HTMLImageElement | null, cx: number, cy: number, h: number) {
+  if (!img || !img.naturalWidth) return false;
+  const wdt = (img.naturalWidth / img.naturalHeight) * h;
+  g.drawImage(img, cx - wdt / 2, cy - h / 2, wdt, h);
+  return true;
+}
+
+/** The storefront's sign: the logo in white on black (the old word sign if the logo didn't load). */
+function fasciaSign(f: Fonts, logos: Logos) {
   return canvasTexture(1024, 200, (g) => {
     g.fillStyle = C.ink;
     g.fillRect(0, 0, 1024, 200);
+    if (drawLogo(g, logos.white, 512, 100, 124)) return;
     g.fillStyle = "#ffffff";
     g.font = `700 150px ${f.display}`;
     g.textBaseline = "middle";
@@ -250,21 +266,6 @@ function kioskScreen(f: Fonts, bill: KioskBill, state: 0 | 1 | 2 | 3) {
   });
 }
 
-function momoSign(f: Fonts) {
-  return canvasTexture(1024, 256, (g) => {
-    g.fillStyle = "#e9b82c";
-    g.fillRect(0, 0, 1024, 256);
-    g.fillStyle = "#b3261e";
-    g.font = `700 104px ${f.display}`;
-    g.fillText("MOMO · CHOWMEIN · LAPHING", 40, 150);
-    g.fillStyle = "#1f2a44";
-    g.fillRect(0, 206, 1024, 50);
-    g.fillStyle = "#e9e5d8";
-    g.font = `600 30px ${f.sans}`;
-    g.fillText("FAST FOOD  ·  JHAMSIKHEL", 40, 242);
-  });
-}
-
 function windowsTexture() {
   return canvasTexture(1024, 360, (g) => {
     g.fillStyle = "#15171d";
@@ -394,8 +395,8 @@ export interface BuiltStore {
   dispose: () => void;
 }
 
-export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill }): BuiltStore {
-  const { fonts, tag, bill } = opts;
+export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill; logos: Logos }): BuiltStore {
+  const { fonts, tag, bill, logos } = opts;
   /** Meshes that move during the film (everything else is frozen in place). */
   const moving = new Set<THREE.Object3D>();
   const group = new THREE.Group();
@@ -442,6 +443,17 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill }
   // full-height mirror closing the central view
   kit.box(M.mirror, [2.7, 1.2, D - 0.02], [0.8, 2.2, 0.02]);
   kit.box(M.ink, [2.7, 1.2, D - 0.01], [0.9, 2.3, 0.01]);
+  // the logo painted on the back wall above the mirror: what you see down the aisle from the door
+  if (logos.ink?.naturalWidth) {
+    const tex = keep(new THREE.Texture(logos.ink));
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    tex.needsUpdate = true;
+    const h = 0.4;
+    const painted = new THREE.Mesh(keep(new THREE.PlaneGeometry((logos.ink.naturalWidth / logos.ink.naturalHeight) * h, h)), keep(new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9 })));
+    painted.position.copy(w(2.7, 2.62, D - 0.005));
+    group.add(painted);
+  }
 
   // ---- Street and facade ----
   const street = new THREE.Mesh(keep(new THREE.PlaneGeometry(30, 14)), M.street);
@@ -471,11 +483,8 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill }
   kit.box(std("#8a4b2f", 0.5, 0.3), [5.9, 0.75, -1.2], [0.4, 0.3, 0.9]);
   // power pole
   kit.box(std("#6b6b6b", 0.9), [-1.4, 4, -1.6], [0.22, 8, 0.22]);
-  // momo shop next door
-  const momo = new THREE.Mesh(keep(new THREE.PlaneGeometry(3.4, 0.85)), keep(new THREE.MeshBasicMaterial({ map: keep(momoSign(fonts)) })));
-  momo.position.copy(w(W + 2.6, 3.2, -0.22));
-  group.add(momo);
-  kit.box(std("#3d2b23", 0.9), [W + 2.6, 1.3, -0.1], [3, 2.6, 0.12]); // their shutter, down
+  // the shop next door, closed: its shutter down, no sign
+  kit.box(std("#3d2b23", 0.9), [W + 2.6, 1.3, -0.1], [3, 2.6, 0.12]);
 
   // tangled cables from the pole across the street
   const cableMat = keep(new THREE.MeshBasicMaterial({ color: "#050505" }));
@@ -492,7 +501,7 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill }
   group.add(coil);
 
   // the fascia sign
-  const fascia = new THREE.Mesh(keep(new THREE.PlaneGeometry(2.6, 0.5)), keep(new THREE.MeshBasicMaterial({ map: keep(fasciaSign(fonts)), toneMapped: false })));
+  const fascia = new THREE.Mesh(keep(new THREE.PlaneGeometry(2.6, 0.5)), keep(new THREE.MeshBasicMaterial({ map: keep(fasciaSign(fonts, logos)), toneMapped: false })));
   fascia.position.copy(w(W / 2, 3.5, -0.36));
   group.add(fascia);
 
@@ -673,12 +682,32 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill }
   kit.box(M.birch, [1.2, 0.98, 2.4], [0.66, 0.04, 1.66]);
   kit.box(M.birch, [0.18, 1.1, 2.4], [0.35, 2.1, 1.6]);
   for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) kit.box(M.bag, [0.24, 0.45 + r * 0.6, 1.9 + c * 0.5], [0.24, 0.34, 0.3]);
-  // the bag waiting on the counter, with its order sticker; it slides forward when you get there
+  // the order waiting on the counter: a black Easypick bag, logo towards you, with two rope
+  // handles and the order sticker; it slides forward when you get there
   const bag = new THREE.Group();
-  const bagBody = new THREE.Mesh(keep(new THREE.BoxGeometry(0.3, 0.36, 0.16)), M.bag);
-  const sticker = new THREE.Mesh(keep(new THREE.BoxGeometry(0.005, 0.06, 0.1)), M.ink);
-  sticker.position.set(0.155, -0.08, 0);
-  bag.add(bagBody, sticker);
+  const bagBody = new THREE.Mesh(keep(new THREE.BoxGeometry(0.16, 0.36, 0.32)), M.ink);
+  bag.add(bagBody);
+  const handleGeo = keep(new THREE.TorusGeometry(0.07, 0.006, 6, 16, Math.PI));
+  for (const x of [-0.05, 0.05]) {
+    const handle = new THREE.Mesh(handleGeo, M.ink);
+    handle.position.set(x, 0.18, 0);
+    handle.rotation.y = Math.PI / 2;
+    bag.add(handle);
+  }
+  if (logos.white?.naturalWidth) {
+    const tex = keep(new THREE.Texture(logos.white));
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    tex.needsUpdate = true;
+    const lw = 0.24;
+    const print = new THREE.Mesh(keep(new THREE.PlaneGeometry(lw, (logos.white.naturalHeight / logos.white.naturalWidth) * lw)), keep(new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })));
+    print.position.set(0.081, 0.04, 0);
+    print.rotation.y = Math.PI / 2;
+    bag.add(print);
+  }
+  const sticker = new THREE.Mesh(keep(new THREE.BoxGeometry(0.004, 0.05, 0.09)), M.bag);
+  sticker.position.set(0.082, -0.11, 0.08);
+  bag.add(sticker);
   group.add(bag);
   moving.add(bag);
   const setBag = (forward: number) => bag.position.copy(w(1.2 + 0.14 * forward, 1.18, 2.2));

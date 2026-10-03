@@ -262,7 +262,14 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
                 Load the 3D store
               </button>
             ) : (
-              <p className="animate-pulse font-mono text-[11px] uppercase tracking-[0.2em] text-paper/60">Opening the store</p>
+              // Loading: the mark turns while the store is built.
+              <div className="flex flex-col items-center gap-6">
+                <span className="[perspective:600px]">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a small static mark, shown before anything else on the page */}
+                  <img src="/brand/mark-white.png" alt="" width={146} height={148} className="tour-spin block h-[72px] w-auto md:h-[88px]" />
+                </span>
+                <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-paper/60">Opening the store</p>
+              </div>
             )}
           </div>
         )}
@@ -283,8 +290,9 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
 
         {/* The page has no header: the name leads home, the cross leads back to the visit page. */}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top))] md:px-10 md:pt-6">
-          <Link href="/" aria-label="Easypick, home" className="display flex h-11 items-center text-[26px] leading-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper md:text-[30px]">
-            Easypick
+          <Link href="/" aria-label="Easypick, home" className="flex h-11 items-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paper">
+            {/* eslint-disable-next-line @next/next/no-img-element -- the logo file, as in the site header */}
+            <img src="/brand/logo-white.png" alt="" width={611} height={161} className="h-6 w-auto md:h-7" />
           </Link>
           <Link href="/visit" aria-label="Close the tour" className={glass}>
             <Icon d="M6 6l12 12M18 6L6 18" />

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { pathAt, SHOTS } from "@/lib/tour-plan";
-import { buildStore, w, type BuiltStore, type Fonts, type KioskBill, type TagInfo } from "./build-store";
+import { buildStore, w, type BuiltStore, type Fonts, type KioskBill, type Logos, type TagInfo } from "./build-store";
 
 export interface TourCanvasProps {
   /** Called every frame with the time since the last one; returns the second of the walk to show. */
@@ -55,6 +55,18 @@ async function fontsReady(f: Fonts) {
   }
 }
 
+/** The logo images for the signs and the bag; a logo that fails to load is left out. */
+function loadLogos(): Promise<Logos> {
+  const one = (src: string) =>
+    new Promise<HTMLImageElement | null>((done) => {
+      const img = new Image();
+      img.onload = () => done(img);
+      img.onerror = () => done(null);
+      img.src = src;
+    });
+  return Promise.all([one("/brand/logo-white.png"), one("/brand/logo.png")]).then(([white, ink]) => ({ white, ink }));
+}
+
 /**
  * A small room for reflections, built here (nothing downloaded): a black ceiling with the three
  * light tracks, pale walls and a grey floor. Rails, mirrors and the polished floor reflect it.
@@ -101,9 +113,9 @@ function Store({ tick, lively, tag, bill, onReady }: TourCanvasProps) {
   useEffect(() => {
     const job: { cancelled: boolean; built: BuiltStore | null } = { cancelled: false, built: null };
     const fonts = readFonts();
-    fontsReady(fonts).then(() => {
+    Promise.all([fontsReady(fonts), loadLogos()]).then(([, logos]) => {
       if (job.cancelled) return;
-      job.built = buildStore({ fonts, tag, bill });
+      job.built = buildStore({ fonts, tag, bill, logos });
       setStore(job.built);
     });
     return () => {
