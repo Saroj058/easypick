@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ProductImage } from "@/components/product-image";
+import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { VaultFeatured } from "./vault-featured";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
@@ -134,9 +135,8 @@ export function Vault({ products }: { products: Product[] }) {
             </h2>
             <p className="mt-2.5 text-[17px] text-[#aeaba3]">Original brands and numbered pieces.</p>
           </div>
-          <Link href={vaultHref()} className="shrink-0 text-[15px] font-semibold uppercase tracking-[0.08em] underline-offset-4 hover:underline">
-            Enter
-          </Link>
+          {/* The way in: the hover pill used on the hero, made for dark grounds. */}
+          <InteractiveHoverButton href={vaultHref()} text="Enter" className="min-w-36 shrink-0" />
         </div>
 
         {/* The brands, each with its own way in. */}
