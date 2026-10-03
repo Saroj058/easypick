@@ -10,7 +10,6 @@ import { useFitProfile } from "@/components/fit-finder";
 import { GarmentSvg } from "@/components/product-image";
 import { BagIcon } from "@/components/icons";
 import { FlowButton } from "@/components/ui/flow-button";
-import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
@@ -360,55 +359,33 @@ export function OccasionFits({ looks, curated }: { looks: Look[]; curated: boole
         </div>
       </div>
 
-      {/* The fit's receipt, in black under the stage: what's in it (numbered as on the figure, with
-          the size picked on each tag), what it all comes to, then the two ways to take it. */}
-      <div className="on-dark flex flex-col gap-5 bg-ink p-4 text-paper sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-6 xl:mt-2">
-        <div className="min-w-0">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/60">
-            {named}
-            {look.curated ? " · designer's pick" : ""}
+      {/* Under the stage, in white: Add the fit with what it all comes to on the left, Quick buy on the right. */}
+      <div className="flex flex-col gap-3 border border-mist bg-paper p-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 xl:mt-2">
+        <div className="flex items-center justify-between gap-4 sm:justify-start sm:gap-6">
+          <button
+            type="button"
+            onClick={addAll}
+            disabled={!ready}
+            aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
+            className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-ink px-6 text-[14px] font-semibold uppercase tracking-[0.06em] text-paper transition-colors hover:bg-[#2c2c2e] disabled:opacity-40 sm:min-w-52"
+          >
+            {added ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+                <path d="M5 12l5 5 9-10" />
+              </svg>
+            ) : (
+              <BagIcon className="h-4 w-4" />
+            )}
+            {added ? "In your bag" : "Add the fit"}
+          </button>
+          <p className="flex flex-col items-end gap-1 sm:items-start">
+            <span className="whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.16em] text-steel-dark">
+              Fit total<span className="hidden sm:inline"> · {look.pieces.length} pieces</span>
+            </span>
+            <span className="font-mono text-[26px] font-semibold leading-none tabular-nums">{formatPrice(total)}</span>
           </p>
-          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-            {worn.map((w) => {
-              const size = sizeOf(w.piece);
-              return (
-                <li key={w.slot} className="flex min-w-0 items-center gap-2 text-[14px]">
-                  <span className={badge} aria-hidden>
-                    {w.n}
-                  </span>
-                  <span className="truncate font-semibold">{w.piece.name}</span>
-                  <span className="shrink-0 font-mono text-[12px] text-paper/60">{size === "ONE" ? "One size" : (size ?? "Pick a size")}</span>
-                </li>
-              );
-            })}
-          </ul>
         </div>
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:shrink-0 lg:justify-end lg:gap-6">
-          <p className="flex items-baseline justify-between gap-3 sm:flex-col sm:items-end sm:gap-1">
-            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/60">Fit total · {look.pieces.length} pieces</span>
-            <span className="font-mono text-[30px] font-semibold leading-none tabular-nums">{formatPrice(total)}</span>
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
-            <InteractiveHoverButton onClick={() => setBuying(lines())} disabled={!ready} text="Quick buy" aria-label={`Quick buy the fit · ${formatPrice(total)}`} className="min-w-0 whitespace-nowrap px-3 text-[13px] sm:min-w-40 sm:px-6 sm:text-[14px]" />
-            <button
-              type="button"
-              onClick={addAll}
-              disabled={!ready}
-              aria-label={added ? "Added to your bag" : `Add the fit · ${formatPrice(total)}`}
-              className="inline-flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-paper px-3 text-[13px] font-semibold uppercase tracking-[0.04em] text-ink sm:px-5 sm:text-[14px] sm:tracking-[0.06em] transition-colors hover:bg-[#e4e3de] disabled:opacity-40 sm:min-w-48"
-            >
-              {added ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
-                  <path d="M5 12l5 5 9-10" />
-                </svg>
-              ) : (
-                <BagIcon className="h-4 w-4" />
-              )}
-              {added ? "In your bag" : "Add the fit"}
-            </button>
-          </div>
-        </div>
+        <FlowButton onClick={() => setBuying(lines())} disabled={!ready} text="Quick buy" aria-label={`Quick buy the fit · ${formatPrice(total)}`} className="w-full sm:w-auto sm:min-w-48" />
       </div>
 
       {/* Quick buy: the whole fit in one order, paid here, no account needed. */}

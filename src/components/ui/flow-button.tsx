@@ -3,15 +3,28 @@ import Link from "next/link";
 
 /**
  * A pill that fills from the centre on hover while one arrow slides out and another slides in.
- * It is a link (it takes people somewhere). The hover is decoration only: the label and an
- * arrow are always visible, and touch screens get the plain pill.
+ * With `href` it is a link (it takes people somewhere); with `onClick` it is a button (it does
+ * something here). The hover is decoration only: the label and an arrow are always visible, and
+ * touch screens get the plain pill.
  */
-export function FlowButton({ href, text, className = "" }: { href: string; text: string; className?: string }) {
-  return (
-    <Link
-      href={href}
-      className={`group relative inline-flex h-12 items-center justify-center gap-1 overflow-hidden rounded-[100px] border-[1.5px] border-ink/40 bg-transparent px-9 text-[14px] font-semibold uppercase tracking-[0.04em] text-ink transition-all duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.95] [@media(hover:hover)]:hover:rounded-[12px] [@media(hover:hover)]:hover:border-transparent [@media(hover:hover)]:hover:text-paper ${className}`}
-    >
+export function FlowButton({
+  href,
+  onClick,
+  text,
+  className = "",
+  disabled,
+  "aria-label": ariaLabel,
+}: {
+  href?: string;
+  onClick?: () => void;
+  text: string;
+  className?: string;
+  disabled?: boolean;
+  "aria-label"?: string;
+}) {
+  const classes = `group relative inline-flex h-12 items-center justify-center gap-1 overflow-hidden rounded-[100px] border-[1.5px] border-ink/40 bg-transparent px-9 text-[14px] font-semibold uppercase tracking-[0.04em] text-ink transition-all duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.95] disabled:pointer-events-none disabled:opacity-40 [@media(hover:hover)]:hover:rounded-[12px] [@media(hover:hover)]:hover:border-transparent [@media(hover:hover)]:hover:text-paper ${className}`;
+  const inside = (
+    <>
       {/* The arrow that slides in from the left */}
       <ArrowRight
         aria-hidden
@@ -28,6 +41,17 @@ export function FlowButton({ href, text, className = "" }: { href: string; text:
         aria-hidden
         className="absolute right-4 z-[9] h-4 w-4 fill-none stroke-ink transition-all duration-[800ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] [@media(hover:hover)]:group-hover:right-[-25%] [@media(hover:hover)]:group-hover:stroke-paper"
       />
-    </Link>
+    </>
+  );
+  if (href)
+    return (
+      <Link href={href} aria-label={ariaLabel} className={classes}>
+        {inside}
+      </Link>
+    );
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={ariaLabel} className={classes}>
+      {inside}
+    </button>
   );
 }
