@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -60,7 +59,7 @@ export function VaultFeatured({ pieces }: { pieces: FeaturedPiece[] }) {
           );
         }}
       />
-      {/* The front piece, in words, with a plain link to it. */}
+      {/* The front piece, in words, and Quick buy. (Tapping the front card opens the piece.) */}
       <div aria-live="polite" className="mt-2 flex min-h-11 flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-[15px]">
         <span className="text-[#aeaba3]">
           {piece.brand} · {piece.name} · <span className="font-mono tabular-nums">{piece.price}</span>
@@ -72,9 +71,6 @@ export function VaultFeatured({ pieces }: { pieces: FeaturedPiece[] }) {
           className="flex h-11 items-center rounded-full bg-[#f2efe8] px-5 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink hover:bg-paper"
           trigger="Quick buy"
         />
-        <Link href={`/product/${piece.slug}`} className="flex h-11 items-center font-semibold uppercase tracking-[0.08em] text-[13px] underline underline-offset-4">
-          View piece
-        </Link>
       </div>
     </div>
   );
