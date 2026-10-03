@@ -76,7 +76,7 @@ export function StackedCarousel({
   const arrow = "absolute top-[136px] z-[60] sm:top-[176px] lg:top-[200px] grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-black/60 text-white backdrop-blur transition hover:bg-black";
 
   return (
-    <div className={cn("relative select-none", className)} role="region" aria-roledescription="carousel" aria-label={label}>
+    <div className={cn("relative isolate select-none", className)} role="region" aria-roledescription="carousel" aria-label={label}>
       <div className="relative flex h-[21rem] w-full items-start justify-center overflow-hidden sm:h-[26rem] lg:h-[30rem]">
         {/* A transparent surface over the cards takes the drag, the tap and the keys. */}
         <motion.div

@@ -248,7 +248,7 @@ export function CoverflowCarousel({
   const arrow = "absolute top-[calc(50%-var(--cf-over)/2)] z-[200] grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-ink/15 bg-paper/85 text-ink backdrop-blur transition hover:bg-paper disabled:opacity-30";
 
   return (
-    <div className={cn("w-full", className)} style={{ ["--cf-card" as string]: cardWidth, ["--cf-over" as string]: overhang }} role="region" aria-roledescription="carousel" aria-label={label}>
+    <div className={cn("isolate w-full", className)} style={{ ["--cf-card" as string]: cardWidth, ["--cf-over" as string]: overhang }} role="region" aria-roledescription="carousel" aria-label={label}>
       <div className="relative">
         <div
           ref={frameRef}
