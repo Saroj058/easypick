@@ -5,18 +5,31 @@ import { cn } from "@/lib/utils";
 
 /**
  * A pill with a small white dot beside its label. On hover the dot grows to fill the pill, the
- * label slides away and comes back in black with an arrow. It is a link (it takes people
- * somewhere), made for dark grounds. Touch screens get the plain pill, label always visible.
+ * label slides away and comes back in black with an arrow. Made for dark grounds. With `href`
+ * it is a link (it takes people somewhere); with `onClick` it is a button (it does something
+ * here). Touch screens get the plain pill, label always visible.
  */
-export function InteractiveHoverButton({ href, text, className }: { href: string; text: string; className?: string }) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "group relative inline-flex h-12 min-w-44 items-center justify-center overflow-hidden rounded-full border border-paper/40 px-6 text-[14px] font-semibold uppercase tracking-[0.06em] text-paper",
-        className,
-      )}
-    >
+export function InteractiveHoverButton({
+  href,
+  onClick,
+  text,
+  className,
+  disabled,
+  "aria-label": ariaLabel,
+}: {
+  href?: string;
+  onClick?: () => void;
+  text: string;
+  className?: string;
+  disabled?: boolean;
+  "aria-label"?: string;
+}) {
+  const classes = cn(
+    "group relative inline-flex h-12 min-w-44 items-center justify-center overflow-hidden rounded-full border border-paper/40 px-6 text-[14px] font-semibold uppercase tracking-[0.06em] text-paper disabled:pointer-events-none disabled:opacity-40",
+    className,
+  );
+  const inside = (
+    <>
       {/* The dot, which grows into the fill */}
       <span
         aria-hidden
@@ -32,6 +45,17 @@ export function InteractiveHoverButton({ href, text, className }: { href: string
         {text}
         <ArrowRight className="h-4 w-4" />
       </span>
-    </Link>
+    </>
+  );
+  if (href)
+    return (
+      <Link href={href} aria-label={ariaLabel} className={classes}>
+        {inside}
+      </Link>
+    );
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={ariaLabel} className={classes}>
+      {inside}
+    </button>
   );
 }
