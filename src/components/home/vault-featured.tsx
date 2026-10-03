@@ -62,7 +62,9 @@ export function VaultFeatured({ pieces }: { pieces: FeaturedPiece[] }) {
       {/* The front piece, in words, and Quick buy. (Tapping the front card opens the piece.) */}
       <div aria-live="polite" className="mt-2 flex min-h-11 flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-[15px]">
         <span className="text-[#aeaba3]">
-          {piece.brand} · {piece.name} · <span className="font-mono tabular-nums">{piece.price}</span>
+          {piece.brand} · {piece.name}
+          {/* The price is on the card's hang tag; this says it for screen readers, which the tag is hidden from. */}
+          <span className="sr-only">, {piece.price}</span>
         </span>
         {/* Buy it from here: the size picker, then the checkout. */}
         <QuickBuy
