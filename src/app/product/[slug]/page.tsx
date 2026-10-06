@@ -180,6 +180,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                   // No on-model photos, so the "Model is … and wears …" note is left out.
                   category={product.category}
                   measurements={product.measurements}
+                  vault={product.vault}
                   dropLabel={drop ? `Drops ${formatDropTime(drop.releaseAt)}` : undefined}
                 />
               </div>

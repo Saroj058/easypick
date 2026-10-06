@@ -85,6 +85,9 @@ test("the owner puts a piece in The Vault and it shows on the home page", async 
 
   await page.goto("/product/coach-jacket");
   await expect(page.getByText("Cut from the last roll of the Drop 01 nylon.")).toBeVisible();
+  // A Vault piece goes in the bag only for a signed-in customer: a guest sees Buy now alone.
+  await expect(page.getByRole("link", { name: "Buy now" }).or(page.getByRole("button", { name: "Pick a size" })).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add to bag" })).toHaveCount(0);
 
   // Put it back so other tests see the usual catalogue.
   await page.goto("/admin/products/coach-jacket");

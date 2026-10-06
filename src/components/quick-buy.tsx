@@ -12,6 +12,7 @@ import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
 import { useFitProfile } from "./fit-finder";
 import { BagIcon, HeartIcon } from "./icons";
 import { toggleSaved, useList } from "./saved";
+import { useMe } from "./session";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "./ui/sheet";
 
 // The two buttons on a product card. Quick buy starts from the size that matches the person's
@@ -61,6 +62,9 @@ export function QuickBuy({
   const suggested = useCardVariant(product);
   const profile = useFitProfile();
   const addToBag = useAddToBag();
+  const me = useMe();
+  // Vault pieces go in the bag only for someone signed in; a guest buys them with Buy now.
+  const canBag = !product.vault || Boolean(me);
   const [open, setOpen] = useState(false);
   const [colour, setColour] = useState<string | null>(null);
   const [size, setSize] = useState<Size | null>(null);
@@ -191,17 +195,19 @@ export function QuickBuy({
               <Link href={`/buy/${product.slug}?sku=${encodeURIComponent(chosen.sku)}`} onClick={() => setOpen(false)} className="btn btn-volt mt-8 w-full">
                 Buy now
               </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  const line = { slug: product.slug, sku: chosen.sku, name: product.name, size: chosen.size, colour: chosen.colour, price: product.salePrice ?? product.price };
-                  if (addToBag([line])) showBagToast(addedMessage(line));
-                  setOpen(false);
-                }}
-                className="btn btn-outline mt-3 w-full"
-              >
-                Add to bag
-              </button>
+              {canBag && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const line = { slug: product.slug, sku: chosen.sku, name: product.name, size: chosen.size, colour: chosen.colour, price: product.salePrice ?? product.price };
+                    if (addToBag([line])) showBagToast(addedMessage(line));
+                    setOpen(false);
+                  }}
+                  className="btn btn-outline mt-3 w-full"
+                >
+                  Add to bag
+                </button>
+              )}
             </>
           ) : (
             <button type="button" disabled className="btn btn-volt mt-8 w-full">

@@ -12,6 +12,7 @@ import { AskWhatsApp } from "./ask-whatsapp";
 import { useAddToBag } from "./bag-gate";
 import { RestockForm } from "./restock-form";
 import { SaveButton } from "./saved";
+import { useMe } from "./session";
 import { GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
 
@@ -20,7 +21,7 @@ const RETRY_MS = 5_000;
 
 type Props = Pick<
   Product,
-  "slug" | "name" | "price" | "salePrice" | "colours" | "variants" | "status" | "fit" | "modelNote" | "category" | "measurements"
+  "slug" | "name" | "price" | "salePrice" | "colours" | "variants" | "status" | "fit" | "modelNote" | "category" | "measurements" | "vault"
 > & {
   dropLabel?: string;
 };
@@ -30,6 +31,9 @@ export function BuyPanel(props: Props) {
   const { slug, name, colours, variants, status } = props;
   const price = props.salePrice ?? props.price;
   const addToBagOrLogin = useAddToBag();
+  const me = useMe();
+  // Vault pieces go in the bag only for someone signed in; a guest buys them with Buy now.
+  const canBag = !props.vault || Boolean(me);
 
   const sizes = Array.from(new Set(variants.map((v) => v.size)));
   const oneSize = sizes.length === 1 && sizes[0] === "ONE";
@@ -247,9 +251,11 @@ export function BuyPanel(props: Props) {
                 Pick a size
               </button>
             )}
-            <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="btn btn-ink flex-1">
-              {added ? "Added" : "Add to bag"}
-            </button>
+            {canBag && (
+              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="btn btn-ink flex-1">
+                {added ? "Added" : "Add to bag"}
+              </button>
+            )}
           </>
         ) : (
           <>
