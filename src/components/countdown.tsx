@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { VaporCountdown } from "@/components/ui/countdown-vapor-digits";
+
 function parts(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
   return { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60 };
@@ -12,7 +14,8 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /**
  * Counts down to a drop. Seconds tick in the large variant (or when `seconds` is asked for), only
  * while the tab is visible, and never under reduced motion (then it updates once a minute).
- * Height is fixed in every state so nothing shifts.
+ * Where the seconds tick, each digit that changes turns to vapor and the new one condenses out
+ * of it (VaporCountdown). Height is fixed in every state so nothing shifts.
  */
 export function Countdown({ to, label, size = "lg", seconds = false }: { to: string; label: string; size?: "sm" | "lg"; seconds?: boolean }) {
   const target = Date.parse(to);
@@ -56,6 +59,11 @@ export function Countdown({ to, label, size = "lg", seconds = false }: { to: str
         <p className={`font-mono font-semibold ${numCls}`}>Live now</p>
       ) : (
         <div role="timer" aria-label={`${label} in ${d} days ${h} hours ${m} minutes`}>
+          {!calm ? (
+            <div aria-hidden>
+              <VaporCountdown targetDate={target} className={`font-mono ${numCls}`} />
+            </div>
+          ) : (
           <ol className={`flex font-mono ${size === "lg" ? "gap-5 md:gap-8" : "gap-3"}`} aria-hidden>
             {units.map((u) => (
               <li key={u.l} className={`flex flex-col ${seconds ? "items-center" : ""}`}>
@@ -64,6 +72,7 @@ export function Countdown({ to, label, size = "lg", seconds = false }: { to: str
               </li>
             ))}
           </ol>
+          )}
         </div>
       )}
     </div>
