@@ -19,3 +19,12 @@ export const AREA_CENTRE: [number, number] = [85.3075, 27.679];
 /** How long a visit counts as "seen before" (the shorter repeat sequence): 30 days. */
 export const SEEN_KEY = "ep.visit.seen";
 export const SEEN_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Step inside: where the tour starts when it's entered from the Visit page's door. */
+export const TOUR_ENTER_URL = "/visit/tour#enter";
+/** The hero's last frame as the camera goes through the door (this tab only), shown by the tour while it loads. */
+export const DOOR_FRAME_KEY = "ep.visit.door";
+/** Set by the tour when it was entered through the door, so the hero shows the door closing on the way back. */
+export const FROM_TOUR_KEY = "ep.visit.back";
+/** The still of the route for the light version of the page. Made for this pin; remake it when the pin moves. */
+export const STATIC_ROUTE = { src: "/visit/route-static.avif", width: 1200, height: 750, pin: { lat: 27.6781, lng: 85.3052 }, from: "Jhamsikhel Chowk" };

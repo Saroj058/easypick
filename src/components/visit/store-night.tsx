@@ -6,7 +6,7 @@ import * as THREE from "three";
 
 import { buildStore, w, type BuiltStore, type KioskBill, type NightKind, type TagInfo } from "@/components/tour3d/build-store";
 import { fontsReady, loadLogos, readFonts, storeEnvironment } from "@/components/tour3d/store-assets";
-import { heightForZoom, inOut } from "@/lib/map/sequence";
+import { dolly, heightForZoom, inOut } from "@/lib/map/sequence";
 import { STORE } from "@/lib/tour-plan";
 
 // The Visit page hero: the store from across the street at night, the same model the tour walks
@@ -37,6 +37,12 @@ export interface StoreNightProps {
   onAnchor?: (x: number, y: number) => void;
   /** How long the rise to straight overhead takes, in ms, once Find us is tapped; null until then. */
   rise?: number | null;
+  /** Step inside: how long the push through the door takes, in ms; null until it's tapped. */
+  enter?: number | null;
+  /** How open the door is when the store first draws (1 on the way back from the tour, so it's seen closing). */
+  doorFrom?: number;
+  /** The push has reached the moment to hand over to the tour (950 ms of its 1100). */
+  onEntered?: () => void;
   /** The map zoom the rise ends at (the map opens at the same view). */
   riseZoom?: number;
   onRisen?: () => void;
@@ -64,15 +70,18 @@ const TOP = new THREE.Vector3();
 const Q0 = new THREE.Quaternion();
 /** Looking straight down with the top of the screen pointing into the store (away from the street). */
 const DOWN = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+/** Where the push through the door ends: the tour's "Enter" stop begins from here. */
+const DOOR_AT = w(CENTRE, 1.55, -0.4);
+const DOOR_LOOK = w(CENTRE, 1.4, 4.5);
 
-function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, onCapture, rise = null, riseZoom = 19, onRisen }: StoreNightProps) {
+function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, onCapture, rise = null, riseZoom = 19, onRisen, enter = null, doorFrom = 0, onEntered }: StoreNightProps) {
   const { invalidate } = useThree();
   const get = useThree((s) => s.get);
   const [store, setStore] = useState<BuiltStore | null>(null);
   const inside = useRef<THREE.PointLight>(null);
   const front = useRef<THREE.PointLight>(null);
   /** Eased values: the drift's clock, the door, the dolly, the upward tilt, the room's light. */
-  const now = useRef({ t: 0, door: 0, dolly: 0, tilt: 0, glow: 1, first: true, rise: 0, risen: false });
+  const now = useRef({ t: 0, door: doorFrom, dolly: 0, tilt: 0, glow: 1, first: true, rise: 0, risen: false, enter: 0, entered: false });
 
   const key = `${tag.name}|${tag.price}|${bill.total}`;
   useEffect(() => {
@@ -104,7 +113,7 @@ function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, 
     onCapture(gl.domElement.toDataURL("image/jpeg", 0.86));
   }, [capture, store, onCapture, get]);
   // A hover or a resize while the store stands still needs one new frame.
-  useEffect(() => invalidate(), [preview, still, rise, invalidate]);
+  useEffect(() => invalidate(), [preview, still, rise, enter, invalidate]);
 
   useFrame(({ camera, size, gl, scene }, delta) => {
     if (!store) return;
@@ -140,6 +149,23 @@ function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, 
     if (aspect < 1) L.y -= 1.0; // an upright phone: the store sits higher, clear of the words
     L.y += Math.tan(THREE.MathUtils.degToRad(v.tilt)) * back;
     camera.lookAt(L);
+
+    // Step inside: the door slides open (the first 500 ms of 1100) and the camera goes through it.
+    if (enter !== null) {
+      // By the real clock (not the capped step), so a slow device still gets there in 1.1 s.
+      v.enter = Math.min(1, enter <= 0 ? 1 : v.enter + (Math.min(delta, 0.4) * 1000) / enter);
+      v.door = Math.min(1, v.enter * 2.2);
+      store.setDoor(v.door);
+      const e = dolly(v.enter);
+      camera.position.lerpVectors(P, DOOR_AT, e);
+      L.lerp(DOOR_LOOK, e);
+      camera.lookAt(L);
+      if (v.enter < 1) invalidate();
+      if (v.enter >= 950 / 1100 && !v.entered) {
+        v.entered = true;
+        requestAnimationFrame(() => onEntered?.());
+      }
+    }
 
     // Find us: the camera lifts until it looks straight down on the roof, as high as the map's
     // opening view, north up (the street at the bottom of the screen), so the map can take over

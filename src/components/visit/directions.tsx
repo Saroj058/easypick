@@ -42,6 +42,10 @@ export interface DirectionsData {
 }
 
 export type Snap = "peek" | "half" | "full";
+/** "From my location": not offered, offered, waiting for the browser, shown on the map, or it didn't work. */
+export type Locate = "off" | "idle" | "asking" | "shown" | "failed";
+
+const far = (m: number) => (m < 950 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${(m / 1000).toFixed(1)} km`);
 /** The sheet's heights on a phone, as a share of the window (the peek is a fixed 96 px). */
 const SHEET = 0.92;
 const HALF = 0.5;
@@ -106,6 +110,9 @@ export function Directions({
   onLook,
   onReplay,
   onLeave,
+  locate = "off",
+  away = null,
+  onLocate,
 }: {
   data: DirectionsData;
   /** The chosen start point. */
@@ -124,6 +131,11 @@ export function Directions({
   onLook: (step: number) => void;
   onReplay: () => void;
   onLeave: () => void;
+  locate?: Locate;
+  /** Metres from the visitor to the door in a straight line, once they've asked. */
+  away?: number | null;
+  /** The only place the page asks for a location: a tap on "From my location". */
+  onLocate?: () => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const [copied, setCopied] = useState<"" | "yes" | "no">("");
@@ -199,7 +211,7 @@ export function Directions({
       {/* The top of the sheet: drag it, or tap it, to change its height. It always shows the total and the way into Google Maps. */}
       <div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} className={`shrink-0 px-5 pt-2 ${wide ? "" : "touch-none"}`}>
         {!wide && (
-          <button type="button" onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onSnap(snap === "peek" ? "half" : snap === "half" ? "full" : "half"))} aria-label={snap === "peek" ? "Show the directions" : "Change the directions' height"} className="mx-auto mb-1 flex h-6 w-24 items-center justify-center">
+          <button type="button" onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onSnap(snap === "peek" ? "half" : snap === "half" ? "full" : "half"))} aria-label={snap === "peek" ? "Show the directions" : "Change the directions' height"} className="mx-auto -mb-4 flex h-11 w-24 items-start justify-center pt-2.5">
             <span className="block h-1 w-10 rounded-full bg-mist" aria-hidden />
           </button>
         )}
@@ -228,8 +240,9 @@ export function Directions({
         )}
 
         {/* Where from, and how */}
-        {!data.soon && data.starts.length > 1 && (
-          <div role="radiogroup" aria-label="Coming from" className="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-3">
+        {!data.soon && (data.starts.length > 1 || locate !== "off") && (
+          <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-3">
+           <div role="radiogroup" aria-label="Coming from" className="flex gap-2">
             {data.starts.map((s) => {
               const on = s.id === start?.id;
               return (
@@ -238,7 +251,28 @@ export function Directions({
                 </button>
               );
             })}
+           </div>
+            {locate !== "off" && (
+              <button type="button" aria-pressed={locate === "shown"} disabled={locate === "asking"} onClick={onLocate} className={`h-11 shrink-0 whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold ${locate === "shown" ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}>
+                From my location
+              </button>
+            )}
           </div>
+        )}
+        {locate !== "off" && locate !== "idle" && (
+          <p role="status" data-me={locate} className="px-5 pt-3 text-[14px] text-steel-dark">
+            {locate === "asking" && "Finding you…"}
+            {locate === "shown" && away !== null && (away < 60_000 ? `You're about ${far(away)} from the door in a straight line (the dashed line). ` : "You're a long way from the store. ")}
+            {locate === "failed" && "Couldn't get your location. "}
+            {locate !== "asking" && mapsUrl && (
+              <>
+                <a href={mapsUrl} target="_blank" rel="noopener" className="font-semibold text-ink underline underline-offset-4">
+                  Google Maps
+                </a>{" "}
+                {locate === "failed" ? "starts from wherever you are." : "has the turns."}
+              </>
+            )}
+          </p>
         )}
         {!data.soon && metres !== null && (
           <div role="radiogroup" aria-label="How you're coming" className="grid grid-cols-3 gap-2 px-5 pt-3">
@@ -283,7 +317,7 @@ export function Directions({
                   return (
                     <li key={i} data-step={on ? "lit" : "dim"}>
                       {start ? (
-                        <button type="button" onClick={() => onLook(i)} aria-label={`Step ${i + 1}: ${s.text}. Show it on the map`} className={`${cls} min-h-9 items-center hover:underline`}>
+                        <button type="button" onClick={() => onLook(i)} aria-label={`Step ${i + 1}: ${s.text}. Show it on the map`} className={`${cls} min-h-11 items-center hover:underline`}>
                           {inner}
                         </button>
                       ) : (

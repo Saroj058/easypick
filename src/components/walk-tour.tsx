@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { DOOR_FRAME_KEY, FROM_TOUR_KEY } from "@/lib/map/tiles";
 import { dip, DURATION, stopIndexAt, type TourStop } from "@/lib/tour-plan";
 import type { KioskBill, TagInfo } from "./tour3d/build-store";
 
@@ -69,6 +70,8 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
   const [playing, setPlaying] = useState(false);
   const [ended, setEnded] = useState(false);
   const [chapter, setChapter] = useState(0);
+  /** Entered through the Visit page's door (#enter): the picture of that last frame, shown until the store has drawn. */
+  const [door, setDoor] = useState<string | null>(null);
 
   const show3d = mode === "3d";
 
@@ -170,6 +173,19 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
     const mq = matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduced(mq.matches);
     update();
+    if (location.hash === "#enter") {
+      let frame: string | null = null;
+      try {
+        // Left in place: the page can mount twice on the way in, and both must find it.
+        frame = sessionStorage.getItem(DOOR_FRAME_KEY);
+        // Back from here, the Visit page shows the door closing.
+        sessionStorage.setItem(FROM_TOUR_KEY, "1");
+      } catch {
+        // blocked storage: the still of the door is used
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the address and this tab's storage can only be read once mounted
+      setDoor(frame ?? "/visit/door-poster.avif");
+    }
     mq.addEventListener("change", update);
     const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
     const go = () => setMode(decideMode());
@@ -204,6 +220,9 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
     const at = Number(new URLSearchParams(location.search).get("t"));
     if (Number.isFinite(at) && location.search.includes("t=")) {
       window.scrollTo({ top: (Math.min(DURATION, Math.max(0, at)) / DURATION) * reach(), behavior: "instant" });
+    } else if (location.hash === "#enter" && stops[1]) {
+      // In through the door from the Visit page: the walk starts at the entrance, not out on the street.
+      window.scrollTo({ top: ((stops[1].from + 0.05) / DURATION) * reach(), behavior: "instant" });
     }
     read();
     time.current.now = atRest.current ? restAt(time.current.target) : time.current.target;
@@ -213,7 +232,7 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
       window.removeEventListener("scroll", read);
       window.removeEventListener("resize", read);
     };
-  }, [begin, paint, reach, restAt]);
+  }, [begin, paint, reach, restAt, stops]);
 
   // The moment the visitor scrolls for themselves, the page stops walking by itself.
   useEffect(() => {
@@ -253,7 +272,7 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
 
       <div className="fixed inset-0 overflow-hidden bg-ink">
         {/* Before the store is on screen (and where there is no 3D): the stop in plain type. */}
-        {!(show3d && ready) && (
+        {!(show3d && ready) && !(door && (mode === "checking" || mode === "3d")) && (
           <div className="absolute inset-0 grid place-items-center px-6 text-center">
             {mode === "static" ? (
               <p className="display text-[72px] leading-[0.9] text-paper/20 md:text-[160px]">{stop.name}</p>
@@ -276,9 +295,15 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
 
         {/* The canvas takes no pointer or touch, so the wheel and the finger always scroll the page. */}
         {show3d && (
-          <div className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`} aria-hidden>
+          <div className={`pointer-events-none absolute inset-0 transition-opacity ${door ? "duration-0" : "duration-700"} ${ready ? "opacity-100" : "opacity-0"}`} aria-hidden>
             <TourCanvas tick={tick} lively={!reduced} tag={tag} bill={bill} onReady={() => setReady(true)} />
           </div>
+        )}
+
+        {/* From the Visit page's door: its last frame stands in until the store has drawn, then fades (200 ms). */}
+        {door && (mode === "checking" || mode === "3d") && (
+          // eslint-disable-next-line @next/next/no-img-element -- a frame handed over from the Visit page, or the still of the door
+          <img src={door} alt="" aria-hidden data-door-poster className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${show3d && ready ? "opacity-0" : "opacity-100"}`} />
         )}
 
         {/* The one cut dips through black. */}
@@ -350,6 +375,9 @@ export function WalkTour({ stops, tag, bill }: { stops: TourStop[]; tag: TagInfo
               <div className="mt-5 flex animate-fade-up flex-wrap gap-2 md:gap-3">
                 <Link href="/visit" className="inline-flex h-12 items-center rounded-full bg-paper px-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-ink md:px-6 md:text-[13px]">
                   Visit the store
+                </Link>
+                <Link href="/visit#find-us" className="inline-flex h-12 items-center rounded-full border border-paper/60 bg-black/40 px-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-paper hover:bg-paper hover:text-ink md:px-6 md:text-[13px]">
+                  Get directions
                 </Link>
                 <Link href="/shop" className="inline-flex h-12 items-center rounded-full border border-paper/60 bg-black/40 px-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-paper hover:bg-paper hover:text-ink md:px-6 md:text-[13px]">
                   Shop the drop

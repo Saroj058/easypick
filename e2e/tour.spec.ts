@@ -72,3 +72,19 @@ test("walk the store: with motion turned off nothing walks by itself, and the st
   await expect(tour.getByText("Just looking?").first()).toBeVisible();
   await ctx.close();
 });
+
+test("walk the store: opened at #enter it starts inside the door, and the end of the walk offers directions", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.goto("/visit/tour#enter");
+  const tour = page.getByRole("region", { name: "Virtual tour" });
+  await expect(tour).toHaveAttribute("data-chapter", "enter", { timeout: 5_000 });
+  // With no frame handed over from the Visit page, the still of the door stands in while the store loads.
+  await expect(tour.locator("[data-door-poster]")).toHaveAttribute("src", "/visit/door-poster.avif");
+  await expect(tour).toHaveAttribute("data-tour-state", "ready", { timeout: 60_000 });
+  await expect(tour).toHaveAttribute("data-chapter", "enter");
+  await expect(tour.getByText("Just looking?").first()).toBeVisible();
+
+  await tour.getByRole("button", { name: /^Stop \d: Out$/ }).click();
+  await expect(tour).toHaveAttribute("data-tour-state", "ended", { timeout: 60_000 });
+  await expect(tour.getByRole("link", { name: "Get directions" })).toHaveAttribute("href", "/visit#find-us");
+});

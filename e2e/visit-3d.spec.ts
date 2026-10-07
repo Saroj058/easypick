@@ -329,3 +329,168 @@ test("directions: on a phone it's a sheet that opens at half, goes nearly full a
   await p.getByRole("button", { name: /The store/ }).click();
   await expect(stage(page)).toHaveAttribute("data-stage", "hero");
 });
+
+// ---------- Phase 6: step inside, the fallbacks, the keyboard, and "From my location" ----------
+
+test("step inside: the camera goes through the door, the tour opens at its entrance on that frame, and Back returns to the store @phone", async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors = collect(page);
+  await page.goto(`/visit?${OPEN}&motion=fast`);
+  await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  await page.getByRole("link", { name: "Step inside" }).click();
+  await expect(stage(page)).toHaveAttribute("data-stage", "inside");
+  await expect(page).toHaveURL(/\/visit\/tour#enter$/, { timeout: 60_000 });
+  const tour = page.getByRole("region", { name: "Virtual tour" });
+  // It starts inside the door, not out on the street, and shows the hero's last frame until the store has drawn.
+  await expect(tour).toHaveAttribute("data-chapter", "enter", { timeout: 5_000 });
+  await expect(tour.locator("[data-door-poster]")).toHaveAttribute("src", /^data:image\/jpeg/);
+  await expect(tour).toHaveAttribute("data-tour-state", "ready", { timeout: 60_000 });
+  await expect(tour).toHaveAttribute("data-chapter", "enter");
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/visit\?/);
+  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
+  await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  expect(errors()).toEqual([]);
+});
+
+test("fallbacks: the light version gets the still of the route, no WebGL gets the map on a tap, reduced motion gets the finished map", async ({ page, browser }, info) => {
+  test.setTimeout(240_000);
+  const heavy: string[] = [];
+  page.on("request", (r) => /maplibre|pmtiles|google\.com\/maps\?/.test(r.url()) && heavy.push(r.url()));
+  const section = page.locator("#find-us");
+
+  // Light (Save-Data, a slow connection, little memory): the poster, the receipt, one small picture of the route.
+  await page.goto(`/visit?preview=open&lite=1&now=${at("2026-10-07T12:00+05:45")}`);
+  await expect(stage(page)).toHaveAttribute("data-fallback", "lite");
+  await expect(page.locator("[data-hero-poster]")).toBeVisible();
+  await page.getByRole("link", { name: "Find us" }).click();
+  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
+  await expect(page.locator("[data-find-us]")).toHaveCount(0);
+  await expect(section.getByText("QUEUE")).toBeInViewport();
+  await expect(section.getByRole("link", { name: "Open in Google Maps" })).toHaveAttribute("href", /google\.com\/maps/);
+  const still = section.locator("[data-route-static]");
+  await still.scrollIntoViewIfNeeded();
+  await expect(still).toBeVisible();
+  expect(await still.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBe(1200);
+  await expect(section.getByRole("button", { name: "Show map" })).toHaveCount(0);
+  await expect(stage(page)).toHaveAttribute("data-3d", "off");
+  await expect(page.locator("[data-hero-canvas] canvas")).toHaveCount(0);
+  expect(heavy).toEqual([]);
+  await page.screenshot({ path: `test-results/shots/visit-6-${info.project.name}-lite.png` });
+
+  // No WebGL: the poster, the receipt, and the Google map that loads only when asked for.
+  await page.goto(`/visit?preview=open&gl=off&now=${at("2026-10-07T12:00+05:45")}`);
+  await expect(stage(page)).toHaveAttribute("data-fallback", "nowebgl");
+  await page.getByRole("link", { name: "Find us" }).click();
+  await expect(section.getByText("QUEUE")).toBeInViewport();
+  await expect(section.getByRole("link", { name: "Open in Google Maps" })).toBeVisible();
+  await expect(section.getByRole("button", { name: "Show map" })).toBeVisible();
+  await expect(section.locator("[data-route-static]")).toHaveCount(0);
+  await page.screenshot({ path: `test-results/shots/visit-6-${info.project.name}-nowebgl.png` });
+  // Step inside still leads to the tour's entrance.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.getByRole("link", { name: "Step inside" }).click();
+  await expect(page).toHaveURL(/\/visit\/tour#enter$/);
+
+  // Reduced motion: no door, no dolly, no flight. The map opens on the finished route.
+  const ctx = await browser.newContext({ reducedMotion: "reduce" });
+  const calm = await ctx.newPage();
+  await calm.goto(`/visit?${OPEN}`);
+  await expect(stage(calm)).toHaveAttribute("data-fallback", "reduced");
+  await expect(stage(calm)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  await calm.getByRole("link", { name: "Find us" }).click();
+  await expect(stage(calm)).toHaveAttribute("data-map-state", "done", { timeout: 60_000 });
+  await expect(panel(calm).getByText("QUEUE")).toBeVisible();
+  await expect(panel(calm).locator("[data-step=dim]")).toHaveCount(0);
+  await expect(panel(calm).getByRole("link", { name: "Open in Google Maps" })).toBeVisible();
+  await calm.screenshot({ path: `test-results/shots/visit-6-${info.project.name}-reduced.png` });
+  await calm.keyboard.press("Escape");
+  await expect(stage(calm)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  await calm.getByRole("link", { name: "Step inside" }).click();
+  await expect(stage(calm)).not.toHaveAttribute("data-stage", "inside");
+  await expect(calm).toHaveURL(/\/visit\/tour#enter$/);
+  await ctx.close();
+});
+
+test("keyboard: Find us opens the map from the keyboard, focus goes to the directions and comes back, and every target is big enough", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.goto(`/visit?${OPEN}&motion=fast`);
+  await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  // The store is a picture: nothing in it takes the keyboard.
+  await expect(page.locator("[data-hero-canvas]")).toHaveAttribute("aria-hidden", "true");
+  const find = page.getByRole("link", { name: "Find us" });
+  await find.focus();
+  await page.keyboard.press("Enter");
+  await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
+  const p = panel(page);
+  await expect(p.getByRole("heading", { name: "Directions" })).toBeFocused();
+  await expect(page.getByRole("link", { name: "Skip map, read directions" })).toHaveAttribute("href", "#find-h");
+  // One message for screen readers when the route is ready.
+  await expect(page.locator("[data-find-us] [aria-live=polite]")).toContainText(/The route is on the map/);
+
+  // Tab reaches the panel's controls, and each shows where the keyboard is.
+  await page.keyboard.press("Tab");
+  const focused = page.locator(":focus");
+  await expect(focused).toBeVisible();
+  expect(await focused.evaluate((el) => getComputedStyle(el).outlineStyle !== "none" || getComputedStyle(el).boxShadow !== "none")).toBe(true);
+
+  // Everything that can be tapped is at least 44 px in one direction and 40 in the other.
+  const small = await page.locator("[data-find-us]").evaluate((root) =>
+    [...root.querySelectorAll<HTMLElement>("a[href], button")]
+      .filter((el) => el.offsetParent !== null && !el.closest(".maplibregl-ctrl") && !el.classList.contains("sr-only"))
+      .map((el) => ({ name: (el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, 40), w: Math.round(el.getBoundingClientRect().width), h: Math.round(el.getBoundingClientRect().height) }))
+      .filter((b) => b.h < 44 || b.w < 40),
+  );
+  expect(small).toEqual([]);
+
+  // Escape closes the map and hands the keyboard back to the link that opened it.
+  await page.keyboard.press("Escape");
+  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
+  await expect(find).toBeFocused();
+});
+
+test("from my location: asked only on a tap, drawn on the map, and never sent anywhere", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const here = { latitude: 27.68512, longitude: 85.31534 };
+  const ctx = await browser.newContext({ permissions: ["geolocation"], geolocation: here });
+  const page = await ctx.newPage();
+  const sent: string[] = [];
+  page.on("request", (r) => sent.push(`${r.url()} ${r.postData() ?? ""}`));
+  // Only the Visit page may ask the browser.
+  expect((await page.goto("/"))!.headers()["permissions-policy"]).toContain("geolocation=()");
+  const res = await page.goto(`/visit?${OPEN}&motion=fast#find-us`);
+  expect(res!.headers()["permissions-policy"]).toContain("geolocation=(self)");
+  await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
+  const p = panel(page);
+  await expect(p.locator("[data-me]")).toHaveCount(0);
+  await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(0);
+
+  const chip = p.getByRole("button", { name: "From my location" });
+  await chip.click();
+  await expect(p.locator("[data-me=shown]")).toContainText(/You're about [\d.]+ (m|km) from the door/);
+  await expect(p.locator("[data-me]").getByRole("link", { name: "Google Maps" })).toHaveAttribute("href", /destination=[\d.]+,[\d.]+&travelmode=walking$/);
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(1);
+  // Where they are stays in the page: not in the address, storage, or any request.
+  const kept = await page.evaluate(() => `${location.href} ${JSON.stringify({ ...localStorage })} ${JSON.stringify({ ...sessionStorage })} ${document.cookie}`);
+  expect(kept).not.toMatch(/27\.685|85\.315/);
+  expect(sent.filter((s) => /27\.685|85\.315/.test(s))).toEqual([]);
+  expect(await p.locator("a[href]").evaluateAll((as) => as.map((a) => a.getAttribute("href")).join(" "))).not.toMatch(/27\.685|85\.315/);
+
+  // A second tap forgets it.
+  await chip.click();
+  await expect(p.locator("[data-me]")).toHaveCount(0);
+  await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(0);
+  await ctx.close();
+
+  // Refused (or unavailable): a plain message and the Google Maps link.
+  const no = await browser.newContext();
+  const other = await no.newPage();
+  await other.goto(`/visit?${OPEN}&motion=fast#find-us`);
+  await expect(stage(other)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
+  await panel(other).getByRole("button", { name: "From my location" }).click();
+  await expect(panel(other).locator("[data-me=failed]")).toContainText("Couldn't get your location", { timeout: 15_000 });
+  await expect(panel(other).locator("[data-me]").getByRole("link", { name: "Google Maps" })).toBeVisible();
+  await no.close();
+});

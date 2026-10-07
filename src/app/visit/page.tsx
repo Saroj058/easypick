@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { MapOnTap } from "@/components/map-on-tap";
 import { RefreshAt } from "@/components/refresh-at";
+import { FindFallback } from "@/components/visit/find-fallback";
 import { RouteReceipt } from "@/components/visit/route-receipt";
 import { VisitHero } from "@/components/visit/visit-hero";
 import { VisitStage, type StageSwitches } from "@/components/visit/visit-stage";
@@ -200,7 +200,7 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
             )}
             {info.geo && (
               <div className="mt-6">
-                <MapOnTap lat={info.geo.lat} lng={info.geo.lng} label={info.address ?? info.area} />
+                <FindFallback lat={info.geo.lat} lng={info.geo.lng} label={info.address ?? info.area} />
               </div>
             )}
             {(info.transport || info.parking || info.access) && (

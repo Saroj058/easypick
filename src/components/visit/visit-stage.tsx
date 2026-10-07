@@ -1,15 +1,16 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { KioskBill, TagInfo } from "@/components/tour3d/build-store";
-import { lengthMeters, minutes, type TravelMode } from "@/lib/map/route";
+import { distance, lengthMeters, minutes, type LngLat, type TravelMode } from "@/lib/map/route";
 import { riseMs } from "@/lib/map/sequence";
-import { FIXTURE_TILES_URL, SEEN_KEY, SEEN_MS, START_ZOOM, TILES_URL } from "@/lib/map/tiles";
+import { DOOR_FRAME_KEY, FIXTURE_TILES_URL, FROM_TOUR_KEY, SEEN_KEY, SEEN_MS, START_ZOOM, TILES_URL, TOUR_ENTER_URL } from "@/lib/map/tiles";
 import type { Lights } from "@/lib/visit-status";
-import { Directions, googleMapsUrl, walkMinutes, type DirectionsData, type Snap } from "./directions";
+import { Directions, googleMapsUrl, walkMinutes, type DirectionsData, type Locate, type Snap } from "./directions";
 import type { MapEntry } from "./find-us-map";
 import type { HeroPreview } from "./store-night";
 
@@ -18,6 +19,9 @@ import type { HeroPreview } from "./store-night";
 // hero itself is server-rendered HTML passed in as children, so the status, the heading and both
 // links work with no JavaScript at all; the 3D store is drawn into a slot the hero leaves for it
 // ([data-hero-canvas]), over the poster.
+//
+// Step inside: the door slides open and the camera goes through it; just before the end its frame
+// is kept (for this tab) and the tour opens at its entrance, showing that frame while it loads.
 //
 // Find us, in order: the 3D camera rises to look straight down on the roof; its last frame is
 // kept as a picture and its canvas is taken away (only one WebGL context at a time); the map is
@@ -97,6 +101,7 @@ export function VisitStage({
   find: FindUs;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const root = useRef<HTMLDivElement>(null);
   const pin = useRef<HTMLSpanElement>(null);
   /** True while #find-us in the address was put there by this page (so Back returns to the hero). */
@@ -136,6 +141,16 @@ export function VisitStage({
   const [mode, setMode] = useState<TravelMode>("walk");
   const [snap, setSnap] = useState<Snap>("half");
   const [look, setLook] = useState<{ step: number; n: number } | null>(null);
+  /** Step inside: the push's length in ms while the camera goes through the door; null otherwise. */
+  const [enter, setEnter] = useState<number | null>(null);
+  /** Asks the 3D store for the frame the tour will show while it loads. */
+  const [grab, setGrab] = useState(false);
+  const toTour = useRef(false);
+  /** 1 on the way back from the tour: the door is open and closes. */
+  const [doorFrom, setDoorFrom] = useState(0);
+  /** "From my location": the visitor's spot lives here and nowhere else (not the address, storage, the server or analytics). */
+  const [locate, setLocate] = useState<Locate>("off");
+  const [me, setMe] = useState<LngLat | null>(null);
 
   const speed = switches.motion === "fast" ? 0.1 : 1;
   const still = fallback === "reduced";
@@ -157,6 +172,17 @@ export function VisitStage({
     setWide(window.innerWidth >= 768);
     setTall(window.innerHeight);
     setSlot(root.current?.querySelector("[data-hero-canvas]") ?? null);
+    try {
+      if (sessionStorage.getItem(FROM_TOUR_KEY)) {
+        sessionStorage.removeItem(FROM_TOUR_KEY);
+        if (f === "none") setDoorFrom(1);
+      }
+    } catch {
+      // blocked storage: the door is simply shut
+    }
+    // Offered only where the browser can be asked: this page loaded with its own header (a direct visit, not a move from another page).
+    const policy = (document as Document & { featurePolicy?: { allowsFeature(name: string): boolean } }).featurePolicy;
+    if (find.pin && "geolocation" in navigator && policy?.allowsFeature("geolocation") !== false) setLocate("idle");
     if (f === "nowebgl" || f === "lite") return;
     // Opened on /visit#find-us (a QR code, a link from Instagram): straight to the map, no 3D first.
     if (location.hash === HASH) {
@@ -235,9 +261,35 @@ export function VisitStage({
   }, []);
 
   const onCapture = useCallback((dataUrl: string) => {
+    if (toTour.current) {
+      try {
+        sessionStorage.setItem(DOOR_FRAME_KEY, dataUrl);
+      } catch {
+        // no room or blocked: the tour shows its own still of the door
+      }
+      router.push(TOUR_ENTER_URL);
+      return;
+    }
     setFrame(dataUrl);
     setLeaving(false);
     setStage("map");
+  }, [router]);
+
+  /** Step inside. With the 3D store on screen the camera goes through the door first; otherwise straight to the tour's entrance. */
+  const stepInside = useCallback(() => {
+    if (!(load3d && drawn && !lost) || still) {
+      router.push(TOUR_ENTER_URL);
+      return;
+    }
+    setPreview(null);
+    setStage("inside");
+    setEnter(1100 * speed);
+  }, [load3d, drawn, lost, still, speed, router]);
+
+  /** The tour is asked for at 950 ms of the 1100, with the frame that's on screen then. */
+  const onEntered = useCallback(() => {
+    toTour.current = true;
+    setGrab(true);
   }, []);
 
   /** Map → hero: the map is removed, then the 3D store is made again. */
@@ -254,7 +306,38 @@ export function VisitStage({
     setLost(false);
     setLoad3d(true);
     setLife((n) => n + 1);
+    // Where they are is forgotten with the map.
+    setMe(null);
+    setLocate((l) => (l === "off" ? "off" : "idle"));
+    // The keyboard goes back to the link that opened the map.
+    requestAnimationFrame(() => root.current?.querySelector<HTMLElement>("[data-hero-action=find]")?.focus({ preventScroll: true }));
   }, []);
+
+  /** The only place the page asks where the visitor is: a tap on "From my location". One reading, coarse, never watched. */
+  const onLocate = useCallback(() => {
+    if (locate === "shown") {
+      setMe(null);
+      setLocate("idle");
+      return;
+    }
+    setLocate("asking");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setMe([pos.coords.longitude, pos.coords.latitude]);
+        setLocate("shown");
+      },
+      () => setLocate("failed"),
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
+    );
+  }, [locate]);
+
+  /** The map lost its graphics context: back to the page, at the section with the still of the route and the receipt. */
+  const onMapLost = useCallback(() => {
+    pushed.current = false;
+    setFallback("lite");
+    toHero();
+    requestAnimationFrame(() => document.getElementById("find-us")?.scrollIntoView());
+  }, [toHero]);
 
   /** The way out of the map: Back if this page put #find-us in the address, else just drop it (a direct link has nowhere to go back to). */
   const leaveMap = useCallback(() => {
@@ -333,7 +416,14 @@ export function VisitStage({
     const on = (e: Event) => setPreview(which(e.target));
     const off = (e: Event) => which(e.target) && setPreview(null);
     const click = (e: MouseEvent) => {
-      if (which(e.target) !== "find" || !canMap || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      const to = which(e.target);
+      if (!to || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      if (to === "inside") {
+        e.preventDefault();
+        stepInside();
+        return;
+      }
+      if (!canMap) return;
       e.preventDefault();
       toMap();
     };
@@ -351,14 +441,15 @@ export function VisitStage({
       el.removeEventListener("pointerdown", on);
       el.removeEventListener("click", click);
     };
-  }, [canMap, toMap]);
+  }, [canMap, toMap, stepInside]);
 
   /** The lime pin sits above the roof wherever the camera puts it. */
   const onAnchor = useCallback((x: number, y: number) => {
     if (pin.current) pin.current.style.transform = `translate(${x}px, ${y}px)`;
   }, []);
 
-  const show3d = load3d && !lost && stage === "hero";
+  const show3d = load3d && !lost && (stage === "hero" || stage === "inside") && (fallback === "none" || fallback === "reduced");
+  const away = me && find.pin ? distance(me, [find.pin.lng, find.pin.lat]) : null;
   const tilesUrl = switches.tiles === "fixture" ? FIXTURE_TILES_URL : TILES_URL;
   const start = find.starts.find((s) => s.id === startId) ?? find.starts[0] ?? null;
   const steps = start ? start.steps : find.steps;
@@ -382,7 +473,7 @@ export function VisitStage({
       data-3d={show3d && drawn ? "on" : "off"}
       data-entry={stage === "map" || rise !== null ? entry : undefined}
       // During the rise the hero's words step aside (visit-hero.tsx), so only the store and the pin are on screen.
-      data-rising={rise !== null || leaving ? "true" : undefined}
+      data-rising={rise !== null || leaving || enter !== null ? "true" : undefined}
     >
       {children}
       {slot &&
@@ -411,7 +502,10 @@ export function VisitStage({
               rise={rise}
               riseZoom={START_ZOOM}
               onRisen={onRisen}
-              capture={leaving}
+              capture={leaving || grab}
+              enter={enter}
+              doorFrom={doorFrom}
+              onEntered={onEntered}
               onCapture={onCapture}
             />
             {/* The pin above the roof: it drops in when Find us is pointed at and stays through the rise, where the map's own pin takes its place. */}
@@ -446,6 +540,8 @@ export function VisitStage({
               inset={inset}
               look={look}
               parking={find.parkingSpots}
+              me={away !== null && away < 60_000 ? me : null}
+              onLost={onMapLost}
               onState={setMapState}
               onStep={setLit}
               onPanel={setPanel}
@@ -475,6 +571,9 @@ export function VisitStage({
               setStartId(id);
             }}
             onMode={setMode}
+            locate={locate}
+            away={away}
+            onLocate={onLocate}
             onLook={(step) => {
               // On a phone the sheet steps down so the spot can be seen.
               if (!wide && snap === "full") setSnap("half");

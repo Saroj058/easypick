@@ -59,6 +59,8 @@ const nextConfig: NextConfig = {
     const privateLinks = [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex" }];
     return [
       { source: "/:path*", headers: common },
+      // The Visit page alone may ask where the visitor is, and only from its "From my location" button.
+      { source: "/visit", headers: [{ key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), payment=()" }] },
       { source: "/g/:path*", headers: privateLinks },
       { source: "/order/:path*", headers: privateLinks },
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },

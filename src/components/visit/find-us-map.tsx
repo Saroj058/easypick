@@ -56,6 +56,10 @@ export interface FindUsMapProps {
   look?: { step: number; n: number } | null;
   /** Where to park, marked P. */
   parking?: { kind: "bike" | "car"; lng: number; lat: number }[];
+  /** Where the visitor is (only after they asked): a dashed line from there to the door. Never leaves the page. */
+  me?: LngLat | null;
+  /** The map's graphics context was lost (the page then shows the still of the route). */
+  onLost?: () => void;
   onState: (state: MapState) => void;
   /** The receipt line the drawn line has reached (-1 before the first). */
   onStep: (index: number) => void;
@@ -90,12 +94,12 @@ const line = (coords: LngLat[]) => ({ type: "Feature" as const, properties: {}, 
 const polygon = (ring: LngLat[]) => ({ type: "Feature" as const, properties: {}, geometry: { type: "Polygon" as const, coordinates: [ring] } });
 
 export default function FindUsMap(props: FindUsMapProps) {
-  const { tilesUrl, pin, label, entry, speed, skip, replay, look } = props;
+  const { tilesUrl, pin, label, entry, speed, skip, replay, look, me } = props;
   const box = useRef<HTMLDivElement>(null);
   /** What the running sequence reads: always the latest props. */
   const live = useRef(props);
   /** The handles the later effects (skip, replay, a new route) use on the map made by the first. */
-  const api = useRef<{ skip: () => void; play: (mode: MapEntry) => void; look: (step: number) => void } | null>(null);
+  const api = useRef<{ skip: () => void; play: (mode: MapEntry) => void; look: (step: number) => void; guide: (from: LngLat | null) => void } | null>(null);
   const routeKey = props.route ? `${props.route.length}:${props.route[0].join(",")}:${props.route[props.route.length - 1].join(",")}` : "";
   const firstRoute = useRef(routeKey);
 
@@ -135,6 +139,8 @@ export default function FindUsMap(props: FindUsMapProps) {
 
     let marker: Marker | null = null;
     const parked: Marker[] = [];
+    let meMarker: Marker | null = null;
+    let alive = true;
     /** Changes whenever a sequence starts or stops, so an older one knows to give up. */
     let run = 0;
     let running = false;
@@ -288,6 +294,8 @@ export default function FindUsMap(props: FindUsMapProps) {
     };
 
     map.on("load", () => {
+      map.addSource("guide", { type: "geojson", data: line([]) });
+      map.addLayer({ id: "guide", type: "line", source: "guide", layout: { "line-cap": "round" }, paint: { "line-color": "#F5F4EF", "line-opacity": 0.7, "line-width": 2, "line-dasharray": [1, 2.5] } });
       map.addSource("route", { type: "geojson", data: line([]) });
       map.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": MAP_COLOURS.ground, "line-width": 8 } });
       map.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": MAP_COLOURS.route, "line-width": 4 } });
@@ -316,6 +324,7 @@ export default function FindUsMap(props: FindUsMapProps) {
       }
       live.current.onState("ready");
       void play(live.current.entry);
+      if (live.current.me) guide(live.current.me);
     });
 
     // A drag, a pinch or the wheel stops the camera where the visitor put it, but they still get
@@ -341,10 +350,34 @@ export default function FindUsMap(props: FindUsMapProps) {
       el.parentElement?.setAttribute("data-look", String(step));
     };
 
-    api.current = { skip: () => running && finish("done", true), play: (mode) => void play(mode), look: lookAt };
+    /** "From my location": a dashed straight line from there to the door, and a view that holds both. */
+    const guide = (from: LngLat | null) => {
+      const src = map.getSource("guide") as GeoJSONSource | undefined;
+      if (!src) return;
+      meMarker?.remove();
+      meMarker = null;
+      src.setData(line(from ? [from, here] : []));
+      if (!from) return;
+      if (running) finish("done", false);
+      const dot = document.createElement("span");
+      dot.className = "block h-3 w-3 rounded-full border-2 border-ink bg-paper";
+      dot.setAttribute("data-map-me", "");
+      meMarker = new Marker({ element: dot }).setLngLat(from).addTo(map);
+      map.fitBounds(bounds([from, here, ...(routeNow() ?? [])]), { padding: padding(), maxZoom: 17, pitch: 0, duration: live.current.entry === "instant" ? 0 : 600 * live.current.speed, essential: true });
+    };
+
+    // If the graphics context goes (a phone under memory pressure), the page falls back to the still.
+    const canvas = map.getCanvas();
+    const lostNow = () => alive && live.current.onLost?.();
+    canvas.addEventListener("webglcontextlost", lostNow);
+
+    api.current = { skip: () => running && finish("done", true), play: (mode) => void play(mode), look: lookAt, guide };
     return () => {
+      alive = false;
+      canvas.removeEventListener("webglcontextlost", lostNow);
       api.current = null;
       stopAll();
+      meMarker?.remove();
       marker?.remove();
       parked.forEach((m) => m.remove());
       map.remove();
@@ -365,6 +398,13 @@ export default function FindUsMap(props: FindUsMapProps) {
     replaySeen.current = replay;
     api.current?.play(entry === "instant" ? "instant" : pin ? "first" : "soon");
   }, [replay, entry, pin]);
+  const meKey = me ? me.join(",") : "";
+  const meSeen = useRef(meKey);
+  useEffect(() => {
+    if (meKey === meSeen.current) return;
+    meSeen.current = meKey;
+    api.current?.guide(live.current.me ?? null);
+  }, [meKey]);
   const lookSeen = useRef(look?.n ?? 0);
   useEffect(() => {
     if (!look || look.n === lookSeen.current) return;
