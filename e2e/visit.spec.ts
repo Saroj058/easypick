@@ -70,8 +70,10 @@ test("the owner sets a special day in admin and the Visit page shows it", async 
   }
   await page.goto("/admin/store");
   await page.getByRole("button", { name: "Add a special day" }).click();
-  const tomorrow = new Date(Date.now() + 86_400_000 + 5.75 * 3_600_000).toISOString().slice(0, 10);
-  await page.getByLabel("Date").last().fill(tomorrow);
+  // Six days out: still in the week of hours the page shows, and clear of the dates other tests pin the clock to
+  // (a closure "tomorrow" changed their status line on the days around those dates).
+  const soonDay = new Date(Date.now() + 6 * 86_400_000 + 5.75 * 3_600_000).toISOString().slice(0, 10);
+  await page.getByLabel("Date").last().fill(soonDay);
   await page.getByLabel("Note").last().fill("Closed for testing");
   await page.getByLabel("Step 1", { exact: true }).fill("Jhamsikhel Chowk");
   await page.getByRole("button", { name: "Save" }).click();

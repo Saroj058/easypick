@@ -141,13 +141,15 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
       {changeAt && !pinned && <RefreshAt at={changeAt} />}
       <VisitStage lights={lightsFor(state)} switches={switches} tour={tour} find={{
           pin: info.geo,
-          route: start.coords,
-          from: start.name,
+          starts: soon ? [] : info.startPoints.map((s) => ({ id: s.id, name: s.name, coords: s.coords, steps: s.steps })),
+          // With no start points yet, the written route (no line on the map).
           steps: soon ? [] : start.steps,
           status: statusShort(state),
           place: info.address ?? info.area,
-          // Plain Google Maps directions to the door: no origin, so it starts from wherever they are.
-          mapsUrl: info.geo ? `https://www.google.com/maps/dir/?api=1&destination=${info.geo.lat},${info.geo.lng}&travelmode=walking` : null,
+          landmark: info.landmark || null,
+          entrancePhoto: info.entrancePhoto,
+          parkingSpots: info.parkingSpots,
+          parkingNote: info.parking,
           soon,
         }}>
         <VisitHero info={info} state={state} status={status} personal={personal} />

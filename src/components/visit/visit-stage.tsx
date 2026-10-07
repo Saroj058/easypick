@@ -5,11 +5,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { KioskBill, TagInfo } from "@/components/tour3d/build-store";
-import type { LngLat } from "@/lib/map/route";
+import { lengthMeters, minutes, type TravelMode } from "@/lib/map/route";
 import { riseMs } from "@/lib/map/sequence";
 import { FIXTURE_TILES_URL, SEEN_KEY, SEEN_MS, START_ZOOM, TILES_URL } from "@/lib/map/tiles";
 import type { Lights } from "@/lib/visit-status";
-import { Directions, walkMinutes, type DirectionsData } from "./directions";
+import { Directions, googleMapsUrl, walkMinutes, type DirectionsData, type Snap } from "./directions";
 import type { MapEntry } from "./find-us-map";
 import type { HeroPreview } from "./store-night";
 
@@ -39,11 +39,8 @@ export interface StageSwitches {
   tiles: "live" | "fixture";
 }
 
-/** What the map and the directions need. Before opening day the page sends no pin and no route. */
-export interface FindUs extends DirectionsData {
-  pin: { lat: number; lng: number } | null;
-  route: LngLat[] | null;
-}
+/** What the map and the directions need. Before opening day the page sends no pin and no start points. */
+export type FindUs = DirectionsData;
 
 const HASH = "#find-us";
 
@@ -133,6 +130,12 @@ export function VisitStage({
   /** Phones: the short bar of what matters (walk time, open or not, Google Maps), a second after the tap. */
   const [bar, setBar] = useState(false);
   const [wide, setWide] = useState(true);
+  const [tall, setTall] = useState(800);
+  /** Where they're coming from, how, the sheet's height on a phone, and the receipt line being looked at. */
+  const [startId, setStartId] = useState<string | null>(find.starts[0]?.id ?? null);
+  const [mode, setMode] = useState<TravelMode>("walk");
+  const [snap, setSnap] = useState<Snap>("half");
+  const [look, setLook] = useState<{ step: number; n: number } | null>(null);
 
   const speed = switches.motion === "fast" ? 0.1 : 1;
   const still = fallback === "reduced";
@@ -152,6 +155,7 @@ export function VisitStage({
     setFallback(f);
     setTier(gpuTier());
     setWide(window.innerWidth >= 768);
+    setTall(window.innerHeight);
     setSlot(root.current?.querySelector("[data-hero-canvas]") ?? null);
     if (f === "nowebgl" || f === "lite") return;
     // Opened on /visit#find-us (a QR code, a link from Instagram): straight to the map, no 3D first.
@@ -174,7 +178,10 @@ export function VisitStage({
   }, [switches.gl, switches.lite]);
 
   useEffect(() => {
-    const onResize = () => setWide(window.innerWidth >= 768);
+    const onResize = () => {
+      setWide(window.innerWidth >= 768);
+      setTall(window.innerHeight);
+    };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -208,6 +215,7 @@ export function VisitStage({
     setPanel(false);
     setLit(-1);
     setBar(false);
+    setSnap("half");
     const with3d = load3d && drawn && !lost;
     if (with3d && mode !== "instant") setRise(riseMs(mode === "repeat" ? "repeat" : mode === "soon" ? "soon" : "first", speed));
     else if (with3d) setLeaving(true);
@@ -352,11 +360,14 @@ export function VisitStage({
 
   const show3d = load3d && !lost && stage === "hero";
   const tilesUrl = switches.tiles === "fixture" ? FIXTURE_TILES_URL : TILES_URL;
-  const mapLabel = find.from ? `Map: route from ${find.from} to Easypick` : find.pin ? "Map: where Easypick is" : "Map: the area Easypick is opening in";
+  const start = find.starts.find((s) => s.id === startId) ?? find.starts[0] ?? null;
+  const steps = start ? start.steps : find.steps;
+  const mapsUrl = find.pin ? googleMapsUrl(find.pin, mode) : null;
+  const mapLabel = start ? `Map: route from ${start.name} to Easypick` : find.pin ? "Map: where Easypick is" : "Map: the area Easypick is opening in";
   const mapShown = stage === "map" && mapState !== "idle" && mapState !== "loading";
-  const walk = walkMinutes(find.steps);
+  const walk = start ? minutes(lengthMeters(start.coords), "walk") : walkMinutes(steps);
   /** The room the panel takes, so the map keeps the route clear of it. */
-  const inset = wide ? { right: 384, bottom: 0 } : { right: 0, bottom: 260 };
+  const inset = wide ? { right: 384, bottom: 0 } : { right: 0, bottom: Math.min(Math.round(tall * 0.5), Math.max(0, tall - 330)) };
   const fade = still ? "duration-150" : speed < 1 ? "duration-[40ms]" : "duration-[240ms]";
 
   return (
@@ -424,8 +435,8 @@ export function VisitStage({
             <FindUsMap
               tilesUrl={tilesUrl}
               pin={find.pin}
-              route={find.route}
-              steps={find.steps}
+              route={start ? start.coords : null}
+              steps={steps}
               label={mapLabel}
               entry={entry}
               speed={speed}
@@ -433,6 +444,8 @@ export function VisitStage({
               skip={skip}
               replay={replay}
               inset={inset}
+              look={look}
+              parking={find.parkingSpots}
               onState={setMapState}
               onStep={setLit}
               onPanel={setPanel}
@@ -440,7 +453,7 @@ export function VisitStage({
           </div>
 
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 bg-gradient-to-b from-black/70 to-transparent p-4 pb-12 md:p-8 md:pb-16">
-            <button type="button" onClick={leaveMap} className="pointer-events-auto flex h-11 items-center gap-2 rounded-full border border-paper/40 bg-black/50 px-4 text-[13px] font-semibold uppercase tracking-[0.06em] backdrop-blur">
+            <button type="button" onClick={leaveMap} hidden={!wide && panel && snap !== "peek"} className="pointer-events-auto flex h-11 items-center gap-2 rounded-full border border-paper/40 bg-black/50 px-4 text-[13px] font-semibold uppercase tracking-[0.06em] backdrop-blur">
               <span aria-hidden>←</span> The store
             </button>
             <h2 className={`display text-[40px] leading-[0.9] transition-opacity duration-[400ms] md:text-[64px] ${panel && wide ? "opacity-0" : "opacity-100"}`}>Find us.</h2>
@@ -448,9 +461,25 @@ export function VisitStage({
 
           <Directions
             data={find}
+            startId={startId}
+            mode={mode}
             lit={lit}
             open={panel}
             still={still}
+            wide={wide}
+            snap={snap}
+            onSnap={setSnap}
+            onStart={(id) => {
+              // The map retracts the old line and draws the new one (the "chip" sequence).
+              setLit(-1);
+              setStartId(id);
+            }}
+            onMode={setMode}
+            onLook={(step) => {
+              // On a phone the sheet steps down so the spot can be seen.
+              if (!wide && snap === "full") setSnap("half");
+              setLook((l) => ({ step, n: (l?.n ?? 0) + 1 }));
+            }}
             onReplay={() => {
               setPanel(false);
               setLit(-1);
@@ -466,8 +495,8 @@ export function VisitStage({
                 {walk !== null && !find.soon ? `${walk} MIN WALK · ` : ""}
                 {find.status}
               </span>
-              {find.mapsUrl && (
-                <a href={find.mapsUrl} target="_blank" rel="noopener" className="flex h-11 shrink-0 items-center underline underline-offset-4">
+              {mapsUrl && (
+                <a href={mapsUrl} target="_blank" rel="noopener" className="flex h-11 shrink-0 items-center underline underline-offset-4">
                   Google Maps
                 </a>
               )}

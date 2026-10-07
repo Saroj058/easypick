@@ -6,7 +6,7 @@ import { AttributionControl, Map as MapLibre, Marker, addProtocol, setWorkerUrl,
 import { Protocol } from "pmtiles";
 import { useEffect, useRef } from "react";
 
-import { bounds, lengthMeters, sliceTo, stepAt, type LngLat } from "@/lib/map/route";
+import { bounds, lengthMeters, pointAt, sliceTo, stepAt, type LngLat } from "@/lib/map/route";
 import { mapPhases, quart, type SeqMode } from "@/lib/map/sequence";
 import { MAP_COLOURS, mapStyle } from "@/lib/map/style";
 import { AREA_CENTRE, START_ZOOM, VALLEY } from "@/lib/map/tiles";
@@ -52,6 +52,10 @@ export interface FindUsMapProps {
   replay: number;
   /** Room the panel takes on the right (desktop) or bottom (phones), so the route stays clear of it. */
   inset: { right: number; bottom: number };
+  /** Look at one receipt step's spot on the route; a new `n` asks again. */
+  look?: { step: number; n: number } | null;
+  /** Where to park, marked P. */
+  parking?: { kind: "bike" | "car"; lng: number; lat: number }[];
   onState: (state: MapState) => void;
   /** The receipt line the drawn line has reached (-1 before the first). */
   onStep: (index: number) => void;
@@ -86,12 +90,12 @@ const line = (coords: LngLat[]) => ({ type: "Feature" as const, properties: {}, 
 const polygon = (ring: LngLat[]) => ({ type: "Feature" as const, properties: {}, geometry: { type: "Polygon" as const, coordinates: [ring] } });
 
 export default function FindUsMap(props: FindUsMapProps) {
-  const { tilesUrl, pin, label, entry, speed, skip, replay } = props;
+  const { tilesUrl, pin, label, entry, speed, skip, replay, look } = props;
   const box = useRef<HTMLDivElement>(null);
   /** What the running sequence reads: always the latest props. */
   const live = useRef(props);
   /** The handles the later effects (skip, replay, a new route) use on the map made by the first. */
-  const api = useRef<{ skip: () => void; play: (mode: MapEntry) => void } | null>(null);
+  const api = useRef<{ skip: () => void; play: (mode: MapEntry) => void; look: (step: number) => void } | null>(null);
   const routeKey = props.route ? `${props.route.length}:${props.route[0].join(",")}:${props.route[props.route.length - 1].join(",")}` : "";
   const firstRoute = useRef(routeKey);
 
@@ -130,6 +134,7 @@ export default function FindUsMap(props: FindUsMapProps) {
     map.addControl(new AttributionControl({ compact: false }), "bottom-left");
 
     let marker: Marker | null = null;
+    const parked: Marker[] = [];
     /** Changes whenever a sequence starts or stops, so an older one knows to give up. */
     let run = 0;
     let running = false;
@@ -301,6 +306,14 @@ export default function FindUsMap(props: FindUsMapProps) {
         map.addLayer({ id: "soon-fill", type: "fill", source: "soon", layout: { visibility: "none" }, paint: { "fill-color": MAP_COLOURS.route, "fill-opacity": 0.07 } });
         map.addLayer({ id: "soon-line", type: "line", source: "soon", layout: { visibility: "none" }, paint: { "line-color": MAP_COLOURS.route, "line-width": 2, "line-dasharray": [2, 2] } });
       }
+      for (const p of live.current.parking ?? []) {
+        const el = document.createElement("span");
+        el.className = "flex h-5 w-5 items-center justify-center rounded-[4px] border border-paper/70 bg-[#0B0C0D] font-mono text-[11px] font-semibold text-paper";
+        el.textContent = "P";
+        el.setAttribute("data-map-parking", p.kind);
+        el.setAttribute("aria-label", p.kind === "bike" ? "Bike parking" : "Car parking");
+        parked.push(new Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(map));
+      }
       live.current.onState("ready");
       void play(live.current.entry);
     });
@@ -316,11 +329,24 @@ export default function FindUsMap(props: FindUsMapProps) {
       if (running) finish("done", true);
     });
 
-    api.current = { skip: () => running && finish("done", true), play: (mode) => void play(mode) };
+    /** A tapped receipt line: the camera goes to where that step ends on the route (600 ms). */
+    const lookAt = (step: number) => {
+      const r = routeNow();
+      const steps = live.current.steps;
+      if (!r || r.length < 2 || !steps[step]) return;
+      if (running) finish("done", false);
+      const last = steps[steps.length - 1].minutes;
+      const f = last > 0 ? steps[step].minutes / last : (step + 1) / steps.length;
+      map.easeTo({ center: pointAt(r, f), zoom: Math.max(map.getZoom(), 17), pitch: 0, padding: padding(), duration: live.current.entry === "instant" ? 0 : 600 * live.current.speed, essential: true });
+      el.parentElement?.setAttribute("data-look", String(step));
+    };
+
+    api.current = { skip: () => running && finish("done", true), play: (mode) => void play(mode), look: lookAt };
     return () => {
       api.current = null;
       stopAll();
       marker?.remove();
+      parked.forEach((m) => m.remove());
       map.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the map is made once per tile set and pin; everything else is read live
@@ -339,6 +365,12 @@ export default function FindUsMap(props: FindUsMapProps) {
     replaySeen.current = replay;
     api.current?.play(entry === "instant" ? "instant" : pin ? "first" : "soon");
   }, [replay, entry, pin]);
+  const lookSeen = useRef(look?.n ?? 0);
+  useEffect(() => {
+    if (!look || look.n === lookSeen.current) return;
+    lookSeen.current = look.n;
+    api.current?.look(look.step);
+  }, [look]);
   useEffect(() => {
     if (routeKey === firstRoute.current) return;
     firstRoute.current = routeKey;

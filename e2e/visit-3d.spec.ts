@@ -214,3 +214,118 @@ test("find us: before opening day the map shows the area only; reduced motion op
   await expect(stage(page)).toHaveAttribute("data-stage", "hero");
   await expect(page.locator("#find-us").getByText("QUEUE")).toBeInViewport();
 });
+
+// ---------- Phase 5: the directions panel ----------
+
+test("directions: start chips redraw the route, modes change the minutes, a receipt line moves the map, and every action is a plain link", async ({ page, context }, info) => {
+  test.setTimeout(240_000);
+  const errors = collect(page);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`/visit?${OPEN}&motion=fast#find-us`);
+  await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
+  const p = panel(page);
+  await expect(p).toHaveAttribute("data-panel", "open");
+  // The keyboard lands on the panel's heading.
+  await expect(p.getByRole("heading", { name: "Directions" })).toBeFocused();
+
+  // Where from: the first start point is chosen; another one redraws the route and reprints the receipt.
+  const chips = p.getByRole("radiogroup", { name: "Coming from" }).getByRole("radio");
+  await expect(chips).toHaveCount(4);
+  await expect(chips.first()).toHaveAttribute("aria-checked", "true");
+  const firstReceipt = await p.locator("[data-receipt]").innerText();
+  const second = chips.nth(1);
+  const name = (await second.innerText()).trim();
+  await second.click();
+  await expect(second).toHaveAttribute("aria-checked", "true");
+  await expect(mapRegion(page)).toHaveAttribute("aria-label", `Map: route from ${name} to Easypick`);
+  await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 30_000 });
+  await expect(p.getByText(`FROM ${name.toUpperCase()}`)).toBeVisible();
+  expect(await p.locator("[data-receipt]").innerText()).not.toBe(firstReceipt);
+  await expect(p.locator("[data-step=dim]")).toHaveCount(0);
+
+  // How: the total, the last receipt line and the Google Maps link all follow the mode.
+  const total = p.locator("[data-total]");
+  await expect(total).toContainText(/\d+ MIN WALK/);
+  const walk = Number((await total.innerText()).match(/(\d+) MIN/)![1]);
+  await expect(p.locator("[data-step]").last()).toContainText(`${walk} MIN`);
+  await p.getByRole("radio", { name: /Car/ }).click();
+  await expect(total).toContainText(/\d+ MIN BY CAR/);
+  const car = Number((await total.innerText()).match(/(\d+) MIN/)![1]);
+  expect(car).toBeLessThanOrEqual(walk);
+  await expect(p.locator("[data-summary]")).toContainText(`${car} MIN BY CAR · OPEN TILL 8 PM`);
+  const maps = p.getByRole("link", { name: "Open in Google Maps" });
+  await expect(maps).toHaveAttribute("href", /google\.com\/maps\/dir\/\?api=1&destination=[\d.]+,[\d.]+&travelmode=driving$/);
+  await expect(maps).toHaveAttribute("target", "_blank");
+  await p.getByRole("radio", { name: /Walk/ }).click();
+  await expect(maps).toHaveAttribute("href", /travelmode=walking$/);
+  await expect(p.getByText("QUEUE")).toBeVisible();
+
+  // A receipt line shows that spot on the map.
+  await p.getByRole("button", { name: /^Step 1: / }).click();
+  await expect(mapRegion(page)).toHaveAttribute("data-look", "0");
+
+  // Arriving: the address can be selected and copied, WhatsApp gets the address and the map link, and the tour is one tap away.
+  const address = (await p.locator("[data-address]").innerText()).trim();
+  expect(await p.locator("[data-address]").evaluate((el) => getComputedStyle(el).userSelect)).toBe("text");
+  await p.getByRole("button", { name: "Copy address" }).click();
+  await expect(p.getByRole("button", { name: "Copied" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(address);
+  const whatsapp = await p.getByRole("link", { name: "WhatsApp" }).getAttribute("href");
+  expect(whatsapp).toMatch(/^https:\/\/wa\.me\/\?text=/);
+  expect(decodeURIComponent(whatsapp!.split("text=")[1])).toContain(address);
+  expect(decodeURIComponent(whatsapp!.split("text=")[1])).toContain("google.com/maps/dir/");
+  await expect(p.getByRole("link", { name: "Look inside" })).toHaveAttribute("href", "/visit/tour");
+  // Parking is marked on the map.
+  await expect(mapRegion(page).locator("[data-map-parking]")).toHaveCount(2);
+
+  // For review, not a baseline: the panel alone (the map behind it is left out).
+  await p.screenshot({ path: `test-results/shots/visit-5-${info.project.name}-panel.png` });
+  expect(errors()).toEqual([]);
+  // Look inside goes to the tour.
+  await p.getByRole("link", { name: "Look inside" }).click();
+  await expect(page).toHaveURL(/\/visit\/tour$/);
+});
+
+test("directions: on a phone it's a sheet that opens at half, goes nearly full and down to a peek, and has the way back @phone", async ({ page }, info) => {
+  test.skip(!info.project.name.startsWith("phone"), "the bottom sheet is the phone layout");
+  test.setTimeout(240_000);
+  await page.goto(`/visit?${OPEN}&motion=fast#find-us`);
+  await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
+  const p = panel(page);
+  await expect(p).toHaveAttribute("data-panel", "open");
+  await expect(p).toHaveAttribute("data-snap", "half");
+  const vh = page.viewportSize()!.height;
+  const top = async () => Math.round((await p.boundingBox())!.y);
+  await expect.poll(top).toBeGreaterThan(vh * 0.45);
+  await expect.poll(top).toBeLessThan(vh * 0.55);
+  // Its header keeps the total and Google Maps in reach at every height.
+  await expect(p.locator("[data-summary]")).toContainText(/\d+ MIN WALK · OPEN TILL 8 PM/);
+  await expect(p.getByRole("link", { name: "Google Maps", exact: true })).toBeInViewport();
+  await page.screenshot({ path: `test-results/shots/visit-5-${info.project.name}-sheet.png` });
+
+  // The handle steps it up.
+  const handle = p.getByRole("button", { name: /directions/i }).first();
+  await handle.click();
+  await expect(p).toHaveAttribute("data-snap", "full");
+  await expect.poll(top).toBeLessThan(vh * 0.12);
+  // A receipt line brings it back down, so the spot can be seen.
+  await p.getByRole("button", { name: /^Step 2: / }).click();
+  await expect(p).toHaveAttribute("data-snap", "half");
+  await expect(mapRegion(page)).toHaveAttribute("data-look", "1");
+
+  // Dragged down, it rests as a 96 px peek.
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, vh - 20, { steps: 8 });
+  await page.mouse.up();
+  await expect(p).toHaveAttribute("data-snap", "peek");
+  await expect.poll(top).toBe(vh - 96);
+  await expect(p.getByRole("link", { name: "Google Maps", exact: true })).toBeInViewport();
+
+  // The way back is in the sheet.
+  await handle.click();
+  await expect(p).toHaveAttribute("data-snap", "half");
+  await p.getByRole("button", { name: /The store/ }).click();
+  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
+});
