@@ -218,21 +218,21 @@ describe("the status line and the lights", () => {
   });
 });
 
-describe("the Find us motion table", () => {
-  // The plan's round numbers: a first visit puts the panel in at about 5.6 s, a repeat visit at
-  // about 3.4 s, a deep link at 1.5 s. The route length decides the drawing time.
+describe("the In person motion table", () => {
+  // A first visit comes down from the globe: Earth 1.2 s, Nepal 1.3 s, the valley 1.5 s, a 0.4 s
+  // hold, then the route. A repeat visit starts on the valley; a deep link on the route. The route
+  // length decides the drawing time.
   it("hits the planned totals", () => {
-    const firstMeters = (1780 - 900) / 0.3; // the draw that makes 5.6 s
-    expect(panelAt("first", firstMeters)).toBeCloseTo(5600, -1);
-    const repeatMeters = (1400 - 900) / 0.3; // the draw that makes 3.4 s
-    expect(panelAt("repeat", repeatMeters)).toBeCloseTo(3400, -1);
+    const down = 1200 + 1300 + 1500 + 400; // globe → Nepal → valley → hold
+    // first visit with a typical 300 m walk: panel at about 7.1 s, arrival 0.7 s later.
+    expect(panelAt("first", 300)).toBe(down + 1000 + 1200 + 520);
+    expect(totalMs("first", 300)).toBe(down + 1000 + 1200 + 520 + 700);
+    const repeatMeters = (1400 - 900) / 0.3; // a 1.4 s draw
+    expect(panelAt("repeat", repeatMeters)).toBeCloseTo(900 + 1400 + 400, -1);
     expect(panelAt("deeplink", 300)).toBe(1500);
     expect(panelAt("deeplink", 4000)).toBe(1500);
-    // soon: valley, then the 400 m circle and the sign-up at about 3 s.
-    expect(panelAt("soon", 0)).toBe(3000);
-    // first visit with a typical 300 m walk: panel just over 5 s, arrival 0.7 s later.
-    expect(panelAt("first", 300)).toBe(3300 + 1200 + 520);
-    expect(totalMs("first", 300)).toBe(3300 + 1200 + 520 + 700);
+    // soon: down to the valley, then the 400 m circle and the sign-up.
+    expect(panelAt("soon", 0)).toBe(down + 500 + 200);
   });
 
   it("clamps the drawing time between 1.2 and 2.4 s", () => {
@@ -242,30 +242,33 @@ describe("the Find us motion table", () => {
     expect(drawDuration(10000)).toBe(2400);
   });
 
-  it("runs the phases in order, with the crossfade on top of the rise", () => {
-    const names = timeline("first", 300)
-      .filter((p) => !p.overlay)
-      .map((p) => p.name);
-    expect(names).toEqual(["rise", "pullout", "hold", "fly", "draw", "settle", "arrival"]);
-    const fade = timeline("first", 300).find((p) => p.name === "crossfade")!;
-    expect([fade.start, fade.end]).toEqual([560, 800]);
-    expect(timeline("repeat", 300).some((p) => p.name === "hold")).toBe(false); // no valley
+  it("runs the phases in order, from the globe down", () => {
+    const names = timeline("first", 300).map((p) => p.name);
+    expect(names).toEqual(["globe", "nepal", "pullout", "hold", "fly", "draw", "settle", "arrival"]);
+    expect(timeline("first", 300)[0].start).toBe(0);
+    expect(timeline("repeat", 300).some((p) => p.name === "globe" || p.name === "hold")).toBe(false); // straight to the route
     expect(timeline("chip", 300).map((p) => p.name)).toEqual(["retract", "draw", "settle"]);
     expect(timeline("soon", 300).some((p) => p.name === "draw")).toBe(false); // no route before opening
   });
 
   it("knows where it is at any moment", () => {
-    expect(phaseAt(0, "first", 300).name).toBe("rise");
-    expect(phaseAt(1000, "first", 300)).toMatchObject({ name: "pullout", progress: 0.3 });
-    expect(phaseAt(2000, "first", 300).name).toBe("hold");
+    expect(phaseAt(0, "first", 300).name).toBe("globe");
+    expect(phaseAt(1500, "first", 300).name).toBe("nepal");
+    expect(phaseAt(3250, "first", 300)).toMatchObject({ name: "pullout", progress: 0.5 });
+    expect(phaseAt(4200, "first", 300).name).toBe("hold");
     expect(phaseAt(99_999, "first", 300)).toMatchObject({ name: "arrival", progress: 1 });
-    expect(drawnAt(3300, "first", 300)).toBe(0);
-    expect(drawnAt(3300 + 600, "first", 300)).toBeCloseTo(0.5, 1);
+    expect(drawnAt(5400, "first", 300)).toBe(0);
+    expect(drawnAt(5400 + 600, "first", 300)).toBeCloseTo(0.5, 1);
     expect(drawnAt(10_000, "first", 300)).toBe(1);
   });
 
+  it("names the place for the caption on the way down", async () => {
+    const { placeAt } = await import("@/lib/map/sequence");
+    expect((["globe", "nepal", "pullout", "hold", "fly", "draw", "settle"] as const).map(placeAt)).toEqual([0, 1, 2, 2, 3, -1, -1]);
+  });
+
   it("scales every time for ?motion=fast", () => {
-    expect(panelAt("first", 300, 0.1)).toBeCloseTo(502, 0);
+    expect(panelAt("first", 300, 0.1)).toBeCloseTo(712, 0);
   });
 
   it("eases the way the plan says", () => {
@@ -434,17 +437,14 @@ describe("the sequence's hand-over from 3D to the map (Phase 4)", () => {
     expect(zoomForCamera(h, 34, 800)).toBeCloseTo(19, 6);
   });
 
-  it("gives the map its own part of each entry, starting at zero, after the rise", async () => {
-    const { mapPhases, riseMs } = await import("@/lib/map/sequence");
-    expect(riseMs("first")).toBe(700);
-    expect(riseMs("first", 0.1)).toBeCloseTo(70, 6);
-    expect(riseMs("deeplink")).toBe(0);
+  it("gives the map every phase of each entry, starting at zero", async () => {
+    const { mapPhases } = await import("@/lib/map/sequence");
     const first = mapPhases("first", 300);
-    expect(first.map((p) => p.name)).toEqual(["pullout", "hold", "fly", "draw", "settle", "arrival"]);
+    expect(first.map((p) => p.name)).toEqual(["globe", "nepal", "pullout", "hold", "fly", "draw", "settle", "arrival"]);
     expect(first[0].start).toBe(0);
-    expect(first.at(-1)!.end).toBe(1000 + 600 + 1000 + 1200 + 520 + 700);
+    expect(first.at(-1)!.end).toBe(1200 + 1300 + 1500 + 400 + 1000 + 1200 + 520 + 700);
     expect(mapPhases("repeat", 300).map((p) => p.name)).toEqual(["fly", "draw", "settle", "arrival"]);
-    expect(mapPhases("soon", 0).map((p) => p.name)).toEqual(["pullout", "hold", "circle", "signup"]);
+    expect(mapPhases("soon", 0).map((p) => p.name)).toEqual(["globe", "nepal", "pullout", "hold", "circle", "signup"]);
   });
 
   it("has a few words of status for the panel and the phone bar", async () => {

@@ -5,6 +5,8 @@
 export const TILES_URL = "https://dfhbezpxijxoqpompiku.supabase.co/storage/v1/object/public/map/kathmandu-20261007.pmtiles";
 /** A few zoom-14 tiles round the sample pin, for tests: never the real file in CI. */
 export const FIXTURE_TILES_URL = "/map/fixture.pmtiles";
+/** The far view's shape, our own small file (Natural Earth, public domain): the world's land, with no borders. */
+export const LAND_URL = "/map/land.json";
 export const ATTRIBUTION = '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a>';
 /** The whole valley: what "pull out" shows. [[west, south], [east, north]] */
 export const VALLEY: [[number, number], [number, number]] = [

@@ -2,34 +2,54 @@ import { expect, test } from "@playwright/test";
 
 const shot = (name: string) => ({ path: `test-results/shots/${name}.png`, fullPage: true });
 
-// The Visit page hero (docs/VISIT_PAGE_PLAN.md): "Come in.", one status line, Step inside and
-// Find us. The receipt lives in the Find us section. ?now= pins the clock (test switch).
+// The Visit page is one screen: "Come in.", one status line, and two ways to visit, In person and
+// Virtual tour. Everything else (the receipt, the hours, how the store works) is in the In person
+// panel. ?now= pins the clock and ?gl=off opens that panel with no live map (test switches).
 // The area at the end of the status line is whatever an earlier admin test saved, so it isn't pinned.
 const at = (iso: string) => encodeURIComponent(iso);
+const panel = (page: import("@playwright/test").Page) => page.locator("[data-panel=open]");
 
 test("visit page: coming soon until opening day, with the opening list @phone", async ({ page }, info) => {
-  await page.goto("/visit");
+  await page.goto("/visit?gl=off");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Come in.");
   await expect(page.locator("[data-status-line]")).toContainText(/OPENING/);
   await expect(page.locator("[data-stage]")).toHaveAttribute("data-lights", "soon");
   await expect(page.getByText("Join the opening list")).toBeVisible();
-  await expect(page.locator("#find-us").getByText("Exact address coming soon")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Planned hours/i })).toBeVisible();
-  await page.screenshot(shot(`visit-2a-${info.project.name}-soon`));
+  await page.screenshot(shot(`visit-${info.project.name}-soon`));
+  // In person, before opening day: the area only, and the planned hours.
+  await expect(page.locator("[data-stage]")).toHaveAttribute("data-fallback", "nowebgl");
+  await page.getByRole("link", { name: "In person" }).click();
+  await expect(panel(page).getByText("Exact address coming soon")).toBeVisible();
+  await expect(panel(page).getByRole("heading", { name: "Planned hours" })).toBeVisible();
+  await expect(panel(page).getByRole("link", { name: "Open in Google Maps" })).toHaveCount(0);
 });
 
-test("visit page preview: status, the two ways in, the route receipt, never indexed @phone", async ({ page }, info) => {
-  await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
+test("visit page preview: one screen with the two ways to visit; the receipt is in In person; never indexed @phone", async ({ page }, info) => {
+  await page.goto(`/visit?preview=open&gl=off&now=${at("2026-10-07T12:00+05:45")}`);
   await expect(page.getByText(/Preview: how this page looks/)).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
-  await expect(page.getByRole("link", { name: "Step inside" })).toHaveAttribute("href", "/visit/tour");
-  await expect(page.getByRole("link", { name: "Find us" })).toHaveAttribute("href", "#find-us");
-  const findUs = page.locator("#find-us");
-  await expect(findUs.getByText("QUEUE")).toBeVisible();
-  await expect(findUs.getByText("01  Jhamsikhel Chowk")).toBeVisible();
-  await expect(findUs.getByText(/^OPEN · TILL 8 PM/)).toBeVisible();
-  await page.screenshot(shot(`visit-2a-${info.project.name}-open`));
+  const ways = page.getByRole("navigation", { name: "Ways to visit" });
+  await expect(ways.getByRole("link")).toHaveCount(2);
+  await expect(ways.locator("[data-hero-action=inside]")).toHaveAttribute("href", "/visit/tour");
+  await expect(ways.getByRole("link", { name: "In person" })).toHaveAttribute("href", "#find-us");
+  // Nothing else on the page: no sections below the screen.
+  await expect(page.locator("main section")).toHaveCount(1);
+  await expect(page.locator("main h2")).toHaveCount(0);
+  await page.screenshot(shot(`visit-${info.project.name}-open`));
+
+  await expect(page.locator("[data-stage]")).toHaveAttribute("data-fallback", "nowebgl");
+  await ways.getByRole("link", { name: "In person" }).click();
+  await expect(page).toHaveURL(/#find-us$/);
+  const p = panel(page);
+  await expect(p.getByText("QUEUE", { exact: true })).toBeVisible();
+  await expect(p.getByText(/01\s+Jhamsikhel Chowk/)).toBeVisible();
+  await expect(p.getByText(/^EASYPICK · OPEN TILL 8 PM/)).toBeVisible();
+  // What used to be the page's sections: how the store works, and the week's hours.
+  await expect(p.locator("[data-inside]").getByText("Pay it.")).toBeAttached();
+  await expect(p.locator("[data-hours] tr")).toHaveCount(7);
+  await expect(p.locator("[data-hours] tr").first()).toContainText(/Today.*11 AM – 8 PM/);
+  await page.screenshot(shot(`visit-${info.project.name}-in-person-plain`));
 });
 
 test("visit page: the lights follow the clock", async ({ page }) => {
@@ -52,10 +72,13 @@ test("visit page works with JavaScript off @phone", async ({ browser }) => {
   const page = await ctx.newPage();
   await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
-  await expect(page.getByRole("link", { name: "Step inside" })).toHaveAttribute("href", "/visit/tour");
-  await page.getByRole("link", { name: "Find us" }).click();
+  await expect(page.locator("[data-hero-action=inside]")).toHaveAttribute("href", "/visit/tour");
+  // With no map, In person leads to the essentials in words: the address, today's hours, Google Maps.
+  await page.getByRole("link", { name: "In person" }).click();
   await expect(page).toHaveURL(/#find-us$/);
-  await expect(page.locator("#find-us").getByText("QUEUE")).toBeInViewport();
+  const words = page.locator("#find-us");
+  await expect(words.getByText(/Today: 11 AM – 8 PM/)).toBeVisible();
+  await expect(words.getByRole("link", { name: "Open in Google Maps" })).toHaveAttribute("href", /google\.com\/maps\/dir/);
   await ctx.close();
 });
 
@@ -79,8 +102,9 @@ test("the owner sets a special day in admin and the Visit page shows it", async 
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText(/^Saved. The Visit page/)).toBeVisible();
 
-  await page.goto("/visit");
-  await expect(page.getByRole("row", { name: /Closed for testing/ })).toContainText("Closed");
+  // The week's hours are in the In person panel.
+  await page.goto("/visit?gl=off#find-us");
+  await expect(panel(page).getByRole("row", { name: /Closed for testing/ })).toContainText("Closed");
 });
 
 

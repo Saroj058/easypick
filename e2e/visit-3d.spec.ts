@@ -40,9 +40,9 @@ test("night store: pointing at Find us drops the pin above the roof @phone", asy
   await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
   const pin = page.locator("[data-pin] > span");
   await expect(pin).toHaveCSS("opacity", "0");
-  await page.getByRole("link", { name: "Find us" }).focus();
+  await page.getByRole("link", { name: "In person" }).focus();
   await expect(pin).toHaveCSS("opacity", "1");
-  await page.getByRole("link", { name: "Step inside" }).focus();
+  await page.locator("[data-hero-action=inside]").focus();
   await expect(pin).toHaveCSS("opacity", "0");
 });
 
@@ -84,12 +84,16 @@ test("find us: the map opens from the hero on our own tiles, plays to the end, a
   // Nothing of the map is loaded until it's asked for.
   expect(mapRequests).toEqual([]);
 
-  await page.getByRole("link", { name: "Find us" }).click();
+  await page.getByRole("link", { name: "In person" }).click();
   await expect(page).toHaveURL(/#find-us$/);
-  // A first visit gets the full sequence: rise, valley, route.
+  // A first visit gets the full sequence: the globe, Nepal, the valley, the route.
   await expect(stage(page)).toHaveAttribute("data-entry", "first");
   await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
   await expect(stage(page)).toHaveAttribute("data-stage", "map");
+  // The far view's land is our own small file.
+  expect(mapRequests.some((u) => u.endsWith("/map/land.json"))).toBe(true);
+  // Once it's over the caption has gone and the map keeps to the valley.
+  await expect(stage(page)).not.toHaveAttribute("data-place", /.+/);
   // One WebGL context at a time: the 3D store's canvas has gone.
   await expect(page.locator("[data-hero-canvas] canvas")).toHaveCount(0);
   await expect(mapRegion(page).locator("canvas")).toBeVisible();
@@ -113,7 +117,7 @@ test("find us: the map opens from the hero on our own tiles, plays to the end, a
   await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
 
   // Having watched it once, the next time is the shorter sequence (no valley).
-  await page.getByRole("link", { name: "Find us" }).click();
+  await page.getByRole("link", { name: "In person" }).click();
   await expect(stage(page)).toHaveAttribute("data-entry", "repeat");
   await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
   expect(refused).toEqual([]);
@@ -124,9 +128,14 @@ test("find us: the receipt lines light in order as the route draws, and Skip jum
   test.setTimeout(240_000);
   await page.goto(`/visit?${OPEN}`); // normal speed: there's time to watch and to skip
   await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
-  await page.getByRole("link", { name: "Find us" }).click();
+  await page.getByRole("link", { name: "In person" }).click();
   // Skip is there from the first moment.
   await expect(page.locator("[data-skip]")).toBeVisible();
+  // It starts far out and names each place on the way down: Earth, Nepal, Kathmandu, the neighbourhood.
+  await expect(stage(page)).toHaveAttribute("data-place", "earth", { timeout: 90_000 });
+  await expect(page.locator("[data-caption]")).toContainText("Earth.");
+  await expect(stage(page)).toHaveAttribute("data-place", "kathmandu", { timeout: 30_000 });
+  await expect(page.locator("[data-caption]")).toContainText("Earth → Nepal → Kathmandu");
   await expect(stage(page)).toHaveAttribute("data-map-state", "drawing", { timeout: 90_000 });
   // While it draws, a line is never lit before the one above it.
   const order = await page.evaluate(async () => {
@@ -154,7 +163,7 @@ test("find us: dragging the map stops the camera but still shows the whole route
   test.setTimeout(240_000);
   await page.goto(`/visit?${OPEN}`);
   await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
-  await page.getByRole("link", { name: "Find us" }).click();
+  await page.getByRole("link", { name: "In person" }).click();
   await expect(stage(page)).toHaveAttribute("data-map-state", "flying", { timeout: 90_000 });
   const box = (await mapRegion(page).boundingBox())!;
   await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.5);
@@ -188,7 +197,7 @@ test("find us: before opening day the map shows the area only; reduced motion op
   test.setTimeout(240_000);
   await page.goto("/visit?tiles=fixture&motion=fast");
   await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
-  await page.getByRole("link", { name: "Find us" }).click();
+  await page.getByRole("link", { name: "In person" }).click();
   await expect(stage(page)).toHaveAttribute("data-entry", "soon");
   await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
   await expect(panel(page).getByText("Exact address coming soon")).toBeVisible();
@@ -203,16 +212,20 @@ test("find us: before opening day the map shows the area only; reduced motion op
   const calm = await ctx.newPage();
   await calm.goto(`/visit?${OPEN}`);
   await expect(stage(calm)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
-  await calm.getByRole("link", { name: "Find us" }).click();
+  await calm.getByRole("link", { name: "In person" }).click();
   await expect(stage(calm)).toHaveAttribute("data-entry", "instant");
   await expect(stage(calm)).toHaveAttribute("data-map-state", "done", { timeout: 60_000 });
   await expect(panel(calm)).toHaveAttribute("data-panel", "open");
   await ctx.close();
 
+  // No WebGL: the directions open all the same, with no live map behind them.
   await page.goto("/visit?preview=open&gl=off");
-  await page.getByRole("link", { name: "Find us" }).click();
-  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
-  await expect(page.locator("#find-us").getByText("QUEUE")).toBeInViewport();
+  await expect(stage(page)).toHaveAttribute("data-fallback", "nowebgl");
+  await page.getByRole("link", { name: "In person" }).click();
+  await expect(stage(page)).toHaveAttribute("data-stage", "map");
+  await expect(panel(page)).toHaveAttribute("data-panel", "open");
+  await expect(panel(page).getByText("QUEUE", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-find-us] canvas")).toHaveCount(0);
 });
 
 // ---------- Phase 5: the directions panel ----------
@@ -258,7 +271,7 @@ test("directions: start chips redraw the route, modes change the minutes, a rece
   await expect(maps).toHaveAttribute("target", "_blank");
   await p.getByRole("radio", { name: /Walk/ }).click();
   await expect(maps).toHaveAttribute("href", /travelmode=walking$/);
-  await expect(p.getByText("QUEUE")).toBeVisible();
+  await expect(p.getByText("QUEUE", { exact: true })).toBeVisible();
 
   // A receipt line shows that spot on the map.
   await p.getByRole("button", { name: /^Step 1: / }).click();
@@ -337,7 +350,7 @@ test("step inside: the camera goes through the door, the tour opens at its entra
   const errors = collect(page);
   await page.goto(`/visit?${OPEN}&motion=fast`);
   await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
-  await page.getByRole("link", { name: "Step inside" }).click();
+  await page.locator("[data-hero-action=inside]").click();
   await expect(stage(page)).toHaveAttribute("data-stage", "inside");
   await expect(page).toHaveURL(/\/visit\/tour#enter$/, { timeout: 60_000 });
   const tour = page.getByRole("region", { name: "Virtual tour" });
@@ -354,43 +367,44 @@ test("step inside: the camera goes through the door, the tour opens at its entra
   expect(errors()).toEqual([]);
 });
 
-test("fallbacks: the light version gets the still of the route, no WebGL gets the map on a tap, reduced motion gets the finished map", async ({ page, browser }, info) => {
+test("fallbacks: the light version and no WebGL get the directions over a still of the route; reduced motion gets the finished map", async ({ page, browser }, info) => {
   test.setTimeout(240_000);
   const heavy: string[] = [];
-  page.on("request", (r) => /maplibre|pmtiles|google\.com\/maps\?/.test(r.url()) && heavy.push(r.url()));
-  const section = page.locator("#find-us");
+  page.on("request", (r) => /maplibre|pmtiles|land\.json|google\.com\/maps\?/.test(r.url()) && heavy.push(r.url()));
 
-  // Light (Save-Data, a slow connection, little memory): the poster, the receipt, one small picture of the route.
-  await page.goto(`/visit?preview=open&lite=1&now=${at("2026-10-07T12:00+05:45")}`);
-  await expect(stage(page)).toHaveAttribute("data-fallback", "lite");
-  await expect(page.locator("[data-hero-poster]")).toBeVisible();
-  await page.getByRole("link", { name: "Find us" }).click();
-  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
-  await expect(page.locator("[data-find-us]")).toHaveCount(0);
-  await expect(section.getByText("QUEUE")).toBeInViewport();
-  await expect(section.getByRole("link", { name: "Open in Google Maps" })).toHaveAttribute("href", /google\.com\/maps/);
-  const still = section.locator("[data-route-static]");
-  await still.scrollIntoViewIfNeeded();
-  await expect(still).toBeVisible();
-  expect(await still.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBe(1200);
-  await expect(section.getByRole("button", { name: "Show map" })).toHaveCount(0);
-  await expect(stage(page)).toHaveAttribute("data-3d", "off");
-  await expect(page.locator("[data-hero-canvas] canvas")).toHaveCount(0);
+  // Light (Save-Data, a slow connection, little memory) and no WebGL: the poster on the first
+  // screen; In person opens the receipt and the rest over one small picture of the route.
+  for (const [name, query] of [
+    ["lite", "lite=1"],
+    ["nowebgl", "gl=off"],
+  ]) {
+    await page.goto(`/visit?preview=open&${query}&now=${at("2026-10-07T12:00+05:45")}`);
+    await expect(stage(page)).toHaveAttribute("data-fallback", name);
+    await expect(page.locator("[data-hero-poster]")).toBeVisible();
+    await expect(page.locator("[data-hero-canvas] canvas")).toHaveCount(0);
+    await page.getByRole("link", { name: "In person" }).click();
+    await expect(stage(page)).toHaveAttribute("data-stage", "map");
+    await expect(page).toHaveURL(/#find-us$/);
+    const p = panel(page);
+    await expect(p).toHaveAttribute("data-panel", "open");
+    await expect(p.getByText("QUEUE", { exact: true })).toBeVisible();
+    await expect(p.locator("[data-step=dim]")).toHaveCount(0);
+    await expect(p.getByRole("link", { name: "Open in Google Maps" })).toHaveAttribute("href", /google\.com\/maps\/dir/);
+    // Nothing to replay and no map to point at.
+    await expect(p.getByRole("button", { name: "Replay" })).toHaveCount(0);
+    await expect(page.locator("[data-skip]")).toHaveCount(0);
+    const still = page.locator("[data-find-us] [data-route-static]");
+    await expect(still).toBeVisible();
+    await expect.poll(() => still.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBe(1200);
+    await expect(page.locator("[data-find-us] canvas")).toHaveCount(0);
+    await page.screenshot({ path: `test-results/shots/visit-${info.project.name}-${name}.png` });
+    // Escape goes back to the first screen.
+    await page.keyboard.press("Escape");
+    await expect(stage(page)).toHaveAttribute("data-stage", "hero");
+  }
   expect(heavy).toEqual([]);
-  await page.screenshot({ path: `test-results/shots/visit-6-${info.project.name}-lite.png` });
-
-  // No WebGL: the poster, the receipt, and the Google map that loads only when asked for.
-  await page.goto(`/visit?preview=open&gl=off&now=${at("2026-10-07T12:00+05:45")}`);
-  await expect(stage(page)).toHaveAttribute("data-fallback", "nowebgl");
-  await page.getByRole("link", { name: "Find us" }).click();
-  await expect(section.getByText("QUEUE")).toBeInViewport();
-  await expect(section.getByRole("link", { name: "Open in Google Maps" })).toBeVisible();
-  await expect(section.getByRole("button", { name: "Show map" })).toBeVisible();
-  await expect(section.locator("[data-route-static]")).toHaveCount(0);
-  await page.screenshot({ path: `test-results/shots/visit-6-${info.project.name}-nowebgl.png` });
-  // Step inside still leads to the tour's entrance.
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.getByRole("link", { name: "Step inside" }).click();
+  // The Virtual tour still opens at the tour's entrance.
+  await page.locator("[data-hero-action=inside]").click();
   await expect(page).toHaveURL(/\/visit\/tour#enter$/);
 
   // Reduced motion: no door, no dolly, no flight. The map opens on the finished route.
@@ -399,15 +413,15 @@ test("fallbacks: the light version gets the still of the route, no WebGL gets th
   await calm.goto(`/visit?${OPEN}`);
   await expect(stage(calm)).toHaveAttribute("data-fallback", "reduced");
   await expect(stage(calm)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
-  await calm.getByRole("link", { name: "Find us" }).click();
+  await calm.getByRole("link", { name: "In person" }).click();
   await expect(stage(calm)).toHaveAttribute("data-map-state", "done", { timeout: 60_000 });
-  await expect(panel(calm).getByText("QUEUE")).toBeVisible();
+  await expect(panel(calm).getByText("QUEUE", { exact: true })).toBeVisible();
   await expect(panel(calm).locator("[data-step=dim]")).toHaveCount(0);
   await expect(panel(calm).getByRole("link", { name: "Open in Google Maps" })).toBeVisible();
   await calm.screenshot({ path: `test-results/shots/visit-6-${info.project.name}-reduced.png` });
   await calm.keyboard.press("Escape");
   await expect(stage(calm)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
-  await calm.getByRole("link", { name: "Step inside" }).click();
+  await calm.locator("[data-hero-action=inside]").click();
   await expect(stage(calm)).not.toHaveAttribute("data-stage", "inside");
   await expect(calm).toHaveURL(/\/visit\/tour#enter$/);
   await ctx.close();
@@ -419,13 +433,12 @@ test("keyboard: Find us opens the map from the keyboard, focus goes to the direc
   await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
   // The store is a picture: nothing in it takes the keyboard.
   await expect(page.locator("[data-hero-canvas]")).toHaveAttribute("aria-hidden", "true");
-  const find = page.getByRole("link", { name: "Find us" });
+  const find = page.getByRole("link", { name: "In person" });
   await find.focus();
   await page.keyboard.press("Enter");
   await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
   const p = panel(page);
   await expect(p.getByRole("heading", { name: "Directions" })).toBeFocused();
-  await expect(page.getByRole("link", { name: "Skip map, read directions" })).toHaveAttribute("href", "#find-h");
   // One message for screen readers when the route is ready.
   await expect(page.locator("[data-find-us] [aria-live=polite]")).toContainText(/The route is on the map/);
 
@@ -457,8 +470,7 @@ test("from my location: asked only on a tap, drawn on the map, and never sent an
   const page = await ctx.newPage();
   const sent: string[] = [];
   page.on("request", (r) => sent.push(`${r.url()} ${r.postData() ?? ""}`));
-  // Only the Visit page may ask the browser.
-  expect((await page.goto("/"))!.headers()["permissions-policy"]).toContain("geolocation=()");
+  // Only this site may ask the browser, never a frame from somewhere else.
   const res = await page.goto(`/visit?${OPEN}&motion=fast#find-us`);
   expect(res!.headers()["permissions-policy"]).toContain("geolocation=(self)");
   await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
@@ -492,5 +504,41 @@ test("from my location: asked only on a tap, drawn on the map, and never sent an
   await panel(other).getByRole("button", { name: "From my location" }).click();
   await expect(panel(other).locator("[data-me=failed]")).toContainText("Couldn't get your location", { timeout: 15_000 });
   await expect(panel(other).locator("[data-me]").getByRole("link", { name: "Google Maps" })).toBeVisible();
+  await no.close();
+});
+
+test("in person: the tap asks where you are, and the route starts from the start point nearest you", async ({ browser }) => {
+  test.setTimeout(240_000);
+  // Beside the sample route's far end, so the nearest start point is not the first one listed.
+  const here = { latitude: 27.6772, longitude: 85.3138 };
+  const ctx = await browser.newContext({ permissions: ["geolocation"], geolocation: here });
+  const page = await ctx.newPage();
+  const sent: string[] = [];
+  page.on("request", (r) => sent.push(`${r.url()} ${r.postData() ?? ""}`));
+  await page.goto(`/visit?${OPEN}&motion=fast`);
+  await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  await page.getByRole("link", { name: "In person" }).click();
+  await expect(stage(page)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
+  const p = panel(page);
+  await expect(p.locator("[data-me=shown]")).toContainText(/You're about [\d.]+ (m|km) from the door/);
+  await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(1);
+  await expect(p.getByRole("button", { name: "From my location" })).toHaveAttribute("aria-pressed", "true");
+  // One start point is chosen, and it's the one nearest to them, not simply the first.
+  const chips = p.getByRole("radiogroup", { name: "Coming from" }).getByRole("radio");
+  await expect(chips.and(page.locator("[aria-checked=true]"))).toHaveCount(1);
+  await expect(chips.first()).toHaveAttribute("aria-checked", "false");
+  await expect(p.locator("[data-step=dim]")).toHaveCount(0);
+  expect(sent.filter((s) => /27\.677|85\.313/.test(s))).toEqual([]);
+  await ctx.close();
+
+  // Without permission the tap says nothing about it: the route simply starts from the first start point.
+  const no = await browser.newContext();
+  const other = await no.newPage();
+  await other.goto(`/visit?${OPEN}&motion=fast`);
+  await expect(stage(other)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  await other.getByRole("link", { name: "In person" }).click();
+  await expect(stage(other)).toHaveAttribute("data-map-state", "done", { timeout: 90_000 });
+  await expect(panel(other).locator("[data-me=failed]")).toHaveCount(0);
+  await expect(panel(other).getByRole("radiogroup", { name: "Coming from" }).getByRole("radio").first()).toHaveAttribute("aria-checked", "true");
   await no.close();
 });

@@ -7,9 +7,9 @@ import { Protocol } from "pmtiles";
 import { useEffect, useRef } from "react";
 
 import { bounds, lengthMeters, pointAt, sliceTo, stepAt, type LngLat } from "@/lib/map/route";
-import { mapPhases, quart, type SeqMode } from "@/lib/map/sequence";
+import { mapPhases, placeAt, quart, type SeqMode } from "@/lib/map/sequence";
 import { MAP_COLOURS, mapStyle } from "@/lib/map/style";
-import { AREA_CENTRE, START_ZOOM, VALLEY } from "@/lib/map/tiles";
+import { AREA_CENTRE, LAND_URL, VALLEY } from "@/lib/map/tiles";
 import type { MapState } from "./visit-stage";
 
 // The Find us map: MapLibre drawing our own Kathmandu tiles (a PMTiles file, read in pieces
@@ -60,12 +60,28 @@ export interface FindUsMapProps {
   me?: LngLat | null;
   /** The map's graphics context was lost (the page then shows the still of the route). */
   onLost?: () => void;
+  /** Where the camera is, for the caption: 0 Earth, 1 Nepal, 2 Kathmandu, 3 the neighbourhood, -1 none. */
+  onPlace?: (place: -1 | 0 | 1 | 2 | 3) => void;
   onState: (state: MapState) => void;
   /** The receipt line the drawn line has reached (-1 before the first). */
   onStep: (index: number) => void;
   /** True once the panel should be in (the sequence has reached "settle", or was skipped or interrupted). */
   onPanel: (open: boolean) => void;
 }
+
+/** Where the globe starts (west of Nepal, so it turns into view), how far out, and where it turns to. */
+const GLOBE_START: LngLat = [52, 16];
+const GLOBE_ZOOM = 1.9;
+const NEPAL: LngLat = [84.1, 28.3];
+const VALLEY_CENTRE: LngLat = [(VALLEY[0][0] + VALLEY[1][0]) / 2, (VALLEY[0][1] + VALLEY[1][1]) / 2];
+/** Once the sequence is over the map stays in and around the valley, where our tiles are. */
+const HOME_BOUNDS: [LngLat, LngLat] = [
+  [84.9, 27.4],
+  [85.8, 28.0],
+];
+const HOME_MIN_ZOOM = 9;
+/** Below this zoom only our own far view is drawn (the land, and the glow over Nepal). */
+const FAR_ZOOM = 7;
 
 const M_PER_DEG_LAT = 110_900;
 const mPerDegLng = (lat: number) => Math.cos((lat * Math.PI) / 180) * 111_320;
@@ -99,7 +115,7 @@ export default function FindUsMap(props: FindUsMapProps) {
   /** What the running sequence reads: always the latest props. */
   const live = useRef(props);
   /** The handles the later effects (skip, replay, a new route) use on the map made by the first. */
-  const api = useRef<{ skip: () => void; play: (mode: MapEntry) => void; look: (step: number) => void; guide: (from: LngLat | null) => void } | null>(null);
+  const api = useRef<{ skip: () => void; play: (mode: MapEntry) => void; look: (step: number) => void; guide: (from: LngLat | null) => void; reroute: (mode: MapEntry) => void } | null>(null);
   const routeKey = props.route ? `${props.route.length}:${props.route[0].join(",")}:${props.route[props.route.length - 1].join(",")}` : "";
   const firstRoute = useRef(routeKey);
 
@@ -114,19 +130,20 @@ export default function FindUsMap(props: FindUsMapProps) {
     live.current.onState("loading");
 
     const here: LngLat = pin ? [pin.lng, pin.lat] : AREA_CENTRE;
-    // It opens where the 3D camera left off: straight above the store, close in.
-    const startsClose = entry === "first" || entry === "repeat" || entry === "soon";
+    // A first visit opens far out, on the globe; a repeat visit on the valley; a direct link close in.
+    const fromSpace = entry === "first" || entry === "soon";
+    // The street map's own layers only come in near the valley: far out, its tiles would put other
+    // people's borders and place names on our globe (and ask for fonts in scripts we don't host).
+    // Set in the style itself, so even the very first tiles are read this way.
+    const style = mapStyle(tilesUrl);
+    style.layers = style.layers.map((l) => ("source" in l ? { ...l, minzoom: Math.max(l.minzoom ?? 0, l.type === "symbol" ? 10 : FAR_ZOOM) } : l));
     const map = new MapLibre({
       container: el,
-      style: mapStyle(tilesUrl),
-      center: here,
-      zoom: startsClose ? START_ZOOM : 15,
-      minZoom: 9,
+      style,
+      center: fromSpace ? GLOBE_START : entry === "repeat" ? VALLEY_CENTRE : here,
+      zoom: fromSpace ? GLOBE_ZOOM : entry === "repeat" ? 11.2 : 15,
+      minZoom: 0,
       maxZoom: 20,
-      maxBounds: [
-        [84.9, 27.4],
-        [85.8, 28.0],
-      ],
       attributionControl: false,
       dragRotate: false,
       pitchWithRotate: false,
@@ -144,7 +161,19 @@ export default function FindUsMap(props: FindUsMapProps) {
     /** Changes whenever a sequence starts or stops, so an older one knows to give up. */
     let run = 0;
     let running = false;
+    /** True once the running sequence has started on the route's line. */
+    let drawing = false;
     let frame = 0;
+    /** After the sequence the map keeps to the valley (where the tiles are); the globe opens it up again. */
+    const lock = () => {
+      if (map.getZoom() < HOME_MIN_ZOOM) return; // left far out by hand: don't snap the camera back
+      map.setMinZoom(HOME_MIN_ZOOM);
+      map.setMaxBounds(HOME_BOUNDS);
+    };
+    const unlock = () => {
+      map.setMaxBounds(null);
+      map.setMinZoom(0);
+    };
     const timers = new Set<ReturnType<typeof setTimeout>>();
 
     const routeNow = () => live.current.route;
@@ -191,7 +220,17 @@ export default function FindUsMap(props: FindUsMapProps) {
       if (map.getLayer("soon-fill")) map.setLayoutProperty("soon-fill", "visibility", "visible");
       if (map.getLayer("soon-line")) map.setLayoutProperty("soon-line", "visibility", "visible");
       live.current.onPanel(true);
-      if (moveCamera) map.easeTo({ ...routeView(true), pitch: 0, bearing: 0, duration: live.current.entry === "instant" ? 0 : 250 * Math.min(1, live.current.speed) });
+      live.current.onPlace?.(-1);
+      if (moveCamera) {
+        const ms = live.current.entry === "instant" ? 0 : 250 * Math.min(1, live.current.speed);
+        map.easeTo({ ...routeView(true), pitch: 0, bearing: 0, duration: ms });
+        const mine = run;
+        const t = setTimeout(() => {
+          timers.delete(t);
+          if (mine === run) lock();
+        }, ms + 60);
+        timers.add(t);
+      }
       live.current.onState(state);
     };
 
@@ -200,23 +239,41 @@ export default function FindUsMap(props: FindUsMapProps) {
       if (mode === "instant") {
         map.jumpTo({ ...routeView(true), pitch: 0, bearing: 0 });
         finish("done", false);
+        lock();
         return;
       }
       const mine = (run += 1);
       running = true;
-      const r = routeNow();
-      const metres = r ? lengthMeters(r) : 0;
+      drawing = false;
+      const metres = lengthMeters(routeNow() ?? []);
       live.current.onPanel(false);
       live.current.onState("flying");
       if (mode !== "chip") setDrawn(0);
+      // From the globe (and on Replay): the whole Earth is open to the camera again.
+      if (mode === "first" || mode === "soon") {
+        unlock();
+        map.jumpTo({ center: GLOBE_START, zoom: GLOBE_ZOOM, pitch: 0, bearing: 0 });
+      } else if (mode === "repeat") {
+        unlock();
+        map.jumpTo({ center: VALLEY_CENTRE, zoom: 11.2, pitch: 0, bearing: 0 });
+      }
 
       for (const phase of mapPhases(mode, metres, live.current.speed)) {
         const ms = phase.end - phase.start;
         if (mine !== run) return;
+        live.current.onPlace?.(placeAt(phase.name));
         switch (phase.name) {
+          case "globe":
+            // The Earth turns until Nepal faces the camera.
+            map.easeTo({ center: NEPAL, zoom: 2.4, duration: ms, easing: phase.ease, essential: true });
+            if (!(await wait(ms, mine))) return;
+            break;
+          case "nepal":
+            map.flyTo({ center: NEPAL, zoom: 5.6, duration: ms, curve: 1.2, easing: quart, essential: true });
+            if (!(await wait(ms, mine))) return;
+            break;
           case "pullout": {
-            const valley = map.cameraForBounds(VALLEY, { padding: 24 }) ?? { center: here, zoom: 11 };
-            map.flyTo({ ...valley, pitch: 0, bearing: 0, duration: ms, curve: 1.42, easing: quart, essential: true });
+            map.flyTo({ center: VALLEY_CENTRE, zoom: 10.6, pitch: 0, bearing: 0, duration: ms, curve: 1.42, easing: quart, essential: true });
             if (!(await wait(ms, mine))) return;
             break;
           }
@@ -242,6 +299,7 @@ export default function FindUsMap(props: FindUsMapProps) {
             const back = phase.name === "retract";
             if (!back) {
               if (mode === "deeplink" || mode === "chip") map.easeTo({ ...routeView(false), duration: Math.min(ms, 400 * live.current.speed + 1), essential: true });
+              drawing = true;
               live.current.onState("drawing");
             }
             const ok = await new Promise<boolean>((done) => {
@@ -290,10 +348,30 @@ export default function FindUsMap(props: FindUsMapProps) {
       }
       if (mine !== run) return;
       running = false;
+      live.current.onPlace?.(-1);
+      lock();
       live.current.onState("done");
     };
 
     map.on("load", () => {
+      // The far view: the Earth as a ball, the land in one flat tone (our own small file: the map
+      // tiles only cover the valley), and a soft lime glow over Nepal. No borders are drawn. All of it fades as the valley's
+      // streets take over.
+      map.setProjection({ type: "globe" });
+      try {
+        map.setSky({ "sky-color": "#0a0e13", "horizon-color": "#1b2633", "fog-color": "#0b0c0d", "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.85, 5, 0.5, 7, 0] });
+      } catch {
+        // no atmosphere on this device: the globe is drawn without its glow
+      }
+      const layers = map.getStyle().layers;
+      const ground = layers.find((l) => l.type === "background")?.id;
+      const above = layers.find((l) => l.type !== "background")?.id;
+      if (ground) map.setPaintProperty(ground, "background-color", ["interpolate", ["linear"], ["zoom"], 4, "#0e141b", 8, MAP_COLOURS.ground]);
+      map.addSource("land", { type: "geojson", data: LAND_URL });
+      map.addLayer({ id: "land", type: "fill", source: "land", maxzoom: 9, paint: { "fill-color": "#1c2126", "fill-opacity": ["interpolate", ["linear"], ["zoom"], FAR_ZOOM, 1, 8.8, 0] } }, above);
+      map.addSource("nepal", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: NEPAL } } });
+      map.addLayer({ id: "nepal-glow", type: "circle", source: "nepal", maxzoom: 9, paint: { "circle-color": MAP_COLOURS.route, "circle-blur": 0.9, "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 1, 9, 5.6, 190, 8, 700], "circle-opacity": ["interpolate", ["linear"], ["zoom"], 1, 0.9, 4, 0.35, 7.5, 0] } }, above);
+
       map.addSource("guide", { type: "geojson", data: line([]) });
       map.addLayer({ id: "guide", type: "line", source: "guide", layout: { "line-cap": "round" }, paint: { "line-color": "#F5F4EF", "line-opacity": 0.7, "line-width": 2, "line-dasharray": [1, 2.5] } });
       map.addSource("route", { type: "geojson", data: line([]) });
@@ -322,6 +400,10 @@ export default function FindUsMap(props: FindUsMapProps) {
         el.setAttribute("aria-label", p.kind === "bike" ? "Bike parking" : "Car parking");
         parked.push(new Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(map));
       }
+      // Parking only means something close in.
+      const nearOnly = () => parked.forEach((m) => (m.getElement().style.visibility = map.getZoom() >= 14 ? "" : "hidden"));
+      map.on("zoom", nearOnly);
+      nearOnly();
       live.current.onState("ready");
       void play(live.current.entry);
       if (live.current.me) guide(live.current.me);
@@ -350,20 +432,32 @@ export default function FindUsMap(props: FindUsMapProps) {
       el.parentElement?.setAttribute("data-look", String(step));
     };
 
-    /** "From my location": a dashed straight line from there to the door, and a view that holds both. */
+    /**
+     * Where the visitor is: a dot, and a dashed straight line from there to where the drawn route
+     * begins (or to the door when there's no route). While the sequence is still playing it only
+     * marks the map; afterwards the camera moves to hold both ends.
+     */
     const guide = (from: LngLat | null) => {
       const src = map.getSource("guide") as GeoJSONSource | undefined;
       if (!src) return;
       meMarker?.remove();
       meMarker = null;
-      src.setData(line(from ? [from, here] : []));
+      const r = routeNow();
+      src.setData(line(from ? [from, r && r.length > 1 ? r[0] : here] : []));
       if (!from) return;
-      if (running) finish("done", false);
       const dot = document.createElement("span");
       dot.className = "block h-3 w-3 rounded-full border-2 border-ink bg-paper";
       dot.setAttribute("data-map-me", "");
       meMarker = new Marker({ element: dot }).setLngLat(from).addTo(map);
-      map.fitBounds(bounds([from, here, ...(routeNow() ?? [])]), { padding: padding(), maxZoom: 17, pitch: 0, duration: live.current.entry === "instant" ? 0 : 600 * live.current.speed, essential: true });
+      if (running) return;
+      map.fitBounds(bounds([from, here, ...(r ?? [])]), { padding: padding(), maxZoom: 17, pitch: 0, duration: live.current.entry === "instant" ? 0 : 600 * live.current.speed, essential: true });
+    };
+
+    /** A different start point. Before the line has started drawing, the running sequence simply uses it. */
+    const reroute = (mode: MapEntry) => {
+      if (live.current.me) guide(live.current.me);
+      if (running && !drawing) return;
+      void play(mode);
     };
 
     // If the graphics context goes (a phone under memory pressure), the page falls back to the still.
@@ -371,7 +465,7 @@ export default function FindUsMap(props: FindUsMapProps) {
     const lostNow = () => alive && live.current.onLost?.();
     canvas.addEventListener("webglcontextlost", lostNow);
 
-    api.current = { skip: () => running && finish("done", true), play: (mode) => void play(mode), look: lookAt, guide };
+    api.current = { skip: () => running && finish("done", true), play: (mode) => void play(mode), look: lookAt, guide, reroute };
     return () => {
       alive = false;
       canvas.removeEventListener("webglcontextlost", lostNow);
@@ -414,7 +508,7 @@ export default function FindUsMap(props: FindUsMapProps) {
   useEffect(() => {
     if (routeKey === firstRoute.current) return;
     firstRoute.current = routeKey;
-    api.current?.play(entry === "instant" ? "instant" : "chip");
+    api.current?.reroute(entry === "instant" ? "instant" : "chip");
   }, [routeKey, entry]);
 
   // MapLibre's own stylesheet makes its container position: relative, so the box that fills the

@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { RefreshAt } from "@/components/refresh-at";
-import { FindFallback } from "@/components/visit/find-fallback";
-import { RouteReceipt } from "@/components/visit/route-receipt";
 import { VisitHero } from "@/components/visit/visit-hero";
 import { VisitStage, type StageSwitches } from "@/components/visit/visit-stage";
 import { getCurrentUser } from "@/lib/auth";
@@ -17,15 +14,17 @@ import { lightsFor, nextChangeAt, statusLine, statusShort, stripPrivate } from "
 import { getDropTimeline, getProduct } from "@/lib/store";
 import { getTourProps } from "@/lib/tour-props";
 
+// The Visit page is one screen: the store at night and two ways to visit. In person opens the map
+// (from the globe down to the door) with the directions, the hours and how the store works;
+// Virtual tour opens /visit/tour. There is nothing below it.
+
 const metadata: Metadata = {
   title: "Visit us",
-  description: "Find Easypick in Kathmandu: open now or not, opening hours, directions by landmark, and how the self-checkout store works.",
+  description: "Visit Easypick in Kathmandu in person or on a virtual tour: open now or not, the way to the door, opening hours, and how the self-checkout store works.",
   alternates: { canonical: "/visit" },
 };
 // Open or closed is worked out per visit, in Kathmandu time.
 export const dynamic = "force-dynamic";
-
-const shortDay = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 const addDays = (ymd: string, n: number) => {
   const d = new Date(`${ymd}T12:00:00Z`);
@@ -73,22 +72,11 @@ function storeLd(info: StoreInfo) {
   };
 }
 
-function Section({ id, anchor, title, children }: { id: string; anchor?: string; title: string; children: React.ReactNode }) {
-  return (
-    <section id={anchor} aria-labelledby={id} className="scroll-mt-24 border-t border-mist py-12 md:grid md:grid-cols-[1fr_2fr] md:gap-12 md:py-16">
-      <h2 id={id} className="display display-h2">
-        {title}
-      </h2>
-      <div className="mt-6 md:mt-0">{children}</div>
-    </section>
-  );
-}
-
 export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
   const sp = await searchParams;
   // ?preview=open: the page as it'll look once open, with sample details, for demos. Never indexed.
   const preview = sp.preview === "open";
-  // Test switches (docs/VISIT_PAGE_PLAN.md §8): only on the preview, or outside production.
+  // Test switches: only on the preview, or outside production.
   const testing = preview || process.env.NODE_ENV !== "production";
   const one = (k: string) => (testing && typeof sp[k] === "string" ? (sp[k] as string) : null);
   const switches: StageSwitches = {
@@ -99,35 +87,36 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
   };
   // ?now=2026-10-02T12:00+05:45 (a "+" in a link arrives as a space).
   const pinned = one("now") ? new Date(one("now")!.replace(" ", "+")) : null;
-  const [saved, timeline, personal, tryProduct, tour] = await Promise.all([
+  const [saved, timeline, ready, tryProduct, tour] = await Promise.all([
     getStoreInfo({ preview }),
     getDropTimeline(),
     personalLine(),
+    // "Try in store" on a product page leads here: one line says the piece is on the rack.
     typeof sp.try === "string" ? getProduct(sp.try) : Promise.resolve(null),
     getTourProps(),
   ]);
+  const personal = ready ?? (tryProduct ? `${tryProduct.name.toUpperCase()} · ON THE RACK TO TRY` : null);
   const now = pinned && !Number.isNaN(pinned.getTime()) ? pinned : new Date();
   const state = storeState(saved, now, timeline.next?.releaseAt ?? timeline.current?.releaseAt ?? null);
   // Before opening day, nothing that pins the store down goes into the page.
   const info = stripPrivate(saved, state);
   const status = statusLine(state, info);
   const changeAt = nextChangeAt(info, state, now);
-  // The first start point's line, for the map (none before opening day: it was stripped above).
+  // The written route, for when there are no start points yet (none of either before opening day).
   const start = routeFor(info);
-  const today = ktmNow(now).date;
-  const coming = info.special.filter((s) => s.date >= today && s.date <= addDays(today, 45)).sort((a, b) => a.date.localeCompare(b.date));
-  const directions = info.mapUrl ?? (info.geo ? `https://www.google.com/maps/search/?api=1&query=${info.geo.lat},${info.geo.lng}` : null);
   const soon = state.kind === "soon";
-
-  const faq = [
-    { q: "How do I pay?", a: "At the self-checkout kiosk: it lists your pieces and shows a QR. Scan it with eSewa. That's all you need to bring." },
-    { q: "Can I try things on?", a: "Yes. Take a numbered token from the helper for the pieces you take into the fitting room." },
-    { q: "What if I need help?", a: "Our helper is on the floor the whole time. Ask about sizes, or anything else." },
-    { q: "Can I return or exchange in store?", a: "Yes, within 7 days, with the receipt and the tags still on. See returns and exchanges." },
-    { q: "Can I collect an online order?", a: "Yes. Show your order number or the SMS at the counter. Pickup is free." },
-    ...(info.parking ? [{ q: "Is there parking?", a: info.parking }] : []),
-    ...(info.access ? [{ q: "Is the store accessible?", a: info.access }] : []),
-  ];
+  const today = ktmNow(now).date;
+  // The week from today, special days included.
+  const hours = [0, 1, 2, 3, 4, 5, 6].map((n) => {
+    const day = addDays(today, n);
+    const h = hoursOn(info, day);
+    return {
+      label: n === 0 ? "Today" : DAY_NAMES[new Date(`${day}T12:00:00Z`).getUTCDay()],
+      text: h ? `${hourLabel(h.open)} – ${hourLabel(h.close)}` : "Closed",
+      today: n === 0,
+      note: info.special.find((s) => s.date === day)?.note || null,
+    };
+  });
 
   return (
     <>
@@ -139,247 +128,27 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
       )}
       {/* The page refreshes itself when the status changes (closing time, the drop, the next opening). */}
       {changeAt && !pinned && <RefreshAt at={changeAt} />}
-      <VisitStage lights={lightsFor(state)} switches={switches} tour={tour} find={{
+      <VisitStage
+        lights={lightsFor(state)}
+        switches={switches}
+        tour={tour}
+        find={{
           pin: info.geo,
           starts: soon ? [] : info.startPoints.map((s) => ({ id: s.id, name: s.name, coords: s.coords, steps: s.steps })),
-          // With no start points yet, the written route (no line on the map).
           steps: soon ? [] : start.steps,
           status: statusShort(state),
           place: info.address ?? info.area,
+          area: info.area,
           landmark: info.landmark || null,
           entrancePhoto: info.entrancePhoto,
           parkingSpots: info.parkingSpots,
           parkingNote: info.parking,
           soon,
-        }}>
-        <VisitHero info={info} state={state} status={status} personal={personal} />
+          hours,
+        }}
+      >
+        <VisitHero info={info} state={state} status={status} personal={personal} hours={`${soon ? "Planned hours today" : "Today"}: ${hours[0].text}`} mapsUrl={info.geo ? `https://www.google.com/maps/dir/?api=1&destination=${info.geo.lat},${info.geo.lng}&travelmode=walking` : null} />
       </VisitStage>
-
-      <div className="container-ep pb-24">
-        {info.whatsapp && (
-          <div className="flex flex-wrap gap-x-6 gap-y-2 pt-6 text-[15px]">
-            <a href={`https://wa.me/${info.whatsapp}`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
-              WhatsApp the helper
-            </a>
-          </div>
-        )}
-
-        {tryProduct && (
-          <div className="mt-6 border-l-4 border-volt bg-photo p-5">
-            <p className="font-semibold">Want to try the {tryProduct.name}?</p>
-            <p className="mt-1 text-[15px] text-steel-dark">
-              {soon ? "Once we open, it'll be on the rack. " : "It's on the rack in store. "}
-              Check live sizes on the{" "}
-              <Link href={`/product/${tryProduct.slug}`} className="underline">
-                product page
-              </Link>{" "}
-              before you come.
-            </p>
-          </div>
-        )}
-
-        <div className="mt-8">
-          <Section id="find-h" anchor="find-us" title="Find us.">
-            <div className="mb-8">
-              <RouteReceipt info={info} state={state} personal={null} />
-            </div>
-            <p className="text-xl font-semibold">{info.address ?? `${site.name}, ${info.area}`}</p>
-            {info.landmark && <p className="mt-1 text-steel-dark">{info.landmark}</p>}
-            {!info.address && <p className="mt-1 text-steel-dark">The exact address goes up here about four weeks before opening day.</p>}
-            {directions && (
-              <div className="mt-5 flex flex-wrap gap-3">
-                <a href={directions} target="_blank" rel="noopener" className="btn btn-ink">
-                  Open in Google Maps
-                </a>
-                {info.phone && (
-                  <a href={`tel:${info.phone}`} className="btn btn-outline">
-                    Call
-                  </a>
-                )}
-              </div>
-            )}
-            {info.geo && (
-              <div className="mt-6">
-                <FindFallback lat={info.geo.lat} lng={info.geo.lng} label={info.address ?? info.area} />
-              </div>
-            )}
-            {(info.transport || info.parking || info.access) && (
-              <dl className="mt-8 grid gap-5 sm:grid-cols-3">
-                {info.transport && (
-                  <div>
-                    <dt className="text-sm font-semibold">By bus or tempo</dt>
-                    <dd className="mt-1 text-[15px] text-steel-dark">{info.transport}</dd>
-                  </div>
-                )}
-                {info.parking && (
-                  <div>
-                    <dt className="text-sm font-semibold">Parking</dt>
-                    <dd className="mt-1 text-[15px] text-steel-dark">{info.parking}</dd>
-                  </div>
-                )}
-                {info.access && (
-                  <div>
-                    <dt className="text-sm font-semibold">Access</dt>
-                    <dd className="mt-1 text-[15px] text-steel-dark">{info.access}</dd>
-                  </div>
-                )}
-              </dl>
-            )}
-          </Section>
-
-          <Section id="hours-h" title={soon ? "Planned hours." : "Opening hours."}>
-            <table className="w-full max-w-md text-[15px]">
-              <caption className="sr-only">Opening hours, Kathmandu time</caption>
-              <tbody>
-                {[0, 1, 2, 3, 4, 5, 6].map((n) => {
-                  const day = addDays(today, n);
-                  const h = hoursOn(info, day);
-                  const special = info.special.find((s) => s.date === day);
-                  return (
-                    <tr key={day} className={`border-b border-mist ${n === 0 ? "font-semibold" : ""}`} aria-current={n === 0 ? "date" : undefined}>
-                      <th scope="row" className="py-3 text-left font-[inherit]">
-                        {n === 0 ? "Today" : DAY_NAMES[new Date(`${day}T12:00:00Z`).getUTCDay()]}
-                        {special?.note && <span className="ml-2 text-[13px] font-normal text-steel-dark">{special.note}</span>}
-                      </th>
-                      <td className="py-3 text-right font-mono">{h ? `${hourLabel(h.open)} – ${hourLabel(h.close)}` : "Closed"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {coming.length > 0 && (
-              <div className="mt-6">
-                <p className="text-sm font-semibold">Coming up</p>
-                <ul className="mt-2 space-y-1 text-[15px] text-steel-dark">
-                  {coming.map((s) => (
-                    <li key={s.date}>
-                      <span className="font-mono text-ink">{shortDay.format(new Date(`${s.date}T12:00:00Z`))}</span> · {s.closed ? "Closed" : `${hourLabel(s.open!)} – ${hourLabel(s.close!)}`}
-                      {s.note ? ` · ${s.note}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <p className="mt-4 text-[13px] text-steel-dark">Kathmandu time.</p>
-          </Section>
-
-          <Section id="how-h" title="How it works.">
-            <ol className="grid gap-8 sm:grid-cols-3">
-              {[
-                ["01", "Pick it.", "Every tag shows the price and the measurements in cm. Nobody follows you around."],
-                ["02", "Pay it.", "Drop your pieces at the kiosk. It lists them and shows a QR. Scan with eSewa."],
-                ["03", "Wear it.", "Your bill comes by SMS. Walk out. That's it."],
-              ].map(([n, t, d]) => (
-                <li key={n}>
-                  <p className="font-mono text-[13px] text-steel-dark">{n}</p>
-                  <p className="display mt-1 text-[32px] leading-none">{t}</p>
-                  <p className="mt-2 text-steel-dark">{d}</p>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-6 text-[15px]">
-              Need help? Our helper is on the floor.{" "}
-              <Link href="/how-it-works" className="font-semibold underline underline-offset-2">
-                More on how it works
-              </Link>
-            </p>
-          </Section>
-
-          <Section id="plan-h" title="Plan your visit.">
-            <ul className="grid gap-4 sm:grid-cols-2">
-              <li className="bg-photo p-5">
-                <p className="font-semibold">Check your size first</p>
-                <p className="mt-1 text-[15px] text-steel-dark">Every product page shows live stock by size, so you know it&apos;s on the rack before you come.</p>
-                <Link href="/shop" className="mt-3 inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
-                  Shop
-                </Link>
-              </li>
-              <li className="bg-photo p-5">
-                <p className="font-semibold">Pick up an online order</p>
-                <p className="mt-1 text-[15px] text-steel-dark">Order online, choose free pickup, and bring your order number or the SMS.</p>
-                <Link href="/track" className="mt-3 inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
-                  Track an order
-                </Link>
-              </li>
-            </ul>
-          </Section>
-
-          {(info.whatsapp || info.phone || info.email || info.instagram) && (
-            <Section id="contact-h" title="Contact.">
-              <ul className="space-y-3 text-[17px]">
-                {info.whatsapp && (
-                  <li>
-                    WhatsApp:{" "}
-                    <a href={`https://wa.me/${info.whatsapp}`} target="_blank" rel="noopener" className="font-semibold underline underline-offset-2">
-                      Message the helper
-                    </a>
-                  </li>
-                )}
-                {info.phone && (
-                  <li>
-                    Phone:{" "}
-                    <a href={`tel:${info.phone}`} className="font-mono font-semibold underline underline-offset-2">
-                      {info.phone}
-                    </a>
-                  </li>
-                )}
-                {info.email && (
-                  <li>
-                    Email:{" "}
-                    <a href={`mailto:${info.email}`} className="font-semibold underline underline-offset-2">
-                      {info.email}
-                    </a>
-                  </li>
-                )}
-                {info.instagram && (
-                  <li>
-                    Instagram:{" "}
-                    <a href={info.instagram} target="_blank" rel="noopener" className="font-semibold underline underline-offset-2">
-                      {info.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@").replace(/\/$/, "")}
-                    </a>
-                  </li>
-                )}
-              </ul>
-              <p className="mt-3 text-[14px] text-steel-dark">We reply during opening hours.</p>
-            </Section>
-          )}
-
-          <Section id="faq-h" title="Questions.">
-            <div className="divide-y divide-mist border-y border-mist">
-              {faq.map(({ q, a }) => (
-                <details key={q} className="group py-4">
-                  <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 font-semibold">
-                    {q}
-                    <span className="text-xl leading-none transition-transform group-open:rotate-45" aria-hidden>
-                      +
-                    </span>
-                  </summary>
-                  <p className="mt-2 text-steel-dark">{a}</p>
-                </details>
-              ))}
-            </div>
-          </Section>
-
-          <Section id="biz-h" title="The business.">
-            <dl className="space-y-2 text-[15px]">
-              <div>
-                <dt className="inline font-semibold">Company: </dt>
-                <dd className="inline">{site.company.legalName}</dd>
-              </div>
-              {site.company.panVat && (
-                <div>
-                  <dt className="inline font-semibold">PAN/VAT: </dt>
-                  <dd className="inline font-mono">{site.company.panVat}</dd>
-                </div>
-              )}
-              <div>
-                <dt className="inline font-semibold">Address: </dt>
-                <dd className="inline">{info.address ?? `${info.area}, Nepal`}</dd>
-              </div>
-            </dl>
-          </Section>
-        </div>
-      </div>
     </>
   );
 }

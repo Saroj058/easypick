@@ -30,6 +30,8 @@ export interface DirectionsData {
   status: string;
   /** The address once the store is open; before that, the area. */
   place: string;
+  /** The neighbourhood, e.g. "Jhamsikhel": the last word of the map's caption on the way down. */
+  area: string;
   landmark: string | null;
   entrancePhoto: string | null;
   /** The store's pin, for Google Maps. Null before opening day. */
@@ -39,7 +41,16 @@ export interface DirectionsData {
   parkingNote: string;
   /** Before opening day: no route, the area only. */
   soon: boolean;
+  /** The week from today: "Today", "Thursday"… with the hours or "Closed". */
+  hours: { label: string; text: string; today: boolean; note: string | null }[];
 }
+
+/** What the store is like, in three lines (the same three as the kiosk receipt). */
+const INSIDE: [string, string][] = [
+  ["Pick it.", "Fixed price and the size in cm on every tag. Nobody follows you around."],
+  ["Pay it.", "Drop your pieces at the kiosk and scan the QR with eSewa. No queue."],
+  ["Wear it.", "The bill comes by SMS. Walk out."],
+];
 
 export type Snap = "peek" | "half" | "full";
 /** "From my location": not offered, offered, waiting for the browser, shown on the map, or it didn't work. */
@@ -113,6 +124,7 @@ export function Directions({
   locate = "off",
   away = null,
   onLocate,
+  plain = false,
 }: {
   data: DirectionsData;
   /** The chosen start point. */
@@ -136,6 +148,8 @@ export function Directions({
   away?: number | null;
   /** The only place the page asks for a location: a tap on "From my location". */
   onLocate?: () => void;
+  /** No live map behind the panel (the light version, or no WebGL): nothing to replay or point at. */
+  plain?: boolean;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const [copied, setCopied] = useState<"" | "yes" | "no">("");
@@ -316,7 +330,7 @@ export function Directions({
                   const cls = `relative flex w-full justify-between gap-4 pl-3 transition-colors duration-200 ${on ? "text-ink" : "text-[#8e8e93]"}`;
                   return (
                     <li key={i} data-step={on ? "lit" : "dim"}>
-                      {start ? (
+                      {start && !plain ? (
                         <button type="button" onClick={() => onLook(i)} aria-label={`Step ${i + 1}: ${s.text}. Show it on the map`} className={`${cls} min-h-11 items-center hover:underline`}>
                           {inner}
                         </button>
@@ -350,9 +364,16 @@ export function Directions({
             {data.place}
           </p>
           {data.landmark && !data.soon && <p className="mt-1 select-text text-[14px] text-steel-dark">{data.landmark}</p>}
-          {data.entrancePhoto && !data.soon && (
-            // eslint-disable-next-line @next/next/no-img-element -- the owner's photo of the door, from a link set in the admin
-            <img src={data.entrancePhoto} alt="The entrance to Easypick" loading="lazy" onError={(e) => (e.currentTarget.hidden = true)} className="mt-3 aspect-[4/3] w-full bg-photo object-cover" />
+          {!data.soon && (
+            // The door: the owner's photo once there is one, the store as built in 3D until then.
+            // eslint-disable-next-line @next/next/no-img-element -- a link set in the admin, or our own small still
+            <img
+              src={data.entrancePhoto ?? "/visit/store-night-828.avif"}
+              alt={data.entrancePhoto ? "The entrance to Easypick" : "The Easypick storefront: a black front with the lights on"}
+              loading="lazy"
+              onError={(e) => (e.currentTarget.hidden = true)}
+              className="mt-3 aspect-[3/2] w-full bg-ink object-cover"
+            />
           )}
           {!data.soon && (data.parkingNote || data.parkingSpots.length > 0) && (
             <p className="mt-3 text-[14px] text-steel-dark">
@@ -392,13 +413,48 @@ export function Directions({
             <Link href="/visit/tour" className={`${button} border-ink`}>
               Look inside
             </Link>
-            <button type="button" onClick={onReplay} className={`${button} border-mist`}>
-              Replay
-            </button>
+            {!plain && (
+              <button type="button" onClick={onReplay} className={`${button} border-mist`}>
+                Replay
+              </button>
+            )}
           </div>
           <p role="status" className="mt-2 min-h-5 text-[13px] text-steel-dark">
             {copied === "no" ? "Couldn't copy. Press and hold the address above to select it." : ""}
           </p>
+        </div>
+
+        {/* Once you're there: how the store works, and when it's open. */}
+        <div data-inside className="border-t border-mist px-5 py-4">
+          <h4 className="font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">At the store</h4>
+          <ol className="mt-3 space-y-3">
+            {INSIDE.map(([title, text]) => (
+              <li key={title}>
+                <p className="display text-[24px] leading-none">{title}</p>
+                <p className="mt-1 text-[14px] text-steel-dark">{text}</p>
+              </li>
+            ))}
+          </ol>
+          {data.hours.length > 0 && (
+            <>
+              <h4 className="mt-5 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">{data.soon ? "Planned hours" : "Opening hours"}</h4>
+              <table data-hours className="mt-2 w-full text-[14px]">
+                <caption className="sr-only">Opening hours for the week, Kathmandu time</caption>
+                <tbody>
+                  {data.hours.map((h) => (
+                    <tr key={h.label} className={`border-b border-mist ${h.today ? "font-semibold" : ""}`} aria-current={h.today ? "date" : undefined}>
+                      <th scope="row" className="py-2 text-left font-[inherit]">
+                        {h.label}
+                        {h.note && <span className="ml-2 text-[12px] font-normal text-steel-dark">{h.note}</span>}
+                      </th>
+                      <td className="py-2 text-right font-mono">{h.text}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-[12px] text-steel-dark">Kathmandu time.</p>
+            </>
+          )}
         </div>
       </div>
     </aside>

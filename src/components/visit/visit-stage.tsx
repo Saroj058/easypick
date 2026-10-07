@@ -7,26 +7,26 @@ import { createPortal } from "react-dom";
 
 import type { KioskBill, TagInfo } from "@/components/tour3d/build-store";
 import { distance, lengthMeters, minutes, type LngLat, type TravelMode } from "@/lib/map/route";
-import { riseMs } from "@/lib/map/sequence";
-import { DOOR_FRAME_KEY, FIXTURE_TILES_URL, FROM_TOUR_KEY, SEEN_KEY, SEEN_MS, START_ZOOM, TILES_URL, TOUR_ENTER_URL } from "@/lib/map/tiles";
+import { DOOR_FRAME_KEY, FIXTURE_TILES_URL, FROM_TOUR_KEY, SEEN_KEY, SEEN_MS, STATIC_ROUTE, TILES_URL, TOUR_ENTER_URL } from "@/lib/map/tiles";
 import type { Lights } from "@/lib/visit-status";
 import { Directions, googleMapsUrl, walkMinutes, type DirectionsData, type Locate, type Snap } from "./directions";
 import type { MapEntry } from "./find-us-map";
 import type { HeroPreview } from "./store-night";
 
-// The Visit page's stage (docs/VISIT_PAGE_PLAN.md): the hero with the 3D store at night, the Find
-// us map, and the motion between them. It's the only place that loads those on the client. The
-// hero itself is server-rendered HTML passed in as children, so the status, the heading and both
-// links work with no JavaScript at all; the 3D store is drawn into a slot the hero leaves for it
-// ([data-hero-canvas]), over the poster.
+// The Visit page is one screen with two ways in: In person, or the Virtual tour. This is its
+// stage: the 3D store at night behind the two choices, the In person map, and the motion between
+// them. It's the only place that loads those on the client. The screen itself is server-rendered
+// HTML passed in as children, so the status, the heading and both links work with no JavaScript;
+// the 3D store is drawn into a slot it leaves ([data-hero-canvas]), over the poster.
 //
-// Step inside: the door slides open and the camera goes through it; just before the end its frame
-// is kept (for this tab) and the tour opens at its entrance, showing that frame while it loads.
+// Virtual tour: the door slides open and the camera goes through it; just before the end its
+// frame is kept (for this tab) and the tour opens at its entrance, showing that frame while it loads.
 //
-// Find us, in order: the 3D camera rises to look straight down on the roof; its last frame is
-// kept as a picture and its canvas is taken away (only one WebGL context at a time); the map is
-// made at the same spot and fades in over the picture; then the map plays its own sequence
-// (find-us-map.tsx). Skip, a tap or a key jumps to the end at any moment.
+// In person, in order: the 3D store's last frame is kept as a picture and its canvas is taken away
+// (only one WebGL context at a time); the map is made far out, on the globe, and fades in over the
+// picture; then it plays its own sequence (find-us-map.tsx): the Earth turns to Nepal, the camera
+// comes down to the country, the valley, the route (from the start point nearest the visitor, if
+// they said where they are) and the door. Skip, a tap or a key jumps to the end at any moment.
 
 const StoreNight = dynamic(() => import("./store-night"), { ssr: false });
 const FindUsMap = dynamic(() => import("./find-us-map"), { ssr: false });
@@ -47,6 +47,8 @@ export interface StageSwitches {
 export type FindUs = DirectionsData;
 
 const HASH = "#find-us";
+/** The caption's words on the way down; the fourth is the store's own area. */
+const PLACES = ["Earth", "Nepal", "Kathmandu", "Here"];
 
 type Nav = Navigator & { connection?: { saveData?: boolean; effectiveType?: string }; deviceMemory?: number };
 
@@ -123,9 +125,9 @@ export function VisitStage({
   const [preview, setPreview] = useState<HeroPreview>(null);
   /** Which sequence plays: decided at the tap. */
   const [entry, setEntry] = useState<MapEntry>("first");
-  /** The rise's length in ms while the 3D camera is lifting; null otherwise. */
-  const [rise, setRise] = useState<number | null>(null);
-  /** After the rise: the 3D store is asked for its last frame, then that picture stands in for it. */
+  /** Where the map's camera is, for the big caption: 0 Earth, 1 Nepal, 2 Kathmandu, 3 the neighbourhood, -1 none. */
+  const [place, setPlace] = useState<-1 | 0 | 1 | 2 | 3>(-1);
+  /** On the way to the map: the 3D store is asked for its last frame, then that picture stands in for it. */
   const [leaving, setLeaving] = useState(false);
   const [frame, setFrame] = useState<string | null>(null);
   const [skip, setSkip] = useState(0);
@@ -154,9 +156,9 @@ export function VisitStage({
 
   const speed = switches.motion === "fast" ? 0.1 : 1;
   const still = fallback === "reduced";
-  /** The map needs WebGL; without it (or in the light version) Find us is a plain link to the section below. */
+  /** The map needs WebGL; without it (or in the light version) In person opens the directions with no live map. */
   const canMap = fallback === "none" || fallback === "reduced";
-  const playing = rise !== null || leaving || (stage === "map" && RUNNING.includes(mapState));
+  const playing = canMap && (leaving || (stage === "map" && RUNNING.includes(mapState)));
 
   useEffect(() => {
     // What this device gets. Asking for a WebGL context can take a moment on a slow phone, so all of
@@ -183,17 +185,22 @@ export function VisitStage({
     } catch {
       // blocked storage: the door is simply shut
     }
-    // Offered only where the browser can be asked: this page loaded with its own header (a direct visit, not a move from another page).
+    // Offered only where the browser can be asked at all.
     const policy = (document as Document & { featurePolicy?: { allowsFeature(name: string): boolean } }).featurePolicy;
     if (find.pin && "geolocation" in navigator && policy?.allowsFeature("geolocation") !== false) setLocate("idle");
-    if (f === "nowebgl" || f === "lite") return;
-    // Opened on /visit#find-us (a QR code, a link from Instagram): straight to the map, no 3D first.
+    // Opened on /visit#find-us (a QR code, a link from Instagram): straight to the directions, no 3D first.
     if (location.hash === HASH) {
-      setEntry(f === "reduced" ? "instant" : find.pin ? "deeplink" : "soon");
+      const plain = f === "nowebgl" || f === "lite";
+      setEntry(plain || f === "reduced" ? "instant" : find.pin ? "deeplink" : "soon");
+      if (plain) {
+        setMapState("done");
+        setLit(99);
+        setPanel(true);
+      } else setBar(true);
       setStage("map");
-      setBar(true);
       return;
     }
+    if (f === "nowebgl" || f === "lite") return;
     // The poster is the picture until then; 3D only where it can run well.
     const win = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (n: number) => void };
     const go = () => setLoad3d(true);
@@ -245,36 +252,70 @@ export function VisitStage({
     };
   }, [slot]);
 
-  /** Hero → map. With the 3D store on screen the camera rises first; then its last frame is taken and its canvas goes before the map is made. */
-  const toMap = useCallback(() => {
-    if (location.hash !== HASH) {
-      history.pushState(null, "", HASH);
-      pushed.current = true;
-    }
-    const mode: MapEntry = still ? "instant" : !find.pin ? "soon" : seenBefore() ? "repeat" : "first";
-    setEntry(mode);
-    setPreview(null);
-    setPanel(false);
-    setLit(-1);
-    setBar(false);
-    setSnap("half");
-    const with3d = load3d && drawn && !lost;
-    if (with3d && mode !== "instant") setRise(riseMs(mode === "repeat" ? "repeat" : mode === "soon" ? "soon" : "first", speed));
-    else if (with3d) setLeaving(true);
-    else setStage("map");
-  }, [still, find.pin, load3d, drawn, lost, speed]);
+  /**
+   * Where the visitor is: one coarse reading, never watched, asked for only by a tap (on In person,
+   * or on "From my location"). The route then starts from the start point nearest to them.
+   * `quiet`: asked along with In person, so a refusal says nothing.
+   */
+  const askWhere = (quiet: boolean) => {
+    setLocate("asking");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const at: LngLat = [pos.coords.longitude, pos.coords.latitude];
+        setMe(at);
+        setLocate("shown");
+        const near = find.starts.reduce<{ id: string; d: number } | null>((best, s) => {
+          const d = distance(at, s.coords[0]);
+          return !best || d < best.d ? { id: s.id, d } : best;
+        }, null);
+        if (near && near.d < 60_000) setStartId(near.id);
+      },
+      () => setLocate(quiet ? "idle" : "failed"),
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
+    );
+  };
 
-  // The phone bar: on screen about a second after the tap, whatever the map is doing.
+  /**
+   * Hero → In person. The 3D store's last frame is kept as a picture and its canvas goes (one
+   * graphics context at a time); the map is then made far out, on the globe, and fades in over
+   * that picture. Without WebGL, or in the light version, the directions open with no live map.
+   */
+  const toMap = useCallback(
+    (byTap = false) => {
+      if (location.hash !== HASH) {
+        history.pushState(null, "", HASH);
+        pushed.current = true;
+      }
+      setPreview(null);
+      setSnap("half");
+      if (!canMap) {
+        setEntry("instant");
+        setMapState("done");
+        setLit(99);
+        setPanel(true);
+        setStage("map");
+        return;
+      }
+      const mode: MapEntry = still ? "instant" : !find.pin ? "soon" : seenBefore() ? "repeat" : "first";
+      setEntry(mode);
+      setPanel(false);
+      setLit(-1);
+      setBar(false);
+      // "From where you are": asked once, at this tap, and quietly dropped if the answer is no.
+      if (byTap && locate === "idle") askWhere(true);
+      if (load3d && drawn && !lost) setLeaving(true);
+      else setStage("map");
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- askWhere reads the latest start points itself
+    [canMap, still, find.pin, load3d, drawn, lost, locate],
+  );
+
+  // The phone bar: on screen within a second of the tap, whatever the map is doing.
   useEffect(() => {
-    if (bar || !(rise !== null || leaving || stage === "map")) return;
+    if (bar || !(leaving || stage === "map")) return;
     const t = setTimeout(() => setBar(true), entry === "instant" ? 0 : 700 * speed);
     return () => clearTimeout(t);
-  }, [bar, rise, leaving, stage, entry, speed]);
-
-  const onRisen = useCallback(() => {
-    setRise(null);
-    setLeaving(true);
-  }, []);
+  }, [bar, leaving, stage, entry, speed]);
 
   const onCapture = useCallback((dataUrl: string) => {
     if (toTour.current) {
@@ -313,7 +354,7 @@ export function VisitStage({
     setStage("hero");
     setMapState("idle");
     setFrame(null);
-    setRise(null);
+    setPlace(-1);
     setLeaving(false);
     setPanel(false);
     setBar(false);
@@ -329,31 +370,21 @@ export function VisitStage({
     requestAnimationFrame(() => root.current?.querySelector<HTMLElement>("[data-hero-action=find]")?.focus({ preventScroll: true }));
   }, []);
 
-  /** The only place the page asks where the visitor is: a tap on "From my location". One reading, coarse, never watched. */
-  const onLocate = useCallback(() => {
+  const onLocate = () => {
     if (locate === "shown") {
       setMe(null);
       setLocate("idle");
-      return;
-    }
-    setLocate("asking");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setMe([pos.coords.longitude, pos.coords.latitude]);
-        setLocate("shown");
-      },
-      () => setLocate("failed"),
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
-    );
-  }, [locate]);
+    } else askWhere(false);
+  };
 
-  /** The map lost its graphics context: back to the page, at the section with the still of the route and the receipt. */
+  /** The map lost its graphics context: the directions stay, over the still of the route. */
   const onMapLost = useCallback(() => {
-    pushed.current = false;
     setFallback("lite");
-    toHero();
-    requestAnimationFrame(() => document.getElementById("find-us")?.scrollIntoView());
-  }, [toHero]);
+    setEntry("instant");
+    setMapState("done");
+    setLit(99);
+    setPanel(true);
+  }, []);
 
   /** The way out of the map: Back if this page put #find-us in the address, else just drop it (a direct link has nowhere to go back to). */
   const leaveMap = useCallback(() => {
@@ -368,21 +399,17 @@ export function VisitStage({
 
   /** Skip: jump to the finished picture, from wherever the sequence is. */
   const skipNow = useCallback(() => {
-    if (rise !== null) {
-      // Still in 3D: no more rising, and the map opens finished.
-      setEntry("instant");
-      setRise(0);
-    } else if (stage !== "map" || mapState === "idle" || mapState === "loading") setEntry("instant");
+    // Not drawn yet: the map opens finished.
+    if (stage !== "map" || mapState === "idle" || mapState === "loading") setEntry("instant");
     setSkip((n) => n + 1);
-  }, [rise, stage, mapState]);
+  }, [stage, mapState]);
 
-  // Back and forward follow the address: #find-us is the map, anything else is the hero.
+  // Back and forward follow the address: #find-us is In person, anything else is the hero.
   useEffect(() => {
-    if (!canMap) return;
     const sync = () => {
       if (location.hash === HASH) {
-        if (stage !== "map" && rise === null && !leaving) toMap();
-      } else if (stage === "map" || rise !== null || leaving) {
+        if (stage !== "map" && !leaving) toMap();
+      } else if (stage === "map" || leaving) {
         pushed.current = false;
         toHero();
       }
@@ -393,12 +420,12 @@ export function VisitStage({
       window.removeEventListener("popstate", sync);
       window.removeEventListener("hashchange", sync);
     };
-  }, [canMap, stage, rise, leaving, toHero, toMap]);
+  }, [stage, leaving, toHero, toMap]);
 
   // While the sequence plays, Space, Enter or Escape finish it; afterwards Escape goes back to the store.
   // The page behind the map doesn't scroll.
   useEffect(() => {
-    if (!(stage === "map" || rise !== null || leaving)) return;
+    if (!(stage === "map" || leaving)) return;
     const before = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
@@ -414,7 +441,7 @@ export function VisitStage({
       document.documentElement.style.overflow = before;
       window.removeEventListener("keydown", onKey);
     };
-  }, [stage, rise, leaving, playing, skipNow, leaveMap]);
+  }, [stage, leaving, playing, skipNow, leaveMap]);
 
   // Once someone has watched it through, the next visit gets the shorter sequence.
   useEffect(() => {
@@ -439,9 +466,8 @@ export function VisitStage({
         stepInside();
         return;
       }
-      if (!canMap) return;
       e.preventDefault();
-      toMap();
+      toMap(true);
     };
     el.addEventListener("pointerover", on);
     el.addEventListener("pointerout", off);
@@ -457,7 +483,7 @@ export function VisitStage({
       el.removeEventListener("pointerdown", on);
       el.removeEventListener("click", click);
     };
-  }, [canMap, toMap, stepInside]);
+  }, [toMap, stepInside]);
 
   // The map's code is fetched just ahead of the tap: when Find us is pointed at, focused or pressed.
   // Not on a timer, so a visitor who never opens the map never pays for it.
@@ -470,6 +496,8 @@ export function VisitStage({
     if (pin.current) pin.current.style.transform = `translate(${x}px, ${y}px)`;
   }, []);
 
+  /** The still of the route is of one pin: it's only shown while the store's pin is that one. */
+  const staticRoute = Boolean(find.pin && Math.abs(find.pin.lat - STATIC_ROUTE.pin.lat) < 0.0005 && Math.abs(find.pin.lng - STATIC_ROUTE.pin.lng) < 0.0005);
   const show3d = load3d && !lost && (stage === "hero" || stage === "inside") && (fallback === "none" || fallback === "reduced");
   const away = me && find.pin ? distance(me, [find.pin.lng, find.pin.lat]) : null;
   const tilesUrl = switches.tiles === "fixture" ? FIXTURE_TILES_URL : TILES_URL;
@@ -493,9 +521,10 @@ export function VisitStage({
       data-motion={switches.motion}
       data-tiles={switches.tiles}
       data-3d={show3d && drawn ? "on" : "off"}
-      data-entry={stage === "map" || rise !== null ? entry : undefined}
-      // During the rise the hero's words step aside (visit-hero.tsx), so only the store and the pin are on screen.
-      data-rising={rise !== null || leaving || enter !== null ? "true" : undefined}
+      data-entry={stage === "map" || leaving ? entry : undefined}
+      data-place={place >= 0 ? PLACES[place].toLowerCase() : undefined}
+      // On the way out of the hero its words step aside (visit-hero.tsx), so only the store is on screen.
+      data-rising={leaving || enter !== null ? "true" : undefined}
     >
       {children}
       {slot &&
@@ -521,21 +550,18 @@ export function VisitStage({
                 setLife((n) => n + 1);
               }}
               onAnchor={onAnchor}
-              rise={rise}
-              riseZoom={START_ZOOM}
-              onRisen={onRisen}
               capture={leaving || grab}
               enter={enter}
               doorFrom={doorFrom}
               onEntered={onEntered}
               onCapture={onCapture}
             />
-            {/* The pin above the roof: it drops in when Find us is pointed at and stays through the rise, where the map's own pin takes its place. */}
+            {/* The pin above the roof: it drops in when In person is pointed at; on the map, the map's own pin takes its place. */}
             <span ref={pin} aria-hidden data-pin className="pointer-events-none absolute left-0 top-0 block">
               <span
                 className={`block h-4 w-4 -translate-x-1/2 rounded-full border-2 border-ink bg-volt shadow-[0_0_0_4px_rgba(198,255,61,0.25)] transition-[opacity,translate] ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
                   still ? "duration-0" : "duration-[280ms]"
-                } ${preview === "find" || rise !== null || leaving ? "translate-y-[-8px] opacity-100" : "translate-y-[-34px] opacity-0"}`}
+                } ${preview === "find" || leaving ? "translate-y-[-8px] opacity-100" : "translate-y-[-34px] opacity-0"}`}
               />
             </span>
           </div>,
@@ -546,8 +572,20 @@ export function VisitStage({
       {stage === "map" && (
         <div data-find-us className="on-dark fixed inset-0 z-[70] overflow-hidden bg-[#0B0C0D] text-paper">
           {/* eslint-disable-next-line @next/next/no-img-element -- a frame of the 3D store, handed over as a data URL */}
-          {frame && <img src={frame} alt="" aria-hidden className={`find-rise-hold absolute inset-0 h-full w-full object-cover transition-opacity ${fade} ${mapShown ? "opacity-0" : "opacity-100"}`} />}
-          <div className={`absolute inset-0 transition-opacity ${fade} ${mapShown ? "opacity-100" : "opacity-0"}`}>
+          {frame && canMap && <img src={frame} alt="" aria-hidden className={`find-rise-hold absolute inset-0 h-full w-full object-cover transition-opacity ${fade} ${mapShown ? "opacity-0" : "opacity-100"}`} />}
+          {!canMap && (
+            // No live map (the light version, no WebGL, or the map lost its graphics): the still of
+            // the route where there is one for this pin, the store's picture otherwise.
+            // eslint-disable-next-line @next/next/no-img-element -- one small still, sized and compressed by hand
+            <img
+              data-route-static={staticRoute ? "" : undefined}
+              src={staticRoute ? STATIC_ROUTE.src : "/visit/store-night.avif"}
+              alt={staticRoute ? `Map: the route from ${STATIC_ROUTE.from} to Easypick` : ""}
+              className={`absolute inset-0 h-full w-full ${staticRoute ? "object-contain object-top md:object-left" : "object-cover opacity-40"}`}
+            />
+          )}
+          {canMap && (
+          <div className={`absolute inset-0 bg-[#050607] transition-opacity ${fade} ${mapShown ? "opacity-100" : "opacity-0"}`}>
             <FindUsMap
               tilesUrl={tilesUrl}
               pin={find.pin}
@@ -567,18 +605,33 @@ export function VisitStage({
               onState={setMapState}
               onStep={setLit}
               onPanel={setPanel}
+              onPlace={setPlace}
             />
           </div>
+          )}
 
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 bg-gradient-to-b from-black/70 to-transparent p-4 pb-12 md:p-8 md:pb-16">
             <button type="button" onClick={leaveMap} hidden={!wide && panel && snap !== "peek"} className="pointer-events-auto flex h-11 items-center gap-2 rounded-full border border-paper/40 bg-black/50 px-4 text-[13px] font-semibold uppercase tracking-[0.06em] backdrop-blur">
               <span aria-hidden>←</span> The store
             </button>
-            <h2 className={`display text-[40px] leading-[0.9] transition-opacity duration-[400ms] md:text-[64px] ${panel && wide ? "opacity-0" : "opacity-100"}`}>Find us.</h2>
+            <h2 className={`display text-[40px] leading-[0.9] transition-opacity duration-[400ms] md:text-[64px] ${(panel && wide) || place >= 0 ? "opacity-0" : "opacity-100"}`}>In person.</h2>
+          </div>
+
+          {/* Where the camera is on the way down: Earth, Nepal, Kathmandu, the neighbourhood. */}
+          <div aria-hidden data-caption className={`pointer-events-none absolute bottom-24 left-4 z-[5] transition-opacity duration-300 md:bottom-16 md:left-12 ${place >= 0 ? "opacity-100" : "opacity-0"}`}>
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/70">
+              {PLACES.slice(0, Math.max(1, place + 1))
+                .map((p, i) => (i === 3 ? find.area : p))
+                .join(" → ")}
+            </p>
+            <p key={place} className="display animate-fade-up text-[clamp(56px,12vw,150px)] leading-[0.86] text-paper">
+              {place === 3 ? find.area : PLACES[Math.max(0, place)]}.
+            </p>
           </div>
 
           <Directions
             data={find}
+            plain={!canMap}
             startId={startId}
             mode={mode}
             lit={lit}
@@ -624,9 +677,11 @@ export function VisitStage({
             </div>
           )}
 
-          <a href="#find-h" onClick={leaveMap} className="sr-only focus:not-sr-only focus:absolute focus:bottom-20 focus:left-4 focus:z-20 focus:bg-paper focus:px-4 focus:py-3 focus:text-ink">
-            Skip map, read directions
-          </a>
+          {playing && (
+            <button type="button" onClick={skipNow} className="sr-only focus:not-sr-only focus:absolute focus:bottom-20 focus:left-4 focus:z-20 focus:bg-paper focus:px-4 focus:py-3 focus:text-ink">
+              Skip the map, read the directions
+            </button>
+          )}
           <p aria-live="polite" className="sr-only">
             {mapState === "done" || mapState === "interrupted" ? (find.soon ? "The map shows the area Easypick is opening in." : `The route is on the map${walk !== null ? `: about ${walk} minutes on foot` : ""}.`) : ""}
           </p>

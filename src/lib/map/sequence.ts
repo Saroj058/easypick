@@ -1,12 +1,13 @@
-// The "Find us" motion as one timing table (docs/VISIT_PAGE_PLAN.md §6). Pure, so the map, the
-// panel and the tests read the same times. Times are in milliseconds from the tap on Find us.
+// The "In person" motion as one timing table: from the globe down to Nepal, the valley, the route
+// and the door. Pure, so the map, the panel and the tests read the same times. Times are in
+// milliseconds from the moment the map is ready.
 
 export type SeqMode = "first" | "repeat" | "deeplink" | "chip" | "soon";
 
 export type PhaseName =
-  | "rise" // the 3D camera tilts up to look straight down
-  | "crossfade" // 3D snapshot → map (an overlay on top of rise and pullout)
-  | "pullout" // out to the whole valley
+  | "globe" // the whole Earth, turning until Nepal faces the camera
+  | "nepal" // down to the country
+  | "pullout" // on down to the whole valley
   | "hold" // the valley, still
   | "fly" // to the route
   | "retract" // a chip change: the old line pulls back
@@ -101,18 +102,18 @@ export function timeline(mode: SeqMode, meters: number, speed = 1): Phase[] {
 
   switch (mode) {
     case "first":
-      add("rise", 700, inOut);
-      p.push({ name: "crossfade", start: 560, end: 800, ease: linear, overlay: true });
-      add("pullout", 1000, quart);
-      add("hold", 600, linear);
+      // From far out: the globe turns to Nepal, the camera comes down to the country, then the valley.
+      add("globe", 1200, inOut);
+      add("nepal", 1300, quart);
+      add("pullout", 1500, quart);
+      add("hold", 400, linear);
       add("fly", 1000, quart);
       add("draw", D, drawEase);
       add("settle", PANEL_MS, out);
       add("arrival", ARRIVAL_MS, out);
       break;
     case "repeat":
-      add("rise", 700, inOut);
-      p.push({ name: "crossfade", start: 560, end: 800, ease: linear, overlay: true });
+      // Seen before: it opens on the valley and goes straight to the route.
       add("fly", 900, quart);
       add("draw", clamp(D, 1200, 1800), drawEase);
       add("settle", 400, expoOut);
@@ -130,10 +131,10 @@ export function timeline(mode: SeqMode, meters: number, speed = 1): Phase[] {
       add("settle", 400, expoOut);
       break;
     case "soon":
-      add("rise", 700, inOut);
-      p.push({ name: "crossfade", start: 560, end: 800, ease: linear, overlay: true });
-      add("pullout", 1000, quart);
-      add("hold", 600, linear);
+      add("globe", 1200, inOut);
+      add("nepal", 1300, quart);
+      add("pullout", 1500, quart);
+      add("hold", 400, linear);
       add("circle", 500, quart);
       add("signup", 200, out);
       break;
@@ -185,15 +186,12 @@ export function heightForZoom(zoom: number, fovDeg: number, viewportHeightPx: nu
   return (mpp * viewportHeightPx) / (2 * Math.tan(((fovDeg / 2) * Math.PI) / 180));
 }
 
-/** The camera phases of the map's part of an entry: everything after the 3D rise, starting at 0. */
+/** The camera phases the map plays for an entry, starting at 0. */
 export function mapPhases(mode: SeqMode, meters: number, speed = 1): Phase[] {
-  const phases = timeline(mode, meters, speed).filter((p) => !p.overlay && p.name !== "rise");
-  const t0 = phases[0]?.start ?? 0;
-  return phases.map((p) => ({ ...p, start: p.start - t0, end: p.end - t0 }));
+  return timeline(mode, meters, speed).filter((p) => !p.overlay);
 }
 
-/** How long the 3D rise lasts before the map takes over (0 for entries with no 3D). */
-export function riseMs(mode: SeqMode, speed = 1): number {
-  const rise = timeline(mode, 0, speed).find((p) => p.name === "rise");
-  return rise ? rise.end - rise.start : 0;
+/** Where the caption says the camera is, by phase: 0 Earth, 1 Nepal, 2 Kathmandu, 3 the neighbourhood; -1 none. */
+export function placeAt(name: PhaseName): -1 | 0 | 1 | 2 | 3 {
+  return name === "globe" ? 0 : name === "nepal" ? 1 : name === "pullout" || name === "hold" ? 2 : name === "fly" || name === "circle" ? 3 : -1;
 }
