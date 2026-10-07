@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { MapOnTap } from "@/components/map-on-tap";
-import { VisitHero } from "@/components/visit-hero";
+import { RefreshAt } from "@/components/refresh-at";
+import { RouteReceipt } from "@/components/visit/route-receipt";
+import { VisitHero } from "@/components/visit/visit-hero";
+import { VisitStage, type StageSwitches } from "@/components/visit/visit-stage";
 import { getCurrentUser } from "@/lib/auth";
 import { jsonLd } from "@/lib/json-ld";
-import { formatBS } from "@/lib/nepali-date";
 import { ordersFor } from "@/lib/orders";
 import { site } from "@/lib/site";
 import { getStoreInfo } from "@/lib/store-info";
 import { DAY_NAMES, hourLabel, hoursOn, ktmNow, storeState, type StoreInfo } from "@/lib/store-state";
+import { lightsFor, nextChangeAt, statusLine, stripPrivate } from "@/lib/visit-status";
 import { getDropTimeline, getProduct } from "@/lib/store";
 
 const metadata: Metadata = {
@@ -20,7 +23,6 @@ const metadata: Metadata = {
 // Open or closed is worked out per visit, in Kathmandu time.
 export const dynamic = "force-dynamic";
 
-const stampFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kathmandu" });
 const shortDay = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 const addDays = (ymd: string, n: number) => {
@@ -69,9 +71,9 @@ function storeLd(info: StoreInfo) {
   };
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function Section({ id, anchor, title, children }: { id: string; anchor?: string; title: string; children: React.ReactNode }) {
   return (
-    <section aria-labelledby={id} className="border-t border-mist py-12 md:grid md:grid-cols-[1fr_2fr] md:gap-12 md:py-16">
+    <section id={anchor} aria-labelledby={id} className="scroll-mt-24 border-t border-mist py-12 md:grid md:grid-cols-[1fr_2fr] md:gap-12 md:py-16">
       <h2 id={id} className="display display-h2">
         {title}
       </h2>
@@ -84,16 +86,30 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
   const sp = await searchParams;
   // ?preview=open: the page as it'll look once open, with sample details, for demos. Never indexed.
   const preview = sp.preview === "open";
-  const [info, timeline, personal, tryProduct] = await Promise.all([
+  // Test switches (docs/VISIT_PAGE_PLAN.md §8): only on the preview, or outside production.
+  const testing = preview || process.env.NODE_ENV !== "production";
+  const one = (k: string) => (testing && typeof sp[k] === "string" ? (sp[k] as string) : null);
+  const switches: StageSwitches = {
+    motion: one("motion") === "fast" ? "fast" : "normal",
+    lite: one("lite") === "1",
+    gl: one("gl") === "off" ? "off" : "on",
+    tiles: one("tiles") === "fixture" ? "fixture" : "live",
+  };
+  // ?now=2026-10-02T12:00+05:45 (a "+" in a link arrives as a space).
+  const pinned = one("now") ? new Date(one("now")!.replace(" ", "+")) : null;
+  const [saved, timeline, personal, tryProduct] = await Promise.all([
     getStoreInfo({ preview }),
     getDropTimeline(),
     personalLine(),
     typeof sp.try === "string" ? getProduct(sp.try) : Promise.resolve(null),
   ]);
-  const now = new Date();
-  const state = storeState(info, now, timeline.next?.releaseAt ?? timeline.current?.releaseAt ?? null);
+  const now = pinned && !Number.isNaN(pinned.getTime()) ? pinned : new Date();
+  const state = storeState(saved, now, timeline.next?.releaseAt ?? timeline.current?.releaseAt ?? null);
+  // Before opening day, nothing that pins the store down goes into the page.
+  const info = stripPrivate(saved, state);
+  const status = statusLine(state, info);
+  const changeAt = nextChangeAt(info, state, now);
   const today = ktmNow(now).date;
-  const stamp = `${formatBS(now, true).toUpperCase()} · ${stampFmt.format(now).toUpperCase()}`;
   const coming = info.special.filter((s) => s.date >= today && s.date <= addDays(today, 45)).sort((a, b) => a.date.localeCompare(b.date));
   const directions = info.mapUrl ?? (info.geo ? `https://www.google.com/maps/search/?api=1&query=${info.geo.lat},${info.geo.lng}` : null);
   const soon = state.kind === "soon";
@@ -116,24 +132,20 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
           Preview: how this page looks once the store is open, with sample details. The public page is unchanged.
         </p>
       )}
-      <VisitHero info={info} state={state} stamp={stamp} personal={personal} />
+      {/* The page refreshes itself when the status changes (closing time, the drop, the next opening). */}
+      {changeAt && !pinned && <RefreshAt at={changeAt} />}
+      <VisitStage lights={lightsFor(state)} switches={switches}>
+        <VisitHero info={info} state={state} status={status} personal={personal} />
+      </VisitStage>
 
       <div className="container-ep pb-24">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 pt-6 text-[15px]">
-          <Link href="/visit/tour" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
-            Take the virtual tour
-          </Link>
-          {directions && (
-            <a href={directions} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
-              Get directions
-            </a>
-          )}
-          {info.whatsapp && (
+        {info.whatsapp && (
+          <div className="flex flex-wrap gap-x-6 gap-y-2 pt-6 text-[15px]">
             <a href={`https://wa.me/${info.whatsapp}`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
               WhatsApp the helper
             </a>
-          )}
-        </div>
+          </div>
+        )}
 
         {tryProduct && (
           <div className="mt-6 border-l-4 border-volt bg-photo p-5">
@@ -150,7 +162,10 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
         )}
 
         <div className="mt-8">
-          <Section id="find-h" title="Find us.">
+          <Section id="find-h" anchor="find-us" title="Find us.">
+            <div className="mb-8">
+              <RouteReceipt info={info} state={state} personal={null} />
+            </div>
             <p className="text-xl font-semibold">{info.address ?? `${site.name}, ${info.area}`}</p>
             {info.landmark && <p className="mt-1 text-steel-dark">{info.landmark}</p>}
             {!info.address && <p className="mt-1 text-steel-dark">The exact address goes up here about four weeks before opening day.</p>}

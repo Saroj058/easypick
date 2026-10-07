@@ -2,7 +2,7 @@
 // the night store shows. Both come from storeState (lib/store-state.ts); nothing here decides
 // open or closed on its own.
 
-import { hourLabel, ktmNow, type StoreInfo, type StoreState } from "./store-state";
+import { hourLabel, hoursOn, ktmNow, type StoreInfo, type StoreState } from "./store-state";
 
 export type Lights = StoreState["kind"];
 
@@ -40,4 +40,36 @@ export function statusLine(state: StoreState, info: Pick<StoreInfo, "area">): st
     case "soon":
       return `${sentences(state.headline)[0] ?? state.headline} · ${where}`.toUpperCase();
   }
+}
+
+/**
+ * Before opening day nothing that pins the store down reaches the page (and everything a page
+ * renders ends up in its HTML): no address, map pin, routes, parking spots or entrance photo.
+ */
+export function stripPrivate(info: StoreInfo, state: StoreState): StoreInfo {
+  if (state.kind !== "soon") return info;
+  return { ...info, address: null, geo: null, mapUrl: null, startPoints: [], parkingSpots: [], entrancePhoto: null };
+}
+
+const KTM = "+05:45";
+
+/**
+ * When the status next changes (closing time, the drop, the next opening), as ISO, so the page can
+ * refresh itself then. Null if nothing changes in the next three weeks, or before opening day.
+ */
+export function nextChangeAt(info: StoreInfo, state: StoreState, now: Date): string | null {
+  const t = ktmNow(now);
+  if (state.kind === "soon") return state.openingAt;
+  if (state.kind === "open") return `${t.date}T${state.closesAt}:00${KTM}`;
+  if (state.kind === "drop") return state.dropAt;
+  for (let i = 0; i < 21; i++) {
+    const d = new Date(`${t.date}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + i);
+    const day = d.toISOString().slice(0, 10);
+    const h = hoursOn(info, day);
+    if (!h) continue;
+    const at = `${day}T${h.open}:00${KTM}`;
+    if (Date.parse(at) > now.getTime()) return at;
+  }
+  return null;
 }

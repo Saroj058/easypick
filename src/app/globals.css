@@ -416,33 +416,11 @@
   }
 }
 
-/* ---------- Visit page: the shutter and the route receipt ---------- */
-/* A rolling shop shutter: ribbed steel in pure CSS. Where it ends up is set by the server
-   (data-state), so the right state shows before any script runs. */
-.shutter {
-  background: repeating-linear-gradient(to bottom, #1c1c1e 0 10px, #0a0a0a 10px 12px, #2a2a2c 12px 14px);
-  box-shadow: inset 0 -6px 0 #3a3a3c;
-}
-.shutter[data-state="open"] {
-  animation: shutter-up 0.8s cubic-bezier(0.6, 0, 0.2, 1) 0.35s forwards;
-}
-.shutter[data-state="drop"] {
-  animation: shutter-half 0.8s cubic-bezier(0.6, 0, 0.2, 1) 0.35s forwards;
-}
-@keyframes shutter-up {
-  to {
-    transform: translateY(-101%);
-  }
-}
-@keyframes shutter-half {
-  to {
-    transform: translateY(-55%);
-  }
-}
-/* The receipt prints line by line once the shutter is up. */
+/* ---------- Visit page: the route receipt ---------- */
+/* The receipt prints line by line. */
 .receipt-line {
   animation: receipt-print 0.25s ease-out both;
-  animation-delay: calc(1.1s + var(--i, 0) * 90ms);
+  animation-delay: calc(0.2s + var(--i, 0) * 90ms);
 }
 @keyframes receipt-print {
   from {
@@ -459,8 +437,6 @@
   height: 10px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .shutter[data-state="open"],
-  .shutter[data-state="drop"],
   .receipt-line {
     animation-delay: 0s !important;
   }

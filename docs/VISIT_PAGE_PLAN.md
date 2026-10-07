@@ -15,7 +15,7 @@ Prototype to match: the "Easypick Visit" motion artifact. Product context: `docs
 | 0 Setup | visit/phase-0 | | review | 7 Oct 2026 | `docs/BLUEPRINT.md` stays local and git-ignored (public repo; section 21 has business figures), so only this plan is committed. No GitHub CLI here: Claude pushes the branch and Saroj opens the PR from the compare link |
 | 1a Data + pure logic | visit/phase-1a | | review | 7 Oct 2026 | Stacked on phase-0. Gaps over 150 m are checked on the pasted trace (simplifying a straight street leaves long legs on purpose). Until 1b, `parseStoreForm` carries start points, parking and the photo over from what's saved. Gate: 174 unit, build, 41 e2e (2 workers) |
 | 1b Admin start points | visit/phase-1b | | review | 7 Oct 2026 | Stacked on 1a. Steps and parking are one-line-per-entry text boxes; the form marks itself (`startPointsForm`) so an older form keeps what's saved. Simplify keeps legs ≤ 140 m so a saved route pastes back in. Preview is the SVG stand-in in `find-us-map.tsx`. Gate: 179 unit, build, 42 e2e (2 workers) |
-| 2a Stage, status, links (no 3D) | visit/phase-2a | | todo | | |
+| 2a Stage, status, links (no 3D) | visit/phase-2a | | review | 7 Oct 2026 | Stacked on 1b. Poster is two stills of the existing 3D store (shutter up / down), AVIF at 828 and 1656 wide (9 KB and 17 KB). Before opening the whole page is stripped of address, pin, map link, routes, parking and photo, not only the client props. The old link row (tour, directions) went: the hero has both. Gate: 181 unit, build, 45 e2e (2 workers) |
 | 2b Night store 3D | visit/phase-2b | | todo | | |
 | 3a Map tiles + fonts | visit/phase-3a | | todo | | needs Saroj: hosting OK |
 | 3b Map + style + CSP | visit/phase-3b | | todo | | |
@@ -267,12 +267,12 @@ npm run lint && npx tsc --noEmit && npm test && node scripts/with-db.mjs --local
 - **Done when:** e2e saves and reloads a start point; saving other fields keeps it; the existing "Step 1" admin test still passes; parser errors show in plain words.
 
 ### Phase 2a: Stage, status and links, no 3D (1 session)
-- [ ] `page.tsx` renders `<VisitStage>` with HTML children: h1 "Come in.", status line, poster `<img>`, `<a href="/visit/tour">` and `<a href="#find-us">`. Strip private fields when `soon` (§5).
-- [ ] Move the soon `AlertSignup`/`Countdown` block into the new hero; remove `VisitHero` (keep `Row`/`Rule`).
-- [ ] Add `id="find-us"` to the Find us `<Section>` (extend `Section` to accept an id).
-- [ ] `RefreshAt` at the next open/close time.
-- [ ] `data-*` hooks and the test switches.
-- [ ] Rewrite `visit.spec.ts` assertions: h1 is "Come in." (soon state checks the status line for "Opening"); receipt checks move to the Find us section.
+- [x] `page.tsx` renders `<VisitStage>` with HTML children: h1 "Come in.", status line, poster `<img>`, `<a href="/visit/tour">` and `<a href="#find-us">`. Strip private fields when `soon` (§5).
+- [x] Move the soon `AlertSignup`/`Countdown` block into the new hero; remove `VisitHero` (keep `Row`/`Rule`).
+- [x] Add `id="find-us"` to the Find us `<Section>` (extend `Section` to accept an id).
+- [x] `RefreshAt` at the next open/close time.
+- [x] `data-*` hooks and the test switches.
+- [x] Rewrite `visit.spec.ts` assertions: h1 is "Come in." (soon state checks the status line for "Opening"); receipt checks move to the Find us section.
 - **Done when:** JS-disabled test (`@phone`) shows status and both working hrefs; `data-lights` is right for each `?now=`; old receipt and admin tests pass in their new form.
 
 ### Phase 2b: Night store 3D (1–2 sessions)

@@ -2,25 +2,61 @@ import { expect, test } from "@playwright/test";
 
 const shot = (name: string) => ({ path: `test-results/shots/${name}.png`, fullPage: true });
 
+// The Visit page hero (docs/VISIT_PAGE_PLAN.md): "Come in.", one status line, Step inside and
+// Find us. The receipt lives in the Find us section. ?now= pins the clock (test switch).
+// The area at the end of the status line is whatever an earlier admin test saved, so it isn't pinned.
+const at = (iso: string) => encodeURIComponent(iso);
+
 test("visit page: coming soon until opening day, with the opening list @phone", async ({ page }, info) => {
   await page.goto("/visit");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(/Opening/i);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Come in.");
+  await expect(page.locator("[data-status-line]")).toContainText(/OPENING/);
+  await expect(page.locator("[data-stage]")).toHaveAttribute("data-lights", "soon");
   await expect(page.getByText("Join the opening list")).toBeVisible();
-  await expect(page.getByText("Exact address coming soon")).toBeVisible();
+  await expect(page.locator("#find-us").getByText("Exact address coming soon")).toBeVisible();
   await expect(page.getByRole("heading", { name: /Planned hours/i })).toBeVisible();
-  await page.screenshot(shot(`visit-soon-${info.project.name}`));
+  await page.screenshot(shot(`visit-2a-${info.project.name}-soon`));
 });
 
-test("visit page preview: shutter up, route receipt, never indexed @phone", async ({ page }, info) => {
-  await page.goto("/visit?preview=open");
+test("visit page preview: status, the two ways in, the route receipt, never indexed @phone", async ({ page }, info) => {
+  await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
   await expect(page.getByText(/Preview: how this page looks/)).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-  await expect(page.getByText("QUEUE")).toBeVisible();
-  await expect(page.getByText("01  Jhamsikhel Chowk")).toBeVisible();
-  // Open, closed or drop day depends on the clock; the receipt's status line always shows.
-  await expect(page.getByText(/^EASYPICK · (OPEN NOW|CLOSED NOW|DROP DAY)/)).toBeVisible();
-  await page.waitForTimeout(2500); // let the shutter roll and the receipt print
-  await page.screenshot(shot(`visit-open-${info.project.name}`));
+  await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
+  await expect(page.getByRole("link", { name: "Step inside" })).toHaveAttribute("href", "/visit/tour");
+  await expect(page.getByRole("link", { name: "Find us" })).toHaveAttribute("href", "#find-us");
+  const findUs = page.locator("#find-us");
+  await expect(findUs.getByText("QUEUE")).toBeVisible();
+  await expect(findUs.getByText("01  Jhamsikhel Chowk")).toBeVisible();
+  await expect(findUs.getByText(/^OPEN · TILL 8 PM/)).toBeVisible();
+  await page.screenshot(shot(`visit-2a-${info.project.name}-open`));
+});
+
+test("visit page: the lights follow the clock", async ({ page }) => {
+  const lights = page.locator("[data-stage]");
+  await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
+  await expect(lights).toHaveAttribute("data-lights", "open");
+  await page.goto(`/visit?preview=open&now=${at("2026-10-07T21:00+05:45")}`);
+  await expect(lights).toHaveAttribute("data-lights", "closed");
+  await expect(page.locator("[data-status-line]")).toHaveText(/^CLOSED · OPENS 11 AM TOMORROW · [A-Z]+$/);
+  await page.goto("/visit");
+  await expect(lights).toHaveAttribute("data-lights", "soon");
+  // Switches for the later phases are read too.
+  await page.goto(`/visit?preview=open&motion=fast&gl=off`);
+  await expect(lights).toHaveAttribute("data-motion", "fast");
+  await expect(lights).toHaveAttribute("data-fallback", "nowebgl");
+});
+
+test("visit page works with JavaScript off @phone", async ({ browser }) => {
+  const ctx = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
+  await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
+  await expect(page.getByRole("link", { name: "Step inside" })).toHaveAttribute("href", "/visit/tour");
+  await page.getByRole("link", { name: "Find us" }).click();
+  await expect(page).toHaveURL(/#find-us$/);
+  await expect(page.locator("#find-us").getByText("QUEUE")).toBeInViewport();
+  await ctx.close();
 });
 
 test("the owner sets a special day in admin and the Visit page shows it", async ({ page }) => {

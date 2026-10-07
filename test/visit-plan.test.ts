@@ -4,7 +4,7 @@ import { bounds, distance, lengthMeters, minutes, pointAt, prepareRoute, parseRo
 import { cubicBezier, drawDuration, drawEase, drawnAt, inOut, panelAt, phaseAt, quart, timeline, totalMs, zoomForCamera } from "@/lib/map/sequence";
 import { parseParking, parseSteps, parseStoreForm, startPointId } from "@/lib/store-form";
 import { DEFAULT_STORE, SAMPLE_STORE, storeState, withDefaults, type StoreInfo } from "@/lib/store-state";
-import { lightsFor, statusLine } from "@/lib/visit-status";
+import { lightsFor, nextChangeAt, statusLine, stripPrivate } from "@/lib/visit-status";
 
 // The Visit page plan, Phase 1a: routes, the status line and the motion table (docs/VISIT_PAGE_PLAN.md).
 
@@ -370,5 +370,29 @@ describe("the admin form's start points (Phase 1b)", () => {
     expect(parseParking("boat, 27.67, 85.30")).toMatchObject({ ok: false });
     expect(startPointId("Chowk", new Set(["chowk"]))).toBe("chowk-2");
     expect(startPointId("Sanepa Chowk (sample)", new Set())).toBe("sanepa-chowk-sample");
+  });
+});
+
+describe("before opening day, and when the status next changes (Phase 2a)", () => {
+  const at = (ymd: string, hhmm: string) => new Date(`${ymd}T${hhmm}:00+05:45`);
+  const open: StoreInfo = { ...withDefaults(null, true), hours: DEFAULT_STORE.hours.map((h) => ({ ...h, open: "11:00", close: "20:00", closed: false })) };
+
+  it("keeps the address, pin, routes, parking and photo out of the page until the store is open", () => {
+    const soon = { ...open, opened: false, mapUrl: "https://maps.app.goo.gl/x", entrancePhoto: "/door.avif" };
+    const s = storeState(soon, at("2026-10-07", "12:00"));
+    const safe = stripPrivate(soon, s);
+    expect(safe).toMatchObject({ address: null, geo: null, mapUrl: null, startPoints: [], parkingSpots: [], entrancePhoto: null });
+    expect(JSON.stringify(safe)).not.toContain(String(SAMPLE_STORE.geo!.lat));
+    expect(safe.area).toBe(soon.area); // the area is public
+    // Once open, nothing is held back.
+    expect(stripPrivate(open, storeState(open, at("2026-10-07", "12:00")))).toBe(open);
+  });
+
+  it("knows when the status changes next", () => {
+    expect(nextChangeAt(open, storeState(open, at("2026-10-07", "12:00")), at("2026-10-07", "12:00"))).toBe("2026-10-07T20:00:00+05:45");
+    expect(nextChangeAt(open, storeState(open, at("2026-10-07", "21:00")), at("2026-10-07", "21:00"))).toBe("2026-10-08T11:00:00+05:45");
+    expect(nextChangeAt(open, storeState(open, at("2026-10-07", "09:00")), at("2026-10-07", "09:00"))).toBe("2026-10-07T11:00:00+05:45");
+    const drop = "2026-10-02T18:00:00+05:45";
+    expect(nextChangeAt(open, storeState(open, at("2026-10-02", "12:00"), drop), at("2026-10-02", "12:00"))).toBe(drop);
   });
 });
