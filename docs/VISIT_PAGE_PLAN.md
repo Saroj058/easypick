@@ -22,7 +22,7 @@ Prototype to match: the "Easypick Visit" motion artifact. Product context: `docs
 | 4 Motion sequence | visit/phase-4 | | review | 7 Oct 2026 | Stacked on 3b. Order of the hand-over: the 3D camera rises to straight overhead (as high as map zoom 19), its last frame is kept as a picture, the canvas goes, then the map is made at the same spot and fades in over the picture; the map's phases run from `mapPhases()` in `sequence.ts`. So the crossfade starts when the map is ready (about 0.7 s plus load), not at a fixed 0.56 s, because of the one-context rule. Not done: the camera does not follow the head of the line while it draws (the whole route is already in view). The panel is `directions.tsx` in its basic form; chips, travel modes, the arrival card and the phone sheet's snap points are Phase 5. No normal-speed video was recorded: software rendering here runs far slower than a phone, so it would mislead; stills are in `test-results/shots/visit-4-*`. Gate: 186 unit, build, 56 e2e |
 | 5 Directions + arrival | visit/phase-5 | | review | 7 Oct 2026 | Stacked on 4. The panel is one component: a side panel from 768 px, a bottom sheet below (96 px peek, half, 92 %; it opens at half; drag the handle or tap it). The peek always shows the total and Google Maps. Minutes: the total comes from the route's length at 75 / 280 / 360 m a minute, and each receipt line shows its share of that total, so the last line and the total always agree (the page section further down still prints the minutes as typed in admin). Bike opens Google Maps in driving mode (it has no bike directions here). Copy address falls back to the old copy command, and if that fails too it says to press and hold the address. An entrance photo that fails to load (the CSP only allows our own and Supabase images) hides itself. One existing test changed its data, not its meaning: the admin special-day test now closes the day six days out instead of tomorrow, because "tomorrow" collided with the date the lights test pins the clock to when the suite ran on 7 Oct 2026. Review shots (not baselines, not committed): `test-results/shots/visit-5-*`. Gate: 186 unit, build, 58 e2e |
 | 6 Step inside + fallbacks + a11y | visit/phase-6 | | review | 7 Oct 2026 | Stacked on 5. **Step inside:** the door opens and the camera goes through; the hand-over happens when the push is 950/1100 of the way (by progress, not a timer, so a slow phone still arrives inside), its frame is kept for this tab only and the tour shows it while loading; with no frame the tour shows `door-poster.avif` (11 KB). The link's own address stays `/visit/tour` (it works with no JavaScript); with JavaScript it goes to `#enter`. Back shows the door closing. The tour's end has Get directions. **Fallbacks:** light version = poster + receipt + `route-static.avif` (16 KB, the sample route, credit printed on it; it is only shown while the store's pin matches the pin it was drawn for, otherwise the Google map on a tap); no WebGL = poster + receipt + the Google map on a tap; reduced motion = no door push, the map opens finished. If the live map loses its graphics context the page drops to the light version at the Find us section. **Accessibility:** Escape hands the keyboard back to Find us; receipt lines and the sheet handle are now 44 px; a test measures every target on the map screen. **axe was not added** (the plan says to ask first): waiting for Saroj's yes or no. **From my location:** the chip is offered only when `/visit` was loaded directly (the permission header belongs to the document, so after moving from another page of the site the browser would refuse; the chip is hidden then). One coarse reading on tap, a dashed straight line and the distance; the reading lives in component state only, and a test checks it reaches no address, storage or request. **Not built:** the optional sound toggle. Stills for review: `test-results/shots/visit-6-*`. Gate: 186 unit, build, 64 e2e |
-| 7 Performance + launch | visit/phase-7 | | todo | | |
+| 7 Performance + launch | visit/phase-7 | | review | 7 Oct 2026 | Stacked on 6. Results, misses and the device checklist are in §11. Three small fixes, no features: the device check (which asks for a WebGL context) now waits until after the first paint; the map's code is fetched when Find us is pointed at, focused or pressed (not on the plan's 3-second timer: an existing test says nothing of the map loads before it's asked for, and a visitor who never opens the map shouldn't pay for it); the phone bar comes in at 0.7 s instead of 1.0 s. The last checklist line of Phase 7 (real pin, routes, photo, new still) waits for the lease. Gate: 186 unit, build, 64 e2e |
 
 Status values: todo / doing / review / merged.
 
@@ -326,8 +326,8 @@ npm run lint && npx tsc --noEmit && npm test && node scripts/with-db.mjs --local
 - **Done when:** tour spec extended for `#enter` (`data-chapter="enter"` within 5 s); each fallback has an e2e asserting `data-fallback` plus visible receipt and Google Maps link; keyboard test; axe has no serious/critical issues.
 
 ### Phase 7: Performance and launch (1 session)
-- [ ] Lighthouse mobile on `/visit?preview=open`: table of LCP, first-load JS, map-interactive time vs §7; list misses with fixes.
-- [ ] Manual checklist for Saroj: Redmi / Samsung A-series on Ncell and NTC 4G, inside Instagram and TikTok, iPhone Safari.
+- [x] Lighthouse mobile on `/visit?preview=open`: table of LCP, first-load JS, map-interactive time vs §7; list misses with fixes.
+- [x] Manual checklist for Saroj: Redmi / Samsung A-series on Ncell and NTC 4G, inside Instagram and TikTok, iPhone Safari.
 - [ ] After the lease: set the real pin, trace the four routes, take the entrance photo, update the static fallback image.
 
 **Total:** about 5–6 weeks part-time. Phases 0–5 can be built now with sample data.
@@ -360,3 +360,69 @@ Read AGENTS.md and docs/VISIT_PAGE_PLAN.md (§0 tracker, §8 rules, §9 Phase N,
 **Phase 6:** `Do Phase 6: the door push and hand-off to /visit/tour#enter (tour starts at the entrance, Back returns to the hero, end of tour links to directions), all three fallbacks, the §7 accessibility items and the optional location chip with the privacy rules. Ask before adding axe-core. Show me each fallback.`
 
 **Phase 7:** `Do Phase 7: Lighthouse mobile run with a table against the §7 budgets, list misses with fixes, and write my manual device checklist. No new features.`
+
+## 11. Phase 7 results (7 Oct 2026)
+
+Measured on a production build on this laptop (`next start`, sample details, `/visit?preview=open`). The laptop's headless Chrome has **no graphics card**, so everything that draws 3D or the map is drawn in software and is far slower here than on a phone. Treat the 3D and map times as worst cases, and the checklist below as the real test.
+
+### Against the §7 budgets
+
+| Budget | Target | Measured | Result |
+| --- | --- | --- | --- |
+| LCP (the poster), Lighthouse mobile, simulated slow 4G + 4× slower CPU, 3 runs | < 2.5 s | 4.3 / 4.6 / 4.9 s | **Miss** |
+| LCP, Lighthouse with the throttling really applied | < 2.5 s | 3.3 s | **Miss** |
+| LCP, Chrome on slow 4G, normal CPU | < 2.5 s | 1.5 s | Pass |
+| LCP, Chrome on slow 4G, 4× slower CPU | < 2.5 s | 2.6 s | Borderline |
+| Layout shift (CLS) | 0 | 0 | Pass |
+| Poster | ≤ 50 KB AVIF, high priority, real alt | 10.6 KB (828 wide; 17 KB at 1656), `fetchpriority="high"`, alt set, found in the first HTML | Pass |
+| First load has no three / MapLibre code | none | none before the page is idle; MapLibre only after Find us is pointed at or pressed | Pass |
+| Hero (3D) chunk | ≤ 250 KB, after the poster, when idle | 247 KB, requested about 2.2 s in, low priority | Pass (close to the limit) |
+| Map chunk | ≤ 300 KB | 294 KB (Phase 3b build) | Pass (close to the limit) |
+| JavaScript on first load, whole page | (none set) | 596 KB transferred in 25 files, of which 247 KB is the 3D chunk | For information |
+| Page weight on first load | (none set) | 907 KB | For information |
+| Key info on screen after Find us | ≤ 1.2 s | 1.95 s before the fix (the bar was set to appear at 1.0 s, plus software drawing); bar now at 0.7 s | **Miss here**, fix made, check on a phone |
+| Map drawing after the tap, cold, slow 4G | ≤ 4 s | 4.4 s (software drawing) | **Miss here**, check on a phone |
+| Panel in, first visit | ≤ 5.6 s | 8.4 s from the tap on cold slow 4G; the sequence itself is 5.6 s once the map has loaded (unit-tested) | **Miss on a cold load** |
+| Skip completes | ≤ 300 ms | under 5 s is all the test can prove in software; the code jumps in one step (250 ms camera ease) | Not measurable here |
+| Frame rate during the fly | 30 fps p95 on a mid-range Android | not measurable here | Phone check |
+| Lighthouse accessibility | (none set) | 100 | Pass |
+| Lighthouse best practices | (none set) | 96 (a 404 for Vercel's analytics script, which only exists on Vercel; no source maps) | Fine |
+| Total blocking time, Lighthouse simulated | (none set) | 9–10 s, almost all of it building the 3D store in software at 4× slower CPU; 0.8 s with throttling really applied | Phone check |
+
+### Misses, and what to do about each
+
+1. **LCP in Lighthouse (4.3–4.9 s simulated, 3.3 s applied).** The poster itself is small and arrives early (it finished loading 0.2 s in). What Lighthouse is charging for is the processor: the site's own first-load JavaScript (about 350 KB before the 3D chunk, shared by every page: header, bag, search) and then the 3D store being built. Fixes, in order of value: (a) measure on the real site after merge, because Vercel serves compressed, cached files from a CDN and this laptop doesn't; (b) if it still misses, start the 3D store only after the page's `load` plus a quiet moment, or only when the hero has been on screen for a second; (c) the site-wide first-load JavaScript is the larger cost and is outside this plan.
+2. **Key info after Find us (1.95 s here).** Fixed in this phase: the phone bar now comes in at 0.7 s instead of 1.0 s. The rest of the gap is software drawing. Check with a stopwatch on a phone.
+3. **Panel in 8.4 s on a cold load.** The 5.6 s is the sequence; on a cold slow connection the map's code (294 KB) and first tiles come first. Fixed in part in this phase: the map's code is now fetched as soon as Find us is pointed at, focused or pressed. The useful information (walk time, Google Maps) does not wait for any of this.
+4. **Supabase serves the map file with `no-cache`** (noted in Phase 3a). Each visit re-checks the file (a small 304). Moving the file to R2 would allow `immutable`; not needed for launch.
+5. **Two chunks sit just under their limits** (247 of 250 KB, 294 of 300 KB). A three.js or MapLibre upgrade could push them over: check the build output after any upgrade.
+
+### Found while measuring
+
+- Lighthouse reported a first paint 1.3–2.3 s after the page had loaded, on the Visit page only. In Chrome itself (same machine, phone emulation) the first paint is at 0.2–0.45 s, so this is an artefact of the Lighthouse run, not something visitors see. One real cause was removed anyway: the device check that asks for a WebGL context ran before the first paint and now runs after it.
+- The browser tests run against `next dev`, not a production build, so they prove behaviour, not speed.
+
+### Manual checklist for Saroj
+
+Do these on the Vercel preview of the branch (or the live site after merge), with `/visit?preview=open` until the real details are in.
+
+**Phones and networks:** a Redmi (Note 11/12 class) and a Samsung A-series, each once on Ncell 4G and once on NTC 4G; an iPhone in Safari.
+
+On each:
+
+- [ ] The store picture is on screen within about 2 seconds of tapping the link; the 3D store fades in over it with no jump.
+- [ ] The status line is right for the time of day (open / closed / drop day), and changes by itself at closing time without a reload.
+- [ ] **Find us:** walk time and the Google Maps link appear within about a second; the map shows streets, not a blank dark screen; the lime line draws; the panel comes in. Skip works at any moment. Dragging the map stops the camera.
+- [ ] The motion is smooth enough to follow (no long freezes) on the Redmi and the Samsung.
+- [ ] Each start point redraws the line; Walk / Bike / Car change the minutes; tapping a receipt line moves the map there.
+- [ ] The sheet drags between its three heights and never traps the page; "← The store" and the phone's Back both return to the store.
+- [ ] **Open in Google Maps** opens the Google Maps app with the store as the destination. **WhatsApp** opens a chat picker with the address and link. **Copy address** copies it (paste it somewhere to check).
+- [ ] **From my location** (open the page directly, not from the home page): the phone asks permission only on that tap; the dashed line and distance appear; refusing shows the Google Maps link.
+- [ ] **Step inside:** the door opens, the camera goes in, the tour continues from inside with no black frame; Back returns to the store with the door closing; the end of the tour has Get directions.
+- [ ] Turn on the phone's "reduce motion" setting: nothing flies or drifts, the map opens finished.
+- [ ] Turn on Data Saver in Chrome: the page shows the picture, the receipt and the small still of the route, and loads no 3D and no map.
+- [ ] Lock the phone for a minute on the map, unlock: the map is still there, or the page has dropped to the still of the route (never a blank screen).
+
+**Inside Instagram and TikTok** (send yourself the link in a message and open it there): the page loads; Find us works; Google Maps, WhatsApp and Copy address all work from inside the app's browser.
+
+**Before launch (after the lease):** set the real pin and address in admin; trace the four routes and paste them into the start points; add the entrance photo (host it in Supabase storage: the site only shows images from there); mark the parking; then ask Claude to remake `route-static.avif` for the real pin (the page hides the still until that's done) and to remove the sample start points.

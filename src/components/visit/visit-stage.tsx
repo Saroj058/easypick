@@ -159,14 +159,17 @@ export function VisitStage({
   const playing = rise !== null || leaving || (stage === "map" && RUNNING.includes(mapState));
 
   useEffect(() => {
+    // What this device gets. Asking for a WebGL context can take a moment on a slow phone, so all of
+    // this waits until the page (the poster, the words, the links) has had its first paint.
+    const arrive = (): (() => void) | void => {
     const decide = (): Fallback => {
-      if (switches.gl === "off" || !hasWebGL()) return "nowebgl";
+      if (switches.gl === "off") return "nowebgl";
       if (switches.lite || wantsLite()) return "lite";
+      if (!hasWebGL()) return "nowebgl";
       if (matchMedia("(prefers-reduced-motion: reduce)").matches) return "reduced";
       return "none";
     };
     const f = decide();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the device can only be read once mounted
     setFallback(f);
     setTier(gpuTier());
     setWide(window.innerWidth >= 768);
@@ -200,6 +203,19 @@ export function VisitStage({
     }
     const timer = window.setTimeout(go, 400);
     return () => clearTimeout(timer);
+    };
+    let undo: (() => void) | void;
+    let later = 0;
+    const frame = requestAnimationFrame(() => {
+      later = window.setTimeout(() => {
+        undo = arrive();
+      }, 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(later);
+      undo?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- read once on arrival
   }, [switches.gl, switches.lite]);
 
@@ -251,7 +267,7 @@ export function VisitStage({
   // The phone bar: on screen about a second after the tap, whatever the map is doing.
   useEffect(() => {
     if (bar || !(rise !== null || leaving || stage === "map")) return;
-    const t = setTimeout(() => setBar(true), entry === "instant" ? 0 : 1000 * speed);
+    const t = setTimeout(() => setBar(true), entry === "instant" ? 0 : 700 * speed);
     return () => clearTimeout(t);
   }, [bar, rise, leaving, stage, entry, speed]);
 
@@ -442,6 +458,12 @@ export function VisitStage({
       el.removeEventListener("click", click);
     };
   }, [canMap, toMap, stepInside]);
+
+  // The map's code is fetched just ahead of the tap: when Find us is pointed at, focused or pressed.
+  // Not on a timer, so a visitor who never opens the map never pays for it.
+  useEffect(() => {
+    if (canMap && stage === "hero" && preview === "find") void import("./find-us-map");
+  }, [canMap, stage, preview]);
 
   /** The lime pin sits above the roof wherever the camera puts it. */
   const onAnchor = useCallback((x: number, y: number) => {
