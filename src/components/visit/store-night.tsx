@@ -6,6 +6,7 @@ import * as THREE from "three";
 
 import { buildStore, w, type BuiltStore, type KioskBill, type NightKind, type TagInfo } from "@/components/tour3d/build-store";
 import { fontsReady, loadLogos, readFonts, storeEnvironment } from "@/components/tour3d/store-assets";
+import { heightForZoom, inOut } from "@/lib/map/sequence";
 import { STORE } from "@/lib/tour-plan";
 
 // The Visit page hero: the store from across the street at night, the same model the tour walks
@@ -34,6 +35,11 @@ export interface StoreNightProps {
   onRestored: () => void;
   /** Where the point above the roof is on screen, in CSS pixels from the canvas's top left, each frame. */
   onAnchor?: (x: number, y: number) => void;
+  /** How long the rise to straight overhead takes, in ms, once Find us is tapped; null until then. */
+  rise?: number | null;
+  /** The map zoom the rise ends at (the map opens at the same view). */
+  riseZoom?: number;
+  onRisen?: () => void;
   /** Set to true to be handed the current frame as a picture (once), before the canvas is taken away. */
   capture?: boolean;
   onCapture?: (dataUrl: string) => void;
@@ -54,15 +60,19 @@ const LOOK = w(CENTRE, 1.95, 0.4);
 const ROOF = w(CENTRE, 4.6, 0.2);
 const P = new THREE.Vector3();
 const L = new THREE.Vector3();
+const TOP = new THREE.Vector3();
+const Q0 = new THREE.Quaternion();
+/** Looking straight down with the top of the screen pointing into the store (away from the street). */
+const DOWN = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
 
-function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, onCapture }: StoreNightProps) {
+function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, onCapture, rise = null, riseZoom = 19, onRisen }: StoreNightProps) {
   const { invalidate } = useThree();
   const get = useThree((s) => s.get);
   const [store, setStore] = useState<BuiltStore | null>(null);
   const inside = useRef<THREE.PointLight>(null);
   const front = useRef<THREE.PointLight>(null);
   /** Eased values: the drift's clock, the door, the dolly, the upward tilt, the room's light. */
-  const now = useRef({ t: 0, door: 0, dolly: 0, tilt: 0, glow: 1, first: true });
+  const now = useRef({ t: 0, door: 0, dolly: 0, tilt: 0, glow: 1, first: true, rise: 0, risen: false });
 
   const key = `${tag.name}|${tag.price}|${bill.total}`;
   useEffect(() => {
@@ -94,9 +104,9 @@ function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, 
     onCapture(gl.domElement.toDataURL("image/jpeg", 0.86));
   }, [capture, store, onCapture, get]);
   // A hover or a resize while the store stands still needs one new frame.
-  useEffect(() => invalidate(), [preview, still, invalidate]);
+  useEffect(() => invalidate(), [preview, still, rise, invalidate]);
 
-  useFrame(({ camera, size, gl }, delta) => {
+  useFrame(({ camera, size, gl, scene }, delta) => {
     if (!store) return;
     const dt = Math.min(delta, 0.1);
     const v = now.current;
@@ -130,6 +140,30 @@ function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, 
     if (aspect < 1) L.y -= 1.0; // an upright phone: the store sits higher, clear of the words
     L.y += Math.tan(THREE.MathUtils.degToRad(v.tilt)) * back;
     camera.lookAt(L);
+
+    // Find us: the camera lifts until it looks straight down on the roof, as high as the map's
+    // opening view, north up (the street at the bottom of the screen), so the map can take over
+    // from the same picture.
+    if (rise !== null) {
+      v.rise = Math.min(1, rise <= 0 ? 1 : v.rise + (dt * 1000) / rise);
+      const e = inOut(v.rise);
+      Q0.copy(camera.quaternion);
+      TOP.set(ROOF.x, heightForZoom(riseZoom, cam.fov, size.height), ROOF.z);
+      camera.position.lerpVectors(P, TOP, e);
+      camera.quaternion.slerpQuaternions(Q0, DOWN, e);
+      cam.far = 80 + e * 1200;
+      cam.updateProjectionMatrix();
+      const fog = scene.fog as THREE.Fog | null;
+      if (fog) {
+        fog.near = 14 + e * 600;
+        fog.far = 34 + e * 1600;
+      }
+      if (v.rise < 1) invalidate();
+      else if (!v.risen) {
+        v.risen = true;
+        requestAnimationFrame(() => onRisen?.());
+      }
+    }
 
     if (onAnchor) {
       P.copy(ROOF).project(camera);

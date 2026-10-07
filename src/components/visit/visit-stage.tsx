@@ -6,18 +6,23 @@ import { createPortal } from "react-dom";
 
 import type { KioskBill, TagInfo } from "@/components/tour3d/build-store";
 import type { LngLat } from "@/lib/map/route";
-import { FIXTURE_TILES_URL, TILES_URL } from "@/lib/map/tiles";
+import { riseMs } from "@/lib/map/sequence";
+import { FIXTURE_TILES_URL, SEEN_KEY, SEEN_MS, START_ZOOM, TILES_URL } from "@/lib/map/tiles";
 import type { Lights } from "@/lib/visit-status";
+import { Directions, walkMinutes, type DirectionsData } from "./directions";
+import type { MapEntry } from "./find-us-map";
 import type { HeroPreview } from "./store-night";
 
 // The Visit page's stage (docs/VISIT_PAGE_PLAN.md): the hero with the 3D store at night, the Find
-// us map, and (from Phase 4) the motion between them. It's the only place that loads those on the
-// client. The hero itself is server-rendered HTML passed in as children, so the status, the
-// heading and both links work with no JavaScript at all; the 3D store is drawn into a slot the
-// hero leaves for it ([data-hero-canvas]), over the poster.
+// us map, and the motion between them. It's the only place that loads those on the client. The
+// hero itself is server-rendered HTML passed in as children, so the status, the heading and both
+// links work with no JavaScript at all; the 3D store is drawn into a slot the hero leaves for it
+// ([data-hero-canvas]), over the poster.
 //
-// Only one WebGL context exists at a time: going to the map, the 3D store hands over its last
-// frame as a picture, its canvas is taken away, and only then is the map made.
+// Find us, in order: the 3D camera rises to look straight down on the roof; its last frame is
+// kept as a picture and its canvas is taken away (only one WebGL context at a time); the map is
+// made at the same spot and fades in over the picture; then the map plays its own sequence
+// (find-us-map.tsx). Skip, a tap or a key jumps to the end at any moment.
 
 const StoreNight = dynamic(() => import("./store-night"), { ssr: false });
 const FindUsMap = dynamic(() => import("./find-us-map"), { ssr: false });
@@ -34,12 +39,10 @@ export interface StageSwitches {
   tiles: "live" | "fixture";
 }
 
-/** What the map needs. Before opening day the page sends no pin and no route. */
-export interface FindUs {
+/** What the map and the directions need. Before opening day the page sends no pin and no route. */
+export interface FindUs extends DirectionsData {
   pin: { lat: number; lng: number } | null;
   route: LngLat[] | null;
-  /** Where the route starts, for the map's label: "Jhamsikhel Chowk". */
-  from: string | null;
 }
 
 const HASH = "#find-us";
@@ -64,6 +67,25 @@ function hasWebGL(): boolean {
 
 /** Phones and tablets draw at 1× with no antialiasing; everything else gets the full picture. */
 const gpuTier = (): 2 | 3 => (matchMedia("(pointer: coarse)").matches || window.innerWidth < 768 ? 2 : 3);
+
+/** Whether this browser has watched the full sequence in the last 30 days (then it gets the short one). */
+function seenBefore(): boolean {
+  try {
+    const at = Number(localStorage.getItem(SEEN_KEY));
+    return Number.isFinite(at) && at > 0 && Date.now() - at < SEEN_MS;
+  } catch {
+    return false;
+  }
+}
+function markSeen() {
+  try {
+    localStorage.setItem(SEEN_KEY, String(Date.now()));
+  } catch {
+    // private mode or blocked storage: they get the full sequence again next time
+  }
+}
+
+const RUNNING: MapState[] = ["loading", "ready", "flying", "drawing"];
 
 export function VisitStage({
   lights,
@@ -97,12 +119,26 @@ export function VisitStage({
   const [life, setLife] = useState(0);
   const [onScreen, setOnScreen] = useState(true);
   const [preview, setPreview] = useState<HeroPreview>(null);
-  /** On the way to the map: the 3D store is asked for its last frame, then that picture stands in for it. */
+  /** Which sequence plays: decided at the tap. */
+  const [entry, setEntry] = useState<MapEntry>("first");
+  /** The rise's length in ms while the 3D camera is lifting; null otherwise. */
+  const [rise, setRise] = useState<number | null>(null);
+  /** After the rise: the 3D store is asked for its last frame, then that picture stands in for it. */
   const [leaving, setLeaving] = useState(false);
   const [frame, setFrame] = useState<string | null>(null);
+  const [skip, setSkip] = useState(0);
+  const [replay, setReplay] = useState(0);
+  const [panel, setPanel] = useState(false);
+  const [lit, setLit] = useState(-1);
+  /** Phones: the short bar of what matters (walk time, open or not, Google Maps), a second after the tap. */
+  const [bar, setBar] = useState(false);
+  const [wide, setWide] = useState(true);
 
+  const speed = switches.motion === "fast" ? 0.1 : 1;
+  const still = fallback === "reduced";
   /** The map needs WebGL; without it (or in the light version) Find us is a plain link to the section below. */
   const canMap = fallback === "none" || fallback === "reduced";
+  const playing = rise !== null || leaving || (stage === "map" && RUNNING.includes(mapState));
 
   useEffect(() => {
     const decide = (): Fallback => {
@@ -115,11 +151,14 @@ export function VisitStage({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the device can only be read once mounted
     setFallback(f);
     setTier(gpuTier());
+    setWide(window.innerWidth >= 768);
     setSlot(root.current?.querySelector("[data-hero-canvas]") ?? null);
     if (f === "nowebgl" || f === "lite") return;
     // Opened on /visit#find-us (a QR code, a link from Instagram): straight to the map, no 3D first.
     if (location.hash === HASH) {
+      setEntry(f === "reduced" ? "instant" : find.pin ? "deeplink" : "soon");
       setStage("map");
+      setBar(true);
       return;
     }
     // The poster is the picture until then; 3D only where it can run well.
@@ -131,7 +170,14 @@ export function VisitStage({
     }
     const timer = window.setTimeout(go, 400);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- read once on arrival
   }, [switches.gl, switches.lite]);
+
+  useEffect(() => {
+    const onResize = () => setWide(window.innerWidth >= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // Nothing is drawn while the hero is off screen or the tab is in the background.
   useEffect(() => {
@@ -150,16 +196,35 @@ export function VisitStage({
     };
   }, [slot]);
 
-  /** Hero → map. With the 3D store on screen, its last frame is taken first and its canvas goes before the map is made. */
+  /** Hero → map. With the 3D store on screen the camera rises first; then its last frame is taken and its canvas goes before the map is made. */
   const toMap = useCallback(() => {
     if (location.hash !== HASH) {
       history.pushState(null, "", HASH);
       pushed.current = true;
     }
+    const mode: MapEntry = still ? "instant" : !find.pin ? "soon" : seenBefore() ? "repeat" : "first";
+    setEntry(mode);
     setPreview(null);
-    if (load3d && drawn && !lost) setLeaving(true);
+    setPanel(false);
+    setLit(-1);
+    setBar(false);
+    const with3d = load3d && drawn && !lost;
+    if (with3d && mode !== "instant") setRise(riseMs(mode === "repeat" ? "repeat" : mode === "soon" ? "soon" : "first", speed));
+    else if (with3d) setLeaving(true);
     else setStage("map");
-  }, [load3d, drawn, lost]);
+  }, [still, find.pin, load3d, drawn, lost, speed]);
+
+  // The phone bar: on screen about a second after the tap, whatever the map is doing.
+  useEffect(() => {
+    if (bar || !(rise !== null || leaving || stage === "map")) return;
+    const t = setTimeout(() => setBar(true), entry === "instant" ? 0 : 1000 * speed);
+    return () => clearTimeout(t);
+  }, [bar, rise, leaving, stage, entry, speed]);
+
+  const onRisen = useCallback(() => {
+    setRise(null);
+    setLeaving(true);
+  }, []);
 
   const onCapture = useCallback((dataUrl: string) => {
     setFrame(dataUrl);
@@ -172,6 +237,11 @@ export function VisitStage({
     setStage("hero");
     setMapState("idle");
     setFrame(null);
+    setRise(null);
+    setLeaving(false);
+    setPanel(false);
+    setBar(false);
+    setLit(-1);
     setDrawn(false);
     setLost(false);
     setLoad3d(true);
@@ -189,12 +259,23 @@ export function VisitStage({
     }
   }, [toHero]);
 
+  /** Skip: jump to the finished picture, from wherever the sequence is. */
+  const skipNow = useCallback(() => {
+    if (rise !== null) {
+      // Still in 3D: no more rising, and the map opens finished.
+      setEntry("instant");
+      setRise(0);
+    } else if (stage !== "map" || mapState === "idle" || mapState === "loading") setEntry("instant");
+    setSkip((n) => n + 1);
+  }, [rise, stage, mapState]);
+
   // Back and forward follow the address: #find-us is the map, anything else is the hero.
   useEffect(() => {
     if (!canMap) return;
     const sync = () => {
-      if (location.hash === HASH) setStage((s) => (s === "map" ? s : "map"));
-      else if (stage === "map") {
+      if (location.hash === HASH) {
+        if (stage !== "map" && rise === null && !leaving) toMap();
+      } else if (stage === "map" || rise !== null || leaving) {
         pushed.current = false;
         toHero();
       }
@@ -205,20 +286,33 @@ export function VisitStage({
       window.removeEventListener("popstate", sync);
       window.removeEventListener("hashchange", sync);
     };
-  }, [canMap, stage, toHero]);
+  }, [canMap, stage, rise, leaving, toHero, toMap]);
 
-  // The page behind the map doesn't scroll; Escape goes back to the store.
+  // While the sequence plays, Space, Enter or Escape finish it; afterwards Escape goes back to the store.
+  // The page behind the map doesn't scroll.
   useEffect(() => {
-    if (stage !== "map") return;
+    if (!(stage === "map" || rise !== null || leaving)) return;
     const before = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && leaveMap();
+    const onKey = (e: KeyboardEvent) => {
+      if (playing && (e.key === " " || e.key === "Enter" || e.key === "Escape")) {
+        // A focused button or link keeps its own Enter and Space.
+        if (e.key !== "Escape" && e.target instanceof Element && e.target.closest("button, a")) return;
+        e.preventDefault();
+        skipNow();
+      } else if (e.key === "Escape") leaveMap();
+    };
     window.addEventListener("keydown", onKey);
     return () => {
       document.documentElement.style.overflow = before;
       window.removeEventListener("keydown", onKey);
     };
-  }, [stage, leaveMap]);
+  }, [stage, rise, leaving, playing, skipNow, leaveMap]);
+
+  // Once someone has watched it through, the next visit gets the shorter sequence.
+  useEffect(() => {
+    if (mapState === "done" && (entry === "first" || entry === "repeat")) markSeen();
+  }, [mapState, entry]);
 
   // Pointing at (or tabbing to, or pressing) either button previews what it does; Find us opens the map.
   useEffect(() => {
@@ -257,12 +351,28 @@ export function VisitStage({
   }, []);
 
   const show3d = load3d && !lost && stage === "hero";
-  const still = fallback === "reduced";
   const tilesUrl = switches.tiles === "fixture" ? FIXTURE_TILES_URL : TILES_URL;
-  const mapLabel = find.from ? `Map: route from ${find.from} to Easypick` : "Map: where Easypick is";
+  const mapLabel = find.from ? `Map: route from ${find.from} to Easypick` : find.pin ? "Map: where Easypick is" : "Map: the area Easypick is opening in";
+  const mapShown = stage === "map" && mapState !== "idle" && mapState !== "loading";
+  const walk = walkMinutes(find.steps);
+  /** The room the panel takes, so the map keeps the route clear of it. */
+  const inset = wide ? { right: 384, bottom: 0 } : { right: 0, bottom: 260 };
+  const fade = still ? "duration-150" : speed < 1 ? "duration-[40ms]" : "duration-[240ms]";
 
   return (
-    <div ref={root} data-stage={stage} data-map-state={mapState} data-lights={lights} data-fallback={fallback} data-motion={switches.motion} data-tiles={switches.tiles} data-3d={show3d && drawn ? "on" : "off"}>
+    <div
+      ref={root}
+      data-stage={stage}
+      data-map-state={mapState}
+      data-lights={lights}
+      data-fallback={fallback}
+      data-motion={switches.motion}
+      data-tiles={switches.tiles}
+      data-3d={show3d && drawn ? "on" : "off"}
+      data-entry={stage === "map" || rise !== null ? entry : undefined}
+      // During the rise the hero's words step aside (visit-hero.tsx), so only the store and the pin are on screen.
+      data-rising={rise !== null || leaving ? "true" : undefined}
+    >
       {children}
       {slot &&
         show3d &&
@@ -287,39 +397,97 @@ export function VisitStage({
                 setLife((n) => n + 1);
               }}
               onAnchor={onAnchor}
+              rise={rise}
+              riseZoom={START_ZOOM}
+              onRisen={onRisen}
               capture={leaving}
               onCapture={onCapture}
             />
-            {/* The pin above the roof: it drops in when Find us is pointed at. One element, so it can stay put when the map takes over (Phase 4). */}
+            {/* The pin above the roof: it drops in when Find us is pointed at and stays through the rise, where the map's own pin takes its place. */}
             <span ref={pin} aria-hidden data-pin className="pointer-events-none absolute left-0 top-0 block">
               <span
                 className={`block h-4 w-4 -translate-x-1/2 rounded-full border-2 border-ink bg-volt shadow-[0_0_0_4px_rgba(198,255,61,0.25)] transition-[opacity,translate] ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
                   still ? "duration-0" : "duration-[280ms]"
-                } ${preview === "find" ? "translate-y-[-8px] opacity-100" : "translate-y-[-34px] opacity-0"}`}
+                } ${preview === "find" || rise !== null || leaving ? "translate-y-[-8px] opacity-100" : "translate-y-[-34px] opacity-0"}`}
               />
             </span>
           </div>,
           slot,
         )}
 
-      {/* The map, over the whole window. The 3D store's last frame sits under it until the map has drawn. */}
+      {/* The map, over the whole window. The 3D store's last frame sits under it until the map has drawn (and drifts back a little, so the screen is never still or blank while it loads). */}
       {stage === "map" && (
-        <div data-find-us className="on-dark fixed inset-0 z-[70] bg-[#0B0C0D] text-paper">
+        <div data-find-us className="on-dark fixed inset-0 z-[70] overflow-hidden bg-[#0B0C0D] text-paper">
           {/* eslint-disable-next-line @next/next/no-img-element -- a frame of the 3D store, handed over as a data URL */}
-          {frame && <img src={frame} alt="" aria-hidden className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${mapState === "idle" || mapState === "loading" ? "opacity-100" : "opacity-0"}`} />}
-          <div className={`absolute inset-0 transition-opacity duration-300 ${mapState === "idle" || mapState === "loading" ? "opacity-0" : "opacity-100"}`}>
-            <FindUsMap tilesUrl={tilesUrl} pin={find.pin} route={find.route} label={mapLabel} onState={setMapState} />
+          {frame && <img src={frame} alt="" aria-hidden className={`find-rise-hold absolute inset-0 h-full w-full object-cover transition-opacity ${fade} ${mapShown ? "opacity-0" : "opacity-100"}`} />}
+          <div className={`absolute inset-0 transition-opacity ${fade} ${mapShown ? "opacity-100" : "opacity-0"}`}>
+            <FindUsMap
+              tilesUrl={tilesUrl}
+              pin={find.pin}
+              route={find.route}
+              steps={find.steps}
+              label={mapLabel}
+              entry={entry}
+              speed={speed}
+              tier={tier}
+              skip={skip}
+              replay={replay}
+              inset={inset}
+              onState={setMapState}
+              onStep={setLit}
+              onPanel={setPanel}
+            />
           </div>
+
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 bg-gradient-to-b from-black/70 to-transparent p-4 pb-12 md:p-8 md:pb-16">
             <button type="button" onClick={leaveMap} className="pointer-events-auto flex h-11 items-center gap-2 rounded-full border border-paper/40 bg-black/50 px-4 text-[13px] font-semibold uppercase tracking-[0.06em] backdrop-blur">
               <span aria-hidden>←</span> The store
             </button>
-            <h2 className="display text-[40px] leading-[0.9] md:text-[64px]">Find us.</h2>
+            <h2 className={`display text-[40px] leading-[0.9] transition-opacity duration-[400ms] md:text-[64px] ${panel && wide ? "opacity-0" : "opacity-100"}`}>Find us.</h2>
           </div>
-          <a href="#find-h" onClick={leaveMap} className="sr-only focus:not-sr-only focus:absolute focus:bottom-4 focus:left-4 focus:z-10 focus:bg-paper focus:px-4 focus:py-3 focus:text-ink">
+
+          <Directions
+            data={find}
+            lit={lit}
+            open={panel}
+            still={still}
+            onReplay={() => {
+              setPanel(false);
+              setLit(-1);
+              setReplay((n) => n + 1);
+            }}
+            onLeave={leaveMap}
+          />
+
+          {/* Phones: what matters, a second after the tap, until the full panel is in. */}
+          {bar && !panel && (
+            <div data-find-bar className="absolute inset-x-0 bottom-0 z-10 flex h-16 items-center justify-between gap-3 bg-paper px-4 font-mono text-[12px] font-semibold tracking-[0.06em] text-ink md:hidden">
+              <span className="min-w-0 truncate">
+                {walk !== null && !find.soon ? `${walk} MIN WALK · ` : ""}
+                {find.status}
+              </span>
+              {find.mapsUrl && (
+                <a href={find.mapsUrl} target="_blank" rel="noopener" className="flex h-11 shrink-0 items-center underline underline-offset-4">
+                  Google Maps
+                </a>
+              )}
+            </div>
+          )}
+
+          <a href="#find-h" onClick={leaveMap} className="sr-only focus:not-sr-only focus:absolute focus:bottom-20 focus:left-4 focus:z-20 focus:bg-paper focus:px-4 focus:py-3 focus:text-ink">
             Skip map, read directions
           </a>
+          <p aria-live="polite" className="sr-only">
+            {mapState === "done" || mapState === "interrupted" ? (find.soon ? "The map shows the area Easypick is opening in." : `The route is on the map${walk !== null ? `: about ${walk} minutes on foot` : ""}.`) : ""}
+          </p>
         </div>
+      )}
+
+      {/* Skip: there from the first moment, through the rise and the map's sequence. */}
+      {playing && (
+        <button type="button" data-skip onClick={skipNow} className="on-dark fixed bottom-20 right-4 z-[80] flex h-11 items-center gap-1 rounded-full border border-paper/40 bg-black/60 px-5 text-[13px] font-semibold uppercase tracking-[0.06em] text-paper backdrop-blur md:bottom-6 md:right-6">
+          Skip <span aria-hidden>›</span>
+        </button>
       )}
     </div>
   );

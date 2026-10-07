@@ -13,7 +13,7 @@ import { ordersFor } from "@/lib/orders";
 import { site } from "@/lib/site";
 import { getStoreInfo } from "@/lib/store-info";
 import { DAY_NAMES, hourLabel, hoursOn, ktmNow, storeState, type StoreInfo } from "@/lib/store-state";
-import { lightsFor, nextChangeAt, statusLine, stripPrivate } from "@/lib/visit-status";
+import { lightsFor, nextChangeAt, statusLine, statusShort, stripPrivate } from "@/lib/visit-status";
 import { getDropTimeline, getProduct } from "@/lib/store";
 import { getTourProps } from "@/lib/tour-props";
 
@@ -139,7 +139,17 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
       )}
       {/* The page refreshes itself when the status changes (closing time, the drop, the next opening). */}
       {changeAt && !pinned && <RefreshAt at={changeAt} />}
-      <VisitStage lights={lightsFor(state)} switches={switches} tour={tour} find={{ pin: info.geo, route: start.coords, from: start.name }}>
+      <VisitStage lights={lightsFor(state)} switches={switches} tour={tour} find={{
+          pin: info.geo,
+          route: start.coords,
+          from: start.name,
+          steps: soon ? [] : start.steps,
+          status: statusShort(state),
+          place: info.address ?? info.area,
+          // Plain Google Maps directions to the door: no origin, so it starts from wherever they are.
+          mapsUrl: info.geo ? `https://www.google.com/maps/dir/?api=1&destination=${info.geo.lat},${info.geo.lng}&travelmode=walking` : null,
+          soon,
+        }}>
         <VisitHero info={info} state={state} status={status} personal={personal} />
       </VisitStage>
 

@@ -73,3 +73,19 @@ export function nextChangeAt(info: StoreInfo, state: StoreState, now: Date): str
   }
   return null;
 }
+
+/** The few words for the map's panel and the phone bar: "OPEN TILL 8 PM", "DROP AT 6 PM", "CLOSED NOW", "OPENING SOON". */
+export function statusShort(state: StoreState): string {
+  switch (state.kind) {
+    case "open":
+      return `OPEN TILL ${hourLabel(state.closesAt)}`;
+    case "drop": {
+      const at = ktmNow(new Date(state.dropAt));
+      return `DROP AT ${hourLabel(`${Math.floor(at.minutes / 60)}:${at.minutes % 60}`)}`;
+    }
+    case "closed":
+      return "CLOSED NOW";
+    case "soon":
+      return "OPENING SOON";
+  }
+}

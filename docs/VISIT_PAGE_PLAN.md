@@ -19,7 +19,7 @@ Prototype to match: the "Easypick Visit" motion artifact. Product context: `docs
 | 2b Night store 3D | visit/phase-2b | | review | 7 Oct 2026 | Stacked on 2a. GPU tiers are a small check (touch screen or under 768 px wide = tier 2; Save-Data, slow network, low memory or no WebGL = poster only) instead of `detect-gpu`, so no benchmark data to host: say if you want the library. Four lights (sky, moon, room, shopfront). The 3D spec is `e2e/visit-3d.spec.ts`; the 3D projects now run one worker at a time (two software-rendered specs side by side timed out). Gate: 181 unit, build, 49 e2e |
 | 3a Map tiles + fonts | visit/phase-3a | | review | 7 Oct 2026 | `kathmandu-20261007.pmtiles`, 12.7 MB (valley z0–13 4.6 MB + Ring Road and Patan z14–15 8.1 MB), merged with `pmtiles merge` (no tile-join on Windows), verified. Uploaded with Saroj's OK to the public Supabase bucket `map`: https://dfhbezpxijxoqpompiku.supabase.co/storage/v1/object/public/map/kathmandu-20261007.pmtiles. Range check: `206`, `Content-Range: bytes 0-16383/12671516`, `Access-Control-Allow-Origin: *`, preflight allows `range`. **Cache header:** stored as `max-age=31536000` but Supabase serves `Cache-Control: no-cache` with an ETag, so browsers revalidate (cheap 304s); `immutable` isn't available here, R2 would give it. Fonts (735 KB) and a 70 KB `fixture.pmtiles` (z14 round the sample pin) are committed; the build copy is in `D:easypick_maptiles`, outside the repo |
 | 3b Map + style + CSP | visit/phase-3b | | review | 7 Oct 2026 | Stacked on 3a. Stricter CSP option taken: MapLibre 6's worker is our own copy at `public/map/maplibre-gl-worker.mjs` (a unit test fails if it drifts from the installed version), so `worker-src 'self'` with no `blob:`. `connect-src` gains the tiles' Supabase origin. A third font, Noto Sans Devanagari Regular v1 (the basemap's Nepali glyphs), is hosted too: fonts are 1.5 MB in all. The admin's flat route drawing moved to `route-preview.tsx` so `/admin` doesn't load the map library. Build proof: `/visit` has 7 entry scripts (166 KB gzip); the MapLibre chunk (294 KB gzip) and the three chunk (245 KB) are not among them. Gate: 183 unit, build, 52 e2e |
-| 4 Motion sequence | visit/phase-4 | | todo | | |
+| 4 Motion sequence | visit/phase-4 | | review | 7 Oct 2026 | Stacked on 3b. Order of the hand-over: the 3D camera rises to straight overhead (as high as map zoom 19), its last frame is kept as a picture, the canvas goes, then the map is made at the same spot and fades in over the picture; the map's phases run from `mapPhases()` in `sequence.ts`. So the crossfade starts when the map is ready (about 0.7 s plus load), not at a fixed 0.56 s, because of the one-context rule. Not done: the camera does not follow the head of the line while it draws (the whole route is already in view). The panel is `directions.tsx` in its basic form; chips, travel modes, the arrival card and the phone sheet's snap points are Phase 5. No normal-speed video was recorded: software rendering here runs far slower than a phone, so it would mislead; stills are in `test-results/shots/visit-4-*`. Gate: 186 unit, build, 56 e2e |
 | 5 Directions + arrival | visit/phase-5 | | todo | | |
 | 6 Step inside + fallbacks + a11y | visit/phase-6 | | todo | | |
 | 7 Performance + launch | visit/phase-7 | | todo | | |
@@ -303,10 +303,10 @@ npm run lint && npx tsc --noEmit && npm test && node scripts/with-db.mjs --local
 - **Done when:** build output shows no maplibre in the `/visit` first load; e2e reaches `data-map-state="ready"` with `?tiles=fixture`; zero CSP "Refused" messages; attribution visible.
 
 ### Phase 4: Motion sequence (1–2 sessions)
-- [ ] Drive everything from `sequence.ts`: matched hand-off, shared pin, pull-out, valley hold, fly, route draw (`pointAt`), settle, arrival.
-- [ ] Phone bottom bar from 1.0 s; Skip button; skip/tap/keys jump to the end in ≤ 300 ms; drag interrupts but shows the full route and panel.
-- [ ] Repeat-visit and deep-link variants; chip change retract/draw; Replay.
-- [ ] Map-not-ready handling.
+- [x] Drive everything from `sequence.ts`: matched hand-off, shared pin, pull-out, valley hold, fly, route draw (`pointAt`), settle, arrival.
+- [x] Phone bottom bar from 1.0 s; Skip button; skip/tap/keys jump to the end in ≤ 300 ms; drag interrupts but shows the full route and panel.
+- [x] Repeat-visit and deep-link variants; chip change retract/draw; Replay.
+- [x] Map-not-ready handling.
 - **Done when:** e2e with `?motion=fast` waits for `done`, checks panel visible and receipt lines lit in order; skip test; drag sets `interrupted` and panel still shows; deep-link test; Vitest on the table already passes.
 
 ### Phase 5: Directions and arrival (1 session)

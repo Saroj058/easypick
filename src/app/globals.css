@@ -944,3 +944,41 @@
     transform: rotateY(360deg);
   }
 }
+
+/* ---------- Visit page: Find us ---------- */
+/* While the map loads, the 3D store's last frame keeps drifting back a little: never a still screen. */
+.find-rise-hold {
+  animation: find-rise-hold 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes find-rise-hold {
+  to {
+    transform: scale(0.94);
+  }
+}
+/* The map's pin, and the one ring it sends when the route arrives. */
+.map-pin {
+  box-shadow: 0 0 0 4px rgba(198, 255, 61, 0.25);
+}
+.map-pin.pin-arrived {
+  animation: pin-ring 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes pin-ring {
+  from {
+    box-shadow: 0 0 0 0 rgba(198, 255, 61, 0.55);
+  }
+  to {
+    box-shadow: 0 0 0 24px rgba(198, 255, 61, 0);
+  }
+}
+/* The receipt's TOTAL line lands like a stamp. */
+.receipt-stamp {
+  animation: receipt-stamp 160ms ease-out both;
+}
+@keyframes receipt-stamp {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1);
+  }
+}

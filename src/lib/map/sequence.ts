@@ -178,3 +178,22 @@ export function zoomForCamera(heightMeters: number, fovDeg: number, viewportHeig
   const mpp = (2 * heightMeters * Math.tan(((fovDeg / 2) * Math.PI) / 180)) / viewportHeightPx;
   return Math.log2((156_543.03392 * Math.cos((latitude * Math.PI) / 180)) / mpp);
 }
+
+/** The other way round: how high a camera has to be to show what the map shows at `zoom`. */
+export function heightForZoom(zoom: number, fovDeg: number, viewportHeightPx: number, latitude = 27.68): number {
+  const mpp = (156_543.03392 * Math.cos((latitude * Math.PI) / 180)) / 2 ** zoom;
+  return (mpp * viewportHeightPx) / (2 * Math.tan(((fovDeg / 2) * Math.PI) / 180));
+}
+
+/** The camera phases of the map's part of an entry: everything after the 3D rise, starting at 0. */
+export function mapPhases(mode: SeqMode, meters: number, speed = 1): Phase[] {
+  const phases = timeline(mode, meters, speed).filter((p) => !p.overlay && p.name !== "rise");
+  const t0 = phases[0]?.start ?? 0;
+  return phases.map((p) => ({ ...p, start: p.start - t0, end: p.end - t0 }));
+}
+
+/** How long the 3D rise lasts before the map takes over (0 for entries with no 3D). */
+export function riseMs(mode: SeqMode, speed = 1): number {
+  const rise = timeline(mode, 0, speed).find((p) => p.name === "rise");
+  return rise ? rise.end - rise.start : 0;
+}

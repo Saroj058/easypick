@@ -32,9 +32,9 @@ export function VisitHero({ info, state, status, personal }: { info: StoreInfo; 
       />
       {/* Where the stage draws the 3D store (visit-stage.tsx). Empty without JavaScript or WebGL. */}
       <div data-hero-canvas className="absolute inset-0 -z-10" aria-hidden />
-      <div className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t ${soon ? "from-black/95 via-black/80 to-black/50" : "from-black/85 via-black/25 to-transparent"}`} aria-hidden />
+      <div className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t ${soon ? "from-black/95 via-black/80 to-black/50" : "from-black/85 via-black/25 to-transparent"} transition-opacity duration-200 [[data-rising=true]_&]:opacity-0`} aria-hidden />
 
-      <div className="container-ep pb-10 pt-28 md:pb-16">
+      <div className="container-ep pb-10 pt-28 transition-opacity duration-200 md:pb-16 [[data-rising=true]_&]:opacity-0">
         <p className="flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] text-paper/85 md:text-[13px]" data-status-line>
           <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${lit ? "bg-volt" : soon ? "border border-paper/60" : "bg-[#8e8e93]"}`} />
           {status}

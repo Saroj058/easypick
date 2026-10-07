@@ -11,3 +11,11 @@ export const VALLEY: [[number, number], [number, number]] = [
   [85.2, 27.61],
   [85.5, 27.79],
 ];
+
+/** The zoom the map starts at when it takes over from the 3D camera looking straight down. */
+export const START_ZOOM = 19;
+/** The middle of Jhamsikhel, for the "coming soon" map: the area is public, the address isn't yet. [lng, lat] */
+export const AREA_CENTRE: [number, number] = [85.3075, 27.679];
+/** How long a visit counts as "seen before" (the shorter repeat sequence): 30 days. */
+export const SEEN_KEY = "ep.visit.seen";
+export const SEEN_MS = 30 * 24 * 60 * 60 * 1000;

@@ -424,3 +424,36 @@ describe("the map's files (Phase 3b)", () => {
     expect(JSON.stringify(major.paint)).toContain(MAP_COLOURS.major);
   });
 });
+
+describe("the sequence's hand-over from 3D to the map (Phase 4)", () => {
+  it("matches the camera's height to the map's opening zoom, both ways", async () => {
+    const { heightForZoom, zoomForCamera } = await import("@/lib/map/sequence");
+    const h = heightForZoom(19, 34, 800);
+    expect(h).toBeGreaterThan(300);
+    expect(h).toBeLessThan(400);
+    expect(zoomForCamera(h, 34, 800)).toBeCloseTo(19, 6);
+  });
+
+  it("gives the map its own part of each entry, starting at zero, after the rise", async () => {
+    const { mapPhases, riseMs } = await import("@/lib/map/sequence");
+    expect(riseMs("first")).toBe(700);
+    expect(riseMs("first", 0.1)).toBeCloseTo(70, 6);
+    expect(riseMs("deeplink")).toBe(0);
+    const first = mapPhases("first", 300);
+    expect(first.map((p) => p.name)).toEqual(["pullout", "hold", "fly", "draw", "settle", "arrival"]);
+    expect(first[0].start).toBe(0);
+    expect(first.at(-1)!.end).toBe(1000 + 600 + 1000 + 1200 + 520 + 700);
+    expect(mapPhases("repeat", 300).map((p) => p.name)).toEqual(["fly", "draw", "settle", "arrival"]);
+    expect(mapPhases("soon", 0).map((p) => p.name)).toEqual(["pullout", "hold", "circle", "signup"]);
+  });
+
+  it("has a few words of status for the panel and the phone bar", async () => {
+    const { statusShort } = await import("@/lib/visit-status");
+    const at = (ymd: string, hhmm: string) => new Date(`${ymd}T${hhmm}:00+05:45`);
+    const open: StoreInfo = { ...DEFAULT_STORE, opened: true, address: "x", hours: DEFAULT_STORE.hours.map((h) => ({ ...h, open: "11:00", close: "20:00", closed: false })) };
+    expect(statusShort(storeState(open, at("2026-10-07", "12:00")))).toBe("OPEN TILL 8 PM");
+    expect(statusShort(storeState(open, at("2026-10-07", "22:00")))).toBe("CLOSED NOW");
+    expect(statusShort(storeState(open, at("2026-10-02", "12:00"), "2026-10-02T18:00:00+05:45"))).toBe("DROP AT 6 PM");
+    expect(statusShort(storeState({ ...open, opened: false }, at("2026-10-07", "12:00")))).toBe("OPENING SOON");
+  });
+});
