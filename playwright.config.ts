@@ -4,6 +4,11 @@ import { defineConfig, devices } from "@playwright/test";
 // port 5435), so they never touch your dev data or the live database.
 const PORT = 3100;
 
+/** Specs that draw 3D or a map (the tour now; the Visit hero and map later). */
+const WEBGL_SPECS = /tour\.spec\.ts/;
+/** Software WebGL (SwiftShader), so 3D renders the same on every machine and in CI. About 3.5× slower, so only for WEBGL_SPECS. */
+const SOFTWARE_GL = { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] };
+
 export default defineConfig({
   testDir: "e2e",
   timeout: 60_000,
@@ -14,9 +19,13 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure" },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
+    { name: "desktop", use: { ...devices["Desktop Chrome"] }, testIgnore: WEBGL_SPECS },
     // After desktop: some phone checks use accounts the desktop tests create.
-    { name: "phone", use: { ...devices["Pixel 7"] }, grep: /@phone/, dependencies: ["desktop"] },
+    { name: "phone", use: { ...devices["Pixel 7"] }, grep: /@phone/, testIgnore: WEBGL_SPECS, dependencies: ["desktop"] },
+    // The 3D and map tests, last and on their own: software WebGL makes them heavy enough to
+    // slow any test running beside them past its timeouts.
+    { name: "desktop-3d", use: { ...devices["Desktop Chrome"], launchOptions: SOFTWARE_GL }, testMatch: WEBGL_SPECS, dependencies: ["phone"] },
+    { name: "phone-3d", use: { ...devices["Pixel 7"], launchOptions: SOFTWARE_GL }, grep: /@phone/, testMatch: WEBGL_SPECS, dependencies: ["desktop-3d"] },
   ],
   webServer: {
     // A fresh test database every run, so orders from earlier runs never use up the stock.
