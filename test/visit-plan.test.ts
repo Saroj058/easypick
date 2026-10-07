@@ -396,3 +396,31 @@ describe("before opening day, and when the status next changes (Phase 2a)", () =
     expect(nextChangeAt(open, storeState(open, at("2026-10-02", "12:00"), drop), at("2026-10-02", "12:00"))).toBe(drop);
   });
 });
+
+describe("the map's files (Phase 3b)", () => {
+  it("serves the same worker the installed MapLibre expects", async () => {
+    const { readFileSync } = await import("node:fs");
+    const ours = readFileSync("public/map/maplibre-gl-worker.mjs");
+    const theirs = readFileSync("node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs");
+    // After upgrading maplibre-gl: copy dist/maplibre-gl-worker.mjs to public/map/ again.
+    expect(ours.equals(theirs)).toBe(true);
+  });
+
+  it("builds a style with our tiles, our fonts, a visible credit, and no icons or points of interest", async () => {
+    const { mapStyle, MAP_COLOURS } = await import("@/lib/map/style");
+    const { FIXTURE_TILES_URL } = await import("@/lib/map/tiles");
+    const style = mapStyle(FIXTURE_TILES_URL);
+    const source = style.sources.protomaps as { url: string; maxzoom: number; attribution: string };
+    expect(source.url).toBe("pmtiles:///map/fixture.pmtiles");
+    expect(source.maxzoom).toBe(15);
+    expect(source.attribution).toMatch(/OpenStreetMap.*Protomaps/);
+    expect(style.glyphs).toBe("/map/fonts/{fontstack}/{range}.pbf");
+    expect(style.sprite).toBeUndefined();
+    const symbols = style.layers.filter((l) => l.type === "symbol");
+    expect(symbols.map((l) => l.id).sort()).toEqual(["places_locality", "places_region", "places_subplace", "roads_labels_major"]);
+    expect(symbols.every((l) => !(l.layout as Record<string, unknown>)["icon-image"])).toBe(true);
+    expect(style.layers.some((l) => l.id.includes("pois"))).toBe(false);
+    const major = style.layers.find((l) => l.id === "roads_major")!;
+    expect(JSON.stringify(major.paint)).toContain(MAP_COLOURS.major);
+  });
+});

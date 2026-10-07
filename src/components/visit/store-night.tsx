@@ -34,6 +34,9 @@ export interface StoreNightProps {
   onRestored: () => void;
   /** Where the point above the roof is on screen, in CSS pixels from the canvas's top left, each frame. */
   onAnchor?: (x: number, y: number) => void;
+  /** Set to true to be handed the current frame as a picture (once), before the canvas is taken away. */
+  capture?: boolean;
+  onCapture?: (dataUrl: string) => void;
 }
 
 // How bright the room is from outside, per state. The shutter is always up; closed is "lights off".
@@ -52,8 +55,9 @@ const ROOF = w(CENTRE, 4.6, 0.2);
 const P = new THREE.Vector3();
 const L = new THREE.Vector3();
 
-function Scene({ lights, preview, still, tag, bill, onReady, onAnchor }: StoreNightProps) {
+function Scene({ lights, preview, still, tag, bill, onReady, onAnchor, capture, onCapture }: StoreNightProps) {
   const { invalidate } = useThree();
+  const get = useThree((s) => s.get);
   const [store, setStore] = useState<BuiltStore | null>(null);
   const inside = useRef<THREE.PointLight>(null);
   const front = useRef<THREE.PointLight>(null);
@@ -82,6 +86,13 @@ function Scene({ lights, preview, still, tag, bill, onReady, onAnchor }: StoreNi
     store?.setNight(lights);
     invalidate();
   }, [store, lights, invalidate]);
+  // The last frame, as a picture: drawn and read in the same tick, so the buffer is still there.
+  useEffect(() => {
+    if (!capture || !store || !onCapture) return;
+    const { gl, scene, camera } = get();
+    gl.render(scene, camera);
+    onCapture(gl.domElement.toDataURL("image/jpeg", 0.86));
+  }, [capture, store, onCapture, get]);
   // A hover or a resize while the store stands still needs one new frame.
   useEffect(() => invalidate(), [preview, still, invalidate]);
 
@@ -144,6 +155,14 @@ function Scene({ lights, preview, still, tag, bill, onReady, onAnchor }: StoreNi
 
 export default function StoreNight(props: StoreNightProps) {
   const { tier, still, active, onLost, onRestored } = props;
+  // Taking the canvas away loses its context on purpose; only a loss while it's on the page counts.
+  const here = useRef(true);
+  useEffect(() => {
+    here.current = true;
+    return () => {
+      here.current = false;
+    };
+  }, []);
   return (
     <Canvas
       // Drawn all the time only while the store drifts and is on screen; otherwise one frame on demand, or none.
@@ -160,9 +179,9 @@ export default function StoreNight(props: StoreNightProps) {
         const canvas = gl.domElement;
         canvas.addEventListener("webglcontextlost", (e) => {
           e.preventDefault(); // lets the browser give the context back
-          onLost();
+          if (here.current) onLost();
         });
-        canvas.addEventListener("webglcontextrestored", onRestored);
+        canvas.addEventListener("webglcontextrestored", () => here.current && onRestored());
       }}
       aria-hidden
       tabIndex={-1}

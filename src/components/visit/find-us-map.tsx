@@ -1,74 +1,102 @@
 "use client";
 
-import { distance, lengthMeters, minutes, type LngLat } from "@/lib/map/route";
+import "maplibre-gl/dist/maplibre-gl.css";
 
-// The "Find us" map. For now only its `preview` form exists, used in /admin/store to check a
-// pasted route before saving: a flat drawing of the line, the store pin and the 30 m circle the
-// route has to finish inside. The MapLibre map replaces the drawing in Phase 3b of
-// docs/VISIT_PAGE_PLAN.md.
+import { AttributionControl, Map as MapLibre, Marker, addProtocol, setWorkerUrl } from "maplibre-gl";
+import { Protocol } from "pmtiles";
+import { useEffect, useRef } from "react";
 
-export interface MapPreview {
-  /** The route as it will be saved, or null when there's nothing valid to draw. */
-  coords: LngLat[] | null;
-  pin: { lat: number; lng: number } | null;
-  /** What's wrong with the pasted route, in plain words. */
-  error?: string | null;
+import { bounds, type LngLat } from "@/lib/map/route";
+import { MAP_COLOURS, mapStyle } from "@/lib/map/style";
+import { VALLEY } from "@/lib/map/tiles";
+import type { MapState } from "./visit-stage";
+
+// The Find us map: MapLibre drawing our own Kathmandu tiles (a PMTiles file, read in pieces
+// straight from storage) in the site's dark style, with the route in lime and the store's pin.
+// Loaded only by visit-stage.tsx, and only after the 3D store's canvas has gone (one WebGL
+// context at a time). The camera moves of the full sequence arrive in Phase 4.
+
+// Once for the page: the worker is our own copy (same origin, so the CSP needs no blob: workers),
+// and "pmtiles://" requests are answered from the one file.
+let prepared = false;
+function prepare() {
+  if (prepared) return;
+  prepared = true;
+  setWorkerUrl("/map/maplibre-gl-worker.mjs");
+  addProtocol("pmtiles", new Protocol().tile);
 }
 
-const W = 320;
-const H = 200;
-const PAD = 22;
-const M_PER_DEG_LAT = 110_900;
+export interface FindUsMapProps {
+  tilesUrl: string;
+  /** The store. Null before opening day: the map then shows the valley, with no pin. */
+  pin: { lat: number; lng: number } | null;
+  /** The route to draw, ending at the pin. */
+  route: LngLat[] | null;
+  /** Read out for the map region, e.g. "Map: route from Jhamsikhel Chowk to Easypick". */
+  label: string;
+  onState: (state: MapState) => void;
+}
 
-export function FindUsMap({ preview }: { preview: MapPreview }) {
-  const { coords, pin, error } = preview;
-  const pinLL: LngLat | null = pin ? [pin.lng, pin.lat] : null;
-  const pts = [...(coords ?? []), ...(pinLL ? [pinLL] : [])];
+export default function FindUsMap({ tilesUrl, pin, route, label, onState }: FindUsMapProps) {
+  const box = useRef<HTMLDivElement>(null);
+  const routeKey = route ? `${route.length}:${route[0].join(",")}:${route[route.length - 1].join(",")}` : "";
 
-  if (!pts.length) {
-    return <p className="border border-dashed border-mist p-4 text-[13px] text-steel-dark">{error ?? "Set the map pin and paste a route to see it here."}</p>;
-  }
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    prepare();
+    onState("loading");
 
-  // A flat projection: longitude squeezed by cos(latitude), so 100 m east looks as long as 100 m north.
-  const lat0 = pts[0][1];
-  const kx = Math.cos((lat0 * Math.PI) / 180) * M_PER_DEG_LAT;
-  const xs = pts.map((p) => p[0] * kx);
-  const ys = pts.map((p) => p[1] * M_PER_DEG_LAT);
-  // Room for the 30 m circle round the pin, and at least 120 m across so a short route isn't a blur.
-  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 120) + 60;
-  const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
-  const cy = (Math.max(...ys) + Math.min(...ys)) / 2;
-  const scale = Math.min((W - PAD * 2) / span, (H - PAD * 2) / span);
-  const at = ([lng, lat]: LngLat) => [W / 2 + (lng * kx - cx) * scale, H / 2 - (lat * M_PER_DEG_LAT - cy) * scale] as const;
+    const view = route && route.length > 1 ? bounds(route) : pin ? ([[pin.lng - 0.004, pin.lat - 0.003], [pin.lng + 0.004, pin.lat + 0.003]] as [LngLat, LngLat]) : VALLEY;
+    const map = new MapLibre({
+      container: el,
+      style: mapStyle(tilesUrl),
+      bounds: view,
+      fitBoundsOptions: { padding: { top: 120, bottom: 120, left: 48, right: 48 }, maxZoom: 17 },
+      minZoom: 9,
+      maxZoom: 18.5,
+      maxBounds: [
+        [84.9, 27.4],
+        [85.8, 28.0],
+      ],
+      attributionControl: false,
+      dragRotate: false,
+      pitchWithRotate: false,
+      // Sharp enough, without drawing four times the pixels on dense phone screens.
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+    });
+    map.touchZoomRotate.disableRotation();
+    // The credit stays in view, written out (not folded behind an "i").
+    map.addControl(new AttributionControl({ compact: false }), "bottom-right");
 
-  const len = coords ? lengthMeters(coords) : 0;
-  const start = coords?.[0];
-  const ends = coords && pinLL ? Math.round(distance(coords[coords.length - 1], pinLL)) : null;
+    let marker: Marker | null = null;
+    map.on("load", () => {
+      if (route && route.length > 1) {
+        map.addSource("route", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route } } });
+        map.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": MAP_COLOURS.ground, "line-width": 8 } });
+        map.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": MAP_COLOURS.route, "line-width": 4 } });
+      }
+      if (pin) {
+        const dot = document.createElement("span");
+        dot.className = "block h-4 w-4 rounded-full border-2 border-ink bg-volt shadow-[0_0_0_4px_rgba(198,255,61,0.25)]";
+        dot.setAttribute("data-map-pin", "");
+        marker = new Marker({ element: dot }).setLngLat([pin.lng, pin.lat]).addTo(map);
+      }
+      onState("ready");
+    });
 
+    return () => {
+      marker?.remove();
+      map.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `routeKey` stands for the route; onState is stable
+  }, [tilesUrl, pin?.lat, pin?.lng, routeKey]);
+
+  // MapLibre's own stylesheet makes its container position: relative, so the box that fills the
+  // stage is this outer one and the map takes all of it.
   return (
-    <figure className="space-y-2">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={coords ? `Route preview, ${Math.round(len)} metres to the store` : "The store pin"} className="block w-full max-w-md rounded-[2px] bg-ink">
-        {/* 50 m grid, for scale */}
-        {Array.from({ length: 12 }, (_, i) => (
-          <line key={`v${i}`} x1={W / 2 + (i - 6) * 50 * scale} x2={W / 2 + (i - 6) * 50 * scale} y1={0} y2={H} stroke="#1c1c1f" />
-        ))}
-        {Array.from({ length: 12 }, (_, i) => (
-          <line key={`h${i}`} y1={H / 2 + (i - 6) * 50 * scale} y2={H / 2 + (i - 6) * 50 * scale} x1={0} x2={W} stroke="#1c1c1f" />
-        ))}
-        {pinLL && <circle cx={at(pinLL)[0]} cy={at(pinLL)[1]} r={30 * scale} fill="none" stroke="#8e8e93" strokeDasharray="3 3" />}
-        {coords && <polyline points={coords.map((c) => at(c).join(",")).join(" ")} fill="none" stroke="#c6ff3d" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />}
-        {start && <circle cx={at(start)[0]} cy={at(start)[1]} r={5} fill="#0a0a0a" stroke="#f4f3ef" strokeWidth={2} />}
-        {pinLL && <circle cx={at(pinLL)[0]} cy={at(pinLL)[1]} r={6} fill="#c6ff3d" stroke="#0a0a0a" strokeWidth={2} />}
-      </svg>
-      <figcaption className="text-[13px]">
-        {error ? (
-          <span className="font-semibold text-error-light">{error}</span>
-        ) : coords ? (
-          <span className="text-steel-dark">
-            {Math.round(len)} m · {minutes(len, "walk")} min walk · {coords.length} points{ends !== null ? " · ends on the pin" : ""}
-          </span>
-        ) : null}
-      </figcaption>
-    </figure>
+    <div role="region" aria-label={label} className="absolute inset-0">
+      <div ref={box} className="h-full w-full" />
+    </div>
   );
 }

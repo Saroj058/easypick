@@ -63,3 +63,56 @@ test("night store: no WebGL or the lite switch keeps the poster; reduced motion 
   await expect(stage(calm)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
   await ctx.close();
 });
+
+// ---------- Phase 3b: the Find us map ----------
+
+test("find us: the map opens from the hero on our own tiles, with credit, and Back returns to the store @phone", async ({ page }, info) => {
+  test.setTimeout(240_000);
+  const errors = collect(page);
+  const refused: string[] = [];
+  page.on("console", (m) => /Refused|Content Security Policy/i.test(m.text()) && refused.push(m.text()));
+  const mapRequests: string[] = [];
+  page.on("request", (r) => /maplibre|pmtiles|\/map\//.test(r.url()) && mapRequests.push(r.url()));
+
+  await page.goto(`/visit?preview=open&tiles=fixture&now=${at("2026-10-07T12:00+05:45")}`);
+  await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  // Nothing of the map is loaded until it's asked for.
+  expect(mapRequests).toEqual([]);
+
+  await page.getByRole("link", { name: "Find us" }).click();
+  await expect(stage(page)).toHaveAttribute("data-stage", "map");
+  await expect(page).toHaveURL(/#find-us$/);
+  await expect(stage(page)).toHaveAttribute("data-map-state", "ready", { timeout: 60_000 });
+  // One WebGL context at a time: the 3D store's canvas has gone.
+  await expect(page.locator("[data-hero-canvas] canvas")).toHaveCount(0);
+  const map = page.getByRole("region", { name: /^Map: route from .+ to Easypick$/ });
+  await expect(map.locator("canvas")).toBeVisible();
+  await expect(map.locator("[data-map-pin]")).toBeVisible();
+  await expect(map.getByText(/© OpenStreetMap/)).toBeVisible();
+  await expect(map.getByText(/Protomaps/)).toBeVisible();
+  // Test runs never fetch the real map file.
+  expect(mapRequests.some((u) => u.includes("supabase"))).toBe(false);
+  expect(mapRequests.some((u) => u.endsWith("/map/fixture.pmtiles"))).toBe(true);
+  await page.screenshot({ path: `test-results/shots/visit-3b-${info.project.name}-map.png` });
+
+  await page.getByRole("button", { name: /The store/ }).click();
+  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
+  await expect(page).not.toHaveURL(/#find-us$/);
+  await expect(stage(page)).toHaveAttribute("data-3d", "on", { timeout: 60_000 });
+  expect(refused).toEqual([]);
+  expect(errors()).toEqual([]);
+});
+
+test("find us: /visit#find-us opens straight on the map; without WebGL it is the section on the page", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/visit?preview=open&tiles=fixture#find-us");
+  await expect(stage(page)).toHaveAttribute("data-stage", "map");
+  await expect(stage(page)).toHaveAttribute("data-map-state", "ready", { timeout: 60_000 });
+  await page.keyboard.press("Escape");
+  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
+
+  await page.goto("/visit?preview=open&gl=off");
+  await page.getByRole("link", { name: "Find us" }).click();
+  await expect(stage(page)).toHaveAttribute("data-stage", "hero");
+  await expect(page.locator("#find-us").getByText("QUEUE")).toBeInViewport();
+});

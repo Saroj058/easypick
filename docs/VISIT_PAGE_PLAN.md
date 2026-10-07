@@ -18,7 +18,7 @@ Prototype to match: the "Easypick Visit" motion artifact. Product context: `docs
 | 2a Stage, status, links (no 3D) | visit/phase-2a | | review | 7 Oct 2026 | Stacked on 1b. Poster is two stills of the existing 3D store (shutter up / down), AVIF at 828 and 1656 wide (9 KB and 17 KB). Before opening the whole page is stripped of address, pin, map link, routes, parking and photo, not only the client props. The old link row (tour, directions) went: the hero has both. Gate: 181 unit, build, 45 e2e (2 workers) |
 | 2b Night store 3D | visit/phase-2b | | review | 7 Oct 2026 | Stacked on 2a. GPU tiers are a small check (touch screen or under 768 px wide = tier 2; Save-Data, slow network, low memory or no WebGL = poster only) instead of `detect-gpu`, so no benchmark data to host: say if you want the library. Four lights (sky, moon, room, shopfront). The 3D spec is `e2e/visit-3d.spec.ts`; the 3D projects now run one worker at a time (two software-rendered specs side by side timed out). Gate: 181 unit, build, 49 e2e |
 | 3a Map tiles + fonts | visit/phase-3a | | review | 7 Oct 2026 | `kathmandu-20261007.pmtiles`, 12.7 MB (valley z0–13 4.6 MB + Ring Road and Patan z14–15 8.1 MB), merged with `pmtiles merge` (no tile-join on Windows), verified. Uploaded with Saroj's OK to the public Supabase bucket `map`: https://dfhbezpxijxoqpompiku.supabase.co/storage/v1/object/public/map/kathmandu-20261007.pmtiles. Range check: `206`, `Content-Range: bytes 0-16383/12671516`, `Access-Control-Allow-Origin: *`, preflight allows `range`. **Cache header:** stored as `max-age=31536000` but Supabase serves `Cache-Control: no-cache` with an ETag, so browsers revalidate (cheap 304s); `immutable` isn't available here, R2 would give it. Fonts (735 KB) and a 70 KB `fixture.pmtiles` (z14 round the sample pin) are committed; the build copy is in `D:easypick_maptiles`, outside the repo |
-| 3b Map + style + CSP | visit/phase-3b | | todo | | |
+| 3b Map + style + CSP | visit/phase-3b | | review | 7 Oct 2026 | Stacked on 3a. Stricter CSP option taken: MapLibre 6's worker is our own copy at `public/map/maplibre-gl-worker.mjs` (a unit test fails if it drifts from the installed version), so `worker-src 'self'` with no `blob:`. `connect-src` gains the tiles' Supabase origin. A third font, Noto Sans Devanagari Regular v1 (the basemap's Nepali glyphs), is hosted too: fonts are 1.5 MB in all. The admin's flat route drawing moved to `route-preview.tsx` so `/admin` doesn't load the map library. Build proof: `/visit` has 7 entry scripts (166 KB gzip); the MapLibre chunk (294 KB gzip) and the three chunk (245 KB) are not among them. Gate: 183 unit, build, 52 e2e |
 | 4 Motion sequence | visit/phase-4 | | todo | | |
 | 5 Directions + arrival | visit/phase-5 | | todo | | |
 | 6 Step inside + fallbacks + a11y | visit/phase-6 | | todo | | |
@@ -294,12 +294,12 @@ npm run lint && npx tsc --noEmit && npm test && node scripts/with-db.mjs --local
 - **Done when:** size, URL and Range check are in the PR; nothing large is committed.
 
 ### Phase 3b: Map, style and CSP (1 session)
-- [ ] Install `maplibre-gl`, `pmtiles`, `@protomaps/basemaps`. `find-us-map.tsx` via `next/dynamic({ ssr:false })` inside `visit-stage.tsx` only; import `maplibre-gl/dist/maplibre-gl.css` there.
-- [ ] `style.ts`: black flavour + our colours (§7 contrast), source `maxzoom: 15`, no POIs, no sprite, labels for places and major roads only.
-- [ ] Attribution control (not compact).
-- [ ] `next.config.ts`: add `worker-src 'self' blob:` and `child-src blob:` (old Safari); add the Supabase origin to `connect-src`. (Stricter option if it works cleanly: MapLibre CSP build + `setWorkerUrl('/map/maplibre-gl-csp-worker.js')`, then `worker-src 'self'` only.) Keep `frame-src https://www.google.com`.
-- [ ] One-context rule: snapshot 3D frame → unmount canvas → create map; `map.remove()` on leave.
-- [ ] State machine with `history.pushState('#find-us')`; `popstate`/`hashchange` returns to the hero; loading with `#find-us` goes straight to the map.
+- [x] Install `maplibre-gl`, `pmtiles`, `@protomaps/basemaps`. `find-us-map.tsx` via `next/dynamic({ ssr:false })` inside `visit-stage.tsx` only; import `maplibre-gl/dist/maplibre-gl.css` there.
+- [x] `style.ts`: black flavour + our colours (§7 contrast), source `maxzoom: 15`, no POIs, no sprite, labels for places and major roads only.
+- [x] Attribution control (not compact).
+- [x] `next.config.ts`: add `worker-src 'self' blob:` and `child-src blob:` (old Safari); add the Supabase origin to `connect-src`. (Stricter option if it works cleanly: MapLibre CSP build + `setWorkerUrl('/map/maplibre-gl-csp-worker.js')`, then `worker-src 'self'` only.) Keep `frame-src https://www.google.com`.
+- [x] One-context rule: snapshot 3D frame → unmount canvas → create map; `map.remove()` on leave.
+- [x] State machine with `history.pushState('#find-us')`; `popstate`/`hashchange` returns to the hero; loading with `#find-us` goes straight to the map.
 - **Done when:** build output shows no maplibre in the `/visit` first load; e2e reaches `data-map-state="ready"` with `?tiles=fixture`; zero CSP "Refused" messages; attribution visible.
 
 ### Phase 4: Motion sequence (1–2 sessions)

@@ -10,7 +10,7 @@ import type { StoreInfo } from "@/lib/store-state";
 // pasted from geojson.io or a GPS app, and the steps printed on the receipt. Each route is checked
 // as it's typed (the same check the save runs) and drawn in a small preview.
 
-const FindUsMap = dynamic(() => import("@/components/visit/find-us-map").then((m) => m.FindUsMap), {
+const RoutePreview = dynamic(() => import("@/components/visit/route-preview").then((m) => m.RoutePreview), {
   ssr: false,
   loading: () => <p className="text-[13px] text-steel-dark">Loading the preview…</p>,
 });
@@ -63,7 +63,7 @@ export function StartPointsFields({ initial, pin }: { initial: StoreInfo; pin: {
                 <textarea id={`sp-route-${r.key}`} name="spRoute" rows={4} value={r.route} onChange={(e) => set(r.key, { route: e.target.value })} placeholder={"GeoJSON, GPX, or one “lat, lng” per line:\n27.6800, 85.3070\n27.6797, 85.3054"} className={area} />
                 <p className={hint}>It has to finish within 30 m of the map pin; the last point becomes the pin exactly.</p>
               </div>
-              <FindUsMap preview={{ coords: checked?.ok ? checked.coords : null, pin, error: checked && !checked.ok ? checked.message : null }} />
+              <RoutePreview preview={{ coords: checked?.ok ? checked.coords : null, pin, error: checked && !checked.ok ? checked.message : null }} />
               <div>
                 <label htmlFor={`sp-steps-${r.key}`} className={lbl}>
                   Receipt steps

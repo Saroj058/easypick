@@ -1,0 +1,13 @@
+// Where the Find us map's tiles are, and the few numbers about them that the page needs before
+// the map library is loaded (so this file imports nothing).
+
+/** The Kathmandu extract in Supabase Storage (docs/VISIT_PAGE_PLAN.md, Phase 3a). Dated, so a new build is a new file. */
+export const TILES_URL = "https://dfhbezpxijxoqpompiku.supabase.co/storage/v1/object/public/map/kathmandu-20261007.pmtiles";
+/** A few zoom-14 tiles round the sample pin, for tests: never the real file in CI. */
+export const FIXTURE_TILES_URL = "/map/fixture.pmtiles";
+export const ATTRIBUTION = '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a>';
+/** The whole valley: what "pull out" shows. [[west, south], [east, north]] */
+export const VALLEY: [[number, number], [number, number]] = [
+  [85.2, 27.61],
+  [85.5, 27.79],
+];

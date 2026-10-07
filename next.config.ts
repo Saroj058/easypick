@@ -12,6 +12,8 @@ const supabaseOrigin = (() => {
     return "";
   }
 })();
+// The Find us map reads its tiles (one PMTiles file, in pieces) from this Supabase Storage bucket.
+const mapTilesOrigin = "https://dfhbezpxijxoqpompiku.supabase.co";
 const csp = [
   "default-src 'self'",
   // 'unsafe-eval' only in development: React uses eval there for better error stacks.
@@ -19,7 +21,10 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: https://*.supabase.co${supabaseOrigin ? ` ${supabaseOrigin}` : ""}`,
   "font-src 'self' data:",
-  "connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com",
+  `connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com ${mapTilesOrigin}`,
+  // The map's worker is our own file (public/map/maplibre-gl-worker.mjs), so no blob: workers are needed.
+  "worker-src 'self'",
+  "child-src 'self' https://www.google.com",
   // eSewa's form (sandbox rc-epay / live epay, and its own redirects), plus the switched-off wallets.
   "form-action 'self' https://esewa.com.np https://*.esewa.com.np https://*.fonepay.com https://khalti.com https://*.khalti.com",
   // The Visit page's map, loaded only when someone taps "Show map".

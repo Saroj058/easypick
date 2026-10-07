@@ -8,6 +8,7 @@ import { VisitHero } from "@/components/visit/visit-hero";
 import { VisitStage, type StageSwitches } from "@/components/visit/visit-stage";
 import { getCurrentUser } from "@/lib/auth";
 import { jsonLd } from "@/lib/json-ld";
+import { routeFor } from "@/lib/map/route";
 import { ordersFor } from "@/lib/orders";
 import { site } from "@/lib/site";
 import { getStoreInfo } from "@/lib/store-info";
@@ -111,6 +112,8 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
   const info = stripPrivate(saved, state);
   const status = statusLine(state, info);
   const changeAt = nextChangeAt(info, state, now);
+  // The first start point's line, for the map (none before opening day: it was stripped above).
+  const start = routeFor(info);
   const today = ktmNow(now).date;
   const coming = info.special.filter((s) => s.date >= today && s.date <= addDays(today, 45)).sort((a, b) => a.date.localeCompare(b.date));
   const directions = info.mapUrl ?? (info.geo ? `https://www.google.com/maps/search/?api=1&query=${info.geo.lat},${info.geo.lng}` : null);
@@ -136,7 +139,7 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
       )}
       {/* The page refreshes itself when the status changes (closing time, the drop, the next opening). */}
       {changeAt && !pinned && <RefreshAt at={changeAt} />}
-      <VisitStage lights={lightsFor(state)} switches={switches} tour={tour}>
+      <VisitStage lights={lightsFor(state)} switches={switches} tour={tour} find={{ pin: info.geo, route: start.coords, from: start.name }}>
         <VisitHero info={info} state={state} status={status} personal={personal} />
       </VisitStage>
 
