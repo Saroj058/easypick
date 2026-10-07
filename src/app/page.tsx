@@ -181,8 +181,20 @@ export default async function HomePage() {
       {/* The rail: products first, with quick filters and "My size" */}
       <Rail products={range} />
 
+      {/* Designer Fits: just a pointer here; the fits themselves are on /fits */}
+      {looks.length > 0 && (
+        <section aria-labelledby="fits-title" className="py-8 md:py-10">
+          <div className="container-ep">
+            <FitsTeaser looks={looks} />
+          </div>
+        </section>
+      )}
 
-      {/* Find a gift and gift cards (docs/BLUEPRINT.md, home page order) */}
+
+      {/* The Vault: original brands and numbered pieces */}
+      <Vault products={products} />
+
+      {/* Find a gift and gift cards, under The Vault (owner's decision, 7 Oct 2026) */}
       <section aria-labelledby="gift-title" className="border-t border-mist py-10 md:py-14">
         <div className="container-ep">
           <h2 id="gift-title" className="display text-[clamp(2.25rem,1.6rem+2.4vw,3.75rem)] leading-[0.92]">
@@ -210,18 +222,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* The Vault: original brands and numbered pieces */}
-      <Vault products={products} />
-
-      {/* Designer Fits: just a pointer here; the fits themselves are on /fits */}
-      {looks.length > 0 && (
-        <section aria-labelledby="fits-title" className="py-8 md:py-10">
-          <div className="container-ep">
-            <FitsTeaser looks={looks} />
-          </div>
-        </section>
-      )}
 
       {/* Festival offers: only while a real sale runs. The pieces move along by themselves. */}
       {offers.length > 0 && (
