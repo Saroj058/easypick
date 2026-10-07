@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Countdown } from "@/components/countdown";
 import { HeroRack, type RackPiece } from "@/components/hero-rack";
 import { FitsTeaser } from "@/components/home/fits-teaser";
+import { GiftBlock } from "@/components/home/gift-block";
 import { OurStore } from "@/components/home/our-store";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
@@ -195,31 +196,9 @@ export default async function HomePage() {
       <Vault products={products} />
 
       {/* Find a gift and gift cards, under The Vault (owner's decision, 7 Oct 2026) */}
-      <section aria-labelledby="gift-title" className="border-t border-mist py-10 md:py-14">
+      <section aria-labelledby="gift-title" className="py-10 md:py-14">
         <div className="container-ep">
-          <h2 id="gift-title" className="display text-[clamp(2.25rem,1.6rem+2.4vw,3.75rem)] leading-[0.92]">
-            Buying for someone?
-          </h2>
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            <Link href="/gift" className="group flex min-h-[112px] items-center justify-between gap-4 bg-ink px-6 py-5 text-paper">
-              <span>
-                <span className="block text-xl font-bold">Send a gift</span>
-                <span className="mt-1 block text-[15px] text-paper/75">You pay. They pick the size.</span>
-              </span>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="shrink-0 transition-transform duration-200 group-hover:translate-x-1">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </Link>
-            <Link href="/gift-cards" className="group flex min-h-[112px] items-center justify-between gap-4 border border-ink px-6 py-5">
-              <span>
-                <span className="block text-xl font-bold">Gift cards</span>
-                <span className="mt-1 block text-[15px] text-steel-dark">Rs 1,000 to 20,000. Sent by email or SMS.</span>
-              </span>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="shrink-0 transition-transform duration-200 group-hover:translate-x-1">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </Link>
-          </div>
+          <GiftBlock />
         </div>
       </section>
 
