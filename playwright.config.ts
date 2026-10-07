@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 3100;
 
 /** Specs that draw 3D or a map (the tour now; the Visit hero and map later). */
-const WEBGL_SPECS = /tour\.spec\.ts/;
+const WEBGL_SPECS = /(tour|visit-3d)\.spec\.ts/;
 /** Software WebGL (SwiftShader), so 3D renders the same on every machine and in CI. About 3.5× slower, so only for WEBGL_SPECS. */
 const SOFTWARE_GL = { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] };
 
@@ -22,10 +22,10 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"] }, testIgnore: WEBGL_SPECS },
     // After desktop: some phone checks use accounts the desktop tests create.
     { name: "phone", use: { ...devices["Pixel 7"] }, grep: /@phone/, testIgnore: WEBGL_SPECS, dependencies: ["desktop"] },
-    // The 3D and map tests, last and on their own: software WebGL makes them heavy enough to
-    // slow any test running beside them past its timeouts.
-    { name: "desktop-3d", use: { ...devices["Desktop Chrome"], launchOptions: SOFTWARE_GL }, testMatch: WEBGL_SPECS, dependencies: ["phone"] },
-    { name: "phone-3d", use: { ...devices["Pixel 7"], launchOptions: SOFTWARE_GL }, grep: /@phone/, testMatch: WEBGL_SPECS, dependencies: ["desktop-3d"] },
+    // The 3D and map tests, last, on their own and one at a time: software WebGL makes them heavy
+    // enough to slow any test running beside them past its timeouts.
+    { name: "desktop-3d", use: { ...devices["Desktop Chrome"], launchOptions: SOFTWARE_GL }, testMatch: WEBGL_SPECS, workers: 1, dependencies: ["phone"] },
+    { name: "phone-3d", use: { ...devices["Pixel 7"], launchOptions: SOFTWARE_GL }, grep: /@phone/, testMatch: WEBGL_SPECS, workers: 1, dependencies: ["desktop-3d"] },
   ],
   webServer: {
     // A fresh test database every run, so orders from earlier runs never use up the stock.

@@ -28,9 +28,11 @@ export function VisitHero({ info, state, status, personal }: { info: StoreInfo; 
         height={1104}
         fetchPriority="high"
         data-hero-poster
-        className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_40%]"
+        className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_40%] transition-opacity duration-700 [[data-3d=on]_&]:opacity-0"
       />
-      <div className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t ${soon ? "from-black/95 via-black/80 to-black/50" : "from-black/90 via-black/40 to-black/10"}`} aria-hidden />
+      {/* Where the stage draws the 3D store (visit-stage.tsx). Empty without JavaScript or WebGL. */}
+      <div data-hero-canvas className="absolute inset-0 -z-10" aria-hidden />
+      <div className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t ${soon ? "from-black/95 via-black/80 to-black/50" : "from-black/85 via-black/25 to-transparent"}`} aria-hidden />
 
       <div className="container-ep pb-10 pt-28 md:pb-16">
         <p className="flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] text-paper/85 md:text-[13px]" data-status-line>

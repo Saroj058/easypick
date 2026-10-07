@@ -388,14 +388,21 @@ class Kit {
   }
 }
 
+/** How the store is lit from the street at night (the Visit page): the lights follow the store's state. */
+export type NightKind = "open" | "closed" | "drop" | "soon";
+
 export interface BuiltStore {
   group: THREE.Group;
   /** Puts everything that moves where it is at this second of the film. */
   apply: (t: number) => void;
+  /** The glowing parts for a night view: on when open, off when closed, a lime line on drop day, tape across the front before opening. */
+  setNight: (kind: NightKind) => void;
+  /** The sliding glass door (only with `door: "sliding"`): 0 shut … 1 fully open. */
+  setDoor: (open: number) => void;
   dispose: () => void;
 }
 
-export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill; logos: Logos }): BuiltStore {
+export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill; logos: Logos; door?: "open" | "sliding" }): BuiltStore {
   const { fonts, tag, bill, logos } = opts;
   /** Meshes that move during the film (everything else is frozen in place). */
   const moving = new Set<THREE.Object3D>();
@@ -510,6 +517,53 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill; 
   kit.box(M.glass, [4.5, 1.5, 0.25], [1.8, 3, 0.02]);
   kit.box(M.steel, [1.8, 1.5, 0.25], [0.05, 3, 0.06]);
   kit.box(M.steel, [3.6, 1.5, 0.25], [0.05, 3, 0.06]);
+  // The sliding glass door, for the Visit page's night store. The tour keeps the doorway open
+  // (it walks through it), so the two panels exist only when asked for.
+  const doorPanels: THREE.Mesh[] = [];
+  if (opts.door === "sliding") {
+    const doorGlass = keep(new THREE.MeshStandardMaterial({ color: "#c9d4d8", roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.2, depthWrite: false }));
+    const panelGeo = keep(new THREE.BoxGeometry(0.9, 2.9, 0.02));
+    const railGeo = keep(new THREE.BoxGeometry(0.9, 0.05, 0.03));
+    for (const side of [-1, 1]) {
+      const panel = new THREE.Mesh(panelGeo, doorGlass);
+      for (const y of [-1.43, 1.43]) {
+        const rail = new THREE.Mesh(railGeo, M.steel);
+        rail.position.y = y;
+        panel.add(rail);
+      }
+      const handle = new THREE.Mesh(keep(new THREE.BoxGeometry(0.02, 0.5, 0.04)), M.chrome);
+      handle.position.set(-side * 0.38, -0.2, 0.03);
+      panel.add(handle);
+      panel.userData.side = side;
+      doorPanels.push(panel);
+      group.add(panel);
+      moving.add(panel);
+    }
+  }
+  // Each panel slides behind the fixed glass on its own side.
+  const setDoor = (open: number) => {
+    const o = Math.min(1, Math.max(0, open));
+    for (const panel of doorPanels) panel.position.copy(w(W / 2 + panel.userData.side * (0.45 + 0.88 * o), 1.48, 0.29));
+  };
+  setDoor(0);
+
+  // Night extras: a lime line under the sign on drop day, tape across the front before opening.
+  const dropLine = new THREE.Mesh(keep(new THREE.BoxGeometry(W + 0.2, 0.05, 0.04)), keep(new THREE.MeshBasicMaterial({ color: C.volt, toneMapped: false })));
+  dropLine.position.copy(w(W / 2, 3.16, -0.37));
+  dropLine.visible = false;
+  group.add(dropLine);
+  const tape = new THREE.Group();
+  const tapeMat = keep(new THREE.MeshBasicMaterial({ color: "#f4f3ef", toneMapped: false }));
+  const tapeGeo = keep(new THREE.BoxGeometry(6.2, 0.07, 0.01));
+  for (const tilt of [-1, 1]) {
+    const strip = new THREE.Mesh(tapeGeo, tapeMat);
+    strip.position.copy(w(W / 2, 1.5, -0.14));
+    strip.rotation.z = tilt * Math.atan2(2.6, W);
+    tape.add(strip);
+  }
+  tape.visible = false;
+  group.add(tape);
+
   // window plinths with a folded stack on each
   kit.box(M.ink, [0.85, 0.15, 0.8], [1.3, 0.3, 0.8]);
   kit.box(M.ink, [4.55, 0.15, 0.8], [1.3, 0.3, 0.8]);
@@ -829,5 +883,17 @@ export function buildStore(opts: { fonts: Fonts; tag: TagInfo; bill: KioskBill; 
   };
   apply(0);
 
-  return { group, apply, dispose: () => disposables.forEach((d) => d.dispose()) };
+  // The glowing parts (spots, the LED strip, the floor tape) are unlit materials, so "lights off"
+  // means dimming those colours; the room's real lights belong to whoever draws the scene.
+  const on = { light: new THREE.Color("#fff6e6"), white: new THREE.Color("#f4f3ef") };
+  const off = { light: new THREE.Color("#1d1a16"), white: new THREE.Color("#3c3b38") };
+  const setNight = (kind: NightKind) => {
+    const lit = kind === "open" || kind === "drop";
+    M.light.color.copy(lit ? on.light : off.light);
+    M.white.color.copy(lit ? on.white : off.white);
+    dropLine.visible = kind === "drop";
+    tape.visible = kind === "soon";
+  };
+
+  return { group, apply, setNight, setDoor, dispose: () => disposables.forEach((d) => d.dispose()) };
 }

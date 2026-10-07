@@ -14,6 +14,7 @@ import { getStoreInfo } from "@/lib/store-info";
 import { DAY_NAMES, hourLabel, hoursOn, ktmNow, storeState, type StoreInfo } from "@/lib/store-state";
 import { lightsFor, nextChangeAt, statusLine, stripPrivate } from "@/lib/visit-status";
 import { getDropTimeline, getProduct } from "@/lib/store";
+import { getTourProps } from "@/lib/tour-props";
 
 const metadata: Metadata = {
   title: "Visit us",
@@ -97,11 +98,12 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
   };
   // ?now=2026-10-02T12:00+05:45 (a "+" in a link arrives as a space).
   const pinned = one("now") ? new Date(one("now")!.replace(" ", "+")) : null;
-  const [saved, timeline, personal, tryProduct] = await Promise.all([
+  const [saved, timeline, personal, tryProduct, tour] = await Promise.all([
     getStoreInfo({ preview }),
     getDropTimeline(),
     personalLine(),
     typeof sp.try === "string" ? getProduct(sp.try) : Promise.resolve(null),
+    getTourProps(),
   ]);
   const now = pinned && !Number.isNaN(pinned.getTime()) ? pinned : new Date();
   const state = storeState(saved, now, timeline.next?.releaseAt ?? timeline.current?.releaseAt ?? null);
@@ -134,7 +136,7 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
       )}
       {/* The page refreshes itself when the status changes (closing time, the drop, the next opening). */}
       {changeAt && !pinned && <RefreshAt at={changeAt} />}
-      <VisitStage lights={lightsFor(state)} switches={switches}>
+      <VisitStage lights={lightsFor(state)} switches={switches} tour={tour}>
         <VisitHero info={info} state={state} status={status} personal={personal} />
       </VisitStage>
 
