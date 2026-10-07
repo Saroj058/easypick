@@ -34,6 +34,8 @@ export interface DirectionsData {
   area: string;
   landmark: string | null;
   entrancePhoto: string | null;
+  /** The picture shown until there is an entrance photo: a still of the 3D store at this hour. */
+  storePicture: string;
   /** The store's pin, for Google Maps. Null before opening day. */
   pin: { lat: number; lng: number } | null;
   parkingSpots: ParkingSpot[];
@@ -101,7 +103,7 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 const dash = (
-  <p className="overflow-hidden whitespace-nowrap text-steel" aria-hidden>
+  <p className="overflow-hidden whitespace-nowrap text-paper/25" aria-hidden>
     ----------------------------------------------
   </p>
 );
@@ -216,7 +218,7 @@ export function Directions({
       aria-hidden={!open}
       inert={!open}
       style={wide ? undefined : { height: sheetPx, transform: `translateY(${offset}px)` }}
-      className={`absolute z-10 flex flex-col bg-paper text-ink ${
+      className={`absolute z-10 flex flex-col border border-white/10 bg-[#0d0e10]/95 text-paper backdrop-blur-md ${
         wide
           ? `bottom-6 right-6 top-28 w-[360px] shadow-[0_24px_48px_-24px_rgba(0,0,0,0.8)] transition-[opacity,translate] ease-[cubic-bezier(0.22,1,0.36,1)] ${still ? "duration-150" : "duration-[520ms]"} ${shown}`
           : `inset-x-0 bottom-0 rounded-t-[14px] shadow-[0_-18px_40px_-18px_rgba(0,0,0,0.7)] ${drag !== null ? "" : `transition-transform ease-[cubic-bezier(0.22,1,0.36,1)] ${still ? "duration-150" : "duration-[520ms]"}`}`
@@ -226,12 +228,12 @@ export function Directions({
       <div onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} className={`shrink-0 px-5 pt-2 ${wide ? "" : "touch-none"}`}>
         {!wide && (
           <button type="button" onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onSnap(snap === "peek" ? "half" : snap === "half" ? "full" : "half"))} aria-label={snap === "peek" ? "Show the directions" : "Change the directions' height"} className="mx-auto -mb-4 flex h-11 w-24 items-start justify-center pt-2.5">
-            <span className="block h-1 w-10 rounded-full bg-mist" aria-hidden />
+            <span className="block h-1 w-10 rounded-full bg-white/30" aria-hidden />
           </button>
         )}
         <div className="flex min-h-14 items-center justify-between gap-3 pb-2 md:pt-3">
           <div className="min-w-0">
-            <h3 ref={heading} tabIndex={-1} className="font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark outline-none">
+            <h3 ref={heading} tabIndex={-1} className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/60 outline-none">
               Directions
             </h3>
             <p data-summary className="line-clamp-2 font-mono text-[13px] font-semibold leading-snug tracking-[0.02em]">
@@ -246,7 +248,7 @@ export function Directions({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-mist">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/12">
         {!wide && (
           <button type="button" onClick={onLeave} className="flex h-11 items-center gap-2 px-5 text-[13px] font-semibold uppercase tracking-[0.06em]">
             <span aria-hidden>←</span> The store
@@ -260,27 +262,27 @@ export function Directions({
             {data.starts.map((s) => {
               const on = s.id === start?.id;
               return (
-                <button key={s.id} type="button" role="radio" aria-checked={on} onClick={() => onStart(s.id)} className={`h-11 shrink-0 whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold ${on ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}>
+                <button key={s.id} type="button" role="radio" aria-checked={on} onClick={() => onStart(s.id)} className={`h-11 shrink-0 whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold ${on ? "border-paper bg-paper text-ink" : "border-white/20 hover:border-paper"}`}>
                   {s.name}
                 </button>
               );
             })}
            </div>
             {locate !== "off" && (
-              <button type="button" aria-pressed={locate === "shown"} disabled={locate === "asking"} onClick={onLocate} className={`h-11 shrink-0 whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold ${locate === "shown" ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}>
+              <button type="button" aria-pressed={locate === "shown"} disabled={locate === "asking"} onClick={onLocate} className={`h-11 shrink-0 whitespace-nowrap rounded-full border px-4 text-[13px] font-semibold ${locate === "shown" ? "border-paper bg-paper text-ink" : "border-white/20 hover:border-paper"}`}>
                 From my location
               </button>
             )}
           </div>
         )}
         {locate !== "off" && locate !== "idle" && (
-          <p role="status" data-me={locate} className="px-5 pt-3 text-[14px] text-steel-dark">
+          <p role="status" data-me={locate} className="px-5 pt-3 text-[14px] text-paper/60">
             {locate === "asking" && "Finding you…"}
             {locate === "shown" && away !== null && (away < 60_000 ? `You're about ${far(away)} from the door in a straight line (the dashed line). ` : "You're a long way from the store. ")}
             {locate === "failed" && "Couldn't get your location. "}
             {locate !== "asking" && mapsUrl && (
               <>
-                <a href={mapsUrl} target="_blank" rel="noopener" className="font-semibold text-ink underline underline-offset-4">
+                <a href={mapsUrl} target="_blank" rel="noopener" className="font-semibold text-paper underline underline-offset-4">
                   Google Maps
                 </a>{" "}
                 {locate === "failed" ? "starts from wherever you are." : "has the turns."}
@@ -293,7 +295,7 @@ export function Directions({
             {MODES.map((m) => {
               const on = m.id === mode;
               return (
-                <button key={m.id} type="button" role="radio" aria-checked={on} onClick={() => onMode(m.id)} className={`flex h-14 flex-col items-center justify-center border ${on ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}>
+                <button key={m.id} type="button" role="radio" aria-checked={on} onClick={() => onMode(m.id)} className={`flex h-14 flex-col items-center justify-center border ${on ? "border-paper bg-paper text-ink" : "border-white/20 hover:border-paper"}`}>
                   <span className="text-[12px] font-semibold uppercase tracking-[0.06em]">{m.label}</span>
                   <span className="font-mono text-[12px] tabular-nums">{minutes(metres, m.id)} min</span>
                 </button>
@@ -309,25 +311,25 @@ export function Directions({
           {data.soon ? (
             <>
               <p>Exact address coming soon</p>
-              <p className="text-steel-dark">The circle is the area. The door goes on the map about four weeks before opening day.</p>
+              <p className="text-paper/60">The circle is the area. The door goes on the map about four weeks before opening day.</p>
             </>
           ) : (
             <>
-              {start && <p className="text-steel-dark">FROM {start.name.toUpperCase()}</p>}
+              {start && <p className="text-paper/60">FROM {start.name.toUpperCase()}</p>}
               <ol data-receipt>
                 {steps.map((s, i) => {
                   const on = i <= lit;
                   const inner = (
                     <>
                       {/* The tick that slides in beside a line as the route reaches it. */}
-                      <span aria-hidden className={`absolute left-0 top-[0.35em] h-[1em] w-[2px] origin-top bg-ink transition-transform duration-[180ms] ${on ? "scale-y-100" : "scale-y-0"}`} />
+                      <span aria-hidden className={`absolute left-0 top-[0.35em] h-[1em] w-[2px] origin-top bg-volt transition-transform duration-[180ms] ${on ? "scale-y-100" : "scale-y-0"}`} />
                       <span className="min-w-0 text-left">
                         {String(i + 1).padStart(2, "0")}&nbsp;&nbsp;{s.text}
                       </span>
                       <span className="shrink-0 tabular-nums">{Math.round(s.minutes * scale)} MIN</span>
                     </>
                   );
-                  const cls = `relative flex w-full justify-between gap-4 pl-3 transition-colors duration-200 ${on ? "text-ink" : "text-[#8e8e93]"}`;
+                  const cls = `relative flex w-full justify-between gap-4 pl-3 transition-colors duration-200 ${on ? "text-paper" : "text-paper/45"}`;
                   return (
                     <li key={i} data-step={on ? "lit" : "dim"}>
                       {start && !plain ? (
@@ -359,16 +361,16 @@ export function Directions({
         </div>
 
         {/* Arriving */}
-        <div data-arrival className="border-t border-mist px-5 py-4">
+        <div data-arrival className="border-t border-white/12 px-5 py-4">
           <p className="select-text text-[16px] font-semibold leading-snug" data-address>
             {data.place}
           </p>
-          {data.landmark && !data.soon && <p className="mt-1 select-text text-[14px] text-steel-dark">{data.landmark}</p>}
+          {data.landmark && !data.soon && <p className="mt-1 select-text text-[14px] text-paper/60">{data.landmark}</p>}
           {!data.soon && (
             // The door: the owner's photo once there is one, the store as built in 3D until then.
             // eslint-disable-next-line @next/next/no-img-element -- a link set in the admin, or our own small still
             <img
-              src={data.entrancePhoto ?? "/visit/store-night-828.avif"}
+              src={data.entrancePhoto ?? data.storePicture}
               alt={data.entrancePhoto ? "The entrance to Easypick" : "The Easypick storefront: a black front with the lights on"}
               loading="lazy"
               onError={(e) => (e.currentTarget.hidden = true)}
@@ -376,20 +378,20 @@ export function Directions({
             />
           )}
           {!data.soon && (data.parkingNote || data.parkingSpots.length > 0) && (
-            <p className="mt-3 text-[14px] text-steel-dark">
-              <span className="font-semibold text-ink">Parking: </span>
+            <p className="mt-3 text-[14px] text-paper/60">
+              <span className="font-semibold text-paper">Parking: </span>
               {data.parkingNote || `${data.parkingSpots.filter((p) => p.kind === "bike").length ? "bikes" : ""}${data.parkingSpots.some((p) => p.kind === "bike") && data.parkingSpots.some((p) => p.kind === "car") ? " and " : ""}${data.parkingSpots.some((p) => p.kind === "car") ? "cars" : ""} marked P on the map.`}
             </p>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-2">
             {mapsUrl && (
-              <a href={mapsUrl} target="_blank" rel="noopener" className={`${button} col-span-2 border-ink bg-ink text-paper`}>
+              <a href={mapsUrl} target="_blank" rel="noopener" className={`${button} col-span-2 border-volt bg-volt text-ink`}>
                 Open in Google Maps
               </a>
             )}
             {data.soon && (
-              <button type="button" onClick={onLeave} className={`${button} col-span-2 border-ink bg-ink text-paper`}>
+              <button type="button" onClick={onLeave} className={`${button} col-span-2 border-volt bg-volt text-ink`}>
                 Join the opening list
               </button>
             )}
@@ -400,59 +402,59 @@ export function Directions({
                   setCopied((await copyText(data.place)) ? "yes" : "no");
                   setTimeout(() => setCopied(""), 2500);
                 }}
-                className={`${button} border-ink`}
+                className={`${button} border-white/35 hover:border-paper`}
               >
                 {copied === "yes" ? "Copied" : "Copy address"}
               </button>
             )}
             {!data.soon && mapsUrl && (
-              <a href={`https://wa.me/?text=${encodeURIComponent(`Easypick, ${data.place}\n${mapsUrl}`)}`} target="_blank" rel="noopener" className={`${button} border-ink`}>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`Easypick, ${data.place}\n${mapsUrl}`)}`} target="_blank" rel="noopener" className={`${button} border-white/35 hover:border-paper`}>
                 WhatsApp
               </a>
             )}
-            <Link href="/visit/tour" className={`${button} border-ink`}>
+            <Link href="/visit/tour" className={`${button} border-white/35 hover:border-paper`}>
               Look inside
             </Link>
             {!plain && (
-              <button type="button" onClick={onReplay} className={`${button} border-mist`}>
+              <button type="button" onClick={onReplay} className={`${button} border-white/15 text-paper/70 hover:border-paper`}>
                 Replay
               </button>
             )}
           </div>
-          <p role="status" className="mt-2 min-h-5 text-[13px] text-steel-dark">
+          <p role="status" className="mt-2 min-h-5 text-[13px] text-paper/60">
             {copied === "no" ? "Couldn't copy. Press and hold the address above to select it." : ""}
           </p>
         </div>
 
         {/* Once you're there: how the store works, and when it's open. */}
-        <div data-inside className="border-t border-mist px-5 py-4">
-          <h4 className="font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">At the store</h4>
+        <div data-inside className="border-t border-white/12 px-5 py-4">
+          <h4 className="font-mono text-[11px] uppercase tracking-[0.16em] text-paper/60">At the store</h4>
           <ol className="mt-3 space-y-3">
             {INSIDE.map(([title, text]) => (
               <li key={title}>
                 <p className="display text-[24px] leading-none">{title}</p>
-                <p className="mt-1 text-[14px] text-steel-dark">{text}</p>
+                <p className="mt-1 text-[14px] text-paper/60">{text}</p>
               </li>
             ))}
           </ol>
           {data.hours.length > 0 && (
             <>
-              <h4 className="mt-5 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">{data.soon ? "Planned hours" : "Opening hours"}</h4>
+              <h4 className="mt-5 font-mono text-[11px] uppercase tracking-[0.16em] text-paper/60">{data.soon ? "Planned hours" : "Opening hours"}</h4>
               <table data-hours className="mt-2 w-full text-[14px]">
                 <caption className="sr-only">Opening hours for the week, Kathmandu time</caption>
                 <tbody>
                   {data.hours.map((h) => (
-                    <tr key={h.label} className={`border-b border-mist ${h.today ? "font-semibold" : ""}`} aria-current={h.today ? "date" : undefined}>
+                    <tr key={h.label} className={`border-b border-white/12 ${h.today ? "font-semibold" : ""}`} aria-current={h.today ? "date" : undefined}>
                       <th scope="row" className="py-2 text-left font-[inherit]">
                         {h.label}
-                        {h.note && <span className="ml-2 text-[12px] font-normal text-steel-dark">{h.note}</span>}
+                        {h.note && <span className="ml-2 text-[12px] font-normal text-paper/60">{h.note}</span>}
                       </th>
                       <td className="py-2 text-right font-mono">{h.text}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p className="mt-2 text-[12px] text-steel-dark">Kathmandu time.</p>
+              <p className="mt-2 text-[12px] text-paper/60">Kathmandu time.</p>
             </>
           )}
         </div>

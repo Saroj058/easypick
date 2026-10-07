@@ -1,32 +1,6 @@
-// The "In person" motion as one timing table: from the globe down to Nepal, the valley, the route
-// and the door. Pure, so the map, the panel and the tests read the same times. Times are in
-// milliseconds from the moment the map is ready.
-
-export type SeqMode = "first" | "repeat" | "deeplink" | "chip" | "soon";
-
-export type PhaseName =
-  | "globe" // the whole Earth, turning until Nepal faces the camera
-  | "nepal" // down to the country
-  | "pullout" // on down to the whole valley
-  | "hold" // the valley, still
-  | "fly" // to the route
-  | "retract" // a chip change: the old line pulls back
-  | "draw" // the route draws
-  | "settle" // the panel slides in, the map recentres
-  | "arrival" // the store extrudes, the pin rings, the total stamps
-  | "circle" // soon: a 400 m circle round the area
-  | "signup"; // soon: the opening-list sign-up
+// The easings the Visit film moves with (lib/visit/film.ts): pure functions of 0 … 1.
 
 export type Easing = (t: number) => number;
-
-export interface Phase {
-  name: PhaseName;
-  start: number;
-  end: number;
-  ease: Easing;
-  /** Overlays (the crossfade) run on top of the camera phases. */
-  overlay?: boolean;
-}
 
 // ---------- Easings ----------
 
@@ -56,13 +30,8 @@ export function cubicBezier(x1: number, y1: number, x2: number, y2: number): Eas
   };
 }
 
-export const linear: Easing = (t) => Math.min(1, Math.max(0, t));
 export const inOut = cubicBezier(0.65, 0, 0.35, 1);
-export const out = cubicBezier(0.22, 1, 0.36, 1);
 export const quart: Easing = (t) => (t < 0.5 ? 8 * t ** 4 : 1 - (-2 * t + 2) ** 4 / 2);
-export const expoOut: Easing = (t) => (t >= 1 ? 1 : 1 - 2 ** (-10 * t));
-/** The step-inside dolly through the door. */
-export const dolly = cubicBezier(0.7, 0, 0.3, 1);
 
 /**
  * The route's own pace: speeding up over the first 12 %, steady through the middle, slowing over
@@ -79,119 +48,3 @@ export const drawEase: Easing = (t) => {
   const r = 1 - x;
   return 1 - (v / (2 * b)) * r * r;
 };
-
-// ---------- Durations ----------
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-
-/** How long the route takes to draw: longer routes a little longer, 1.2 to 2.4 s. */
-export const drawDuration = (meters: number) => clamp(900 + 0.3 * meters, 1200, 2400);
-
-export const PANEL_MS = 520;
-export const ARRIVAL_MS = 700;
-
-/** The whole table for an entry. `speed` scales every time (?motion=fast uses 0.1). */
-export function timeline(mode: SeqMode, meters: number, speed = 1): Phase[] {
-  const D = drawDuration(meters);
-  const p: Phase[] = [];
-  let t = 0;
-  const add = (name: PhaseName, ms: number, ease: Easing) => {
-    p.push({ name, start: t, end: t + ms, ease });
-    t += ms;
-  };
-
-  switch (mode) {
-    case "first":
-      // From far out: the globe turns to Nepal, the camera comes down to the country, then the valley.
-      add("globe", 1200, inOut);
-      add("nepal", 1300, quart);
-      add("pullout", 1500, quart);
-      add("hold", 400, linear);
-      add("fly", 1000, quart);
-      add("draw", D, drawEase);
-      add("settle", PANEL_MS, out);
-      add("arrival", ARRIVAL_MS, out);
-      break;
-    case "repeat":
-      // Seen before: it opens on the valley and goes straight to the route.
-      add("fly", 900, quart);
-      add("draw", clamp(D, 1200, 1800), drawEase);
-      add("settle", 400, expoOut);
-      add("arrival", ARRIVAL_MS, out);
-      break;
-    case "deeplink":
-      // Straight to the route: drawn by 1.2 s, panel in by 1.5 s.
-      add("draw", 1200, drawEase);
-      add("settle", 300, expoOut);
-      add("arrival", ARRIVAL_MS, out);
-      break;
-    case "chip":
-      add("retract", 250, inOut);
-      add("draw", clamp(D, 1200, 1800), drawEase);
-      add("settle", 400, expoOut);
-      break;
-    case "soon":
-      add("globe", 1200, inOut);
-      add("nepal", 1300, quart);
-      add("pullout", 1500, quart);
-      add("hold", 400, linear);
-      add("circle", 500, quart);
-      add("signup", 200, out);
-      break;
-  }
-  return p.map((x) => ({ ...x, start: x.start * speed, end: x.end * speed })).sort((a, b) => a.start - b.start);
-}
-
-/** When the panel has fully slid in (the end of "settle"), or the sign-up shows for soon. */
-export function panelAt(mode: SeqMode, meters: number, speed = 1): number {
-  const tl = timeline(mode, meters, speed);
-  return (tl.find((x) => x.name === "settle") ?? tl.find((x) => x.name === "signup") ?? tl[tl.length - 1]).end;
-}
-
-/** When everything has finished, arrival included. */
-export function totalMs(mode: SeqMode, meters: number, speed = 1): number {
-  return Math.max(...timeline(mode, meters, speed).map((x) => x.end));
-}
-
-/**
- * The camera phase at time `t` (overlays aside), with its raw and eased progress. Before the start
- * it's the first phase at 0; after the end, the last phase at 1.
- */
-export function phaseAt(t: number, mode: SeqMode, meters: number, speed = 1): { name: PhaseName; progress: number; eased: number } {
-  const camera = timeline(mode, meters, speed).filter((x) => !x.overlay);
-  const now = camera.find((x) => t >= x.start && t < x.end) ?? (t < camera[0].start ? camera[0] : camera[camera.length - 1]);
-  const progress = now.end === now.start ? 1 : Math.min(1, Math.max(0, (t - now.start) / (now.end - now.start)));
-  return { name: now.name, progress, eased: now.ease(progress) };
-}
-
-/** How much of the route is drawn at time `t` (0 … 1), eased. */
-export function drawnAt(t: number, mode: SeqMode, meters: number, speed = 1): number {
-  const tl = timeline(mode, meters, speed);
-  const draw = tl.find((x) => x.name === "draw");
-  if (!draw) return 0;
-  if (t <= draw.start) return 0;
-  if (t >= draw.end) return 1;
-  return draw.ease((t - draw.start) / (draw.end - draw.start));
-}
-
-/** Map zoom that shows the same ground as a camera `heightMeters` up, looking straight down (§6). */
-export function zoomForCamera(heightMeters: number, fovDeg: number, viewportHeightPx: number, latitude = 27.68): number {
-  const mpp = (2 * heightMeters * Math.tan(((fovDeg / 2) * Math.PI) / 180)) / viewportHeightPx;
-  return Math.log2((156_543.03392 * Math.cos((latitude * Math.PI) / 180)) / mpp);
-}
-
-/** The other way round: how high a camera has to be to show what the map shows at `zoom`. */
-export function heightForZoom(zoom: number, fovDeg: number, viewportHeightPx: number, latitude = 27.68): number {
-  const mpp = (156_543.03392 * Math.cos((latitude * Math.PI) / 180)) / 2 ** zoom;
-  return (mpp * viewportHeightPx) / (2 * Math.tan(((fovDeg / 2) * Math.PI) / 180));
-}
-
-/** The camera phases the map plays for an entry, starting at 0. */
-export function mapPhases(mode: SeqMode, meters: number, speed = 1): Phase[] {
-  return timeline(mode, meters, speed).filter((p) => !p.overlay);
-}
-
-/** Where the caption says the camera is, by phase: 0 Earth, 1 Nepal, 2 Kathmandu, 3 the neighbourhood; -1 none. */
-export function placeAt(name: PhaseName): -1 | 0 | 1 | 2 | 3 {
-  return name === "globe" ? 0 : name === "nepal" ? 1 : name === "pullout" || name === "hold" ? 2 : name === "fly" || name === "circle" ? 3 : -1;
-}

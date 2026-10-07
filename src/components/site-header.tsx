@@ -213,6 +213,7 @@ export function MobileTabBar() {
   const { count, ready } = useBag();
   const me = useMe();
   const [typing, setTyping] = useState(false);
+  // The visit page is one full screen with two choices of its own: no tab bar under them (the three dots open the menu).
   const tabs = [
     { href: "/shop", label: "Shop", icon: <ShopIcon className="h-5 w-5" /> },
     { href: "/fits", label: "Fits", icon: <Shirt className="h-5 w-5" strokeWidth={1.8} aria-hidden /> },
@@ -234,7 +235,7 @@ export function MobileTabBar() {
 
   // Purchase flows have their own pay bar at the bottom instead.
   // …and the store walk-through needs the whole screen.
-  if (pathname.startsWith("/checkout") || pathname.startsWith("/gift/") || pathname === "/gift-cards" || pathname === "/visit/tour") return null;
+  if (pathname.startsWith("/checkout") || pathname.startsWith("/gift/") || pathname === "/gift-cards" || pathname === "/visit" || pathname === "/visit/tour") return null;
   return (
     <nav
       aria-label="Quick links"

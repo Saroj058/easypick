@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 import { RefreshAt } from "@/components/refresh-at";
-import { VisitHero } from "@/components/visit/visit-hero";
-import { VisitStage, type StageSwitches } from "@/components/visit/visit-stage";
+import { VisitFilm, type FilmSwitches } from "@/components/visit/visit-film";
 import { getCurrentUser } from "@/lib/auth";
 import { jsonLd } from "@/lib/json-ld";
+import { kathmanduClock, skyOverKathmandu, subsolarPoint } from "@/lib/kathmandu-sky";
 import { routeFor } from "@/lib/map/route";
 import { ordersFor } from "@/lib/orders";
 import { site } from "@/lib/site";
@@ -79,11 +79,12 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
   // Test switches: only on the preview, or outside production.
   const testing = preview || process.env.NODE_ENV !== "production";
   const one = (k: string) => (testing && typeof sp[k] === "string" ? (sp[k] as string) : null);
-  const switches: StageSwitches = {
+  const switches: FilmSwitches = {
     motion: one("motion") === "fast" ? "fast" : "normal",
     lite: one("lite") === "1",
     gl: one("gl") === "off" ? "off" : "on",
     tiles: one("tiles") === "fixture" ? "fixture" : "live",
+    at: one("t") !== null && Number.isFinite(Number(one("t"))) ? Number(one("t")) : null,
   };
   // ?now=2026-10-02T12:00+05:45 (a "+" in a link arrives as a space).
   const pinned = one("now") ? new Date(one("now")!.replace(" ", "+")) : null;
@@ -105,6 +106,11 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
   // The written route, for when there are no start points yet (none of either before opening day).
   const start = routeFor(info);
   const soon = state.kind === "soon";
+  // ?lights=closed (a test switch) shows the store in another state than the clock says, for making the stills.
+  const forced = one("lights");
+  const lights = forced === "open" || forced === "closed" || forced === "drop" || forced === "soon" ? forced : lightsFor(state);
+  // The sky over Kathmandu at this moment lights the store (the browser keeps it up to date).
+  const sky = skyOverKathmandu(now);
   const today = ktmNow(now).date;
   // The week from today, special days included.
   const hours = [0, 1, 2, 3, 4, 5, 6].map((n) => {
@@ -128,27 +134,35 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
       )}
       {/* The page refreshes itself when the status changes (closing time, the drop, the next opening). */}
       {changeAt && !pinned && <RefreshAt at={changeAt} />}
-      <VisitStage
-        lights={lightsFor(state)}
+      <VisitFilm
         switches={switches}
-        tour={tour}
+        sun={subsolarPoint(now)}
+        clock={kathmanduClock(now)}
+        // A pinned clock (a test, a demo) stays where it was put.
+        liveClock={!pinned}
+        daylight={sky.day > 0.5}
+        status={status}
+        short={statusShort(state)}
+        open={lights === "open" || lights === "drop"}
+        personal={personal}
+        hoursToday={`${soon ? "Planned hours today" : "Today"}: ${hours[0].text}`}
         find={{
           pin: info.geo,
           starts: soon ? [] : info.startPoints.map((s) => ({ id: s.id, name: s.name, coords: s.coords, steps: s.steps })),
           steps: soon ? [] : start.steps,
           status: statusShort(state),
           place: info.address ?? info.area,
-          area: info.area,
+          area: (info.area.split(",")[0] || info.area).trim(),
           landmark: info.landmark || null,
           entrancePhoto: info.entrancePhoto,
+          // Until there's a photo of the door: the store as built in 3D, under the sky of this hour.
+          storePicture: `/visit/store-${sky.phase}-${lights === "open" || lights === "drop" ? "open" : "closed"}-828.avif`,
           parkingSpots: info.parkingSpots,
           parkingNote: info.parking,
           soon,
           hours,
         }}
-      >
-        <VisitHero info={info} state={state} status={status} personal={personal} hours={`${soon ? "Planned hours today" : "Today"}: ${hours[0].text}`} mapsUrl={info.geo ? `https://www.google.com/maps/dir/?api=1&destination=${info.geo.lat},${info.geo.lng}&travelmode=walking` : null} />
-      </VisitStage>
+      />
     </>
   );
 }

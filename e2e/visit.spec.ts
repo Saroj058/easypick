@@ -2,22 +2,23 @@ import { expect, test } from "@playwright/test";
 
 const shot = (name: string) => ({ path: `test-results/shots/${name}.png`, fullPage: true });
 
-// The Visit page is one screen: "Come in.", one status line, and two ways to visit, In person and
-// Virtual tour. Everything else (the receipt, the hours, how the store works) is in the In person
-// panel. ?now= pins the clock and ?gl=off opens that panel with no live map (test switches).
-// The area at the end of the status line is whatever an earlier admin test saved, so it isn't pinned.
+// The Visit page is one film (see e2e/visit-3d.spec.ts for the film itself). These tests cover
+// what doesn't need WebGL: the first screen's HTML (the headline, the status, the two ways to
+// visit), and In person with no film (?gl=off): the directions over a still.
+// ?now= pins the clock (test switch). The area in the status is whatever an earlier admin test saved.
 const at = (iso: string) => encodeURIComponent(iso);
 const panel = (page: import("@playwright/test").Page) => page.locator("[data-panel=open]");
+const film = (page: import("@playwright/test").Page) => page.locator("[data-film]");
 
 test("visit page: coming soon until opening day, with the opening list @phone", async ({ page }, info) => {
   await page.goto("/visit?gl=off");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Come in.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Visit Easypick");
   await expect(page.locator("[data-status-line]")).toContainText(/OPENING/);
-  await expect(page.locator("[data-stage]")).toHaveAttribute("data-lights", "soon");
+  await expect(page.locator("[data-status]")).toContainText("OPENING SOON");
   await expect(page.getByText("Join the opening list")).toBeVisible();
   await page.screenshot(shot(`visit-${info.project.name}-soon`));
   // In person, before opening day: the area only, and the planned hours.
-  await expect(page.locator("[data-stage]")).toHaveAttribute("data-fallback", "nowebgl");
+  await expect(film(page)).toHaveAttribute("data-fallback", "nowebgl");
   await page.getByRole("link", { name: "In person" }).click();
   await expect(panel(page).getByText("Exact address coming soon")).toBeVisible();
   await expect(panel(page).getByRole("heading", { name: "Planned hours" })).toBeVisible();
@@ -29,43 +30,46 @@ test("visit page preview: one screen with the two ways to visit; the receipt is 
   await expect(page.getByText(/Preview: how this page looks/)).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
+  // What's on the first screen: the hour in Kathmandu, the status, one headline, two choices.
+  await expect(page.locator("[data-ktm-clock]").first()).toHaveText("12:00");
+  await expect(page.locator("[data-status]")).toContainText("OPEN TILL 8 PM");
+  await expect(page.getByText("One planet.")).toBeVisible();
   const ways = page.getByRole("navigation", { name: "Ways to visit" });
   await expect(ways.getByRole("link")).toHaveCount(2);
-  await expect(ways.locator("[data-hero-action=inside]")).toHaveAttribute("href", "/visit/tour");
+  await expect(ways.getByRole("link", { name: "Virtual tour" })).toHaveAttribute("href", "/visit/tour#enter");
   await expect(ways.getByRole("link", { name: "In person" })).toHaveAttribute("href", "#find-us");
-  // Nothing else on the page: no sections below the screen.
-  await expect(page.locator("main section")).toHaveCount(1);
+  // Nothing else on the page: no sections, no footer, no tab bar.
   await expect(page.locator("main h2")).toHaveCount(0);
   await expect(page.getByRole("contentinfo")).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Quick links" })).toHaveCount(0);
   await page.screenshot(shot(`visit-${info.project.name}-open`));
 
-  await expect(page.locator("[data-stage]")).toHaveAttribute("data-fallback", "nowebgl");
+  await expect(film(page)).toHaveAttribute("data-fallback", "nowebgl");
   await ways.getByRole("link", { name: "In person" }).click();
-  await expect(page).toHaveURL(/#find-us$/);
   const p = panel(page);
   await expect(p.getByText("QUEUE", { exact: true })).toBeVisible();
   await expect(p.getByText(/01\s+Jhamsikhel Chowk/)).toBeVisible();
   await expect(p.getByText(/^EASYPICK · OPEN TILL 8 PM/)).toBeVisible();
-  // What used to be the page's sections: how the store works, and the week's hours.
+  // How the store works, and the week's hours, are in the panel.
   await expect(p.locator("[data-inside]").getByText("Pay it.")).toBeAttached();
   await expect(p.locator("[data-hours] tr")).toHaveCount(7);
   await expect(p.locator("[data-hours] tr").first()).toContainText(/Today.*11 AM – 8 PM/);
   await page.screenshot(shot(`visit-${info.project.name}-in-person-plain`));
 });
 
-test("visit page: the lights follow the clock", async ({ page }) => {
-  const lights = page.locator("[data-stage]");
-  await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
-  await expect(lights).toHaveAttribute("data-lights", "open");
-  await page.goto(`/visit?preview=open&now=${at("2026-10-07T21:00+05:45")}`);
-  await expect(lights).toHaveAttribute("data-lights", "closed");
+test("visit page: the status and the still follow the clock in Kathmandu", async ({ page }) => {
+  await page.goto(`/visit?preview=open&gl=off&now=${at("2026-10-07T12:00+05:45")}`);
+  await expect(page.locator("[data-status]")).toContainText("OPEN TILL 8 PM");
+  await expect(page.locator("img[data-poster]")).toHaveAttribute("src", /earth-day/);
+  await page.goto(`/visit?preview=open&gl=off&now=${at("2026-10-07T21:00+05:45")}`);
+  await expect(page.locator("[data-status]")).toContainText("CLOSED NOW");
   await expect(page.locator("[data-status-line]")).toHaveText(/^CLOSED · OPENS 11 AM TOMORROW · [A-Z]+$/);
-  await page.goto("/visit");
-  await expect(lights).toHaveAttribute("data-lights", "soon");
-  // Switches for the later phases are read too.
+  await expect(page.locator("[data-ktm-clock]").first()).toHaveText("21:00");
+  await expect(page.locator("img[data-poster]")).toHaveAttribute("src", /earth-night/);
+  // The test switches are read.
   await page.goto(`/visit?preview=open&motion=fast&gl=off`);
-  await expect(lights).toHaveAttribute("data-motion", "fast");
-  await expect(lights).toHaveAttribute("data-fallback", "nowebgl");
+  await expect(film(page)).toHaveAttribute("data-motion", "fast");
+  await expect(film(page)).toHaveAttribute("data-fallback", "nowebgl");
 });
 
 test("visit page works with JavaScript off @phone", async ({ browser }) => {
@@ -73,9 +77,9 @@ test("visit page works with JavaScript off @phone", async ({ browser }) => {
   const page = await ctx.newPage();
   await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
-  await expect(page.locator("[data-hero-action=inside]")).toHaveAttribute("href", "/visit/tour");
-  // With no map, In person leads to the essentials in words: the address, today's hours, Google Maps.
-  await page.getByRole("link", { name: "In person" }).click();
+  await expect(page.locator("[data-action=tour]")).toHaveAttribute("href", "/visit/tour#enter");
+  // With no film, In person leads to the essentials in words: the address, today's hours, Google Maps.
+  await page.locator("[data-action=in-person]").click();
   await expect(page).toHaveURL(/#find-us$/);
   const words = page.locator("#find-us");
   await expect(words.getByText(/Today: 11 AM – 8 PM/)).toBeVisible();

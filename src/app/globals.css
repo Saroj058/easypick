@@ -982,3 +982,58 @@
     transform: scale(1);
   }
 }
+
+/* The Visit page's first screen: the words rise in, the shade over the picture lifts, and a little film grain sits over it. */
+@keyframes visit-in {
+  from {
+    opacity: 0.001;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes visit-lift {
+  from {
+    background-color: rgb(0 0 0 / 0.85);
+  }
+  to {
+    background-color: rgb(0 0 0 / 0);
+  }
+}
+.visit-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes visit-push {
+  from {
+    scale: 1.07;
+  }
+  to {
+    scale: 1;
+  }
+}
+
+/* The Visit film. Words on the first screen rise in (only where motion is welcome). */
+.visit-in {
+  animation: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .visit-in {
+    animation: visit-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+/* The cloud between orbit and the city: soft white, thicker in the middle. */
+.visit-cloud {
+  background:
+    radial-gradient(ellipse 60% 45% at 30% 40%, rgb(255 255 255 / 0.95), transparent 70%),
+    radial-gradient(ellipse 55% 50% at 72% 62%, rgb(255 255 255 / 0.9), transparent 72%),
+    radial-gradient(ellipse 80% 60% at 50% 50%, rgb(236 240 247 / 1), rgb(214 222 235 / 1));
+}
+/* The beam of light standing on the store once the film arrives. */
+.map-beam {
+  height: 190px;
+  background: linear-gradient(to top, rgb(198 255 61 / 0.95), rgb(198 255 61 / 0.35) 45%, transparent);
+  box-shadow: 0 0 18px 2px rgb(198 255 61 / 0.45);
+  transition: opacity 200ms linear;
+}

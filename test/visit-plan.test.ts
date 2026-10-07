@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { bounds, distance, lengthMeters, minutes, pointAt, prepareRoute, parseRouteText, routeFor, simplify, sliceTo, snapToPin, stepAt, type LngLat } from "@/lib/map/route";
-import { cubicBezier, drawDuration, drawEase, drawnAt, inOut, panelAt, phaseAt, quart, timeline, totalMs, zoomForCamera } from "@/lib/map/sequence";
 import { parseParking, parseSteps, parseStoreForm, startPointId } from "@/lib/store-form";
 import { DEFAULT_STORE, SAMPLE_STORE, storeState, withDefaults, type StoreInfo } from "@/lib/store-state";
 import { lightsFor, nextChangeAt, statusLine, stripPrivate } from "@/lib/visit-status";
@@ -218,80 +217,6 @@ describe("the status line and the lights", () => {
   });
 });
 
-describe("the In person motion table", () => {
-  // A first visit comes down from the globe: Earth 1.2 s, Nepal 1.3 s, the valley 1.5 s, a 0.4 s
-  // hold, then the route. A repeat visit starts on the valley; a deep link on the route. The route
-  // length decides the drawing time.
-  it("hits the planned totals", () => {
-    const down = 1200 + 1300 + 1500 + 400; // globe → Nepal → valley → hold
-    // first visit with a typical 300 m walk: panel at about 7.1 s, arrival 0.7 s later.
-    expect(panelAt("first", 300)).toBe(down + 1000 + 1200 + 520);
-    expect(totalMs("first", 300)).toBe(down + 1000 + 1200 + 520 + 700);
-    const repeatMeters = (1400 - 900) / 0.3; // a 1.4 s draw
-    expect(panelAt("repeat", repeatMeters)).toBeCloseTo(900 + 1400 + 400, -1);
-    expect(panelAt("deeplink", 300)).toBe(1500);
-    expect(panelAt("deeplink", 4000)).toBe(1500);
-    // soon: down to the valley, then the 400 m circle and the sign-up.
-    expect(panelAt("soon", 0)).toBe(down + 500 + 200);
-  });
-
-  it("clamps the drawing time between 1.2 and 2.4 s", () => {
-    expect(drawDuration(0)).toBe(1200);
-    expect(drawDuration(1000)).toBe(1200);
-    expect(drawDuration(2000)).toBe(1500);
-    expect(drawDuration(10000)).toBe(2400);
-  });
-
-  it("runs the phases in order, from the globe down", () => {
-    const names = timeline("first", 300).map((p) => p.name);
-    expect(names).toEqual(["globe", "nepal", "pullout", "hold", "fly", "draw", "settle", "arrival"]);
-    expect(timeline("first", 300)[0].start).toBe(0);
-    expect(timeline("repeat", 300).some((p) => p.name === "globe" || p.name === "hold")).toBe(false); // straight to the route
-    expect(timeline("chip", 300).map((p) => p.name)).toEqual(["retract", "draw", "settle"]);
-    expect(timeline("soon", 300).some((p) => p.name === "draw")).toBe(false); // no route before opening
-  });
-
-  it("knows where it is at any moment", () => {
-    expect(phaseAt(0, "first", 300).name).toBe("globe");
-    expect(phaseAt(1500, "first", 300).name).toBe("nepal");
-    expect(phaseAt(3250, "first", 300)).toMatchObject({ name: "pullout", progress: 0.5 });
-    expect(phaseAt(4200, "first", 300).name).toBe("hold");
-    expect(phaseAt(99_999, "first", 300)).toMatchObject({ name: "arrival", progress: 1 });
-    expect(drawnAt(5400, "first", 300)).toBe(0);
-    expect(drawnAt(5400 + 600, "first", 300)).toBeCloseTo(0.5, 1);
-    expect(drawnAt(10_000, "first", 300)).toBe(1);
-  });
-
-  it("names the place for the caption on the way down", async () => {
-    const { placeAt } = await import("@/lib/map/sequence");
-    expect((["globe", "nepal", "pullout", "hold", "fly", "draw", "settle"] as const).map(placeAt)).toEqual([0, 1, 2, 2, 3, -1, -1]);
-  });
-
-  it("scales every time for ?motion=fast", () => {
-    expect(panelAt("first", 300, 0.1)).toBeCloseTo(712, 0);
-  });
-
-  it("eases the way the plan says", () => {
-    for (const e of [inOut, quart, drawEase]) {
-      expect(e(0)).toBeCloseTo(0, 6);
-      expect(e(1)).toBeCloseTo(1, 6);
-      expect(e(0.5)).toBeCloseTo(0.5, 1); // halfway, near enough (drawEase's ramps differ: 12 % and 15 %)
-    }
-    // drawEase: slow start, steady middle, slow finish.
-    expect(drawEase(0.06)).toBeLessThan(0.06);
-    expect(drawEase(0.97)).toBeGreaterThan(0.97);
-    expect(cubicBezier(0.22, 1, 0.36, 1)(0.5)).toBeGreaterThan(0.85);
-  });
-
-  it("matches the map's zoom to the 3D camera", () => {
-    // A camera 40 m up with a 60° lens on an 800 px tall view: 0.058 m a pixel, zoom 21.2;
-    // 160 m up it's two zoom levels further out.
-    expect(zoomForCamera(40, 60, 800)).toBeCloseTo(21.2, 1);
-    expect(zoomForCamera(160, 60, 800)).toBeCloseTo(19.2, 1);
-  });
-});
-
-
 describe("the admin form's start points (Phase 1b)", () => {
   const base = () => {
     const f = new FormData();
@@ -425,35 +350,5 @@ describe("the map's files (Phase 3b)", () => {
     expect(style.layers.some((l) => l.id.includes("pois"))).toBe(false);
     const major = style.layers.find((l) => l.id === "roads_major")!;
     expect(JSON.stringify(major.paint)).toContain(MAP_COLOURS.major);
-  });
-});
-
-describe("the sequence's hand-over from 3D to the map (Phase 4)", () => {
-  it("matches the camera's height to the map's opening zoom, both ways", async () => {
-    const { heightForZoom, zoomForCamera } = await import("@/lib/map/sequence");
-    const h = heightForZoom(19, 34, 800);
-    expect(h).toBeGreaterThan(300);
-    expect(h).toBeLessThan(400);
-    expect(zoomForCamera(h, 34, 800)).toBeCloseTo(19, 6);
-  });
-
-  it("gives the map every phase of each entry, starting at zero", async () => {
-    const { mapPhases } = await import("@/lib/map/sequence");
-    const first = mapPhases("first", 300);
-    expect(first.map((p) => p.name)).toEqual(["globe", "nepal", "pullout", "hold", "fly", "draw", "settle", "arrival"]);
-    expect(first[0].start).toBe(0);
-    expect(first.at(-1)!.end).toBe(1200 + 1300 + 1500 + 400 + 1000 + 1200 + 520 + 700);
-    expect(mapPhases("repeat", 300).map((p) => p.name)).toEqual(["fly", "draw", "settle", "arrival"]);
-    expect(mapPhases("soon", 0).map((p) => p.name)).toEqual(["globe", "nepal", "pullout", "hold", "circle", "signup"]);
-  });
-
-  it("has a few words of status for the panel and the phone bar", async () => {
-    const { statusShort } = await import("@/lib/visit-status");
-    const at = (ymd: string, hhmm: string) => new Date(`${ymd}T${hhmm}:00+05:45`);
-    const open: StoreInfo = { ...DEFAULT_STORE, opened: true, address: "x", hours: DEFAULT_STORE.hours.map((h) => ({ ...h, open: "11:00", close: "20:00", closed: false })) };
-    expect(statusShort(storeState(open, at("2026-10-07", "12:00")))).toBe("OPEN TILL 8 PM");
-    expect(statusShort(storeState(open, at("2026-10-07", "22:00")))).toBe("CLOSED NOW");
-    expect(statusShort(storeState(open, at("2026-10-02", "12:00"), "2026-10-02T18:00:00+05:45"))).toBe("DROP AT 6 PM");
-    expect(statusShort(storeState({ ...open, opened: false }, at("2026-10-07", "12:00")))).toBe("OPENING SOON");
   });
 });
