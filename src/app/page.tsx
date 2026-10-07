@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Countdown } from "@/components/countdown";
 import { HeroRack, type RackPiece } from "@/components/hero-rack";
-import { OccasionFits } from "@/components/home/occasion-fits";
+import { FitsTeaser } from "@/components/home/fits-teaser";
 import { OurStore } from "@/components/home/our-store";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
@@ -91,7 +91,7 @@ export default async function HomePage() {
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
-  const { looks, curated } = designerFits(products, await getSavedLooks());
+  const { looks } = designerFits(products, await getSavedLooks());
 
   return (
     <>
@@ -182,11 +182,11 @@ export default async function HomePage() {
       <Rail products={range} />
 
 
-      {/* Designer Fits: a ready fit per occasion */}
+      {/* Designer Fits: just a pointer here; the fits themselves are on /fits */}
       {looks.length > 0 && (
-        <section aria-labelledby="occasion-title" className="py-10 md:py-14">
+        <section aria-labelledby="fits-title" className="py-8 md:py-10">
           <div className="container-ep">
-            <OccasionFits looks={looks} curated={curated} />
+            <FitsTeaser looks={looks} />
           </div>
         </section>
       )}

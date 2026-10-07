@@ -12,7 +12,7 @@ test("home, shop and a product page load @phone", async ({ page }) => {
   await expect(page.getByText(/Free pickup at the store/)).toBeVisible();
 });
 
-test("home: the rail (cover-flow rows, size asked once, buy or bag, search) and Designer Fits @phone", async ({ page }) => {
+test("home: the rail (cover-flow rows, size asked once, buy or bag, search), then Designer Fits @phone", async ({ page }) => {
   await page.goto("/");
   const rail = page.getByRole("region", { name: "The rail" });
   // Laid out in sections; each is a cover-flow with one piece at the centre and its details underneath.
@@ -96,13 +96,18 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search) and 
   await expect(chart).toHaveCount(0);
   await expect(first.getByText(/Size L · cm/)).toBeVisible();
 
+  // On the home page Designer Fits is a pointer: an occasion opens /fits on that occasion.
+  const teaser = page.getByRole("region", { name: "Designer Fits" });
+  await teaser.scrollIntoViewIfNeeded();
+  await teaser.getByRole("list", { name: "Occasions" }).getByRole("link").nth(1).click();
+  await page.waitForURL(/\/fits#/, { timeout: 60_000 });
   const fits = page.getByRole("region", { name: "Designer Fits" });
-  await fits.scrollIntoViewIfNeeded();
   // An occasion, then one of the fits inside it.
   // (Only the occasions themselves: on a wide screen the chosen one's fits are listed under it.)
   const occasions = fits.getByRole("radiogroup", { name: "Designer Fits" }).locator(':scope > [role="radio"]');
-  await occasions.nth(1).click();
-  await expect(occasions.nth(1)).toHaveAttribute("aria-checked", "true");
+  await expect(occasions.nth(1)).toHaveAttribute("aria-checked", "true"); // the one picked on the home page
+  await occasions.nth(2).click();
+  await expect(occasions.nth(2)).toHaveAttribute("aria-checked", "true");
   const inside = fits.getByRole("radiogroup", { name: /fits$/ }).getByRole("radio");
   if ((await inside.count()) > 1) {
     await inside.nth(1).click();

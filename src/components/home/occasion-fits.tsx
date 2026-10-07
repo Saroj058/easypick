@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useAddToBag } from "@/components/bag-gate";
@@ -92,6 +92,14 @@ export function OccasionFits({ looks }: { looks: Look[]; curated?: boolean }) {
   const addToBagOrLogin = useAddToBag();
   const profile = useFitProfile();
   const [group, setGroup] = useState(looks[0]?.group);
+  // Opened from an occasion on the home page (/fits#party): start on that occasion.
+  useEffect(() => {
+    const want = decodeURIComponent(location.hash.slice(1));
+    if (want && looks.some((l) => l.group === want)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the hash is only readable once mounted
+      setGroup(want);
+    }
+  }, [looks]);
   /** The fit last opened in each occasion, so coming back to one shows what was there. */
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [picked, setPicked] = useState<Record<string, Size | null>>({});

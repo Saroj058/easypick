@@ -33,5 +33,5 @@ export async function saveLooksForm(_prev: SaveState, form: FormData): Promise<S
   updateTag(LOOKS_TAG);
   revalidatePath("/");
   revalidatePath("/fits");
-  return { status: "saved", message: "Saved. The home page shows these looks." };
+  return { status: "saved", message: "Saved. The Fits page shows these looks." };
 }

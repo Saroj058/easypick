@@ -101,7 +101,7 @@ test("the owner puts a piece in The Vault and it shows on the home page", async 
   await expect(page.getByText("Saved.")).toBeVisible();
 });
 
-test("the owner sets a Designer Fits look and the home page uses it", async ({ page }) => {
+test("the owner sets a Designer Fits look and the Fits page uses it", async ({ page }) => {
   await ownerSignIn(page);
 
   await page.goto("/admin/looks");
@@ -117,9 +117,9 @@ test("the owner sets a Designer Fits look and the home page uses it", async ({ p
 
   await pick("Piece 2", "relaxed-straight-jean");
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText(/Saved\. The home page shows these looks/)).toBeVisible();
+  await expect(page.getByText(/Saved\. The Fits page shows these looks/)).toBeVisible();
 
-  await page.goto("/");
+  await page.goto("/fits");
   const fits = page.getByRole("region", { name: "Designer Fits" });
   await expect(fits.getByRole("radio", { name: "Party", exact: true })).toBeVisible();
   await expect(fits.getByRole("radio", { name: "Night out" })).toHaveAttribute("aria-checked", "true");

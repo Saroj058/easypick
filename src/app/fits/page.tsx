@@ -23,7 +23,9 @@ export default async function FitsPage() {
     <div className="container-ep pb-24 pt-10 md:pt-16">
       <h1 className="sr-only">Fits</h1>
       {looks.length > 0 ? (
-        <OccasionFits looks={looks} curated={curated} />
+        <section aria-labelledby="occasion-title">
+          <OccasionFits looks={looks} curated={curated} />
+        </section>
       ) : (
         <div>
           <p className="display display-h1">Fits</p>
