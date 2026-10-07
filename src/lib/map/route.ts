@@ -187,8 +187,12 @@ export function parseRouteText(text: string): Parsed {
 
 // ---------- Simplifying ----------
 
-/** Douglas-Peucker with the tolerance in metres (on a local flat projection, fine at street scale). */
-export function simplify(coords: LngLat[], toleranceMeters: number): LngLat[] {
+/**
+ * Douglas-Peucker with the tolerance in metres (on a local flat projection, fine at street scale).
+ * `maxLegMeters` keeps a point inside any leg longer than that, so a simplified route still passes
+ * the gap check when it's pasted back in (the admin form shows saved routes as text).
+ */
+export function simplify(coords: LngLat[], toleranceMeters: number, maxLegMeters = Infinity): LngLat[] {
   if (coords.length <= 2) return coords.slice();
   const lat0 = rad(coords[0][1]);
   const xy = coords.map(([lng, lat]) => [rad(lng) * Math.cos(lat0) * EARTH, rad(lat) * EARTH]);
@@ -213,6 +217,10 @@ export function simplify(coords: LngLat[], toleranceMeters: number): LngLat[] {
     if (worst > toleranceMeters) {
       keep[at] = true;
       stack.push([a, at], [at, b]);
+    } else if (b - a > 1 && len > maxLegMeters) {
+      const mid = (a + b) >> 1;
+      keep[mid] = true;
+      stack.push([a, mid], [mid, b]);
     }
   }
   return coords.filter((_, i) => keep[i]);
@@ -243,10 +251,11 @@ export function prepareRoute(text: string, pin: { lat: number; lng: number } | n
   }
 
   let tol: number = LIMITS.simplifyMeters;
-  let coords = simplify(parsed.coords, tol);
+  const maxLeg = LIMITS.maxJumpMeters - 10;
+  let coords = simplify(parsed.coords, tol, maxLeg);
   while (coords.length > LIMITS.maxPoints) {
     tol *= 2;
-    coords = simplify(parsed.coords, tol);
+    coords = simplify(parsed.coords, tol, maxLeg);
   }
   if (coords.length < 2) return { ok: false, message: "A route needs at least two points." };
 

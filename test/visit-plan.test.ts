@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { bounds, distance, lengthMeters, minutes, pointAt, prepareRoute, parseRouteText, routeFor, simplify, sliceTo, snapToPin, stepAt, type LngLat } from "@/lib/map/route";
 import { cubicBezier, drawDuration, drawEase, drawnAt, inOut, panelAt, phaseAt, quart, timeline, totalMs, zoomForCamera } from "@/lib/map/sequence";
-import { parseStoreForm } from "@/lib/store-form";
+import { parseParking, parseSteps, parseStoreForm, startPointId } from "@/lib/store-form";
 import { DEFAULT_STORE, SAMPLE_STORE, storeState, withDefaults, type StoreInfo } from "@/lib/store-state";
 import { lightsFor, statusLine } from "@/lib/visit-status";
 
@@ -120,6 +120,14 @@ describe("reading a pasted route", () => {
     for (let i = 0; i <= 40; i++) long.push([85.25 + (i % 2) * 0.0014, 27.6781 + i * 0.0012]);
     long.push([85.3052, 27.6781]);
     expect(prepareRoute(asLatLng(long), pin)).toMatchObject({ ok: false });
+  });
+
+  it("can be pasted back in: a prepared route prepares again to the same line", () => {
+    const r1 = prepareRoute(asLatLng(line), pin);
+    expect(r1.ok).toBe(true);
+    if (!r1.ok) return;
+    for (let i = 1; i < r1.coords.length; i++) expect(distance(r1.coords[i - 1], r1.coords[i])).toBeLessThanOrEqual(150);
+    expect(prepareRoute(asLatLng(r1.coords), pin)).toEqual(r1);
   });
 
   it("needs the store pin first", () => {
@@ -277,5 +285,90 @@ describe("the Find us motion table", () => {
     // 160 m up it's two zoom levels further out.
     expect(zoomForCamera(40, 60, 800)).toBeCloseTo(21.2, 1);
     expect(zoomForCamera(160, 60, 800)).toBeCloseTo(19.2, 1);
+  });
+});
+
+
+describe("the admin form's start points (Phase 1b)", () => {
+  const base = () => {
+    const f = new FormData();
+    for (let d = 0; d < 7; d++) {
+      f.set(`open-${d}`, "11:00");
+      f.set(`close-${d}`, "20:00");
+    }
+    f.set("lat", String(pin.lat));
+    f.set("lng", String(pin.lng));
+    f.set("startPointsForm", "1");
+    return f;
+  };
+  const addStart = (f: FormData, name: string, route: string, steps: string) => {
+    f.append("spName", name);
+    f.append("spRoute", route);
+    f.append("spSteps", steps);
+  };
+
+  it("reads a start point, its route and steps, parking and the photo", () => {
+    const f = base();
+    addStart(f, "Jhamsikhel Chowk", asLatLng(line), ["Jhamsikhel Chowk, 0", "Second left, 2", "Black shutter, 4"].join("\n"));
+    addStart(f, "", "", ""); // an empty row is skipped
+    f.set("parkingSpots", ["bike, 27.6779, 85.3053", "car 27.6774 85.3061"].join("\n"));
+    f.set("entrancePhoto", "https://example.com/door.jpg");
+    const r = parseStoreForm(f);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.info.startPoints).toHaveLength(1);
+    expect(r.info.startPoints[0]).toMatchObject({
+      id: "jhamsikhel-chowk",
+      name: "Jhamsikhel Chowk",
+      steps: [
+        { text: "Jhamsikhel Chowk", minutes: 0 },
+        { text: "Second left", minutes: 2 },
+        { text: "Black shutter", minutes: 4 },
+      ],
+    });
+    expect(r.info.startPoints[0].coords.at(-1)).toEqual([pin.lng, pin.lat]);
+    expect(r.info.parkingSpots).toEqual([
+      { kind: "bike", lat: 27.6779, lng: 85.3053 },
+      { kind: "car", lat: 27.6774, lng: 85.3061 },
+    ]);
+    expect(r.info.entrancePhoto).toBe("https://example.com/door.jpg");
+  });
+
+  it("says which start point is wrong, in plain words", () => {
+    const f = base();
+    addStart(f, "Sanepa", "51.5, -0.12", "Sanepa, 0");
+    expect(parseStoreForm(f)).toMatchObject({ ok: false, message: expect.stringMatching(/^Start point 1 \(Sanepa\): .*Nepal/) });
+    const g = base();
+    addStart(g, "", asLatLng(line), "");
+    expect(parseStoreForm(g)).toMatchObject({ ok: false, message: expect.stringMatching(/give it a name/) });
+    const h = base();
+    h.delete("lat");
+    h.delete("lng");
+    addStart(h, "Chowk", asLatLng(line), "");
+    expect(parseStoreForm(h)).toMatchObject({ ok: false, message: expect.stringMatching(/map pin/) });
+  });
+
+  it("clears start points when the form sends none, but keeps them when the form doesn't carry them", () => {
+    const saved = { startPoints: SAMPLE_STORE.startPoints!, parkingSpots: [], entrancePhoto: null };
+    const cleared = parseStoreForm(base(), saved);
+    expect(cleared.ok && cleared.info.startPoints).toEqual([]);
+    const legacy = base();
+    legacy.delete("startPointsForm");
+    const kept = parseStoreForm(legacy, saved);
+    expect(kept.ok && kept.info.startPoints).toEqual(saved.startPoints);
+  });
+
+  it("reads steps and parking lines, and makes unique ids", () => {
+    expect(parseSteps(["Chowk, 0", "", "Shutter 4 min"].join("\n"))).toEqual({
+      ok: true,
+      steps: [
+        { text: "Chowk", minutes: 0 },
+        { text: "Shutter", minutes: 4 },
+      ],
+    });
+    expect(parseSteps("Chowk")).toMatchObject({ ok: false, message: expect.stringMatching(/place, minutes/) });
+    expect(parseParking("boat, 27.67, 85.30")).toMatchObject({ ok: false });
+    expect(startPointId("Chowk", new Set(["chowk"]))).toBe("chowk-2");
+    expect(startPointId("Sanepa Chowk (sample)", new Set())).toBe("sanepa-chowk-sample");
   });
 });

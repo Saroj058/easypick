@@ -6,6 +6,7 @@ import type { SaveState } from "@/app/admin/actions";
 import { saveStore } from "@/app/admin/store-actions";
 import { formatBS } from "@/lib/nepali-date";
 import { DAY_NAMES, type StoreInfo } from "@/lib/store-state";
+import { StartPointsFields } from "./start-points-fields";
 
 const input = "mt-1 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-3 text-base outline-none focus:border-ink";
 const lbl = "text-sm font-semibold";
@@ -45,6 +46,10 @@ export function StoreForm({ initial }: { initial: StoreInfo }) {
   const [route, setRoute] = useState<RouteRow[]>(
     (initial.route.length ? initial.route : [{ text: "", minutes: 0 }]).map((r, i) => ({ key: i, text: r.text, minutes: String(r.minutes) })),
   );
+  // The map pin, kept here so the start points can be checked against it as it's typed.
+  const [lat, setLat] = useState(initial.geo ? String(initial.geo.lat) : "");
+  const [lng, setLng] = useState(initial.geo ? String(initial.geo.lng) : "");
+  const pin = Number(lat) > 26 && Number(lat) < 31 && Number(lng) > 80 && Number(lng) < 89 ? { lat: Number(lat), lng: Number(lng) } : null;
   const setS = (key: number, p: Partial<SpecialRow>) => setSpecial((rs) => rs.map((r) => (r.key === key ? { ...r, ...p } : r)));
   const setR = (key: number, p: Partial<RouteRow>) => setRoute((rs) => rs.map((r) => (r.key === key ? { ...r, ...p } : r)));
   const bs = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? formatBS(new Date(`${d}T12:00:00+05:45`), true) : "");
@@ -66,8 +71,8 @@ export function StoreForm({ initial }: { initial: StoreInfo }) {
         <Field id="landmark" label="Landmark" defaultValue={initial.landmark ?? ""} placeholder="Next to …, black shutter with a lime dot" />
         <Field id="mapUrl" label="Google Maps link" defaultValue={initial.mapUrl ?? ""} placeholder="https://maps.app.goo.gl/…" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="lat" label="Map pin latitude" inputMode="decimal" defaultValue={initial.geo?.lat ?? ""} placeholder="27.6844" />
-          <Field id="lng" label="Map pin longitude" inputMode="decimal" defaultValue={initial.geo?.lng ?? ""} placeholder="85.3066" />
+          <Field id="lat" label="Map pin latitude" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="27.6844" />
+          <Field id="lng" label="Map pin longitude" inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="85.3066" />
         </div>
         <p className={hint}>In Google Maps, long-press the door and copy the two numbers.</p>
       </Group>
@@ -99,6 +104,10 @@ export function StoreForm({ initial }: { initial: StoreInfo }) {
             Add a step
           </button>
         )}
+      </Group>
+
+      <Group title="Start points" note="Where people come from, each with a route drawn on the Visit page map and its own receipt. Up to 6; the first is shown first.">
+        <StartPointsFields initial={initial} pin={pin} />
       </Group>
 
       <Group title="Weekly hours" note="Kathmandu time.">

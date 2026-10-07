@@ -14,7 +14,7 @@ Prototype to match: the "Easypick Visit" motion artifact. Product context: `docs
 | --- | --- | --- | --- | --- | --- |
 | 0 Setup | visit/phase-0 | | review | 7 Oct 2026 | `docs/BLUEPRINT.md` stays local and git-ignored (public repo; section 21 has business figures), so only this plan is committed. No GitHub CLI here: Claude pushes the branch and Saroj opens the PR from the compare link |
 | 1a Data + pure logic | visit/phase-1a | | review | 7 Oct 2026 | Stacked on phase-0. Gaps over 150 m are checked on the pasted trace (simplifying a straight street leaves long legs on purpose). Until 1b, `parseStoreForm` carries start points, parking and the photo over from what's saved. Gate: 174 unit, build, 41 e2e (2 workers) |
-| 1b Admin start points | visit/phase-1b | | todo | | |
+| 1b Admin start points | visit/phase-1b | | review | 7 Oct 2026 | Stacked on 1a. Steps and parking are one-line-per-entry text boxes; the form marks itself (`startPointsForm`) so an older form keeps what's saved. Simplify keeps legs ≤ 140 m so a saved route pastes back in. Preview is the SVG stand-in in `find-us-map.tsx`. Gate: 179 unit, build, 42 e2e (2 workers) |
 | 2a Stage, status, links (no 3D) | visit/phase-2a | | todo | | |
 | 2b Night store 3D | visit/phase-2b | | todo | | |
 | 3a Map tiles + fonts | visit/phase-3a | | todo | | needs Saroj: hosting OK |
@@ -260,10 +260,10 @@ npm run lint && npx tsc --noEmit && npm test && node scripts/with-db.mjs --local
 - **Done when:** Vitest covers: pointAt 0/0.5/1; minutes per mode; stepAt; swapped coordinates; simplify; jump/length rejection; snap within 30 m and rejection beyond; no-pin error; legacy `route` fallback; statusLine for all four states incl. special day and drop Friday; sequence totals (5.6 / 3.4 / 1.5 s) and draw clamp.
 
 ### Phase 1b: Admin start points (1 session)
-- [ ] Parse start points, parking spots and entrance photo in `parseStoreForm` so a save never wipes them.
-- [ ] "Start points" group in `/admin/store`: name, paste box (GeoJSON/GPX/lat,lng), steps. Max 6 start points.
-- [ ] Preview: lazy-loaded `find-us-map.tsx` with a `preview` prop showing the line, pin and 30 m circle (until Phase 3 exists, an SVG with x scaled by cos(lat)).
-- [ ] Short help text: "Trace the route in geojson.io or record it with OsmAnd / Organic Maps, then paste it here."
+- [x] Parse start points, parking spots and entrance photo in `parseStoreForm` so a save never wipes them.
+- [x] "Start points" group in `/admin/store`: name, paste box (GeoJSON/GPX/lat,lng), steps. Max 6 start points.
+- [x] Preview: lazy-loaded `find-us-map.tsx` with a `preview` prop showing the line, pin and 30 m circle (until Phase 3 exists, an SVG with x scaled by cos(lat)).
+- [x] Short help text: "Trace the route in geojson.io or record it with OsmAnd / Organic Maps, then paste it here."
 - **Done when:** e2e saves and reloads a start point; saving other fields keeps it; the existing "Step 1" admin test still passes; parser errors show in plain words.
 
 ### Phase 2a: Stage, status and links, no 3D (1 session)
