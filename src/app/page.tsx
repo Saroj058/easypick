@@ -182,15 +182,6 @@ export default async function HomePage() {
       <Rail products={range} />
 
 
-      {/* Designer Fits: just a pointer here; the fits themselves are on /fits */}
-      {looks.length > 0 && (
-        <section aria-labelledby="fits-title" className="py-8 md:py-10">
-          <div className="container-ep">
-            <FitsTeaser looks={looks} />
-          </div>
-        </section>
-      )}
-
       {/* Find a gift and gift cards (docs/BLUEPRINT.md, home page order) */}
       <section aria-labelledby="gift-title" className="border-t border-mist py-10 md:py-14">
         <div className="container-ep">
@@ -222,6 +213,15 @@ export default async function HomePage() {
 
       {/* The Vault: original brands and numbered pieces */}
       <Vault products={products} />
+
+      {/* Designer Fits: just a pointer here; the fits themselves are on /fits */}
+      {looks.length > 0 && (
+        <section aria-labelledby="fits-title" className="py-8 md:py-10">
+          <div className="container-ep">
+            <FitsTeaser looks={looks} />
+          </div>
+        </section>
+      )}
 
       {/* Festival offers: only while a real sale runs. The pieces move along by themselves. */}
       {offers.length > 0 && (
