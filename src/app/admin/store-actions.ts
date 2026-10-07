@@ -4,13 +4,13 @@ import { revalidatePath, updateTag } from "next/cache";
 
 import { logStaff, requireOwner } from "@/lib/staff";
 import { parseStoreForm } from "@/lib/store-form";
-import { saveStoreInfo, STORE_TAG } from "@/lib/store-info";
+import { getStoreInfoForAdmin, saveStoreInfo, STORE_TAG } from "@/lib/store-info";
 import type { SaveState } from "./actions";
 
 /** Owner only: the store's address, hours, special days, notice and route for /visit. */
 export async function saveStore(_prev: SaveState, form: FormData): Promise<SaveState> {
   const me = await requireOwner();
-  const parsed = parseStoreForm(form);
+  const parsed = parseStoreForm(form, await getStoreInfoForAdmin());
   if (!parsed.ok) return { status: "error", message: parsed.message };
   await saveStoreInfo(parsed.info);
   await logStaff(me, "saved store details", null, { opened: parsed.info.opened, specialDays: parsed.info.special.length });

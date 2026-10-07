@@ -27,6 +27,24 @@ export interface RouteStep {
   minutes: number;
 }
 
+/** A place people come from (a chowk, a bus stop) and the line from it to the store. */
+export interface StartPoint {
+  /** ^[a-z0-9-]{1,24}$, e.g. "chowk" */
+  id: string;
+  /** Up to 40 characters, e.g. "Jhamsikhel Chowk". */
+  name: string;
+  /** [lng, lat], 6 decimals, 2 to 300 points; the last one is the store pin. */
+  coords: [number, number][];
+  /** Up to 6 receipt lines. */
+  steps: RouteStep[];
+}
+
+export interface ParkingSpot {
+  kind: "bike" | "car";
+  lng: number;
+  lat: number;
+}
+
 export interface StoreInfo {
   /** The owner's opening-day switch. Until it's on, the public page shows "Coming soon". */
   opened: boolean;
@@ -45,8 +63,13 @@ export interface StoreInfo {
   special: SpecialDay[];
   /** One line for the Visit page, e.g. "Closed for Tika, back on Oct 14". */
   notice: string;
-  /** Walking directions by landmark, for the route receipt. */
+  /** Walking directions by landmark, for the route receipt. Used when there are no start points. */
   route: RouteStep[];
+  /** Up to 6; the first is the default on the map. */
+  startPoints: StartPoint[];
+  /** A photo of the entrance, for the arrival card. */
+  entrancePhoto: string | null;
+  parkingSpots: ParkingSpot[];
   transport: string;
   parking: string;
   access: string;
@@ -70,10 +93,75 @@ export const DEFAULT_STORE: StoreInfo = {
   special: [],
   notice: "",
   route: [],
+  startPoints: [],
+  entrancePhoto: null,
+  parkingSpots: [],
   transport: "",
   parking: "",
   access: "",
 };
+
+// ---------- Sample data for the preview ----------
+// The sample pin is a made-up spot in Jhamsikhel, not the store (the real address stays out of
+// this public repo until opening day). Every sample place says "(sample)".
+
+const SAMPLE_PIN = { lat: 27.6781, lng: 85.3052 };
+
+/** A line through the waypoints with a point at least every 70 m, like a traced route. */
+function sampleLine(...waypoints: [number, number][]): [number, number][] {
+  const out: [number, number][] = [waypoints[0]];
+  for (let i = 1; i < waypoints.length; i++) {
+    const [a, b] = [waypoints[i - 1], waypoints[i]];
+    const metres = Math.hypot((b[0] - a[0]) * 98_600, (b[1] - a[1]) * 110_900);
+    const n = Math.max(1, Math.ceil(metres / 70));
+    for (let k = 1; k <= n; k++) out.push([Number((a[0] + ((b[0] - a[0]) * k) / n).toFixed(6)), Number((a[1] + ((b[1] - a[1]) * k) / n).toFixed(6))]);
+  }
+  return out;
+}
+const PIN: [number, number] = [SAMPLE_PIN.lng, SAMPLE_PIN.lat];
+
+const SAMPLE_START_POINTS: StartPoint[] = [
+  {
+    id: "chowk",
+    name: "Jhamsikhel Chowk (sample)",
+    coords: sampleLine([85.307, 27.68], [85.3054, 27.6797], PIN),
+    steps: [
+      { text: "Jhamsikhel Chowk", minutes: 0 },
+      { text: "West, past the café row", minutes: 2 },
+      { text: "Black shutter, lime dot", minutes: 4 },
+    ],
+  },
+  {
+    id: "sanepa",
+    name: "Sanepa Chowk (sample)",
+    coords: sampleLine([85.3045, 27.684], [85.305, 27.68], PIN),
+    steps: [
+      { text: "Sanepa Chowk", minutes: 0 },
+      { text: "South on the main road", minutes: 5 },
+      { text: "Black shutter, lime dot", minutes: 9 },
+    ],
+  },
+  {
+    id: "pulchowk",
+    name: "Pulchowk (sample)",
+    coords: sampleLine([85.313, 27.679], [85.3058, 27.679], PIN),
+    steps: [
+      { text: "Pulchowk bus stop", minutes: 0 },
+      { text: "West towards Jhamsikhel", minutes: 6 },
+      { text: "Black shutter, lime dot", minutes: 11 },
+    ],
+  },
+  {
+    id: "kupondole",
+    name: "Kupondole (sample)",
+    coords: sampleLine([85.312, 27.686], [85.308, 27.6815], PIN),
+    steps: [
+      { text: "Kupondole Height", minutes: 0 },
+      { text: "Down to Jhamsikhel Road", minutes: 7 },
+      { text: "Black shutter, lime dot", minutes: 14 },
+    ],
+  },
+];
 
 /** What /visit?preview=open shows for demos while the real details aren't in yet. Never public. */
 export const SAMPLE_STORE: Partial<StoreInfo> = {
@@ -88,6 +176,12 @@ export const SAMPLE_STORE: Partial<StoreInfo> = {
   transport: "Micro and tempo stop at Jhamsikhel Chowk, 3 minutes' walk.",
   parking: "Free bike parking outside. Car parking a 2-minute walk away.",
   access: "Step-free entrance and wide aisles. Our helper can bring pieces to you.",
+  geo: SAMPLE_PIN,
+  startPoints: SAMPLE_START_POINTS,
+  parkingSpots: [
+    { kind: "bike", lng: 85.30535, lat: 27.67798 },
+    { kind: "car", lng: 85.3061, lat: 27.6774 },
+  ],
 };
 
 // ---------- Kathmandu time ----------
@@ -196,7 +290,7 @@ export function withDefaults(saved: Partial<StoreInfo> | null, preview = false):
     const v = base[k];
     if (v === null || v === "" || (Array.isArray(v) && v.length === 0)) (base as unknown as Record<string, unknown>)[k] = SAMPLE_STORE[k] ?? v;
   };
-  (["area", "address", "landmark", "route", "transport", "parking", "access"] as const).forEach(fill);
+  (["area", "address", "landmark", "geo", "route", "startPoints", "parkingSpots", "entrancePhoto", "transport", "parking", "access"] as const).forEach(fill);
   if (!saved?.area) base.area = SAMPLE_STORE.area!;
   return { ...base, opened: true };
 }

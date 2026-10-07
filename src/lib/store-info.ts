@@ -22,7 +22,7 @@ async function readSaved(): Promise<Partial<StoreInfo> | null> {
   }
 }
 
-const cachedSaved = unstable_cache(readSaved, ["store-info-v1"], { tags: [STORE_TAG], revalidate: 3600 });
+const cachedSaved = unstable_cache(readSaved, ["store-info-v2"], { tags: [STORE_TAG], revalidate: 3600 });
 
 /** The details for the public site. `preview` fills in the sample address and route and shows it open. */
 export async function getStoreInfo(opts: { preview?: boolean } = {}): Promise<StoreInfo> {

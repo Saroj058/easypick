@@ -13,7 +13,7 @@ Prototype to match: the "Easypick Visit" motion artifact. Product context: `docs
 | Phase | Branch | PR | Status | Date | Notes / blockers |
 | --- | --- | --- | --- | --- | --- |
 | 0 Setup | visit/phase-0 | | review | 7 Oct 2026 | `docs/BLUEPRINT.md` stays local and git-ignored (public repo; section 21 has business figures), so only this plan is committed. No GitHub CLI here: Claude pushes the branch and Saroj opens the PR from the compare link |
-| 1a Data + pure logic | visit/phase-1a | | todo | | |
+| 1a Data + pure logic | visit/phase-1a | | review | 7 Oct 2026 | Stacked on phase-0. Gaps over 150 m are checked on the pasted trace (simplifying a straight street leaves long legs on purpose). Until 1b, `parseStoreForm` carries start points, parking and the photo over from what's saved. Gate: 174 unit, build, 41 e2e (2 workers) |
 | 1b Admin start points | visit/phase-1b | | todo | | |
 | 2a Stage, status, links (no 3D) | visit/phase-2a | | todo | | |
 | 2b Night store 3D | visit/phase-2b | | todo | | |
@@ -252,11 +252,11 @@ npm run lint && npx tsc --noEmit && npm test && node scripts/with-db.mjs --local
 - [x] Add the SwiftShader launch args (only for the 3D specs, in their own Playwright projects; see §8) and confirm the existing tour tests still pass.
 
 ### Phase 1a: Data and pure logic (1 session)
-- [ ] `StartPoint`, `entrancePhoto`, `parkingSpots` in `StoreInfo`; `DEFAULT_STORE`; `fill` list (including `geo`); `SAMPLE_STORE` with shifted sample `geo` and four sample routes.
-- [ ] Cache key → `store-info-v2`.
-- [ ] `src/lib/map/route.ts` (pipeline in §5 plus `lengthMeters`, `pointAt`, `bounds`, `minutes`, `stepAt`).
-- [ ] `src/lib/visit-status.ts`: `statusLine(state, info)` using `hourLabel`, and `lightsFor(state)`. Soon text comes from `state.headline`.
-- [ ] `src/lib/map/sequence.ts`: §6 as a pure table with `phaseAt(t, mode)` for first/repeat/deep-link/chip/soon.
+- [x] `StartPoint`, `entrancePhoto`, `parkingSpots` in `StoreInfo`; `DEFAULT_STORE`; `fill` list (including `geo`); `SAMPLE_STORE` with shifted sample `geo` and four sample routes.
+- [x] Cache key → `store-info-v2`.
+- [x] `src/lib/map/route.ts` (pipeline in §5 plus `lengthMeters`, `pointAt`, `bounds`, `minutes`, `stepAt`).
+- [x] `src/lib/visit-status.ts`: `statusLine(state, info)` using `hourLabel`, and `lightsFor(state)`. Soon text comes from `state.headline`.
+- [x] `src/lib/map/sequence.ts`: §6 as a pure table with `phaseAt(t, mode)` for first/repeat/deep-link/chip/soon.
 - **Done when:** Vitest covers: pointAt 0/0.5/1; minutes per mode; stepAt; swapped coordinates; simplify; jump/length rejection; snap within 30 m and rejection beyond; no-pin error; legacy `route` fallback; statusLine for all four states incl. special day and drop Friday; sequence totals (5.6 / 3.4 / 1.5 s) and draw clamp.
 
 ### Phase 1b: Admin start points (1 session)

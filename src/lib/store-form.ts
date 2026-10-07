@@ -7,7 +7,11 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export type StoreFormResult = { ok: true; info: StoreInfo } | { ok: false; message: string };
 
-export function parseStoreForm(form: FormData): StoreFormResult {
+/**
+ * `previous` is what's saved now: fields this form doesn't edit (start points, parking spots,
+ * the entrance photo) are carried over from it, so a save never wipes them.
+ */
+export function parseStoreForm(form: FormData, previous?: Pick<StoreInfo, "startPoints" | "parkingSpots" | "entrancePhoto">): StoreFormResult {
   const str = (k: string, max = 200) => String(form.get(k) ?? "").trim().slice(0, max);
   const opt = (k: string, max = 200) => str(k, max) || null;
   const all = (k: string) => form.getAll(k).map((v) => String(v).trim());
@@ -97,6 +101,9 @@ export function parseStoreForm(form: FormData): StoreFormResult {
       special,
       notice: str("notice", 120),
       route,
+      startPoints: previous?.startPoints ?? [],
+      entrancePhoto: previous?.entrancePhoto ?? null,
+      parkingSpots: previous?.parkingSpots ?? [],
       transport: str("transport", 200),
       parking: str("parking", 200),
       access: str("access", 200),
