@@ -78,7 +78,7 @@ const collapsedIconVariants: Variants = {
 
 const MotionLink = motion.create(Link);
 
-const COLLAPSE_AFTER = 150; // px from the top before anything hides
+const COLLAPSE_AFTER = 40; // px from the top before anything hides: a slight scroll is enough
 const JITTER = 6; // ignore tiny scroll movements (trackpad bounce, iOS rubber-band)
 
 /**

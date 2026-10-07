@@ -6,7 +6,7 @@ import type { StoreInfo, StoreState } from "@/lib/store-state";
 
 /**
  * The Visit page, as plain server-rendered HTML: one screen. The store at night fills it (a poster
- * image until the 3D store loads over it), with "Come in.", one status line, and the two ways to
+ * image until the 3D store loads over it) and the two ways to
  * visit: In person (the map, from the globe down to the door) and the Virtual tour. Everything
  * here works without JavaScript; the stage around it (visit-stage.tsx) adds the motion.
  */
@@ -38,7 +38,7 @@ export function VisitHero({
   const rule = "absolute bottom-0 hidden h-px w-0 bg-paper transition-[width] duration-[400ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:w-full group-focus-visible:w-full md:block";
 
   return (
-    <section aria-labelledby="visit-h" className="on-dark relative isolate flex min-h-[calc(100svh-10rem)] flex-col justify-between overflow-hidden bg-ink text-paper md:min-h-[calc(100svh-4.5rem)]">
+    <section aria-labelledby="visit-h" className="on-dark relative isolate flex min-h-[calc(100svh-57px-env(safe-area-inset-bottom))] flex-col justify-between overflow-hidden bg-ink text-paper lg:min-h-svh">
       {/* The store at night: the 3D scene takes this place once it has drawn its first frame. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- the LCP image, sized and compressed by hand */}
       <img
@@ -59,16 +59,16 @@ export function VisitHero({
         aria-hidden
       />
 
-      <div className="container-ep pt-10 transition-opacity duration-200 md:pt-16 [[data-rising=true]_&]:opacity-0">
-        <p className="flex items-center gap-2.5 font-mono text-[12px] tracking-[0.14em] text-paper/85 md:text-[13px]" data-status-line>
-          <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${lit ? "bg-volt" : soon ? "border border-paper/60" : "bg-[#8e8e93]"}`} />
-          {status}
-        </p>
-        <h1 id="visit-h" className="display mt-4 text-[72px] leading-[0.86] md:text-[clamp(96px,11vw,168px)]">
+      {/* Nothing is written over the store: the heading and the status are kept for screen readers
+          (the status is shown in the In person panel). Only a signed-in visitor's own line shows. */}
+      <div className="container-ep pt-24 md:pt-28">
+        <h1 id="visit-h" className="sr-only">
           Come in.
         </h1>
-        {personal && <p className="mt-4 font-mono text-[13px] tracking-[0.1em] text-volt">{personal}</p>}
-        {info.notice && <p className="mt-5 inline-block bg-volt px-3 py-2 text-[15px] font-semibold text-ink">{info.notice}</p>}
+        <p className="sr-only" data-status-line>
+          {status}
+        </p>
+        {personal && <p className="font-mono text-[13px] tracking-[0.1em] text-volt transition-opacity duration-200 [[data-rising=true]_&]:opacity-0">{personal}</p>}
       </div>
 
       <div className="container-ep pb-6 transition-opacity duration-200 md:pb-12 [[data-rising=true]_&]:opacity-0">

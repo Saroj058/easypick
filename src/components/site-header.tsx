@@ -80,8 +80,13 @@ export function SiteHeader() {
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (y) => setAtTop(y < 24));
 
-  // A new page starts at the top, so everything shows.
-  useEffect(() => setExpanded(true), [pathname, setExpanded]);
+  // The visit page is one full screen of the store: there the header starts tucked away (a back
+  // button and the three dots) and opens when the dots are pressed.
+  const visit = pathname === "/visit";
+  const flat = atTop && !visit;
+
+  // A new page starts at the top, so everything shows (except on the visit page).
+  useEffect(() => setExpanded(pathname !== "/visit"), [pathname, setExpanded]);
 
   // Adding to the bag brings the header back so the new count is seen.
   const lastCount = useRef(count);
@@ -119,7 +124,7 @@ export function SiteHeader() {
         Skip to content
       </a>
       {/* Keeps page content clear of the floating nav. The home hero runs full-bleed under it instead. */}
-      {pathname !== "/" && <div className="h-[72px] md:h-[88px]" aria-hidden />}
+      {pathname !== "/" && !visit && <div className="h-[72px] md:h-[88px]" aria-hidden />}
 
       {/* Three floating pills: logo · links · actions. Clicks pass through the gaps. */}
       <MotionConfig reducedMotion="user">
@@ -127,7 +132,7 @@ export function SiteHeader() {
         <motion.div
           aria-hidden
           initial={false}
-          animate={atTop ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
+          animate={flat ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[72px] border-b border-mist bg-paper pt-[env(safe-area-inset-top)] md:h-[88px]"
         />
@@ -135,11 +140,19 @@ export function SiteHeader() {
           <div className="container-ep relative flex items-center justify-between gap-3">
             {/* Logo: slides away while scrolling down */}
             {/* Not inert while tucked away: tabbing to it brings it back (onFocus below). */}
-            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)}>
-              <Link href="/" aria-label="Easypick home" className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(atTop)} flex h-12 items-center rounded-full border px-5`}>
-                <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
-              </Link>
-            </motion.div>
+            <div className="relative">
+              <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)}>
+                <Link href="/" aria-label="Easypick home" className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-5`}>
+                  <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
+                </Link>
+              </motion.div>
+              {/* The visit page, header tucked away: the way back home, where the logo was. */}
+              {visit && !expanded && (
+                <Link href="/" data-visit-back className="pointer-events-auto absolute left-0 top-0 flex h-12 items-center gap-2 whitespace-nowrap rounded-full border border-mist bg-paper px-5 text-sm font-semibold uppercase tracking-[0.06em] shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
+                  <span aria-hidden>←</span> Home
+                </Link>
+              )}
+            </div>
 
             {/* Links (large screens; phones and tablets use the bottom tab bar). Collapses to a circle on scroll. */}
             <div className="pointer-events-auto absolute left-1/2 hidden -translate-x-1/2 lg:block">
@@ -148,15 +161,22 @@ export function SiteHeader() {
                 logo={null}
                 expanded={expanded}
                 onExpandedChange={setExpanded}
-                flat={atTop}
+                flat={flat}
                 collapsedIcon={<Ellipsis className="h-6 w-6" aria-hidden />}
                 items={primary.map((l) => ({ name: l.label, href: l.href, active: pathname === l.href || pathname.startsWith(`${l.href}/`) }))}
               />
             </div>
 
             {/* Account, bag, menu: slides away while scrolling down */}
+            <div className="relative">
+            {/* Phones have no centre pill: on the visit page the three dots sit here instead. */}
+            {visit && !expanded && (
+              <button type="button" aria-label="Show navigation" onClick={() => setExpanded(true)} className="pointer-events-auto absolute right-0 top-0 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-mist bg-paper shadow-[0_6px_24px_rgba(0,0,0,0.08)] lg:hidden">
+                <Ellipsis className="h-6 w-6" aria-hidden />
+              </button>
+            )}
             <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)}>
-              <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(atTop)} flex h-12 items-center rounded-full border px-1.5`}>
+              <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-1.5`}>
                 <SearchButton />
                 {account}
                 <Link href="/bag" className="relative flex h-10 w-10 items-center justify-center" aria-label={`Bag, ${ready ? count : 0} items`}>
@@ -176,6 +196,7 @@ export function SiteHeader() {
                 )}
               </div>
             </motion.div>
+            </div>
           </div>
         </div>
       </MotionConfig>

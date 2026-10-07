@@ -122,7 +122,7 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
     <>
       {!preview && info.opened && <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(storeLd(info))} />}
       {preview && (
-        <p className="bg-volt px-4 py-2 text-center text-[14px] font-semibold text-ink">
+        <p className="fixed left-1/2 top-[72px] z-30 w-max max-w-[92vw] -translate-x-1/2 rounded-[10px] bg-volt px-3 py-1.5 text-center text-[12px] font-semibold text-ink md:top-[84px]">
           Preview: how this page looks once the store is open, with sample details. The public page is unchanged.
         </p>
       )}
