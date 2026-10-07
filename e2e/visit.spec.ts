@@ -36,6 +36,7 @@ test("visit page preview: one screen with the two ways to visit; the receipt is 
   // Nothing else on the page: no sections below the screen.
   await expect(page.locator("main section")).toHaveCount(1);
   await expect(page.locator("main h2")).toHaveCount(0);
+  await expect(page.getByRole("contentinfo")).toHaveCount(0);
   await page.screenshot(shot(`visit-${info.project.name}-open`));
 
   await expect(page.locator("[data-stage]")).toHaveAttribute("data-fallback", "nowebgl");

@@ -11,8 +11,8 @@ export function ShopChrome({ children }: { children: React.ReactNode }) {
   return path.startsWith("/admin") || path.startsWith("/helper") || path === "/visit/tour" ? null : children;
 }
 
-/** The footer shows on the three pages people land on: home, the shop and the visit page. */
-const WITH_FOOTER = new Set(["/", "/shop", "/visit"]);
+/** The footer shows on the two pages people land on: home and the shop. (The visit page is one full screen.) */
+const WITH_FOOTER = new Set(["/", "/shop"]);
 export function FooterChrome({ children }: { children: React.ReactNode }) {
   if (WITH_FOOTER.has(usePathname())) return children;
   // Elsewhere, room at the bottom so the phone's tab bar never covers the end of the page.
