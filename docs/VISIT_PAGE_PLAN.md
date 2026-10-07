@@ -17,7 +17,7 @@ Prototype to match: the "Easypick Visit" motion artifact. Product context: `docs
 | 1b Admin start points | visit/phase-1b | | review | 7 Oct 2026 | Stacked on 1a. Steps and parking are one-line-per-entry text boxes; the form marks itself (`startPointsForm`) so an older form keeps what's saved. Simplify keeps legs ≤ 140 m so a saved route pastes back in. Preview is the SVG stand-in in `find-us-map.tsx`. Gate: 179 unit, build, 42 e2e (2 workers) |
 | 2a Stage, status, links (no 3D) | visit/phase-2a | | review | 7 Oct 2026 | Stacked on 1b. Poster is two stills of the existing 3D store (shutter up / down), AVIF at 828 and 1656 wide (9 KB and 17 KB). Before opening the whole page is stripped of address, pin, map link, routes, parking and photo, not only the client props. The old link row (tour, directions) went: the hero has both. Gate: 181 unit, build, 45 e2e (2 workers) |
 | 2b Night store 3D | visit/phase-2b | | review | 7 Oct 2026 | Stacked on 2a. GPU tiers are a small check (touch screen or under 768 px wide = tier 2; Save-Data, slow network, low memory or no WebGL = poster only) instead of `detect-gpu`, so no benchmark data to host: say if you want the library. Four lights (sky, moon, room, shopfront). The 3D spec is `e2e/visit-3d.spec.ts`; the 3D projects now run one worker at a time (two software-rendered specs side by side timed out). Gate: 181 unit, build, 49 e2e |
-| 3a Map tiles + fonts | visit/phase-3a | | todo | | needs Saroj: hosting OK |
+| 3a Map tiles + fonts | visit/phase-3a | | doing | 7 Oct 2026 | **Waiting for Saroj's OK to upload.** Built `kathmandu-20261007.pmtiles`: 12.7 MB (valley z0–13 at 4.6 MB, plus Ring Road + Patan z14–15 at 8.1 MB), merged with `pmtiles merge` (no tile-join on Windows), verified. It sits outside the repo in `D:easypick_maptiles`. Fonts (Noto Sans Regular and Medium, 4 ranges each, 735 KB) and a 70 KB `fixture.pmtiles` (z14 round the sample pin) are committed |
 | 3b Map + style + CSP | visit/phase-3b | | todo | | |
 | 4 Motion sequence | visit/phase-4 | | todo | | |
 | 5 Directions + arrival | visit/phase-5 | | todo | | |
@@ -282,7 +282,7 @@ npm run lint && npx tsc --noEmit && npm test && node scripts/with-db.mjs --local
 - **Done when:** e2e: canvas visible, `data-lights` per state, zero console errors; the tour spec still passes; screenshots of the four states.
 
 ### Phase 3a: Map tiles and fonts (1 session, stop-and-ask)
-- [ ] Build the extract outside the repo (newest date from maps.protomaps.com/builds):
+- [x] Build the extract outside the repo (newest date from maps.protomaps.com/builds):
   ```
   pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles valley.pmtiles --bbox=85.18,27.60,85.52,27.80 --maxzoom=13
   pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles city.pmtiles   --bbox=85.27,27.66,85.37,27.75 --maxzoom=15
@@ -290,7 +290,7 @@ npm run lint && npx tsc --noEmit && npm test && node scripts/with-db.mjs --local
   pmtiles show kathmandu-YYYYMMDD.pmtiles && pmtiles verify kathmandu-YYYYMMDD.pmtiles
   ```
 - [ ] **Report the file size to Saroj before uploading.** Upload to a public Supabase Storage bucket with the cache header; check `curl -sI -H "Range: bytes=0-16383" <url>` returns `206` with `Content-Range` and CORS allows `Range`.
-- [ ] Copy Noto Sans glyph ranges into `public/map/fonts/`. Make `public/map/fixture.pmtiles` (tiny) for tests.
+- [x] Copy Noto Sans glyph ranges into `public/map/fonts/`. Make `public/map/fixture.pmtiles` (tiny) for tests.
 - **Done when:** size, URL and Range check are in the PR; nothing large is committed.
 
 ### Phase 3b: Map, style and CSP (1 session)
