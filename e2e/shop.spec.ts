@@ -274,7 +274,7 @@ test("Buy now remembers a guest's number on this phone, and forgets it when aske
 });
 
 test("footer: one-line drop alert sign-up takes an email or a WhatsApp number", async ({ page }) => {
-  await page.goto("/track");
+  await page.goto("/shop");
   const footer = page.getByRole("contentinfo");
   await expect(async () => {
     await footer.getByLabel("Drop alerts").fill("not-a-number");

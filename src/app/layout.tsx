@@ -3,7 +3,7 @@ import { Baloo_2, Barlow_Condensed, Inter, JetBrains_Mono, Mukta } from "next/fo
 
 import { PendingBagAdd } from "@/components/bag-gate";
 import { BagProvider } from "@/components/bag-provider";
-import { ShopChrome } from "@/components/shop-chrome";
+import { FooterChrome, ShopChrome } from "@/components/shop-chrome";
 import { SiteAnalytics } from "@/components/site-analytics";
 import { SiteFooter } from "@/components/site-footer";
 import { MobileTabBar, SiteHeader } from "@/components/site-header";
@@ -44,7 +44,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {children}
           </main>
           <ShopChrome>
-            <SiteFooter />
+            <FooterChrome>
+              <SiteFooter />
+            </FooterChrome>
             <MobileTabBar />
           </ShopChrome>
           <PendingBagAdd />
