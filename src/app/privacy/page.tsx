@@ -42,6 +42,10 @@ export default function PrivacyPage() {
         <li>An SMS provider and email (Gmail or Resend), to send codes, order updates and gift links.</li>
         <li>Vercel (website hosting) and Supabase (database and photos, stored in Mumbai, India).</li>
         <li>Google, only if you choose to sign in with Google.</li>
+        <li>
+          Anywear (Decart), only if you press &ldquo;Try it on live&rdquo; on a piece: your camera video goes from your browser to them to draw the piece on you. We never
+          receive or keep it.
+        </li>
       </ul>
       <h2>CCTV in the store</h2>
       <p>

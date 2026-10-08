@@ -306,6 +306,7 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
   const brand = str(form, "brand", 40) || undefined;
   const original = form.get("original") === "on";
   const story = str(form, "story", 600) || undefined;
+  const tryOn = form.get("tryOn") === "on";
   const noRaw = str(form, "editionNo");
   const ofRaw = str(form, "editionOf");
   let edition: { no: number; of: number } | undefined;
@@ -340,6 +341,7 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     p.original = original || undefined;
     p.edition = edition;
     p.story = story;
+    p.tryOn = tryOn || undefined;
     if (photoSrc) {
       const front = { src: photoSrc, alt: `${p.name}, front`, kind: "front" as const };
       const i = p.images.findIndex((img) => img.kind === "front");
@@ -356,6 +358,7 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     hiddenFromTrending: Boolean(product.hideFromTrending) !== (form.get("hideFromTrending") === "on") ? form.get("hideFromTrending") === "on" : undefined,
     vault: Boolean(product.vault) !== vault ? vault : undefined,
     original: Boolean(product.original) !== original ? original : undefined,
+    tryOn: Boolean(product.tryOn) !== tryOn ? tryOn : undefined,
   });
   catalogueChanged();
   updateTag("trending");

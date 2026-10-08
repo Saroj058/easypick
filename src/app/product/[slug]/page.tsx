@@ -7,6 +7,7 @@ import { HangTag } from "@/components/hang-tag";
 import { ChevronIcon } from "@/components/icons";
 import { RecentlyViewed } from "@/components/local-lists";
 import { TrackView } from "@/components/track-view";
+import { TryOnLive } from "@/components/try-on-live";
 import { ProductGrid } from "@/components/product-card";
 import { RecordView } from "@/components/saved";
 import { ProductImage } from "@/components/product-image";
@@ -183,6 +184,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                   vault={product.vault}
                   dropLabel={drop ? `Drops ${formatDropTime(drop.releaseAt)}` : undefined}
                 />
+                {product.tryOn && <TryOnLive slug={product.slug} />}
               </div>
 
               <div className="mt-10 divide-y divide-mist border-y border-mist">

@@ -105,6 +105,17 @@ export function ProductForm({ product }: { product: Product }) {
         <input id="shortDescription" name="shortDescription" maxLength={300} defaultValue={product.shortDescription} className={input} />
       </div>
 
+      <fieldset className="space-y-3">
+        <legend className="text-lg font-semibold">Live try-on</legend>
+        <label className="flex min-h-11 items-start gap-3 text-[15px]">
+          <input type="checkbox" name="tryOn" defaultChecked={Boolean(product.tryOn)} className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
+          <span>
+            Offer &ldquo;Try it on live&rdquo; on this piece
+            <span className="block text-[13px] text-steel-dark">Shoppers see it on themselves through their camera, using Anywear. Works best with a clear front photo.</span>
+          </span>
+        </label>
+      </fieldset>
+
       <fieldset className="space-y-4">
         <legend className="text-lg font-semibold">The Vault</legend>
         <p className="text-[14px] text-steel-dark">Premium pieces: original brands and numbered runs, in their own dark section on the home page.</p>

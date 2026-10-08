@@ -14,25 +14,29 @@ const supabaseOrigin = (() => {
 })();
 // The Find us map reads its tiles (one PMTiles file, in pieces) from this Supabase Storage bucket.
 const mapTilesOrigin = "https://dfhbezpxijxoqpompiku.supabase.co https://routing.openstreetmap.de";
-const csp = [
+// Live try-on (Anywear's widget, components/try-on-live.tsx). Its script, frame and camera are
+// allowed on one address only: a product page opened with ?try=1, which the shopper asks for.
+const tryOnOrigin = "https://anywear.decart.ai";
+const cspFor = (extra: string) => [
   "default-src 'self'",
   // 'unsafe-eval' only in development: React uses eval there for better error stacks.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com${extra}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https://*.supabase.co${supabaseOrigin ? ` ${supabaseOrigin}` : ""}`,
+  `img-src 'self' data: blob: https://*.supabase.co${supabaseOrigin ? ` ${supabaseOrigin}` : ""}${extra}`,
   "font-src 'self' data:",
-  `connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com ${mapTilesOrigin}`,
+  `connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com ${mapTilesOrigin}${extra}`,
   // The map's worker is our own file (public/map/maplibre-gl-worker.mjs), so no blob: workers are needed.
   "worker-src 'self'",
   "child-src 'self' https://www.google.com",
   // eSewa's form (sandbox rc-epay / live epay, and its own redirects), plus the switched-off wallets.
   "form-action 'self' https://esewa.com.np https://*.esewa.com.np https://*.fonepay.com https://khalti.com https://*.khalti.com",
   // The Visit page's map, loaded only when someone taps "Show map".
-  "frame-src https://www.google.com",
+  `frame-src https://www.google.com${extra}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",
 ].join("; ");
+const csp = cspFor("");
 
 const nextConfig: NextConfig = {
   // The browser tests run their own dev server beside yours, in a separate build folder.
@@ -61,6 +65,15 @@ const nextConfig: NextConfig = {
     const privateLinks = [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex" }];
     return [
       { source: "/:path*", headers: common },
+      // After the rule above, so these two replace its values on this one address.
+      {
+        source: "/product/:slug",
+        has: [{ type: "query", key: "try", value: "1" }],
+        headers: [
+          { key: "Content-Security-Policy", value: cspFor(` ${tryOnOrigin}`) },
+          { key: "Permissions-Policy", value: `camera=(self "${tryOnOrigin}"), microphone=(), geolocation=(self), payment=()` },
+        ],
+      },
       { source: "/g/:path*", headers: privateLinks },
       { source: "/order/:path*", headers: privateLinks },
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
