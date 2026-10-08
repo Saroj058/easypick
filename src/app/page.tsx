@@ -196,7 +196,7 @@ export default async function HomePage() {
       <Vault products={products} />
 
       {/* Find a gift and gift cards, under The Vault (owner's decision, 7 Oct 2026) */}
-      <section aria-labelledby="gift-title" className="py-10 md:py-14">
+      <section aria-labelledby="gift-title" className="py-6 md:py-8">
         <div className="container-ep">
           <GiftBlock />
         </div>
