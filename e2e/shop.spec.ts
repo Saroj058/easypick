@@ -312,3 +312,23 @@ test("shop: search narrows the pieces, keeps the other filters, and Filter opens
   await expect(page.getByText("Colour", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Price: low to high" })).toBeVisible();
 });
+
+test("the rail: sizing from measurements is for logged-in customers; a guest is asked to log in", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const rail = page.locator("section[aria-labelledby=rail-title]");
+  await rail.scrollIntoViewIfNeeded();
+  // On a cold dev server the first click can land before the page is interactive: retry it.
+  await expect(async () => {
+    await rail.getByRole("button", { name: "Pick from my measurements" }).click();
+    await expect(rail.getByRole("dialog", { name: "Log in to use your size" })).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
+  const nudge = rail.getByRole("dialog", { name: "Log in to use your size" });
+  await expect(nudge).toContainText("Log in and save your size to use it.");
+  await expect(nudge.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
+  // No size is marked as "picked from your measurements" for a guest, and the letters still work by hand.
+  await expect(rail.locator("[data-fit]")).toHaveCount(0);
+  await nudge.getByRole("button", { name: "Not now" }).click();
+  await expect(nudge).toHaveCount(0);
+  await page.screenshot({ path: "test-results/shots/rail-fit-nudge.png" });
+});

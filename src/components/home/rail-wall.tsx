@@ -11,6 +11,7 @@ import { useBag } from "@/components/bag-provider";
 import { PriceTag } from "@/components/hang-tag";
 import { BagIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
+import { useMe } from "@/components/session";
 import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
 import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock";
 import { FlowButton } from "@/components/ui/flow-button";
@@ -168,7 +169,10 @@ function PieceControls({
 }) {
   const addToBag = useAddToBag();
   const bag = useBag();
-  const profile = useFitProfile();
+  const saved = useFitProfile();
+  const me = useMe();
+  // Measurements pick the size only for a logged-in customer (they are kept on the account).
+  const profile = me ? saved : {};
   const [colourName, setColourName] = useState<string | null>(null);
   const [picked, setPicked] = useState<Size | null>(null);
   const [open, setOpen] = useState(false); // the size row
@@ -665,6 +669,11 @@ export function RailWall({
   /** The piece being bought in the pop-up. */
   const [buying, setBuying] = useState<BagLine | null>(null);
   const profile = useFitProfile();
+  const me = useMe();
+  /** Logged in with measurements saved: sizes are picked from them, and the bar shows which. */
+  const fitOn = Boolean(me) && hasFit(profile);
+  /** Not logged in and asked for measurement sizing: the small pop-up that says to log in. */
+  const [nudge, setNudge] = useState(false);
 
   const q = query.trim();
   const fits = (p: RailPiece) => !budget || p.price < budget;
@@ -691,6 +700,16 @@ export function RailWall({
         .map((s) => ({ ...s, show: ordered(s.pieces.filter(fits)) }))
         .filter((s) => s.show.length > 0);
   const showing = wall.reduce((n, s) => n + s.show.length, 0);
+  // The letter their measurements land on most often across the rail: the one to highlight.
+  const fitLetter = fitOn
+    ? (Object.entries(
+        all.reduce<Record<string, number>>((count, piece) => {
+          const size = matchSize(piece.category, piece.measurements, profile)?.size;
+          if (size && MY_SIZES.includes(size)) count[size] = (count[size] ?? 0) + 1;
+          return count;
+        }, {}),
+      ).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null)
+    : null;
   const inMySize = mySize
     ? all.filter((p) =>
         p.colours.some((c) =>
@@ -752,22 +771,58 @@ export function RailWall({
                   key={s}
                   type="button"
                   aria-pressed={mySize === s}
+                  aria-label={fitLetter === s ? `${s}, picked from your measurements` : undefined}
+                  data-fit={fitLetter === s ? "" : undefined}
                   onClick={() => {
                     setMySize(s);
                     setChanging(false);
                   }}
-                  className={`grid h-11 w-11 place-items-center rounded-full border font-mono text-[12px] font-semibold ${mySize === s ? "border-ink bg-ink text-paper" : "border-ink/60 hover:border-ink hover:bg-ink hover:text-paper"}`}
+                  className={`grid h-11 w-11 place-items-center rounded-full border font-mono text-[12px] font-semibold ${mySize === s ? "border-ink bg-ink text-paper" : "border-ink/60 hover:border-ink hover:bg-ink hover:text-paper"} ${fitLetter === s ? "ring-2 ring-volt ring-offset-2" : ""}`}
                 >
                   {s}
                 </button>
               ))}
             </div>
-            <Link
-              href="/size-guide"
-              className="hidden h-11 items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 xl:flex"
-            >
-              {hasFit(profile) ? "Picked from your measurements" : "Check in cm"}
-            </Link>
+            {me ? (
+              <Link
+                href="/size-guide"
+                className="hidden h-11 items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 xl:flex"
+              >
+                {fitOn ? "Picked from your measurements" : "Add your measurements"}
+              </Link>
+            ) : (
+              <div className="relative hidden xl:block">
+                <button
+                  type="button"
+                  onClick={() => setNudge(!nudge)}
+                  aria-expanded={nudge}
+                  aria-controls="rail-fit-nudge"
+                  className="flex h-11 cursor-pointer items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 hover:text-ink"
+                >
+                  Pick from my measurements
+                </button>
+                {nudge && (
+                  <div
+                    id="rail-fit-nudge"
+                    role="dialog"
+                    aria-label="Log in to use your size"
+                    onKeyDown={(e) => e.key === "Escape" && setNudge(false)}
+                    className="absolute left-0 top-full z-30 mt-2 w-[280px] animate-fade-up rounded-2xl border border-ink bg-paper p-4 text-left shadow-[0_18px_30px_-18px_rgba(0,0,0,0.45)]"
+                  >
+                    <p className="text-[15px] font-semibold">Log in and save your size to use it.</p>
+                    <p className="mt-1 text-[13px] text-steel-dark">Then every piece opens on the size your measurements give.</p>
+                    <div className="mt-3 flex items-center gap-3">
+                      <Link href="/login" className="inline-flex h-10 items-center rounded-full bg-ink px-5 text-[12px] font-semibold uppercase tracking-[0.08em] text-paper transition-colors hover:bg-volt hover:text-ink">
+                        Log in
+                      </Link>
+                      <button type="button" onClick={() => setNudge(false)} className="h-10 cursor-pointer text-[13px] underline underline-offset-4">
+                        Not now
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {mySize && (
               <button
                 type="button"
