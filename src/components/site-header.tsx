@@ -196,7 +196,7 @@ export function SiteHeader() {
                   </Dock>
                 </motion.nav>
                 {!expanded && (
-                  <button type="button" aria-label="Show navigation" onClick={() => setExpanded(true)} onFocus={() => setDotsGone(false)} className={`absolute left-1/2 top-0 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full border border-mist bg-paper shadow-[0_6px_24px_rgba(0,0,0,0.08)] transition-[transform,opacity,translate] duration-300 hover:scale-110 active:scale-95 ${dotsGone ? "pointer-events-none -translate-y-16 opacity-0" : "pointer-events-auto"}`}>
+                  <button type="button" aria-label="Show navigation" onClick={() => setExpanded(true)} onFocus={() => setDotsGone(false)} className={`absolute left-1/2 top-0 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full border border-white/40 bg-white/25 backdrop-blur-md transition-[transform,opacity,translate] duration-300 hover:scale-110 active:scale-95 ${dotsGone ? "pointer-events-none -translate-y-16 opacity-0" : "pointer-events-auto"}`}>
                     <Ellipsis className="h-6 w-6" aria-hidden />
                   </button>
                 )}
