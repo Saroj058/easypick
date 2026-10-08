@@ -721,8 +721,8 @@ export function RailWall({
 
   return (
     <div>
-      {/* One line over a rule: the name, their size (asked once), search, Filter and Shop all. On a phone it is two rows. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-ink pb-4 lg:flex-nowrap">
+      {/* One black bar, rounded at the top and square at the bottom: the name, their size (asked once), search, Filter and Shop all. On a phone it is two rows. */}
+      <div className="on-dark flex flex-wrap items-center gap-x-4 gap-y-3 rounded-t-2xl bg-ink px-4 py-3 text-paper md:px-5 lg:flex-nowrap">
         <h2
           id="rail-title"
           className="display order-1 text-[38px] leading-[0.9] md:text-[44px]"
@@ -730,12 +730,12 @@ export function RailWall({
           The rail
         </h2>
         <div className="order-2 ml-auto shrink-0 lg:order-last lg:ml-0">
-          <FlowButton href={withSize("/shop")} text="Shop all" />
+          <FlowButton href={withSize("/shop")} text="Shop all" className="border-paper! bg-paper!" />
         </div>
         <span aria-hidden className="order-3 h-0 basis-full lg:hidden" />
         <span
           aria-hidden
-          className="order-4 hidden h-8 w-px shrink-0 bg-mist lg:block"
+          className="order-4 hidden h-8 w-px shrink-0 bg-paper/25 lg:block"
         />
 
         {/* On a phone the open search field takes this row, so the size steps aside until it folds away. */}
@@ -745,7 +745,7 @@ export function RailWall({
             aria-label="Your size"
             className={`order-5 shrink-0 items-center gap-x-3 ${searchOpen ? "hidden lg:flex" : "flex"}`}
           >
-            <p className={`${mono} hidden text-steel-dark lg:block`}>Size</p>
+            <p className={`${mono} hidden text-paper/60 lg:block`}>Size</p>
             <div className="flex gap-1.5">
               {MY_SIZES.map((s) => (
                 <button
@@ -756,7 +756,7 @@ export function RailWall({
                     setMySize(s);
                     setChanging(false);
                   }}
-                  className={`grid h-11 w-11 place-items-center rounded-full border font-mono text-[12px] font-semibold ${mySize === s ? "border-ink bg-ink text-paper" : "border-ink/60 hover:border-ink hover:bg-ink hover:text-paper"}`}
+                  className={`grid h-11 w-11 place-items-center rounded-full border font-mono text-[12px] font-semibold ${mySize === s ? "border-paper bg-paper text-ink" : "border-paper/60 hover:border-paper hover:bg-paper hover:text-ink"}`}
                 >
                   {s}
                 </button>
@@ -764,7 +764,7 @@ export function RailWall({
             </div>
             <Link
               href="/size-guide"
-              className="hidden h-11 items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 xl:flex"
+              className="hidden h-11 items-center whitespace-nowrap text-[13px] text-paper/70 underline underline-offset-4 xl:flex"
             >
               {hasFit(profile) ? "Picked from your measurements" : "Check in cm"}
             </Link>
@@ -790,15 +790,15 @@ export function RailWall({
               type="button"
               onClick={() => setChanging(true)}
               aria-label={`My size is ${mySize}. Change it`}
-              className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-ink pl-1.5 pr-4 text-[13px] font-semibold"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-paper pl-1.5 pr-4 text-[13px] font-semibold"
             >
-              <span className="grid h-8 min-w-8 place-items-center rounded-full bg-ink px-1 font-mono text-[12px] text-paper">
+              <span className="grid h-8 min-w-8 place-items-center rounded-full bg-paper px-1 font-mono text-[12px] text-ink">
                 {mySize}
               </span>
               Change
             </button>
-            <p className="hidden whitespace-nowrap text-[13px] text-steel-dark xl:block">
-              <span className="font-semibold text-ink">
+            <p className="hidden whitespace-nowrap text-[13px] text-paper/70 xl:block">
+              <span className="font-semibold text-paper">
                 {inMySize} of {total}
               </span>{" "}
               come in {mySize}
@@ -813,7 +813,7 @@ export function RailWall({
           onOpenChange={setSearching}
           label="Search the rail"
           placeholder="Search the rail"
-          className="order-6 min-w-0 flex-1"
+          className="order-6 min-w-0 flex-1 text-ink"
         />
         {budgets.length > 0 && (
           <button
@@ -822,7 +822,7 @@ export function RailWall({
             aria-label="Filter"
             aria-expanded={filterOpen}
             aria-controls="rail-filter"
-            className={`${box} relative order-7 w-11 shrink-0 gap-2 rounded-full sm:w-auto sm:px-4 ${filterOpen || budget || sort === "price" ? "border-ink" : "border-mist hover:border-ink"}`}
+            className={`${box} relative order-7 w-11 shrink-0 gap-2 rounded-full bg-paper text-ink sm:w-auto sm:px-4 ${filterOpen || budget || sort === "price" ? "border-volt" : "border-paper"}`}
           >
             <svg
               width="16"
@@ -851,7 +851,7 @@ export function RailWall({
       {filterOpen && (
         <div
           id="rail-filter"
-          className="mt-3 flex flex-wrap items-end gap-x-5 gap-y-3 border border-mist p-3"
+          className="flex flex-wrap items-end gap-x-5 gap-y-3 border border-t-0 border-ink p-3"
         >
           <div role="group" aria-label="Budget">
             <p className={`${mono} mb-1.5 text-steel-dark`}>Under Rs</p>

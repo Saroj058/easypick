@@ -101,28 +101,38 @@ test("gift card: chosen on the Gift page, filled in a sheet over it; no separate
   }).toPass({ timeout: 30_000 });
   await cards.getByRole("button", { name: "Gift card, Rs 2,000" }).click();
   const mine = page.getByRole("dialog", { name: "A gift card for you" });
-  await expect(mine.getByRole("radio", { name: "Myself" })).toHaveAttribute("aria-checked", "true");
+  // The form doesn't ask again what was already chosen: no amounts, no someone-or-myself switch.
+  await expect(mine.getByRole("heading", { name: "1. Your details" })).toBeVisible();
+  await expect(mine.getByLabel("Your email")).toBeVisible();
+  await expect(mine.getByRole("radio")).toHaveCount(0);
+  await expect(mine.getByText("Choose an amount")).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(mine).toHaveCount(0);
   await cards.getByRole("radio", { name: "For someone" }).click();
-  await expect(async () => {
-    await cards.getByRole("button", { name: "Gift card, Rs 50,000" }).click();
-    await expect(page.getByRole("dialog", { name: "Send a gift card" })).toBeVisible({ timeout: 3000 });
-  }).toPass({ timeout: 30_000 });
+
+  // A chosen card opens on that card, with its own printed picture.
+  await cards.getByRole("button", { name: "Gift card, Rs 50,000" }).click();
+  const sheet = page.getByRole("dialog", { name: "Send a gift card" });
+  await expect(sheet).toBeVisible();
   await expect(page).toHaveURL(/\/gift$/);
-  // Each amount has its own printed card; other amounts go up to Rs 1,00,000 on the plain black card.
   const preview = page.getByRole("complementary", { name: "Preview" });
-  await expect(page.getByRole("radio", { name: "Rs 50,000" })).toHaveAttribute("aria-checked", "true");
   await expect(preview.getByRole("img", { name: "Easypick gift card, Rs 50,000" }).locator("img")).toHaveAttribute("src", /front-50000/);
   await expect(preview).toContainText("valid for 12 months from purchase");
-  await page.getByRole("radio", { name: "Custom" }).click();
+  await expect(sheet.getByRole("heading", { name: "1. Who it's for" })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: /Pay Rs 50,000|Buy gift card · Rs 50,000/ }).first()).toBeVisible();
+  await preview.getByRole("button", { name: "See the back" }).click();
+  await expect(preview.getByRole("img", { name: "The back of an Easypick gift card" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+
+  // "Your amount" asks only for the amount: up to Rs 1,00,000, on the plain black card.
+  await cards.getByRole("button", { name: /Your amount/ }).click();
+  await expect(sheet.getByRole("heading", { name: "1. Your amount" })).toBeVisible();
   await page.locator("#gc-custom").fill("100100");
   await expect(page.locator("#gc-custom-hint")).toContainText("from Rs 1,000 to Rs 1,00,000");
   await page.locator("#gc-custom").fill("100000");
   await expect(preview.getByRole("img", { name: "Easypick gift card, Rs 1,00,000" }).locator("img")).toHaveAttribute("src", /back/);
-  await preview.getByRole("button", { name: "See the back" }).click();
-  await expect(preview.getByRole("img", { name: "The back of an Easypick gift card" })).toBeVisible();
-  await page.getByRole("radio", { name: "Rs 5,000" }).click();
+  await page.locator("#gc-custom").fill("5000");
   await expect(page.getByRole("button", { name: /Pay Rs 5,000|Buy gift card · Rs 5,000/ }).first()).toBeVisible();
   await page.locator("#gc-remail").fill("not-an-email");
   await page.locator("#gc-rphone").click();

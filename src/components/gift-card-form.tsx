@@ -46,6 +46,9 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [anonymous, setAnonymous] = useState(false);
+  // In the sheet the card and who it's for were chosen before it opened, so the form doesn't ask again.
+  const fixedAmount = inSheet && initialValue !== "custom";
+  const step = (n: number) => n - (fixedAmount ? 1 : 0);
   const customN = Number(custom) || 0;
   const customOk = customN >= MIN && customN <= MAX && customN % STEP === 0;
   const amount = value === "custom" ? (customOk ? customN : 0) : value;
@@ -59,15 +62,16 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
     <form action={action} className={`grid gap-10 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-12 lg:pb-0 ${inSheet ? "pb-0" : "pb-24"}`} noValidate>
       <div className="space-y-12">
         <input type="hidden" name="design" value="pick" />
-        <section className="space-y-3" aria-labelledby="gc-amount-h">
+        {fixedAmount && <input type="hidden" name="value" value={value === "custom" ? "" : value} />}
+        <section hidden={fixedAmount} className="space-y-3" aria-labelledby="gc-amount-h">
           <h2 id="gc-amount-h" className="text-xl font-semibold">
-            1. Choose an amount
+            1. {inSheet ? "Your amount" : "Choose an amount"}
           </h2>
-          <input type="hidden" name="value" value={value === "custom" ? "" : value} />
+          {!fixedAmount && <input type="hidden" name="value" value={value === "custom" ? "" : value} />}
           <p className="font-mono text-[40px] font-semibold leading-none md:text-[48px]" aria-live="polite">
             {amount ? formatPrice(amount) : <span className="text-steel">Rs –</span>}
           </p>
-          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="gc-amount-h">
+          <div hidden={inSheet} className={inSheet ? undefined : "grid grid-cols-3 gap-2"} role="radiogroup" aria-labelledby="gc-amount-h">
             {VALUES.map((v) => (
               <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => setValue(v)} className={`${chip(value === v)} font-mono`}>
                 {formatPrice(v)}
@@ -101,9 +105,9 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
 
         <section className="space-y-4" aria-labelledby="gc-to-h">
           <h2 id="gc-to-h" className="text-xl font-semibold">
-            2. Send to
+            {step(2)}. {inSheet ? (forMe ? "Your details" : "Who it's for") : "Send to"}
           </h2>
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="gc-to-h">
+          <div hidden={inSheet} className={inSheet ? undefined : "grid grid-cols-2 gap-2"} role="radiogroup" aria-labelledby="gc-to-h">
             <button type="button" role="radio" aria-checked={!forMe} onClick={() => setForMe(false)} className={chip(!forMe)}>
               Someone else
             </button>
@@ -140,7 +144,7 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
         {!forMe && (
           <section className="space-y-4" aria-labelledby="gc-msg-h">
             <h2 id="gc-msg-h" className="text-xl font-semibold">
-              3. Message and date
+              {step(3)}. Message and date
             </h2>
             <div>
               <label htmlFor="gc-message" className={label}>
@@ -179,7 +183,7 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
 
         <section className="space-y-4" aria-labelledby="gc-pay-h">
           <h2 id="gc-pay-h" className="text-xl font-semibold">
-            {forMe ? "3" : "4"}. Pay
+            {step(forMe ? 3 : 4)}. Pay
           </h2>
           <div>
             <label htmlFor="gc-bphone" className={label}>
@@ -210,7 +214,17 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
       <aside className={`order-first lg:sticky lg:order-none lg:self-start ${inSheet ? "lg:top-0" : "lg:top-28"}`} aria-label="Preview">
         <p className="index text-steel-dark">Preview</p>
         <div className="mx-auto mt-3 max-w-[340px] lg:max-w-none">
-          <GiftCardPicture amount={amount || null} side={flipped ? "back" : "front"} priority />
+          {/* Both faces, back to back: "See the back" turns the card over. */}
+          <div className="[perspective:1400px]">
+            <div className={`relative transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [transform-style:preserve-3d] ${flipped ? "[transform:rotateY(180deg)]" : ""}`} data-flipped={flipped}>
+              <div className="[backface-visibility:hidden]" aria-hidden={flipped}>
+                <GiftCardPicture amount={amount || null} priority />
+              </div>
+              <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]" aria-hidden={!flipped}>
+                <GiftCardPicture amount={null} side="back" fill />
+              </div>
+            </div>
+          </div>
         </div>
         <p className="mt-3 flex flex-wrap items-center justify-between gap-x-4 text-[13px] text-steel-dark">
           <span>Picture for illustration. Your card is valid for 12 months from purchase.</span>
