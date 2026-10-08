@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DESIGNS, DesignSwitch, GiftOpener, WHO } from "@/components/gift/gift-openers";
 import { GiftCardArt } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
@@ -94,6 +95,9 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
   const max = BUDGETS.find((b) => String(b) === sp.max) ?? null;
   const forWho = FOR.find((f) => f.key === sp.for)?.key ?? null;
   const shown = Math.min(Math.max(Number(sp.show) || PAGE, PAGE), 600);
+  // The five openings the owner is choosing between: /gift?design=1…5. Without it, the page as it is.
+  const design = DESIGNS.find((d) => String(d.n) === sp.design)?.n ?? null;
+  const who = design ? (WHO.find((w) => w.key === sp.who) ?? null) : null;
 
   const [all, festival, trending] = await Promise.all([getProducts(), currentFestival(), getTrending()]);
   const live = all.filter((p) => p.status === "live" && inStock(p));
@@ -107,21 +111,42 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
   const fresh = live.filter((p) => p.isNew);
 
   const every = cheapFirst.filter((p) => (max ? priceOf(p) <= max : true) && (forWho ? p.gender === forWho || p.gender === "unisex" : true));
-  const q = (next: { max?: number | null; for?: string | null; show?: number }) => {
+  const q = (next: { max?: number | null; for?: string | null; show?: number; who?: string | null; jump?: boolean }) => {
     const u = new URLSearchParams();
+    if (design) u.set("design", String(design));
+    const w = next.who === undefined ? who?.key : next.who;
+    if (w) u.set("who", w);
     const m = next.max === undefined ? max : next.max;
     const f = next.for === undefined ? forWho : next.for;
     if (m) u.set("max", String(m));
     if (f) u.set("for", f);
     if (next.show) u.set("show", String(next.show));
     const s = u.toString();
-    return `/gift${s ? `?${s}` : ""}#pieces`;
+    return `/gift${s ? `?${s}` : ""}${next.jump === false ? "" : "#pieces"}`;
   };
+  const counts = Object.fromEntries(BUDGETS.map((b) => [b, live.filter((p) => priceOf(p) <= b).length]));
 
   return (
     <div className="pb-24">
+      {design && (
+        <>
+          <GiftOpener
+            design={design}
+            festival={festival?.name ?? null}
+            budgets={BUDGETS}
+            counts={counts}
+            picks={cheapFirst.filter((p) => p.images[0]?.src).slice(0, 40)}
+            who={who?.key ?? null}
+            max={max}
+            forWho={forWho}
+            cardFrom={GIFT_CARD_MIN}
+            link={(n) => q({ ...n, jump: n.jump ?? false })}
+          />
+          <DesignSwitch design={design} />
+        </>
+      )}
       {/* Hero */}
-      <section className="container-ep pb-10 pt-14 md:pb-14 md:pt-24">
+      <section className={`container-ep pb-10 pt-14 md:pb-14 md:pt-24 ${design ? "hidden" : ""}`}>
         <p className="index text-steel-dark">{festival ? `${festival.name} gifts` : "Gifts"}</p>
         <h1 className="display display-h1 mt-3">
           Gift it.
@@ -151,9 +176,9 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
         )}
       </section>
 
-      <div className="container-ep space-y-20">
+      <div className={`container-ep space-y-20 ${design === 2 || design === 3 ? "pt-16 md:pt-20" : ""}`}>
         {/* Piece or card? */}
-        <section aria-labelledby="choose-h">
+        <section aria-labelledby="choose-h" className={design ? "hidden" : undefined}>
           <h2 id="choose-h" className="sr-only">
             Piece or gift card?
           </h2>
@@ -195,7 +220,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
         {/* Every piece, with budget and who-for filters (plain links, no script needed) */}
         <section id="pieces" aria-labelledby="pieces-h" className="scroll-mt-20">
           <h2 id="pieces-h" className="display display-h2">
-            Every piece.
+            {who ? `For ${who.phrase}.` : "Every piece."}
           </h2>
           <nav aria-label="Filter gifts" className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1">
             <Chip href={q({ max: null })} on={!max}>

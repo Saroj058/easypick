@@ -1088,3 +1088,21 @@
     radial-gradient(ellipse 55% 50% at 72% 62%, rgb(255 255 255 / 0.9), transparent 72%),
     radial-gradient(ellipse 80% 60% at 50% 50%, rgb(236 240 247 / 1), rgb(214 222 235 / 1));
 }
+
+/* Gift page, "The box" opening: the lid lifts a little, as if about to be opened. */
+@media (prefers-reduced-motion: no-preference) {
+  .gift-lid {
+    transform-box: fill-box;
+    transform-origin: 20% 100%;
+    animation: gift-lid 3.6s cubic-bezier(0.65, 0, 0.35, 1) infinite alternate;
+  }
+}
+@keyframes gift-lid {
+  0%,
+  55% {
+    transform: none;
+  }
+  100% {
+    transform: translateY(-10px) rotate(-3deg);
+  }
+}
