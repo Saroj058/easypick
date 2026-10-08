@@ -171,23 +171,19 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
       </section>
 
       <div className="container-ep space-y-14 pt-10 md:space-y-20 md:pt-14">
-        {/* Already holding a gift card: type its code right here */}
-        <section id="balance" aria-labelledby="balance-h" className="scroll-mt-24 flex flex-col gap-5 rounded-2xl border border-steel p-4 md:flex-row md:items-center md:gap-8 md:p-5">
-          <div className="flex items-center gap-4 md:gap-6">
-            <span className="block w-24 shrink-0 -rotate-3 md:w-32" aria-hidden>
-              <GiftCardPicture amount={null} side="back" className="shadow-[0_10px_24px_-12px_rgba(0,0,0,0.5)]" />
+        {/* Already holding a gift card: one thin strip, the code typed right here */}
+        <section id="balance" aria-labelledby="balance-h" className="scroll-mt-24 flex flex-col gap-3 rounded-2xl border border-steel px-4 py-3 md:flex-row md:items-center md:gap-6 md:rounded-full md:py-2 md:pl-3 md:pr-2">
+          <div className="flex items-center gap-3">
+            <span className="block w-14 shrink-0 -rotate-3" aria-hidden>
+              <GiftCardPicture amount={null} side="back" className="shadow-[0_6px_14px_-8px_rgba(0,0,0,0.5)]" />
             </span>
-            <div>
-              <h2 id="balance-h" className="display text-[26px] leading-none md:text-[32px]">
-                Got a gift card?
-              </h2>
-              <p className="mt-1.5 text-[14px] text-steel-dark md:text-[15px]">Type its code to see what&apos;s left on it.</p>
-            </div>
+            <h2 id="balance-h" className="display text-[22px] leading-none">
+              Got a gift card?
+            </h2>
+            <p className="text-[14px] text-steel-dark max-lg:hidden">See what&apos;s left on it.</p>
           </div>
-          <div className="min-w-0 flex-1 md:flex md:justify-center">
-            <div className="w-full max-w-md">
-              <BalanceCheck />
-            </div>
+          <div className="min-w-0 flex-1 md:ml-auto md:max-w-[420px]">
+            <BalanceCheck />
           </div>
         </section>
 

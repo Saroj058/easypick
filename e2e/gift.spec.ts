@@ -16,6 +16,8 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   const balance = page.getByRole("region", { name: "Got a gift card?" });
   await expect(balance.getByLabel("Gift card code")).toHaveAttribute("placeholder", "EP-XXXX-XXXX");
   await expect(balance.getByRole("button", { name: "Check" })).toBeVisible();
+  // It is one thin strip, not a block.
+  expect((await balance.boundingBox())!.height).toBeLessThan(info.project.name === "phone" ? 150 : 80);
   await expect(page.getByText("Three ways to gift")).toHaveCount(0);
   // The gift cards are shown as cards to pick from, not as a price.
   const cards = page.getByRole("region", { name: "Or let them choose." });
