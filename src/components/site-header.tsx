@@ -1,7 +1,7 @@
 "use client";
 
 import { MotionConfig, motion, useMotionValueEvent, useScroll, type Variants } from "framer-motion";
-import { Ellipsis, Gem, Gift, House, MapPin, Shirt, ShoppingBag } from "lucide-react";
+import { Gem, Gift, House, MapPin, Shirt, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -81,27 +81,7 @@ export function SiteHeader() {
   // At the very top the header is one full-width bar; once scrolled it splits into floating pills.
   const [atTop, setAtTop] = useState(true);
   const { scrollY } = useScroll();
-  // The three dots the nav tucks into: one more scroll down and they go too; any scroll back up returns them.
-  const [dotsGone, setDotsGone] = useState(false);
-  const dotsFrom = useRef<number | null>(null);
-  const lastY = useRef(0);
-  useMotionValueEvent(scrollY, "change", (y) => {
-    setAtTop(y < 24);
-    const before = lastY.current;
-    const delta = y - before;
-    if (Math.abs(delta) < 6) return;
-    lastY.current = y;
-    if (open) {
-      dotsFrom.current = null;
-      if (dotsGone) setDotsGone(false);
-    } else if (delta < 0) {
-      dotsFrom.current = y;
-      if (dotsGone) setDotsGone(false);
-    } else {
-      if (dotsFrom.current === null) dotsFrom.current = before;
-      if (y - dotsFrom.current > 120 && !dotsGone) setDotsGone(true);
-    }
-  });
+  useMotionValueEvent(scrollY, "change", (y) => setAtTop(y < 24));
 
   // The visit page is one full screen of the store with no header at all: just the logo on the
   // left and a small black Back button on the right.
@@ -178,7 +158,7 @@ export function SiteHeader() {
               )}
             </div>
 
-            {/* Links (large screens; phones and tablets use the bottom tab bar): a dock whose icons swell under the pointer. Tucks away to a circle on scroll. */}
+            {/* Links (large screens; phones and tablets use the bottom tab bar): a dock whose icons swell under the pointer. It slides away on the way down the page and comes back on the way up. */}
             {!visit && (
               <div className="absolute left-1/2 top-0 hidden -translate-x-1/2 lg:block">
                 <motion.nav aria-label="Main" variants={sideVariants} animate={expanded ? "shown" : "hidden"} inert={!expanded} className={expanded ? "pointer-events-auto" : "pointer-events-none"}>
@@ -196,11 +176,6 @@ export function SiteHeader() {
                     })}
                   </Dock>
                 </motion.nav>
-                {!expanded && (
-                  <button type="button" aria-label="Show navigation" onClick={() => setExpanded(true)} onFocus={() => setDotsGone(false)} className={`absolute left-1/2 top-0 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full border border-white/40 bg-white/25 backdrop-blur-md transition-[transform,opacity,translate] duration-300 hover:scale-110 active:scale-95 ${dotsGone ? "pointer-events-none -translate-y-16 opacity-0" : "pointer-events-auto"}`}>
-                    <Ellipsis className="h-6 w-6" aria-hidden />
-                  </button>
-                )}
               </div>
             )}
 
