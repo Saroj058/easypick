@@ -103,6 +103,16 @@ export default async function HomePage() {
           {/* Stage */}
           <div className="on-dark relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-graphite text-paper md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
             <HeroRack top={upper} bottom={lower} />
+            {/* The way into the drop, on the wardrobe itself */}
+            <Link
+              href={drop ? `/drop/${drop.slug}` : "/drops"}
+              className="group absolute right-3 top-3 z-20 inline-flex h-11 items-center gap-2 rounded-full bg-paper px-4 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink md:px-5 md:text-[13px] shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)] transition-colors duration-200 hover:bg-volt md:right-4 md:top-4"
+            >
+              {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </Link>
           </div>
 
           {/* Words */}
@@ -165,16 +175,11 @@ export default async function HomePage() {
           </div>
 
           {/* At the end: the drop. The countdown in the middle, the way into the drop beside it. */}
-          <div className="grid items-center gap-x-6 gap-y-4 border-t border-ink/15 pt-5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:col-span-12 lg:row-start-2">
+          <div className="grid items-center gap-x-6 gap-y-4 border-t border-ink/15 pt-5 md:grid-cols-[auto_minmax(0,1fr)] lg:col-span-12 lg:row-start-2">
             <p className="index text-center text-ink/70 md:text-left">
               {next ? `Drop ${next.slug} opens in` : current ? `${current.name} · out now` : "Kathmandu"}
             </p>
-            <div className="flex justify-center">{next && <Countdown to={next.releaseAt} label={next.name} size="sm" seconds />}</div>
-            <div className="flex md:justify-end">
-              <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn btn-ink w-full md:w-auto">
-                {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
-              </Link>
-            </div>
+            <div className="flex justify-center md:justify-end">{next && <Countdown to={next.releaseAt} label={next.name} size="sm" seconds />}</div>
           </div>
         </div>
       </section>

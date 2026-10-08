@@ -730,7 +730,7 @@ export function RailWall({
           The rail
         </h2>
         <div className="order-2 ml-auto shrink-0 lg:order-last lg:ml-0">
-          <FlowButton href={withSize("/shop")} text="Shop all" />
+          <FlowButton href={withSize("/shop")} text="Shop all" solid />
         </div>
         <span aria-hidden className="order-3 h-0 basis-full lg:hidden" />
         <span
