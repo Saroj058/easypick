@@ -34,12 +34,12 @@ const emailCheck = (v: string) => (v && !EMAIL.test(v) ? "Check the email, like 
 const phoneCheck = (v: string) => (v && !normaliseNepaliMobile(v) ? "10 digits, starting 97 or 98." : null);
 
 /** Buy a gift card: amount (each has its own printed card), who it's for, message and date, with a live preview. */
-export function GiftCardForm() {
+export function GiftCardForm({ initialValue = 2000, inSheet = false }: { /** The card it opens on. */ initialValue?: number | "custom"; /** Shown in the sheet over the Gift page, not on a page of its own. */ inSheet?: boolean }) {
   const me = useMe();
   const senderField = usePrefilled(me?.name);
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<GiftState, FormData>(buyGiftCard, { status: "idle" });
-  const [value, setValue] = useState<number | "custom">(2000);
+  const [value, setValue] = useState<number | "custom">(initialValue);
   const [flipped, setFlipped] = useState(false);
   const [custom, setCustom] = useState("");
   const [forMe, setForMe] = useState(false);
@@ -56,7 +56,7 @@ export function GiftCardForm() {
   const bphone = useFieldCheck(phoneCheck);
 
   return (
-    <form action={action} className="grid gap-10 pb-24 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-12 lg:pb-0" noValidate>
+    <form action={action} className={`grid gap-10 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-12 lg:pb-0 ${inSheet ? "pb-0" : "pb-24"}`} noValidate>
       <div className="space-y-12">
         <input type="hidden" name="design" value="pick" />
         <section className="space-y-3" aria-labelledby="gc-amount-h">
@@ -207,7 +207,7 @@ export function GiftCardForm() {
       </div>
 
       {/* Live preview: what arrives in their inbox. First on phones, so the card is built in view. */}
-      <aside className="order-first lg:sticky lg:top-28 lg:order-none lg:self-start" aria-label="Preview">
+      <aside className={`order-first lg:sticky lg:order-none lg:self-start ${inSheet ? "lg:top-0" : "lg:top-28"}`} aria-label="Preview">
         <p className="index text-steel-dark">Preview</p>
         <div className="mx-auto mt-3 max-w-[340px] lg:max-w-none">
           <GiftCardPicture amount={amount || null} side={flipped ? "back" : "front"} priority />
@@ -227,7 +227,7 @@ export function GiftCardForm() {
       </aside>
 
       {/* Phones: the card and the Pay button stay in view while the form scrolls. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-mist bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden">
+      <div className={`z-30 border-t border-mist bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 lg:hidden ${inSheet ? "sticky bottom-0 -mx-4" : "fixed inset-x-0 bottom-0"}`}>
         {state.status === "error" && (
           <p className="mb-2 text-[13px] text-error-light" aria-hidden>
             {state.message}

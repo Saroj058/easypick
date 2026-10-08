@@ -17,7 +17,7 @@ export async function SiteFooter() {
         { href: "/shop", label: "The rail" },
         { href: "/vault", label: "The Vault" },
         { href: "/fit", label: "Build a fit" },
-        { href: "/gift-cards", label: "Gift cards" },
+        { href: "/gift#buy", label: "Gift cards" },
       ],
     },
     {

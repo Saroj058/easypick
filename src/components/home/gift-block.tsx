@@ -74,7 +74,7 @@ export function GiftBlock() {
         </Link>
 
         {/* Gift cards */}
-        <Link href="/gift-cards" className="group relative flex min-h-[300px] flex-col justify-between overflow-hidden border border-ink bg-photo p-6 md:p-8">
+        <Link href="/gift#buy" className="group relative flex min-h-[300px] flex-col justify-between overflow-hidden border border-ink bg-photo p-6 md:p-8">
           <div className="relative z-10 lg:max-w-[52%]">
             <h3 className="display text-[40px] leading-[0.9] md:text-[48px]">Gift cards</h3>
             <p className="mt-3 text-[15px] text-steel-dark">Any amount from Rs 1,000 to 1,00,000. Sent by email or SMS, spent online or in the store.</p>

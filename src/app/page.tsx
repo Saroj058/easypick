@@ -98,17 +98,17 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(orgLd)} />
       {/* 01 — Hero: the rail, a tag, and the drop's numbers */}
-      <section aria-labelledby="hero-title" className="on-dark bg-ink text-paper">
+      <section aria-labelledby="hero-title" className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
-          <div className="relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-graphite md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
+          <div className="on-dark relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-graphite text-paper md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
             <HeroRack top={upper} bottom={lower} />
           </div>
 
           {/* Words */}
           <div className="flex flex-col justify-end lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:justify-center lg:pb-10">
-            <p className="eyebrow flex items-center gap-2 text-paper/80">
-              <span className="h-1.5 w-1.5 bg-paper" aria-hidden />
+            <p className="eyebrow flex items-center gap-2 text-ink/70">
+              <span className="h-1.5 w-1.5 bg-ink" aria-hidden />
               Pick it. Pay it. Wear it.
             </p>
             <h1 id="hero-title" className="display display-hero mt-4">
@@ -135,9 +135,9 @@ export default async function HomePage() {
             {/* Why the store exists, in the owner's words */}
             <div className="mt-6 max-w-[460px]">
               <p className="display text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] leading-[0.95]">
-                Shopping shouldn&apos;t feel like negotiation. <span className="text-paper/60">That&apos;s why we built Easypick.</span>
+                Shopping shouldn&apos;t feel like negotiation. <span className="text-steel-dark">That&apos;s why we built Easypick.</span>
               </p>
-              <p className="mt-3 text-[15px] leading-relaxed text-paper/80 sm:text-[16px]">
+              <p className="mt-3 text-[15px] leading-relaxed text-ink/75 sm:text-[16px]">
                 Fixed prices. Automated checkout.
                 <br />
                 Same price online and in-store.
@@ -145,7 +145,7 @@ export default async function HomePage() {
             </div>
             {/* Visit store, and the two ways to do it: they slide out beside the button on hover or focus (always shown on touch screens). */}
             <div className="group/visit mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <InteractiveHoverButton href="/visit" text="Visit store" className="w-full sm:w-auto" />
+              <InteractiveHoverButton href="/visit" text="Visit store" tone="light" className="w-full sm:w-auto" />
               <ul className="flex gap-2 transition-all duration-300 [@media(hover:hover)]:-translate-x-2 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/visit:translate-x-0 [@media(hover:hover)]:group-focus-within/visit:opacity-100 [@media(hover:hover)]:group-hover/visit:translate-x-0 [@media(hover:hover)]:group-hover/visit:opacity-100">
                 {[
                   { href: "/visit", label: "In person" },
@@ -154,7 +154,7 @@ export default async function HomePage() {
                   <li key={o.href} className="flex-1 sm:flex-none">
                     <Link
                       href={o.href}
-                      className="flex h-12 items-center justify-center whitespace-nowrap rounded-full border border-paper/40 px-5 text-[13px] font-semibold uppercase tracking-[0.06em] text-paper hover:border-paper hover:bg-paper hover:text-ink"
+                      className="flex h-12 items-center justify-center whitespace-nowrap rounded-full border border-ink/40 px-5 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink hover:border-ink hover:bg-ink hover:text-paper"
                     >
                       {o.label}
                     </Link>
@@ -165,13 +165,13 @@ export default async function HomePage() {
           </div>
 
           {/* At the end: the drop. The countdown in the middle, the way into the drop beside it. */}
-          <div className="grid items-center gap-x-6 gap-y-4 border-t border-paper/15 pt-5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:col-span-12 lg:row-start-2">
-            <p className="index text-center text-paper/70 md:text-left">
+          <div className="grid items-center gap-x-6 gap-y-4 border-t border-ink/15 pt-5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:col-span-12 lg:row-start-2">
+            <p className="index text-center text-ink/70 md:text-left">
               {next ? `Drop ${next.slug} opens in` : current ? `${current.name} · out now` : "Kathmandu"}
             </p>
             <div className="flex justify-center">{next && <Countdown to={next.releaseAt} label={next.name} size="sm" seconds />}</div>
             <div className="flex md:justify-end">
-              <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn w-full bg-paper text-ink hover:bg-paper/85 md:w-auto">
+              <Link href={drop ? `/drop/${drop.slug}` : "/drops"} className="btn btn-ink w-full md:w-auto">
                 {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
               </Link>
             </div>

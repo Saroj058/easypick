@@ -18,7 +18,7 @@ export default async function LinksPage() {
     next && { href: `/drop/${next.slug}?utm_source=ig&utm_medium=bio&utm_campaign=drop${next.slug}`, title: `${next.name}`, note: formatDropTime(next.releaseAt) },
     { href: "/new?utm_source=ig&utm_medium=bio", title: "New in", note: "Everything from the last 30 days" },
     { href: "/trending?utm_source=ig&utm_medium=bio", title: "Trending", note: "What people are buying this week" },
-    { href: "/gift-cards?utm_source=ig&utm_medium=bio", title: "Gift cards", note: "From Rs 1,000, sent in minutes" },
+    { href: "/gift?utm_source=ig&utm_medium=bio#buy", title: "Gift cards", note: "Sent in minutes" },
     { href: "/alerts?utm_source=ig&utm_medium=bio", title: "Get drop alerts", note: "WhatsApp or email" },
     { href: "/visit?utm_source=ig&utm_medium=bio", title: "Find the store", note: "Hours and directions" },
     { href: "/how-it-works?utm_source=ig&utm_medium=bio", title: "How it works", note: "Pick. Pay. Wear." },

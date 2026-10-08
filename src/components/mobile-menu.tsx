@@ -34,8 +34,8 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Gift",
     links: [
       { href: "/gift", label: "Find a gift" },
-      { href: "/gift-cards", label: "Gift cards" },
-      { href: "/gift-cards#balance", label: "Check a balance" },
+      { href: "/gift#buy", label: "Gift cards" },
+      { href: "/gift#balance", label: "Check a balance" },
     ],
   },
   {

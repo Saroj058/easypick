@@ -11,7 +11,7 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   // The opening offers the two things to do, a piece or a card, with equal weight.
   const start = page.getByRole("navigation", { name: "Start a gift" });
   await expect(start.getByRole("link", { name: "Send a piece" })).toHaveAttribute("href", "#pieces");
-  await expect(start.getByRole("link", { name: "Send a gift card" })).toHaveAttribute("href", "/gift-cards#buy");
+  await expect(start.getByRole("link", { name: "Send a gift card" })).toHaveAttribute("href", "#buy");
   // Right below: someone already holding a gift card types its code here, without leaving the page.
   const balance = page.getByRole("region", { name: "Got a gift card?" });
   await expect(balance.getByLabel("Gift card code")).toHaveAttribute("placeholder", "EP-XXXX-XXXX");
@@ -19,10 +19,10 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(page.getByText("Three ways to gift")).toHaveCount(0);
   // The gift cards are shown as cards to pick from, not as a price.
   const cards = page.getByRole("region", { name: "Or let them choose." });
-  await expect(cards.getByRole("link", { name: /^Gift card, Rs/ })).toHaveCount(9);
+  await expect(cards.getByRole("button", { name: /^Gift card, Rs/ })).toHaveCount(9);
   // All nine are in view together: a grid, not a row to swipe through.
   expect(await cards.getByRole("list").evaluate((el) => getComputedStyle(el).display)).toBe("grid");
-  await expect(cards.getByRole("link", { name: "Pick a card" })).toHaveAttribute("href", "/gift-cards#buy");
+  await expect(cards.getByRole("button", { name: "Choose your own" })).toBeVisible();
   await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toBeVisible();
   await page.screenshot(shot(`gift-${info.project.name}`));
@@ -84,11 +84,20 @@ test("send a piece: three steps, their name before the note, checks before payme
   await page.waitForURL(/esewa|\/pay\/|\/order\//, { timeout: 30_000, waitUntil: "commit" });
 });
 
-test("gift card: amount shown large, checks on leaving a field @phone", async ({ page }, info) => {
+test("gift card: chosen on the Gift page, filled in a sheet over it; no separate page @phone", async ({ page }, info) => {
+  // The old address lands on the Gift page.
   await page.goto("/gift-cards");
+  await expect(page).toHaveURL(/\/gift$/);
+  // Choosing a card opens the form over the page, on that card.
+  const cards = page.getByRole("region", { name: "Or let them choose." });
+  await expect(async () => {
+    await cards.getByRole("button", { name: "Gift card, Rs 50,000" }).click();
+    await expect(page.getByRole("dialog", { name: "Send a gift card" })).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 30_000 });
+  await expect(page).toHaveURL(/\/gift$/);
   // Each amount has its own printed card; other amounts go up to Rs 1,00,000 on the plain black card.
   const preview = page.getByRole("complementary", { name: "Preview" });
-  await page.getByRole("radio", { name: "Rs 50,000" }).click();
+  await expect(page.getByRole("radio", { name: "Rs 50,000" })).toHaveAttribute("aria-checked", "true");
   await expect(preview.getByRole("img", { name: "Easypick gift card, Rs 50,000" }).locator("img")).toHaveAttribute("src", /front-50000/);
   await expect(preview).toContainText("valid for 12 months from purchase");
   await page.getByRole("radio", { name: "Custom" }).click();

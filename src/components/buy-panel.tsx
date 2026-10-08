@@ -123,7 +123,7 @@ export function BuyPanel(props: Props) {
       </p>
       <p className="mt-1 text-[13px] text-steel-dark">
         Gift cards accepted ·{" "}
-        <Link href="/gift-cards" className="underline underline-offset-2">
+        <Link href="/gift#buy" className="underline underline-offset-2">
           Give one
         </Link>
       </p>

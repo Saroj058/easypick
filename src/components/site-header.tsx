@@ -50,7 +50,7 @@ const menu: SmoothDropdownItem[] = [
   { id: "/trending", href: "/trending", label: "Trending", icon: FireIcon },
   { id: "/drops", href: "/drops", label: "Drops", icon: Calendar03Icon },
   { id: "/fit", href: "/fit", label: "Build a fit", icon: HangerIcon },
-  { id: "/gift-cards", href: "/gift-cards", label: "Gift cards", icon: GiftCardIcon },
+  { id: "/gift-cards", href: "/gift#buy", label: "Gift cards", icon: GiftCardIcon },
   { id: "/saved", href: "/saved", label: "Saved", icon: FavouriteIcon },
   { id: "/size-guide", href: "/size-guide", label: "Your size in cm", icon: RulerIcon },
   { id: "/how-it-works", href: "/how-it-works", label: "How the store works", icon: HelpCircleIcon },

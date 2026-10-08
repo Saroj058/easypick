@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import { BalanceCheck } from "@/app/gift-cards/balance-check";
+import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
-import { GiftCardPicture, PRINTED_CARDS } from "@/components/gift-card-art";
+import { GiftCardPicker } from "@/components/gift/gift-card-picker";
+import { GiftCardPicture } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
@@ -118,12 +119,12 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
 
   return (
     <div className="pb-24">
-      {/* The opening: the owner's picture (a warm wall, the box, two cards) fills the screen; the words sit on its open left side. */}
-      <section className="relative overflow-hidden bg-[#f1dcc3] text-ink">
+      {/* The opening: the owner's picture (a white room, the box, two cards) fills the screen; the words sit on its open left side. */}
+      <section className="relative overflow-hidden bg-[#f1f2f5] text-ink">
         {/* Phones: the box and cards at the top, the words over the picture's pale foot. */}
-        <Image src="/gift/hero-light-phone.webp" alt="" width={900} height={804} priority sizes="100vw" className="absolute inset-x-0 top-0 h-auto w-full md:hidden" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[36%] to-[#f1dcc3] to-[48%] md:hidden" aria-hidden />
-        <Image src="/gift/hero-light.webp" alt="" fill priority sizes="100vw" className="object-cover object-right max-md:hidden" />
+        <Image src="/gift/hero-white-phone.webp" alt="" width={900} height={804} priority sizes="100vw" className="absolute inset-x-0 top-0 h-auto w-full md:hidden" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[36%] to-[#f1f2f5] to-[48%] md:hidden" aria-hidden />
+        <Image src="/gift/hero-white.webp" alt="" fill priority sizes="100vw" className="object-cover object-right max-md:hidden" />
         <div className="container-ep relative flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] items-end pb-6 pt-[66vw] md:min-h-[calc(100svh-88px)] md:items-center md:py-20">
           <div className="md:max-w-[50%]">
             <p className="index text-ink/60">Gifting, simplified</p>
@@ -144,7 +145,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                 </span>
                 <GiftBox className="absolute -right-2 bottom-[-18px] w-[118px]" />
               </a>
-              <Link href="/gift-cards#buy" className="group relative flex h-[88px] items-center overflow-hidden rounded-2xl border border-ink/15 bg-paper/85 pl-5 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-transform duration-150 active:scale-[0.99] md:h-[104px]">
+              <a href="#buy" className="group relative flex h-[88px] items-center overflow-hidden rounded-2xl border border-ink/15 bg-paper/85 pl-5 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-transform duration-150 active:scale-[0.99] md:h-[104px]">
                 <span className="relative z-10">
                   <span className="display block text-[26px] leading-none">Send a gift card</span>
                   <span className="mt-1.5 flex items-center gap-1.5 text-[13px] text-steel-dark">
@@ -163,7 +164,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                     <GiftCardPicture amount={2000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]" />
                   </span>
                 </span>
-              </Link>
+              </a>
             </nav>
           </div>
         </div>
@@ -171,7 +172,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
 
       <div className="container-ep space-y-14 pt-10 md:space-y-20 md:pt-14">
         {/* Already holding a gift card: type its code right here */}
-        <section aria-labelledby="balance-h" className="flex flex-col gap-5 rounded-2xl border border-steel p-4 md:flex-row md:items-center md:gap-8 md:p-5">
+        <section id="balance" aria-labelledby="balance-h" className="scroll-mt-24 flex flex-col gap-5 rounded-2xl border border-steel p-4 md:flex-row md:items-center md:gap-8 md:p-5">
           <div className="flex items-center gap-4 md:gap-6">
             <span className="block w-24 shrink-0 -rotate-3 md:w-32" aria-hidden>
               <GiftCardPicture amount={null} side="back" className="shadow-[0_10px_24px_-12px_rgba(0,0,0,0.5)]" />
@@ -230,7 +231,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
           ) : live.length === 0 ? (
             <p className="mt-6">
               Nothing to send right now.{" "}
-              <Link href="/gift-cards#buy" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
+              <Link href="#buy" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
                 A gift card works today
               </Link>
             </p>
@@ -241,7 +242,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                 Show every piece
               </Link>{" "}
               or{" "}
-              <Link href="/gift-cards#buy" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
+              <Link href="#buy" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
                 send a gift card
               </Link>
             </p>
@@ -256,30 +257,13 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
         </section>
 
         {/* The gift cards, shown as what they are: a row of cards to pick from */}
-        {!filtered && (
-          <section aria-labelledby="cards-h" className="on-dark -mx-4 overflow-hidden bg-ink px-4 py-12 text-paper md:mx-0 md:rounded-2xl md:px-10 md:py-14">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h2 id="cards-h" className="display display-h2">
-                  Or let them choose.
-                </h2>
-                <p className="mt-2 max-w-[40ch] text-paper/75">A card for the mountains, a card for the city, a card for the one who has everything.</p>
-              </div>
-              <Link href="/gift-cards#buy" className="inline-flex h-12 items-center gap-2 rounded-full bg-volt px-6 text-[14px] font-semibold uppercase tracking-[0.08em] text-ink transition-transform duration-150 active:scale-[0.98]">
-                Pick a card <ArrowIcon className="h-4 w-4" />
-              </Link>
-            </div>
-            <ul className="mt-8 grid grid-cols-2 items-center gap-x-3 gap-y-5 sm:grid-cols-3 md:gap-x-6 md:gap-y-8">
-              {PRINTED_CARDS.map((amount, i) => (
-                <li key={amount}>
-                  <Link href="/gift-cards#buy" aria-label={`Gift card, ${formatPrice(amount)}`} className={`block transition-transform duration-300 hover:-translate-y-1 hover:rotate-0 ${i % 2 ? "rotate-[1.5deg]" : "-rotate-[1.5deg]"}`}>
-                    <GiftCardPicture amount={amount} className="shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)]" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        <section id="buy" aria-labelledby="cards-h" className="on-dark scroll-mt-24 -mx-4 overflow-hidden bg-ink px-4 py-12 text-paper md:mx-0 md:rounded-2xl md:px-10 md:py-14">
+            <h2 id="cards-h" className="display display-h2">
+              Or let them choose.
+            </h2>
+            <p className="mt-2 max-w-[44ch] text-paper/75">Pick a card and fill it in right here. It reaches them by email in minutes.</p>
+            <GiftCardPicker />
+        </section>
 
         {/* Two short rows, only while nothing is filtered */}
         {!filtered && <Rail id="nosize-h" title="No size to guess." note="One size. Nothing to swap." products={noSize} />}
