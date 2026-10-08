@@ -5,6 +5,7 @@ import { Countdown } from "@/components/countdown";
 import { HeroRack, type RackPiece } from "@/components/hero-rack";
 import { FitsTeaser } from "@/components/home/fits-teaser";
 import { GiftBlock } from "@/components/home/gift-block";
+import { ShinyLink } from "@/components/ui/shiny-button";
 import { OurStore } from "@/components/home/our-store";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
@@ -103,16 +104,12 @@ export default async function HomePage() {
           {/* Stage */}
           <div className="on-dark relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-graphite text-paper md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
             <HeroRack top={upper} bottom={lower} />
-            {/* The way into the drop, on the wardrobe itself: at the foot of the card beside the price tag (top corner on phones, where the foot holds the piece bar) */}
-            <Link
-              href={drop ? `/drop/${drop.slug}` : "/drops"}
-              className="group absolute right-3 top-3 z-30 inline-flex h-11 items-center gap-2 rounded-full bg-paper px-4 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)] transition-colors duration-200 hover:bg-volt md:bottom-6 md:right-[150px] md:top-auto md:h-12 md:px-6 md:text-[13px] lg:bottom-7"
-            >
-              {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </Link>
+            {/* The way into the drop, on the wardrobe itself: in the middle of the card's foot (top on phones, where the foot holds the piece bar). The same sweeping pill as the Rail's "Show all", on white. */}
+            <div className="absolute inset-x-0 bottom-[70px] z-30 flex justify-center md:bottom-6 lg:bottom-7">
+              <ShinyLink href={drop ? `/drop/${drop.slug}` : "/drops"} className="[&>span]:bg-paper [&>span]:px-6 [&>span]:py-3 [&>span]:shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)]">
+                {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
+              </ShinyLink>
+            </div>
           </div>
 
           {/* Words */}
