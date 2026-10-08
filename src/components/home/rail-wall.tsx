@@ -770,14 +770,14 @@ export function RailWall({
                 <button
                   key={s}
                   type="button"
-                  aria-pressed={mySize === s}
+                  aria-pressed={mySize === s || (!mySize && fitLetter === s)}
                   aria-label={fitLetter === s ? `${s}, picked from your measurements` : undefined}
                   data-fit={fitLetter === s ? "" : undefined}
                   onClick={() => {
                     setMySize(s);
                     setChanging(false);
                   }}
-                  className={`grid h-11 w-11 place-items-center rounded-full border font-mono text-[12px] font-semibold ${mySize === s ? "border-ink bg-ink text-paper" : "border-ink/60 hover:border-ink hover:bg-ink hover:text-paper"} ${fitLetter === s ? "ring-2 ring-volt ring-offset-2" : ""}`}
+                  className={`grid h-11 w-11 place-items-center rounded-full border font-mono text-[12px] font-semibold ${mySize === s || (!mySize && fitLetter === s) ? "border-ink bg-ink text-paper" : "border-ink/60 hover:border-ink hover:bg-ink hover:text-paper"}`}
                 >
                   {s}
                 </button>
