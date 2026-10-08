@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
-import { GiftCardArt } from "@/components/gift-card-art";
+import { GiftCardPicture } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
@@ -160,7 +160,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
               </span>
               <span className="flex shrink-0 items-center gap-3">
                 <span className="block w-24 rotate-[-6deg] max-sm:hidden" aria-hidden>
-                  <GiftCardArt design="lime" amount={null} />
+                  <GiftCardPicture amount={2000} className="shadow-none" />
                 </span>
                 <ArrowIcon className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
               </span>

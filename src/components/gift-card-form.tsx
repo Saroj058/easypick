@@ -4,15 +4,14 @@ import { useActionState, useState } from "react";
 
 import { buyGiftCard, type GiftState } from "@/app/gift-actions";
 import { formatPrice, normaliseNepaliMobile } from "@/lib/format";
-import { GIFT_CARD_DESIGNS, type GiftCardDesign } from "@/lib/gift-card-designs";
 import { kathmanduToday } from "@/lib/kathmandu-date";
-import { GiftCardArt } from "./gift-card-art";
+import { GiftCardPicture, PRINTED_CARDS } from "./gift-card-art";
 import { useMe, usePrefilled } from "./session";
 import { PayWith } from "./pay-with";
 
-const VALUES = [1000, 2000, 3000, 5000, 10000];
+const VALUES = PRINTED_CARDS;
 const MIN = 1000;
-const MAX = 20000;
+const MAX = 100000;
 const STEP = 100;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const input = "mt-2 h-14 w-full rounded-[2px] border border-steel-dark bg-paper px-4 text-base aria-[invalid=true]:border-error-light";
@@ -34,14 +33,14 @@ function useFieldCheck(test: (v: string) => string | null) {
 const emailCheck = (v: string) => (v && !EMAIL.test(v) ? "Check the email, like name@example.com." : null);
 const phoneCheck = (v: string) => (v && !normaliseNepaliMobile(v) ? "10 digits, starting 97 or 98." : null);
 
-/** Buy a gift card: design, amount, who it's for, message and date, with a live preview. */
+/** Buy a gift card: amount (each has its own printed card), who it's for, message and date, with a live preview. */
 export function GiftCardForm() {
   const me = useMe();
   const senderField = usePrefilled(me?.name);
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<GiftState, FormData>(buyGiftCard, { status: "idle" });
-  const [design, setDesign] = useState<GiftCardDesign>("pick");
   const [value, setValue] = useState<number | "custom">(2000);
+  const [flipped, setFlipped] = useState(false);
   const [custom, setCustom] = useState("");
   const [forMe, setForMe] = useState(false);
   const [name, setName] = useState("");
@@ -59,32 +58,10 @@ export function GiftCardForm() {
   return (
     <form action={action} className="grid gap-10 pb-24 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-12 lg:pb-0" noValidate>
       <div className="space-y-12">
-        <section className="space-y-3" aria-labelledby="gc-design-h">
-          <h2 id="gc-design-h" className="text-xl font-semibold">
-            1. Choose a design
-          </h2>
-          <input type="hidden" name="design" value={design} />
-          <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="gc-design-h">
-            {GIFT_CARD_DESIGNS.map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                role="radio"
-                aria-checked={design === d.id}
-                onClick={() => setDesign(d.id)}
-                className={`rounded-[16px] p-1.5 text-left ${design === d.id ? "ring-2 ring-ink" : "ring-1 ring-mist hover:ring-ink"}`}
-              >
-                <GiftCardArt design={d.id} amount={null} className="pointer-events-none shadow-none" />
-                <span className="mt-2 block px-1 text-[14px] font-semibold">{d.name}</span>
-                <span className="block px-1 pb-1 text-[12px] text-steel-dark">{d.note}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
+        <input type="hidden" name="design" value="pick" />
         <section className="space-y-3" aria-labelledby="gc-amount-h">
           <h2 id="gc-amount-h" className="text-xl font-semibold">
-            2. Choose an amount
+            1. Choose an amount
           </h2>
           <input type="hidden" name="value" value={value === "custom" ? "" : value} />
           <p className="font-mono text-[40px] font-semibold leading-none md:text-[48px]" aria-live="polite">
@@ -103,20 +80,20 @@ export function GiftCardForm() {
           {value === "custom" && (
             <div>
               <label htmlFor="gc-custom" className={label}>
-                Amount in rupees <span className="font-normal text-steel-dark">(1,000 to 20,000, in hundreds)</span>
+                Amount in rupees <span className="font-normal text-steel-dark">(1,000 to 1,00,000, in hundreds)</span>
               </label>
               <input
                 id="gc-custom"
                 name="custom"
                 inputMode="numeric"
                 value={custom}
-                onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 aria-invalid={custom !== "" && !customOk}
                 aria-describedby="gc-custom-hint"
                 className={`${input} font-mono`}
               />
               <p id="gc-custom-hint" className={`mt-1 text-[13px] ${custom !== "" && !customOk ? "text-error-light" : "text-steel-dark"}`}>
-                {custom !== "" && !customOk ? "Use a whole number of hundreds, from Rs 1,000 to Rs 20,000." : "For example 2,500 or 7,000."}
+                {custom !== "" && !customOk ? "Use a whole number of hundreds, from Rs 1,000 to Rs 1,00,000." : "For example 2,500 or 7,000."}
               </p>
             </div>
           )}
@@ -124,7 +101,7 @@ export function GiftCardForm() {
 
         <section className="space-y-4" aria-labelledby="gc-to-h">
           <h2 id="gc-to-h" className="text-xl font-semibold">
-            3. Send to
+            2. Send to
           </h2>
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="gc-to-h">
             <button type="button" role="radio" aria-checked={!forMe} onClick={() => setForMe(false)} className={chip(!forMe)}>
@@ -163,7 +140,7 @@ export function GiftCardForm() {
         {!forMe && (
           <section className="space-y-4" aria-labelledby="gc-msg-h">
             <h2 id="gc-msg-h" className="text-xl font-semibold">
-              4. Message and date
+              3. Message and date
             </h2>
             <div>
               <label htmlFor="gc-message" className={label}>
@@ -202,7 +179,7 @@ export function GiftCardForm() {
 
         <section className="space-y-4" aria-labelledby="gc-pay-h">
           <h2 id="gc-pay-h" className="text-xl font-semibold">
-            {forMe ? "4" : "5"}. Pay
+            {forMe ? "3" : "4"}. Pay
           </h2>
           <div>
             <label htmlFor="gc-bphone" className={label}>
@@ -233,8 +210,14 @@ export function GiftCardForm() {
       <aside className="order-first lg:sticky lg:top-28 lg:order-none lg:self-start" aria-label="Preview">
         <p className="index text-steel-dark">Preview</p>
         <div className="mx-auto mt-3 max-w-[340px] lg:max-w-none">
-          <GiftCardArt design={design} amount={amount || null} />
+          <GiftCardPicture amount={amount || null} side={flipped ? "back" : "front"} priority />
         </div>
+        <p className="mt-3 flex flex-wrap items-center justify-between gap-x-4 text-[13px] text-steel-dark">
+          <span>Picture for illustration. Your card is valid for 12 months from purchase.</span>
+          <button type="button" onClick={() => setFlipped((f) => !f)} aria-pressed={flipped} className="inline-flex min-h-11 items-center font-semibold text-ink underline underline-offset-2">
+            {flipped ? "See the front" : "See the back"}
+          </button>
+        </p>
         <div className="mt-5 hidden bg-photo p-5 text-[15px] lg:block">
           <p className="font-semibold">{forMe ? `For you${name ? `, ${name.split(" ")[0]}` : ""}` : name ? `For ${name}` : "For them"}</p>
           {!forMe && message && <p className="mt-2 whitespace-pre-line">&ldquo;{message}&rdquo;</p>}
@@ -252,7 +235,7 @@ export function GiftCardForm() {
         )}
         <div className="flex items-center gap-3">
           <div className="w-14 shrink-0" aria-hidden>
-            <GiftCardArt design={design} amount={null} className="shadow-none" />
+            <GiftCardPicture amount={amount || null} className="shadow-none" />
           </div>
           <button type="submit" className="btn btn-volt flex-1" disabled={pending || !amount} aria-busy={pending}>
             {pending ? "One moment…" : amount ? `Pay ${formatPrice(amount)}` : "Choose an amount"}

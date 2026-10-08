@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AskWhatsApp } from "@/components/ask-whatsapp";
-import { GiftCardArt } from "@/components/gift-card-art";
+import { GiftCardPicture } from "@/components/gift-card-art";
 import { GiftCardForm } from "@/components/gift-card-form";
 import { site } from "@/lib/site";
 import { BalanceCheck } from "./balance-check";
@@ -52,8 +52,11 @@ export default function GiftCardsPage() {
               <AskWhatsApp text="Hi Easypick, I need help with a gift card." label="Stuck? Ask us on WhatsApp" />
             </p>
           </div>
-          <div className="mx-auto w-full max-w-md md:-rotate-3">
-            <GiftCardArt design="pick" amount={2000} />
+          {/* The front, and the back every card shares behind it */}
+          <div className="relative mx-auto w-full max-w-md pb-[8%] pr-[8%]">
+            <GiftCardPicture amount={null} side="back" className="absolute bottom-0 right-0 w-[92%] rotate-[5deg]" />
+            <GiftCardPicture amount={5000} priority className="relative w-[92%] -rotate-3" />
+            <p className="mt-6 text-[13px] text-steel-dark">Pictures for illustration. Every card is valid for 12 months from purchase.</p>
           </div>
         </div>
       </section>

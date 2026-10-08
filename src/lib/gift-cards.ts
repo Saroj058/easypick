@@ -41,11 +41,13 @@ export interface GiftCard {
   sentAt?: string;
 }
 
-export const GIFT_CARD_VALUES = [1000, 2000, 3000, 5000];
+/** The amounts with a printed card of their own (public/gift-cards/front-*.webp). */
+export const GIFT_CARD_VALUES = [1000, 2000, 5000, 10000, 15000, 20000, 25000, 30000, 50000];
 export const GIFT_CARD_MIN = 1000;
 /** Custom amounts go in steps of Rs 100. */
 export const GIFT_CARD_STEP = 100;
-export const GIFT_CARD_MAX = 20000;
+/** Raised from Rs 20,000 by the owner on 8 Oct 2026. */
+export const GIFT_CARD_MAX = 100000;
 
 // No 0/O, 1/I/L: easy to read out loud and type from an SMS.
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";

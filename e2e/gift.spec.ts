@@ -76,6 +76,18 @@ test("send a piece: three steps, their name before the note, checks before payme
 
 test("gift card: amount shown large, checks on leaving a field @phone", async ({ page }, info) => {
   await page.goto("/gift-cards");
+  // Each amount has its own printed card; other amounts go up to Rs 1,00,000 on the plain black card.
+  const preview = page.getByRole("complementary", { name: "Preview" });
+  await page.getByRole("radio", { name: "Rs 50,000" }).click();
+  await expect(preview.getByRole("img", { name: "Easypick gift card, Rs 50,000" }).locator("img")).toHaveAttribute("src", /front-50000/);
+  await expect(preview).toContainText("valid for 12 months from purchase");
+  await page.getByRole("radio", { name: "Custom" }).click();
+  await page.locator("#gc-custom").fill("100100");
+  await expect(page.locator("#gc-custom-hint")).toContainText("from Rs 1,000 to Rs 1,00,000");
+  await page.locator("#gc-custom").fill("100000");
+  await expect(preview.getByRole("img", { name: "Easypick gift card, Rs 1,00,000" }).locator("img")).toHaveAttribute("src", /back/);
+  await preview.getByRole("button", { name: "See the back" }).click();
+  await expect(preview.getByRole("img", { name: "The back of an Easypick gift card" })).toBeVisible();
   await page.getByRole("radio", { name: "Rs 5,000" }).click();
   await expect(page.getByRole("button", { name: /Pay Rs 5,000|Buy gift card · Rs 5,000/ }).first()).toBeVisible();
   await page.locator("#gc-remail").fill("not-an-email");

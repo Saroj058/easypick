@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { GiftCardArt } from "@/components/gift-card-art";
+import { GiftCardPicture } from "@/components/gift-card-art";
 
 const Arrow = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
@@ -77,7 +77,7 @@ export function GiftBlock() {
         <Link href="/gift-cards" className="group relative flex min-h-[300px] flex-col justify-between overflow-hidden border border-ink bg-photo p-6 md:p-8">
           <div className="relative z-10 lg:max-w-[52%]">
             <h3 className="display text-[40px] leading-[0.9] md:text-[48px]">Gift cards</h3>
-            <p className="mt-3 text-[15px] text-steel-dark">Any amount from Rs 1,000 to 20,000. Sent by email or SMS, spent online or in the store.</p>
+            <p className="mt-3 text-[15px] text-steel-dark">Any amount from Rs 1,000 to 1,00,000. Sent by email or SMS, spent online or in the store.</p>
             <p className="mt-5 flex flex-wrap gap-1.5 font-mono text-[12px] tabular-nums">
               {["1,000", "2,500", "5,000", "10,000"].map((a) => (
                 <span key={a} className="rounded-full border border-ink/25 bg-paper px-2.5 py-1">
@@ -89,8 +89,8 @@ export function GiftBlock() {
           {/* Two designs, fanned: under the words on smaller screens, beside them on wide ones */}
           <div aria-hidden className="pointer-events-none relative mx-auto mt-10 w-[68%] max-w-[260px] lg:absolute lg:right-8 lg:top-[54%] lg:mx-0 lg:mt-0 lg:w-[40%] lg:-translate-y-1/2">
             <div className="relative">
-              <GiftCardArt design="flatlay" amount={null} className="absolute inset-0 translate-x-[10%] translate-y-[-14%] rotate-[10deg] transition-transform duration-500 group-hover:translate-x-[16%] group-hover:rotate-[14deg]" />
-              <GiftCardArt design="pick" amount={2500} className="relative -rotate-[6deg] transition-transform duration-500 group-hover:-translate-y-1 group-hover:-rotate-[9deg]" />
+              <GiftCardPicture amount={5000} className="absolute inset-0 translate-x-[10%] translate-y-[-14%] rotate-[10deg] transition-transform duration-500 group-hover:translate-x-[16%] group-hover:rotate-[14deg]" />
+              <GiftCardPicture amount={2000} className="relative -rotate-[6deg] transition-transform duration-500 group-hover:-translate-y-1 group-hover:-rotate-[9deg]" />
             </div>
           </div>
           <span className="relative z-10 mt-8 inline-flex h-12 w-fit items-center gap-2 rounded-full bg-ink px-6 text-[14px] font-semibold uppercase tracking-[0.06em] text-paper lg:mt-6">

@@ -6,6 +6,52 @@ import { GarmentSvg } from "./product-image";
 
 const NAMES: Record<GiftCardDesign, string> = { pick: "Pick It", flatlay: "Flat Lay", lime: "Lime" };
 
+/** The amounts that have a printed card of their own: the owner's artwork, with the amount on it. */
+export const PRINTED_CARDS = [1000, 2000, 5000, 10000, 15000, 20000, 25000, 30000, 50000] as const;
+/** Each picture's own size in pixels, so a card is shown whole, at its own shape, never cropped. */
+const SIZES: Record<number | "back", [number, number]> = {
+  1000: [433, 239],
+  2000: [462, 239],
+  5000: [458, 239],
+  10000: [360, 231],
+  15000: [333, 229],
+  20000: [344, 230],
+  25000: [350, 231],
+  30000: [459, 239],
+  50000: [470, 239],
+  back: [1128, 622],
+};
+
+/**
+ * The gift card as it is printed. An amount with a card of its own shows that card; any other
+ * amount shows the plain black Easypick card with the amount set on it. `side="back"` is the
+ * back every card shares.
+ */
+export function GiftCardPicture({ amount, side = "front", className = "", priority }: { amount: number | null; side?: "front" | "back"; className?: string; priority?: boolean }) {
+  const printed = side === "front" && amount !== null && (PRINTED_CARDS as readonly number[]).includes(amount);
+  const [w, h] = SIZES[printed ? (amount as number) : "back"];
+  return (
+    <div
+      className={`relative w-full overflow-hidden bg-ink text-paper [container-type:inline-size] shadow-[0_18px_40px_-18px_rgba(0,0,0,0.45)] ${className}`}
+      style={{ borderRadius: "4.5% / 8%" }}
+      role="img"
+      aria-label={side === "back" ? "The back of an Easypick gift card" : `Easypick gift card${amount ? `, ${formatPrice(amount)}` : ""}`}
+    >
+      <Image src={printed ? `/gift-cards/front-${amount}.webp` : "/gift-cards/back.webp"} alt="" width={w} height={h} sizes="(min-width: 1024px) 420px, 340px" priority={priority} className="block h-auto w-full" />
+      {!printed && side === "front" && amount ? (
+        <>
+          <p className="absolute font-semibold uppercase leading-none tracking-[0.2em]" style={{ right: "6cqw", top: "7cqw", fontSize: "2.8cqw" }}>
+            Gift card
+          </p>
+          <p className="absolute font-semibold leading-none" style={{ left: "7cqw", bottom: "7cqw", fontSize: "8cqw" }}>
+            {formatPrice(amount).replace("Rs ", "Rs. ")}
+          </p>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * An Easypick gift card at credit-card proportions (85.6 × 54 mm). Same layout on every
  * design: logo top left, artwork full bleed, amount bottom left, "Gift card" bottom right.

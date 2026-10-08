@@ -244,8 +244,8 @@ describe("bought gift cards", () => {
     expect(await sendDueGiftCards(onTheDay)).toBe(0); // never twice
   });
 
-  it("must be Rs 1,000 to 20,000 in steps of Rs 100", async () => {
-    for (const amount of ["750.5", "500", "1250", "20100"]) {
+  it("must be Rs 1,000 to 1,00,000 in steps of Rs 100", async () => {
+    for (const amount of ["750.5", "500", "1250", "100100"]) {
       const f = new FormData();
       f.set("custom", amount);
       const r = await buyGiftCard({ status: "idle" }, f);
