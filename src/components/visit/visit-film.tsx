@@ -5,24 +5,24 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AlertSignup } from "@/components/alert-signup";
-import { kathmanduClock, subsolarPoint } from "@/lib/kathmandu-sky";
+import { kathmanduClock } from "@/lib/kathmandu-sky";
+import { fromRouting, MAX_LIVE_METRES, routingUrl } from "@/lib/map/live-route";
 import { distance, lengthMeters, minutes, type LngLat, type TravelMode } from "@/lib/map/route";
-import { FIXTURE_TILES_URL, STATIC_ROUTE, TILES_URL, TOUR_ENTER_URL, VALLEY } from "@/lib/map/tiles";
-import { altitudeLabel, altitudeMetres, cloudAt, FILM_SECONDS, HANDOVER, KATHMANDU, planFilm, sceneAt, SCENES, sceneStart, type SceneId } from "@/lib/visit/film";
-import { Directions, googleMapsUrl, walkMinutes, type DirectionsData, type Locate, type Snap } from "./directions";
+import { AREA_CENTRE, FIXTURE_TILES_URL, STATIC_ROUTE, TILES_URL, TOUR_ENTER_URL } from "@/lib/map/tiles";
+import { altitudeLabel, altitudeMetres, FILM_SECONDS, planFilm, SCENES, sceneStart, type SceneId } from "@/lib/visit/film";
+import { Directions, googleMapsUrl, walkMinutes, type DirectionsData, type Locate, type Snap, type StartChoice } from "./directions";
 
-// The Visit page: one film, and the page's scroll is its clock. It opens on the Earth from orbit,
-// lit as it really is at this moment, with two ways to visit: In person and the Virtual tour.
-// Scrolling (or pressing In person, which scrolls for you) falls towards Nepal, through the
-// clouds, into Kathmandu as a tilted city at night, along the route in lime, to the door, and
-// ends on the directions. Scrolling back up runs it backwards. Every position of everything is a
-// pure function of the film's second (lib/visit/film.ts); this component turns scroll into that
-// second and hands it to the two pictures (earth.tsx above the clouds, descent-map.tsx below).
+// The Visit page: one film, and the page's scroll is its clock. It opens on Kathmandu as a tilted
+// city at night with the whole route to the store drawn in lime and the store lit at its end, and
+// two ways to visit: In person and the Virtual tour. Scrolling (or pressing In person, which
+// scrolls for you) drops to where the route begins, flies along it step by step, pushes in on the
+// door, and ends on the directions. Scrolling back up runs it backwards. Every position of
+// everything is a pure function of the film's second (lib/visit/film.ts); this component turns
+// scroll into that second and hands it to the map (descent-map.tsx).
 //
 // Without WebGL, or on a data-saver or low-memory phone, there is no film: the first screen is a
 // still, and In person opens the same directions over a still of the route.
 
-const Earth = dynamic(() => import("./earth"), { ssr: false });
 const DescentMap = dynamic(() => import("./descent-map"), { ssr: false });
 
 export type Fallback = "none" | "reduced" | "lite" | "nowebgl";
@@ -39,9 +39,9 @@ export interface FilmSwitches {
 
 const HASH = "#find-us";
 /** How many screens of scroll the film is. */
-const SCREENS = 9;
+const SCREENS = 7;
 /** Playing by itself, the film runs a little faster than its own clock. */
-const PLAY_RATE = 1.5;
+const PLAY_RATE = 1.25;
 
 type Nav = Navigator & { connection?: { saveData?: boolean; effectiveType?: string }; deviceMemory?: number };
 
@@ -97,10 +97,9 @@ function Decode({ text, still }: { text: string; still: boolean }) {
 export function VisitFilm({
   switches,
   find,
-  sun: sunAtLoad,
   clock,
   liveClock,
-  daylight,
+  backdrop,
   status,
   short,
   open,
@@ -110,14 +109,12 @@ export function VisitFilm({
   switches: FilmSwitches;
   /** What the map and the directions need. Before opening day there is no pin and no start point. */
   find: DirectionsData;
-  /** Where the sun is overhead as the page is made. */
-  sun: { lat: number; lng: number };
   /** "19:42" in Kathmandu as the page is made; kept running here. */
   clock: string;
-  /** False when the clock is pinned (tests, demos): the sun and the time stay put. */
+  /** False when the clock is pinned (tests, demos): the time stays put. */
   liveClock: boolean;
-  /** True while it's day in Kathmandu: picks the still that stands in for the Earth. */
-  daylight: boolean;
+  /** A still of the store, for the first screen where there is no film. */
+  backdrop: string;
   /** The whole status for screen readers, and the few words shown. */
   status: string;
   short: string;
@@ -128,9 +125,6 @@ export function VisitFilm({
   hoursToday: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const veil = useRef<HTMLDivElement>(null);
-  const earthBox = useRef<HTMLDivElement>(null);
-  const mapBox = useRef<HTMLDivElement>(null);
   const altEl = useRef<HTMLSpanElement>(null);
   const fills = useRef<(HTMLSpanElement | null)[]>([]);
   /** The film's second: where scroll points, and where the picture is (easing towards it). */
@@ -146,18 +140,12 @@ export function VisitFilm({
   const [tier, setTier] = useState<2 | 3>(3);
   const [wide, setWide] = useState(true);
   const [tall, setTall] = useState(800);
-  const [sun, setSun] = useState(sunAtLoad);
-  const [loaded, setLoaded] = useState(0);
-  const [earthOn, setEarthOn] = useState(false);
-  const [earthLost, setEarthLost] = useState(false);
-  const [wantMap, setWantMap] = useState(false);
   const [mapOn, setMapOn] = useState(false);
   const [mapLost, setMapLost] = useState(false);
-  const [scene, setScene] = useState<SceneId>("orbit");
+  const [scene, setScene] = useState<SceneId>("open");
   const [caption, setCaption] = useState<string | null>(null);
   const [panel, setPanel] = useState(false);
   const [lit, setLit] = useState(-1);
-  const [started, setStarted] = useState(false);
   const [playing, setPlaying] = useState(false);
   /** In person with no film: the directions over a still. */
   const [plain, setPlain] = useState(false);
@@ -168,16 +156,16 @@ export function VisitFilm({
   /** The visitor's spot lives here and nowhere else (not the address, storage, the server or analytics). */
   const [locate, setLocate] = useState<Locate>("off");
   const [me, setMe] = useState<LngLat | null>(null);
+  /** The way from where the visitor is, along real streets (worked out by OpenStreetMap's routing service once they share their location). */
+  const [mine, setMine] = useState<StartChoice | null>(null);
 
   const still = fallback === "reduced";
-  const canFilm = decided && (fallback === "none" || fallback === "reduced") && !earthLost && !mapLost;
-  const start = find.starts.find((s) => s.id === startId) ?? find.starts[0] ?? null;
+  const canFilm = decided && (fallback === "none" || fallback === "reduced") && !mapLost;
+  const starts = useMemo(() => (mine ? [mine, ...find.starts] : find.starts), [mine, find.starts]);
+  const start = starts.find((s) => s.id === startId) ?? starts[0] ?? null;
   const steps = start ? start.steps : find.steps;
-  const here: LngLat = useMemo(() => (find.pin ? [find.pin.lng, find.pin.lat] : [KATHMANDU.lng, KATHMANDU.lat]), [find.pin]);
-  const plan = useMemo(
-    () => planFilm({ pin: here, valley: [(VALLEY[0][0] + VALLEY[1][0]) / 2, (VALLEY[0][1] + VALLEY[1][1]) / 2], route: start ? start.coords : null, steps, area: find.area, hasDoor: Boolean(find.pin) }),
-    [here, start, steps, find.area, find.pin],
-  );
+  const here: LngLat = useMemo(() => (find.pin ? [find.pin.lng, find.pin.lat] : AREA_CENTRE), [find.pin]);
+  const plan = useMemo(() => planFilm({ pin: here, route: start ? start.coords : null, steps, area: find.area, hasDoor: Boolean(find.pin) }), [here, start, steps, find.area, find.pin]);
   const planRef = useRef(plan);
   useEffect(() => {
     planRef.current = plan;
@@ -212,10 +200,6 @@ export function VisitFilm({
           if (plainOnly) setPlain(true);
           else opening.current = FILM_SECONDS;
         } else if (switches.at !== null && !plainOnly) opening.current = switches.at;
-        if (opening.current !== null) {
-          setWantMap(true);
-          setStarted(true);
-        }
       }, 0);
     });
     return () => {
@@ -234,15 +218,10 @@ export function VisitFilm({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Kathmandu's clock and the sun keep time while the page is open.
+  // Kathmandu's clock keeps time while the page is open.
   useEffect(() => {
     if (!liveClock) return;
-    const tick = () => {
-      const now = new Date();
-      const s = subsolarPoint(now);
-      setSun((was) => (Math.abs(was.lng - s.lng) > 0.2 ? s : was));
-      root.current?.querySelectorAll("[data-ktm-clock]").forEach((el) => (el.textContent = kathmanduClock(now)));
-    };
+    const tick = () => root.current?.querySelectorAll("[data-ktm-clock]").forEach((el) => (el.textContent = kathmanduClock(new Date())));
     tick();
     const timer = setInterval(tick, 20_000);
     return () => clearInterval(timer);
@@ -267,6 +246,20 @@ export function VisitFilm({
           return !best || d < best.d ? { id: s.id, d } : best;
         }, null);
         if (near && near.d < 60_000) setStartId(near.id);
+        // The real way from there, along the streets. Until it arrives (or if it can't be had), the nearest saved start point stands in.
+        const pin = find.pin;
+        if (!pin || distance(at, [pin.lng, pin.lat]) > MAX_LIVE_METRES) return;
+        fetch(routingUrl(at, pin), { signal: AbortSignal.timeout(9000) })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((answer) => {
+            const route = fromRouting(answer, pin);
+            if (!route) return;
+            setMine({ id: "me", name: "Your location", coords: route.coords, steps: route.steps });
+            setStartId("me");
+          })
+          .catch(() => {
+            // offline, blocked or slow: the saved start point and the dashed line remain
+          });
       },
       () => setLocate(quiet ? "idle" : "failed"),
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
@@ -279,8 +272,6 @@ export function VisitFilm({
       setPlain(true);
       return;
     }
-    setWantMap(true);
-    setStarted(true);
     if (locate === "idle") askWhere(true);
     if (still) {
       // Reduced motion: no flight, straight to the end.
@@ -309,47 +300,35 @@ export function VisitFilm({
     film.current.shown = t;
   }, [canFilm, scrollToSecond]);
 
-  // The film's clock: scroll decides where it should be; each frame it eases there, and the
-  // pictures and the words follow. Only what changes by the scene touches React.
+  // The film's clock: scroll decides where it should be; each frame it eases there, and the map
+  // and the words follow. Only what changes by the scene touches React.
   useEffect(() => {
     if (!canFilm) return;
     let frame = 0;
     let last = performance.now();
     const seen = { scene: "" as string, caption: "" as string | null, panel: false, step: -2 };
     const speed = switches.motion === "fast" ? 8 : 1;
-    const read = () => {
-      const top = root.current?.offsetTop ?? 0;
-      film.current.target = Math.min(1, Math.max(0, (window.scrollY - top) / reach())) * FILM_SECONDS;
-    };
     const loop = (now: number) => {
       frame = requestAnimationFrame(loop);
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       const f = film.current;
       const a = auto.current;
+      const top = root.current?.offsetTop ?? 0;
       if (a.on) {
-        const top = root.current?.offsetTop ?? 0;
         const max = top + reach();
-        // In the thick of the cloud it waits for the city to be drawn, then carries on.
-        const waiting = f.target >= HANDOVER - 0.15 && f.target < HANDOVER + 0.4 && !mapReady.current;
-        if (!waiting) a.y = Math.min(max, a.y + ((dt * reach()) / FILM_SECONDS) * PLAY_RATE * speed);
+        // It waits for the city to be drawn before it sets off.
+        if (mapReady.current) a.y = Math.min(max, a.y + ((dt * reach()) / FILM_SECONDS) * PLAY_RATE * speed);
         window.scrollTo({ top: a.y, behavior: "instant" });
         if (a.y >= max) stopAuto();
       }
-      read();
+      f.target = Math.min(1, Math.max(0, (window.scrollY - top) / reach())) * FILM_SECONDS;
       const gap = f.target - f.shown;
       f.shown = still || Math.abs(gap) < 0.002 ? f.target : f.shown + gap * (1 - Math.exp(-dt * 6 * speed));
       const t = f.shown;
 
-      // The cloud, and which picture is under it.
-      const below = t >= HANDOVER;
-      const cloud = below && !mapReady.current ? 1 : cloudAt(t);
-      if (veil.current) veil.current.style.opacity = String(cloud);
-      if (earthBox.current) earthBox.current.style.opacity = below ? "0" : "1";
-      if (mapBox.current) mapBox.current.style.opacity = below ? "1" : "0";
-
       const fr = planRef.current.frame(t);
-      if (altEl.current) altEl.current.textContent = altitudeLabel(altitudeMetres(t, fr.map.zoom, fr.map.center[1]));
+      if (altEl.current) altEl.current.textContent = fr.overview === 0 ? altitudeLabel(altitudeMetres(fr.map.zoom, fr.map.center[1])) : "";
       SCENES.forEach((s, i) => {
         const el = fills.current[i];
         if (!el) return;
@@ -359,10 +338,6 @@ export function VisitFilm({
       if (fr.scene !== seen.scene) {
         seen.scene = fr.scene;
         setScene(fr.scene);
-        if (t > 0.6) {
-          setWantMap(true);
-          setStarted(true);
-        }
       }
       if (fr.caption !== seen.caption) {
         seen.caption = fr.caption;
@@ -409,10 +384,9 @@ export function VisitFilm({
   const mapLabel = start ? `Map: route from ${start.name} to Easypick` : find.pin ? "Map: where Easypick is" : "Map: the area Easypick is opening in";
   const inset = wide ? { right: 384, bottom: 0 } : { right: 0, bottom: Math.min(Math.round(tall * 0.5), Math.max(0, tall - 330)) };
   const staticRoute = Boolean(find.pin && Math.abs(find.pin.lat - STATIC_ROUTE.pin.lat) < 0.0005 && Math.abs(find.pin.lng - STATIC_ROUTE.pin.lng) < 0.0005);
-  const inFilm = canFilm && started && scene !== "orbit";
+  const inFilm = canFilm && scene !== "open";
   const atEnd = scene === "arrive" && panel;
   const sceneIndex = SCENES.findIndex((s) => s.id === scene);
-  const still3d = `/visit/earth-${daylight ? "day" : "night"}`;
   const pill = "flex h-14 items-center justify-center gap-3 rounded-full px-7 text-[14px] font-semibold uppercase tracking-[0.08em] transition-transform duration-150 active:scale-[0.98]";
 
   return (
@@ -421,29 +395,21 @@ export function VisitFilm({
       data-film={canFilm ? "on" : "off"}
       data-fallback={fallback}
       data-scene={scene}
-      data-earth={earthOn ? "on" : "off"}
-      data-map-state={!wantMap ? "idle" : mapOn ? (atEnd ? "done" : "ready") : "loading"}
+      data-map-state={!canFilm ? "idle" : mapOn ? (atEnd ? "done" : "ready") : "loading"}
       data-playing={playing}
       data-motion={switches.motion}
       data-tiles={switches.tiles}
-      className="on-dark relative bg-[#020308] text-paper"
+      className="on-dark relative bg-[#0B0C0D] text-paper"
       style={{ height: canFilm ? `${SCREENS * 100}svh` : undefined }}
     >
       <div className={`${canFilm ? "sticky top-0" : "relative"} h-svh min-h-[540px] overflow-hidden`}>
-        {/* A still of the Earth: what's on screen before (and without) the live one. */}
-        <picture>
-          <source media="(max-aspect-ratio: 4/5)" srcSet={`${still3d}-tall.avif`} />
-          {/* eslint-disable-next-line @next/next/no-img-element -- the LCP image, sized and compressed by hand */}
-          <img src={`${still3d}.avif`} alt="The Earth from orbit, with South Asia in view" width={1656} height={1104} fetchPriority="high" draggable={false} data-poster className={`absolute inset-0 h-full w-full select-none object-cover transition-opacity duration-700 ${earthOn ? "opacity-0" : "opacity-100"}`} />
-        </picture>
-
-        {canFilm && (
-          <div ref={earthBox} className={`absolute inset-0 transition-opacity duration-700 ${earthOn ? "" : "!opacity-0"}`}>
-            <Earth time={time} sun={sun} active={scene === "orbit" || scene === "approach" || scene === "clouds"} tier={tier} still={still} onProgress={setLoaded} onReady={() => setEarthOn(true)} onLost={() => setEarthLost(true)} />
-          </div>
+        {/* With no film: a still of the store behind the words. */}
+        {decided && !canFilm && (
+          // eslint-disable-next-line @next/next/no-img-element -- one small still, sized and compressed by hand
+          <img src={backdrop} alt="" draggable={false} data-backdrop className="absolute inset-0 h-full w-full select-none object-cover opacity-55" />
         )}
-        {canFilm && wantMap && (
-          <div ref={mapBox} data-map-box className="absolute inset-0 bg-[#0B0C0D] opacity-0" style={{ pointerEvents: atEnd ? "auto" : "none" }}>
+        {canFilm && (
+          <div data-map-box className={`absolute inset-0 bg-[#0B0C0D] transition-opacity duration-700 ${mapOn ? "opacity-100" : "opacity-0"}`} style={{ pointerEvents: atEnd ? "auto" : "none" }}>
             <DescentMap
               tilesUrl={tilesUrl}
               pin={find.pin}
@@ -465,14 +431,13 @@ export function VisitFilm({
             />
           </div>
         )}
-        {/* The cloud between the two worlds: it thickens as the camera reaches it and clears over the city. */}
-        <div ref={veil} aria-hidden className="visit-cloud pointer-events-none absolute inset-0 opacity-0" />
-        {/* The finish over every picture: a little grain, darker corners, and shade under the words. */}
+        {/* The finish over the picture: a little grain, and shade under the words. */}
         <div className="visit-grain pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay" aria-hidden />
-        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent via-45% to-black/80 transition-opacity duration-500 ${atEnd ? "opacity-0" : "opacity-100"}`} aria-hidden />
+        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent via-40% to-black/85 transition-opacity duration-500 ${atEnd ? "opacity-0" : "opacity-100"}`} aria-hidden />
+        <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 via-45% to-transparent transition-opacity duration-500 max-md:hidden ${inFilm ? "opacity-0" : "opacity-100"}`} aria-hidden />
 
         {/* The read-out: the hour in Kathmandu, and how high the camera is. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center px-4 pt-[calc(env(safe-area-inset-top)+74px)] md:justify-end md:px-10 md:pt-9">
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center px-4 pt-[calc(env(safe-area-inset-top)+68px)] md:pt-9">
           <p className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-paper/80 md:text-[11px]">
             <span>
               <span className="text-paper/50">Kathmandu</span> <span data-ktm-clock className="tabular-nums">{clock}</span>
@@ -482,7 +447,7 @@ export function VisitFilm({
                 <span className="text-paper/50">Alt</span> <span ref={altEl} data-altitude />
               </span>
             )}
-            {canFilm && !earthOn && loaded < 1 && <span className="tabular-nums text-paper/60">Loading {Math.round(loaded * 100)}%</span>}
+            {canFilm && !mapOn && <span className="text-paper/60">Loading the map</span>}
           </p>
         </div>
 
@@ -496,14 +461,20 @@ export function VisitFilm({
               {status}
             </p>
             {personal && <p className="mb-4 font-mono text-[12px] tracking-[0.1em] text-paper">{personal}</p>}
-            <p className="visit-in flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/80 [animation-delay:120ms] md:text-[11px]" data-status>
+            <p className="visit-in flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/80 [animation-delay:120ms] md:text-[11px]" data-visit-status>
               {!find.soon && <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${open ? "bg-volt" : "border border-paper/80"}`} />}
               {short} <span className="text-paper/45">·</span> {find.area}
+              {walk !== null && !find.soon && (
+                <>
+                  {" "}
+                  <span className="text-paper/45">·</span> {walk} min walk
+                </>
+              )}
             </p>
-            <p aria-hidden className="visit-in display mt-3 text-[clamp(54px,15.5vw,84px)] leading-[0.84] [animation-delay:200ms] md:text-[clamp(96px,11vw,188px)]">
-              One planet.
+            <p aria-hidden className="visit-in display mt-3 text-[clamp(60px,17vw,92px)] leading-[0.84] [animation-delay:200ms] md:text-[clamp(104px,12vw,200px)]">
+              This way
               <br />
-              One door.
+              in.
             </p>
             <nav aria-label="Ways to visit" className="visit-in mt-7 flex flex-col gap-3 [animation-delay:300ms] sm:flex-row md:mt-9">
               <a
@@ -514,8 +485,6 @@ export function VisitFilm({
                   e.preventDefault();
                   play();
                 }}
-                onPointerEnter={() => canFilm && setWantMap(true)}
-                onFocus={() => canFilm && setWantMap(true)}
                 className={`${pill} bg-paper text-ink`}
               >
                 In person
@@ -535,7 +504,7 @@ export function VisitFilm({
                 <span className="relative block h-7 w-px overflow-hidden bg-paper/25">
                   <span className="tour-hint absolute inset-0 bg-paper" />
                 </span>
-                Or scroll to fall in
+                Or scroll to walk it
               </p>
             )}
             {find.soon && (
@@ -593,9 +562,9 @@ export function VisitFilm({
                     aria-current={i === sceneIndex ? "step" : undefined}
                     onClick={() => {
                       stopAuto();
-                      scrollToSecond(sceneStart(s.id) + (s.id === "arrive" ? 1 : 0.4), !still);
+                      scrollToSecond(s.id === "arrive" ? FILM_SECONDS : sceneStart(s.id) + (s.id === "door" ? 1.6 : 0.4), !still);
                     }}
-                    className="flex h-9 w-11 justify-center focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-paper md:h-10"
+                    className="flex h-11 w-11 justify-center focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-paper"
                   >
                     <span className="relative block h-full w-[3px] bg-paper/30">
                       <span
@@ -648,7 +617,7 @@ export function VisitFilm({
             {/* eslint-disable-next-line @next/next/no-img-element -- one small still, sized and compressed by hand */}
             <img
               data-route-static={staticRoute ? "" : undefined}
-              src={staticRoute ? STATIC_ROUTE.src : "/visit/store-night-open.avif"}
+              src={staticRoute ? STATIC_ROUTE.src : backdrop}
               alt={staticRoute ? `Map: the route from ${STATIC_ROUTE.from} to Easypick` : ""}
               className={`absolute inset-0 h-full w-full ${staticRoute ? "object-contain object-top md:object-left" : "object-cover opacity-40"}`}
             />
@@ -659,9 +628,9 @@ export function VisitFilm({
         )}
 
         {(canFilm || plain) && (
-          <div className={plain ? "absolute inset-0 z-30 pointer-events-none [&>*]:pointer-events-auto" : "pointer-events-none absolute inset-0 z-10 [&>*]:pointer-events-auto"}>
+          <div className={`pointer-events-none absolute inset-0 [&>*]:pointer-events-auto ${plain ? "z-30" : "z-10"}`}>
             <Directions
-              data={find}
+              data={mine ? { ...find, starts } : find}
               plain={plain || !canFilm}
               startId={startId}
               mode={mode}
@@ -678,6 +647,8 @@ export function VisitFilm({
               onLocate={() => {
                 if (locate === "shown") {
                   setMe(null);
+                  setMine(null);
+                  setStartId(find.starts[0]?.id ?? null);
                   setLocate("idle");
                 } else askWhere(false);
               }}

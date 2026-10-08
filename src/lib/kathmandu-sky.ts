@@ -62,16 +62,3 @@ export function kathmanduClock(now: Date): string {
   return clockFmt.format(now);
 }
 
-/** The spot on the Earth the sun is straight above at this moment (for lighting the globe as it really is). */
-export function subsolarPoint(now: Date): { lat: number; lng: number } {
-  const d = now.getTime() / 86_400_000 - 10957.5;
-  const meanLng = rad((280.46 + 0.9856474 * d) % 360);
-  const anomaly = rad((357.528 + 0.9856003 * d) % 360);
-  const ecliptic = meanLng + rad(1.915) * Math.sin(anomaly) + rad(0.02) * Math.sin(2 * anomaly);
-  const tilt = rad(23.439 - 0.0000004 * d);
-  const declination = Math.asin(Math.sin(tilt) * Math.sin(ecliptic));
-  const rightAscension = Math.atan2(Math.cos(tilt) * Math.sin(ecliptic), Math.cos(ecliptic));
-  const gmst = rad((280.46061837 + 360.98564736629 * d) % 360);
-  const lng = ((((deg(rightAscension - gmst) + 180) % 360) + 360) % 360) - 180;
-  return { lat: deg(declination), lng };
-}

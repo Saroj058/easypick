@@ -4,7 +4,7 @@ import { RefreshAt } from "@/components/refresh-at";
 import { VisitFilm, type FilmSwitches } from "@/components/visit/visit-film";
 import { getCurrentUser } from "@/lib/auth";
 import { jsonLd } from "@/lib/json-ld";
-import { kathmanduClock, skyOverKathmandu, subsolarPoint } from "@/lib/kathmandu-sky";
+import { kathmanduClock, skyOverKathmandu } from "@/lib/kathmandu-sky";
 import { routeFor } from "@/lib/map/route";
 import { ordersFor } from "@/lib/orders";
 import { site } from "@/lib/site";
@@ -14,9 +14,9 @@ import { lightsFor, nextChangeAt, statusLine, statusShort, stripPrivate } from "
 import { getDropTimeline, getProduct } from "@/lib/store";
 import { getTourProps } from "@/lib/tour-props";
 
-// The Visit page is one screen: the store at night and two ways to visit. In person opens the map
-// (from the globe down to the door) with the directions, the hours and how the store works;
-// Virtual tour opens /visit/tour. There is nothing below it.
+// The Visit page is one film (components/visit/visit-film.tsx): it opens on the city with the route
+// to the store and two ways to visit. In person flies along the route to the door and ends on the
+// directions, the hours and how the store works; Virtual tour opens /visit/tour.
 
 const metadata: Metadata = {
   title: "Visit us",
@@ -136,11 +136,10 @@ export default async function VisitPage({ searchParams }: PageProps<"/visit">) {
       {changeAt && !pinned && <RefreshAt at={changeAt} />}
       <VisitFilm
         switches={switches}
-        sun={subsolarPoint(now)}
         clock={kathmanduClock(now)}
         // A pinned clock (a test, a demo) stays where it was put.
         liveClock={!pinned}
-        daylight={sky.day > 0.5}
+        backdrop={`/visit/store-${sky.phase}-${lights === "open" || lights === "drop" ? "open" : "closed"}.avif`}
         status={status}
         short={statusShort(state)}
         open={lights === "open" || lights === "drop"}

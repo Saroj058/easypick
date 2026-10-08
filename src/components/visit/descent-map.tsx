@@ -9,9 +9,9 @@ import { useEffect, useRef } from "react";
 import { bounds, pointAt, sliceTo, type LngLat } from "@/lib/map/route";
 import { MAP_COLOURS, mapStyle } from "@/lib/map/style";
 import { AREA_CENTRE } from "@/lib/map/tiles";
-import { FILM_SECONDS, HANDOVER, type FilmPlan } from "@/lib/visit/film";
+import { FILM_SECONDS, type FilmPlan } from "@/lib/visit/film";
 
-// The lower half of the Visit page's film: Kathmandu as a tilted city at night, drawn by MapLibre
+// The picture of the Visit page's film: Kathmandu as a tilted city at night, drawn by MapLibre
 // from our own tiles (a PMTiles file read in pieces), with its buildings standing up, the route
 // glowing in lime and the store lit as the one bright building. This component decides nothing
 // about time: every frame it asks for the film's second, asks the plan (lib/visit/film.ts) where
@@ -106,19 +106,19 @@ export default function DescentMap(props: DescentMapProps) {
     // zoom, names only close in (wide tiles carry far-off names in scripts we don't host fonts for).
     const style = mapStyle(tilesUrl);
     style.layers = style.layers.map((l) => ("source" in l ? { ...l, minzoom: Math.max(l.minzoom ?? 0, l.type === "symbol" ? 11.5 : 8) } : l)) as LayerSpecification[];
-    const first = live.current.plan.frame(HANDOVER).map;
     const map = new MapLibre({
       container: el,
       style,
-      center: first.center,
-      zoom: first.zoom,
-      pitch: first.pitch,
-      bearing: first.bearing,
+      center: here,
+      zoom: 15,
+      pitch: 38,
       minZoom: 8,
       maxZoom: 20,
       maxPitch: 70,
       attributionControl: false,
       fadeDuration: 150,
+      // The film moves the camera every frame: tiles asked for on the way must be allowed to arrive.
+      cancelPendingTileRequestsWhileZooming: false,
       // Sharp enough, without drawing four times the pixels on dense phone screens.
       pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
     });
@@ -142,12 +142,17 @@ export default function DescentMap(props: DescentMapProps) {
       const { right, bottom } = live.current.inset;
       return { top: 110, left: 40, right: 40 + right, bottom: 60 + bottom };
     };
-    /** The view that holds the whole route (or the store, or the area), clear of the panel. */
-    const overview = () => {
+    /** On the first screen the words sit bottom-left (below, on a phone): the route keeps to the rest of the picture. */
+    const heroPadding = () => {
+      const { clientWidth: w, clientHeight: h } = el;
+      return w >= 768 ? { top: 130, left: Math.round(w * 0.46), right: 70, bottom: 110 } : { top: 120, left: 36, right: 36, bottom: Math.round(h * 0.5) };
+    };
+    /** The view that holds the whole route (or the store, or the area): beside the words at the start, clear of the panel at the end. */
+    const overview = (hero: boolean) => {
       const r = routeNow();
-      if (r && r.length > 1) return map.cameraForBounds(bounds(r), { padding: padding(), maxZoom: 17.2 }) ?? { center: here, zoom: 16 };
-      if (pin) return { center: here, zoom: 16.5 };
-      return map.cameraForBounds(bounds(circle(AREA_CENTRE, 400)), { padding: padding() }) ?? { center: here, zoom: 15 };
+      const pad = hero ? heroPadding() : padding();
+      if (r && r.length > 1) return map.cameraForBounds(bounds(r), { padding: pad, maxZoom: 17.2 }) ?? { center: here, zoom: 16 };
+      return map.cameraForBounds(bounds(circle(here, pin ? 220 : 400)), { padding: pad, maxZoom: 16.8 }) ?? { center: here, zoom: 15 };
     };
 
     const apply = () => {
@@ -162,13 +167,13 @@ export default function DescentMap(props: DescentMapProps) {
         if (atEnd) map.touchZoomRotate.disableRotation();
         el.parentElement?.setAttribute("data-free", String(atEnd));
       }
-      if (t === shown.t || t < HANDOVER - 1.2) return;
+      if (t === shown.t) return;
       shown.t = t;
       const f = live.current.plan.frame(t);
       let { center, zoom, pitch, bearing } = f.map;
       if (f.overview > 0) {
-        // The last move: back and up, to the whole route beside the directions.
-        const o = overview();
+        // Pulled back to the whole route: beside the words on the first screen, beside the directions at the end.
+        const o = overview(f.scene === "open" || f.scene === "street");
         const oc = (Array.isArray(o.center) ? o.center : here) as LngLat;
         center = [lerp(center[0], oc[0], f.overview), lerp(center[1], oc[1], f.overview)];
         zoom = lerp(zoom, o.zoom ?? 16, f.overview);

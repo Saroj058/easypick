@@ -13,7 +13,7 @@ const supabaseOrigin = (() => {
   }
 })();
 // The Find us map reads its tiles (one PMTiles file, in pieces) from this Supabase Storage bucket.
-const mapTilesOrigin = "https://dfhbezpxijxoqpompiku.supabase.co";
+const mapTilesOrigin = "https://dfhbezpxijxoqpompiku.supabase.co https://routing.openstreetmap.de";
 const csp = [
   "default-src 'self'",
   // 'unsafe-eval' only in development: React uses eval there for better error stacks.

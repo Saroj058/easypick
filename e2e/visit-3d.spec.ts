@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// The Visit page's film (src/components/visit/visit-film.tsx): the Earth from orbit, then one
-// scroll (or one tap on In person) down through the clouds into Kathmandu, along the route, to the
-// door and the directions. Runs in the 3D projects (software WebGL): see WEBGL_SPECS in
+// The Visit page's film (src/components/visit/visit-film.tsx): it opens on the city with the whole
+// route drawn; one scroll (or one tap on In person) drops to the route's start, flies along it to
+// the door and ends on the directions. Runs in the 3D projects (software WebGL): see WEBGL_SPECS in
 // playwright.config.ts. ?motion=fast plays it eight times faster; ?tiles=fixture keeps the real
 // map file out of tests; ?now= pins the clock; ?t= opens on a second of the film.
 
@@ -25,33 +25,33 @@ function collect(page: Page) {
 const scrollTo = (page: Page, second: number) =>
   page.evaluate((s) => {
     const root = document.querySelector<HTMLElement>("[data-film]")!;
-    window.scrollTo({ top: root.offsetTop + (s / 20) * (root.offsetHeight - window.innerHeight), behavior: "instant" });
+    window.scrollTo({ top: root.offsetTop + (s / 13) * (root.offsetHeight - window.innerHeight), behavior: "instant" });
   }, second);
 
-test("first screen: the live Earth takes over from the still, by day and by night @phone", async ({ page }, info) => {
+test("first screen: the city with the route drawn and the store lit, and a clean top: the logo and one Menu capsule @phone", async ({ page }, info) => {
   test.setTimeout(240_000);
   const errors = collect(page);
-  for (const [name, hour] of [
-    ["day", "12:00"],
-    ["night", "22:30"],
-  ]) {
-    await page.goto(`/visit?preview=open&tiles=fixture&now=${at(`2026-10-07T${hour}+05:45`)}`);
-    // The still for this hour is there first; the live Earth draws over it.
-    await expect(page.locator("img[data-poster]")).toHaveAttribute("src", new RegExp(`earth-${name}`));
-    await expect(film(page)).toHaveAttribute("data-film", "on");
-    await expect(film(page)).toHaveAttribute("data-fallback", "none");
-    await expect(film(page)).toHaveAttribute("data-earth", "on", { timeout: 90_000 });
-    await expect(film(page).locator("canvas").first()).toBeVisible();
-    await expect(film(page)).toHaveAttribute("data-scene", "orbit");
-    // Nothing of the map is loaded until it's wanted.
-    await expect(film(page)).toHaveAttribute("data-map-state", "idle");
-    await expect(page.locator("[data-ktm-clock]").first()).toHaveText(hour);
-    await page.screenshot({ path: `test-results/shots/film-${info.project.name}-orbit-${name}.png` });
-  }
+  await page.goto(`/visit?${OPEN}`);
+  await expect(film(page)).toHaveAttribute("data-film", "on");
+  await expect(film(page)).toHaveAttribute("data-fallback", "none");
+  await expect(film(page)).toHaveAttribute("data-map-state", "ready", { timeout: 120_000 });
+  await expect(film(page)).toHaveAttribute("data-scene", "open");
+  await expect(mapRegion(page).locator("canvas")).toBeVisible();
+  await expect(mapRegion(page).locator("[data-map-pin]")).toBeVisible();
+  await expect(page.locator("[data-ktm-clock]").first()).toHaveText("12:00");
+  await expect(page.locator("[data-visit-status]")).toContainText(/OPEN TILL 8 PM · .+ · d+ min walk/i);
+  await expect(panel(page)).toHaveAttribute("data-panel", "closed");
+  // The top of the page: the logo (it leads home) and one capsule that opens the site's menu.
+  await expect(page.locator("[data-visit-back]")).toHaveAttribute("href", "/");
+  await expect(page.getByRole("link", { name: "Easypick home" })).toBeHidden();
+  await page.screenshot({ path: `test-results/shots/film-${info.project.name}-open.png` });
+  await page.locator("[data-visit-menu]").click();
+  await expect(page.locator("[data-visit-menu]")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Easypick home" })).toBeVisible();
   expect(errors()).toEqual([]);
 });
 
-test("in person: one tap plays the film from orbit to the door and ends on the directions @phone", async ({ page }, info) => {
+test("in person: one tap plays the film along the route to the door and ends on the directions @phone", async ({ page }, info) => {
   test.setTimeout(300_000);
   const errors = collect(page);
   const refused: string[] = [];
@@ -60,8 +60,7 @@ test("in person: one tap plays the film from orbit to the door and ends on the d
   page.on("request", (r) => /maplibre|pmtiles/.test(r.url()) && mapRequests.push(r.url()));
 
   await page.goto(`/visit?${OPEN}&motion=fast`);
-  await expect(film(page)).toHaveAttribute("data-earth", "on", { timeout: 90_000 });
-  expect(mapRequests).toEqual([]);
+  await expect(film(page)).toHaveAttribute("data-map-state", "ready", { timeout: 120_000 });
 
   await inPerson(page).click();
   // It runs by itself all the way down: the scenes pass and the directions come in.
@@ -81,9 +80,9 @@ test("in person: one tap plays the film from orbit to the door and ends on the d
   expect(mapRequests.some((u) => u.endsWith("/map/fixture.pmtiles"))).toBe(true);
   await page.screenshot({ path: `test-results/shots/film-${info.project.name}-directions.png` });
 
-  // Escape goes back to the top of the film: the Earth, and the two choices.
+  // Escape goes back to the top of the film: the whole route, and the two choices.
   await page.keyboard.press("Escape");
-  await expect(film(page)).toHaveAttribute("data-scene", "orbit", { timeout: 30_000 });
+  await expect(film(page)).toHaveAttribute("data-scene", "open", { timeout: 30_000 });
   await expect(inPerson(page)).toBeVisible();
   expect(refused).toEqual([]);
   expect(errors()).toEqual([]);
@@ -92,37 +91,34 @@ test("in person: one tap plays the film from orbit to the door and ends on the d
 test("the scroll is the film: forwards, backwards, and straight to a scene", async ({ page }, info) => {
   test.setTimeout(300_000);
   await page.goto(`/visit?${OPEN}`);
-  await expect(film(page)).toHaveAttribute("data-earth", "on", { timeout: 90_000 });
+  await expect(film(page)).toHaveAttribute("data-map-state", "ready", { timeout: 120_000 });
   const caption = page.locator("[data-caption]");
 
-  // Down a little: falling towards Nepal, with the first line of the story and the height counting down.
+  // Down a little: the camera drops to where the route begins.
   await scrollTo(page, 3);
-  await expect(film(page)).toHaveAttribute("data-scene", "approach", { timeout: 30_000 });
-  await expect(caption).toContainText("Somewhere on Earth.");
-  await expect(page.locator("[data-altitude]")).toHaveText(/[\d,.]+ KM/);
-  await page.screenshot({ path: `test-results/shots/film-${info.project.name}-approach.png` });
+  await expect(film(page)).toHaveAttribute("data-scene", "street", { timeout: 30_000 });
+  await expect(caption).toContainText("Start here.");
 
-  // Further: through the cloud into the city, then along the route (the caption is the step being walked).
-  await scrollTo(page, 9);
-  await expect(film(page)).toHaveAttribute("data-scene", "valley", { timeout: 60_000 });
-  await expect(film(page)).toHaveAttribute("data-map-state", "ready", { timeout: 90_000 });
-  await expect(caption).toContainText("In one valley.");
-  await scrollTo(page, 15);
+  // Further: along the route (the caption is the step being walked, and the height is on screen).
+  await scrollTo(page, 7);
   await expect(film(page)).toHaveAttribute("data-scene", "route", { timeout: 30_000 });
   await expect(caption).toContainText(/Jhamsikhel Chowk|West, past the café row|Black shutter/);
-  await expect(page.locator("[data-altitude]")).toHaveText(/[\d,.]+ (M|KM)/);
+  await expect(page.locator("[data-altitude]")).toHaveText(/[d,.]+ (M|KM)/);
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `test-results/shots/film-${info.project.name}-route.png` });
   // Nothing plays by itself while the visitor is scrolling, and the directions wait for the end.
   await expect(film(page)).toHaveAttribute("data-playing", "false");
   await expect(panel(page)).toHaveAttribute("data-panel", "closed");
 
-  // Back up: the film runs backwards, out of the city to the Earth.
-  await scrollTo(page, 5);
-  await expect(film(page)).toHaveAttribute("data-scene", "approach", { timeout: 30_000 });
-  await expect(caption).toContainText("Under the mountains.");
+  // Back up: the film runs backwards.
+  await scrollTo(page, 2.5);
+  await expect(film(page)).toHaveAttribute("data-scene", "street", { timeout: 30_000 });
+  await scrollTo(page, 0);
+  await expect(film(page)).toHaveAttribute("data-scene", "open", { timeout: 30_000 });
+  await expect(inPerson(page)).toBeVisible();
 
   // The rail goes straight to a scene; Directions goes straight to the end.
+  await scrollTo(page, 5);
   await page.getByRole("button", { name: "Go to The door" }).click();
   await expect(film(page)).toHaveAttribute("data-scene", "door", { timeout: 30_000 });
   await expect(caption).toContainText("One door.");
@@ -142,14 +138,14 @@ test("a direct link opens on the directions; before opening day the map shows th
 
   // Not opened yet: no pin, no route, no Google Maps; the area and the opening list.
   await page.goto("/visit?tiles=fixture&motion=fast");
-  await expect(film(page)).toHaveAttribute("data-earth", "on", { timeout: 90_000 });
+  await expect(film(page)).toHaveAttribute("data-map-state", "ready", { timeout: 120_000 });
   await inPerson(page).click();
   await expect(film(page)).toHaveAttribute("data-map-state", "done", { timeout: 180_000 });
   await expect(panel(page).getByText("Exact address coming soon")).toBeVisible();
   await expect(mapRegion(page).locator("[data-map-pin]")).toHaveCount(0);
   await expect(panel(page).getByRole("link", { name: "Open in Google Maps" })).toHaveCount(0);
   await panel(page).getByRole("button", { name: "Join the opening list" }).click();
-  await expect(film(page)).toHaveAttribute("data-scene", "orbit", { timeout: 30_000 });
+  await expect(film(page)).toHaveAttribute("data-scene", "open", { timeout: 30_000 });
   await expect(page.getByText("Join the opening list").first()).toBeVisible();
 });
 
@@ -259,15 +255,15 @@ test("directions: on a phone it's a sheet that opens at half, goes nearly full a
   await handle.click();
   await expect(p).toHaveAttribute("data-snap", "half");
   await p.getByRole("button", { name: /The store/ }).click();
-  await expect(film(page)).toHaveAttribute("data-scene", "orbit", { timeout: 30_000 });
+  await expect(film(page)).toHaveAttribute("data-scene", "open", { timeout: 30_000 });
 });
 
 test("fallbacks: the light version and no WebGL get a still and the directions; reduced motion skips the flight", async ({ page, browser }, info) => {
   test.setTimeout(240_000);
   const heavy: string[] = [];
-  page.on("request", (r) => /maplibre|pmtiles|earth\/(day|night|clouds)|google\.com\/maps\?/.test(r.url()) && heavy.push(r.url()));
+  page.on("request", (r) => /maplibre|pmtiles|google\.com\/maps\?/.test(r.url()) && heavy.push(r.url()));
 
-  // Light (Save-Data, a slow connection, little memory) and no WebGL: a still of the Earth on the
+  // Light (Save-Data, a slow connection, little memory) and no WebGL: a still of the store on the
   // first screen, no film to scroll; In person opens the directions over one small picture of the route.
   for (const [name, query] of [
     ["lite", "lite=1"],
@@ -276,7 +272,7 @@ test("fallbacks: the light version and no WebGL get a still and the directions; 
     await page.goto(`/visit?preview=open&${query}&now=${at("2026-10-07T12:00+05:45")}`);
     await expect(film(page)).toHaveAttribute("data-fallback", name);
     await expect(film(page)).toHaveAttribute("data-film", "off");
-    await expect(page.locator("img[data-poster]")).toBeVisible();
+    await expect(page.locator("img[data-backdrop]")).toBeVisible();
     await expect(film(page).locator("canvas")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 2)).toBe(true);
     await inPerson(page).click();
@@ -298,12 +294,12 @@ test("fallbacks: the light version and no WebGL get a still and the directions; 
   }
   expect(heavy).toEqual([]);
 
-  // Reduced motion: the Earth is there but nothing flies. In person goes straight to the finished directions.
+  // Reduced motion: the map is there but nothing flies. In person goes straight to the finished directions.
   const ctx = await browser.newContext({ reducedMotion: "reduce" });
   const calm = await ctx.newPage();
   await calm.goto(`/visit?${OPEN}`);
   await expect(film(calm)).toHaveAttribute("data-fallback", "reduced");
-  await expect(film(calm)).toHaveAttribute("data-earth", "on", { timeout: 90_000 });
+  await expect(film(calm)).toHaveAttribute("data-map-state", "ready", { timeout: 120_000 });
   await inPerson(calm).click();
   await expect(film(calm)).toHaveAttribute("data-playing", "false");
   await expect(film(calm)).toHaveAttribute("data-map-state", "done", { timeout: 120_000 });
@@ -315,9 +311,7 @@ test("fallbacks: the light version and no WebGL get a still and the directions; 
 test("keyboard: In person plays from the keyboard, focus goes to the directions and comes back, and every target is big enough", async ({ page }) => {
   test.setTimeout(300_000);
   await page.goto(`/visit?${OPEN}&motion=fast`);
-  await expect(film(page)).toHaveAttribute("data-earth", "on", { timeout: 90_000 });
-  // The pictures take no keyboard.
-  await expect(film(page).locator("canvas").first()).toHaveAttribute("aria-hidden", "true");
+  await expect(film(page)).toHaveAttribute("data-map-state", "ready", { timeout: 120_000 });
   await inPerson(page).focus();
   await page.keyboard.press("Enter");
   await expect(film(page)).toHaveAttribute("data-map-state", "done", { timeout: 180_000 });
@@ -337,15 +331,30 @@ test("keyboard: In person plays from the keyboard, focus goes to the directions 
 
   // Escape goes back to the top and hands the keyboard back to the choice that started it.
   await page.keyboard.press("Escape");
-  await expect(film(page)).toHaveAttribute("data-scene", "orbit", { timeout: 30_000 });
+  await expect(film(page)).toHaveAttribute("data-scene", "open", { timeout: 30_000 });
   await expect(inPerson(page)).toBeFocused();
 });
 
-test("from my location: drawn on the map, the route starts from the nearest start point, and it's never sent anywhere", async ({ browser }) => {
+test("from my location: the real way from where the visitor is, drawn on the map; without it, the nearest start point", async ({ browser }) => {
   test.setTimeout(300_000);
-  // Beside the sample Pulchowk start, so the nearest start point is not the first one listed.
+  // Beside the sample Pulchowk start, so the nearest saved start point is not the first one listed.
   const here = { latitude: 27.6772, longitude: 85.3138 };
+  // What the routing service would answer: a short walk to the sample pin.
+  const answer = {
+    code: "Ok",
+    routes: [
+      {
+        geometry: { coordinates: [[85.3138, 27.6772], [85.3120, 27.6775], [85.3100, 27.6778], [85.3080, 27.6779], [85.3060, 27.6780], [85.3053, 27.6781]] },
+        legs: [{ steps: [{ distance: 180, name: "Pulchowk Road", maneuver: { type: "depart" } }, { distance: 420, name: "Jhamsikhel Road", maneuver: { type: "turn", modifier: "left" } }, { distance: 240, name: "", maneuver: { type: "turn", modifier: "right" } }, { distance: 0, name: "", maneuver: { type: "arrive" } }] }],
+      },
+    ],
+  };
   const ctx = await browser.newContext({ permissions: ["geolocation"], geolocation: here });
+  const asked: string[] = [];
+  await ctx.route("https://routing.openstreetmap.de/**", (route) => {
+    asked.push(route.request().url());
+    return route.fulfill({ json: answer, headers: { "access-control-allow-origin": "*" } });
+  });
   const page = await ctx.newPage();
   const sent: string[] = [];
   page.on("request", (r) => sent.push(`${r.url()} ${r.postData() ?? ""}`));
@@ -356,28 +365,50 @@ test("from my location: drawn on the map, the route starts from the nearest star
   const p = panel(page);
   // A direct link asks nothing by itself.
   await expect(p.locator("[data-me]")).toHaveCount(0);
-  await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(0);
+  expect(asked).toEqual([]);
 
   const chip = p.getByRole("button", { name: "From my location" });
   await chip.click();
-  await expect(p.locator("[data-me=shown]")).toContainText(/You're about [\d.]+ (m|km) from the door/);
-  await expect(chip).toHaveAttribute("aria-pressed", "true");
-  await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(1);
+  // The route is theirs: a new first choice, its own receipt, and a dot where they are.
   const chips = p.getByRole("radiogroup", { name: "Coming from" }).getByRole("radio");
-  await expect(chips.and(page.locator("[aria-checked=true]"))).toHaveCount(1);
-  await expect(chips.first()).toHaveAttribute("aria-checked", "false");
-  // Where they are stays in the page: not in the address, storage, or any request.
+  await expect(chips).toHaveCount(5, { timeout: 15_000 });
+  await expect(chips.first()).toHaveText("Your location");
+  await expect(chips.first()).toHaveAttribute("aria-checked", "true");
+  await expect(p.locator("[data-me=shown]")).toContainText(/The line is the way from where you are: [\d.]+ (m|km) on foot/);
+  await expect(p.locator("[data-receipt]")).toContainText("Where you are now");
+  await expect(p.locator("[data-receipt]")).toContainText("Left onto Jhamsikhel Road");
+  await expect(p.locator("[data-receipt]")).toContainText("Easypick: black shutter, lime dot");
+  await expect(mapRegion(page)).toHaveAttribute("aria-label", "Map: route from Your location to Easypick");
+  await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(1);
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  // Where they are goes to the routing service to work out the way, and nowhere else: not the address, storage or our own server.
+  expect(asked.length).toBe(1);
+  expect(asked[0]).toContain("85.313800,27.677200;");
   const kept = await page.evaluate(() => `${location.href} ${JSON.stringify({ ...localStorage })} ${JSON.stringify({ ...sessionStorage })} ${document.cookie}`);
   expect(kept).not.toMatch(/27\.677|85\.313/);
-  expect(sent.filter((s) => /27\.677|85\.313/.test(s))).toEqual([]);
-  expect(await p.locator("a[href]").evaluateAll((as) => as.map((a) => a.getAttribute("href")).join(" "))).not.toMatch(/27\.677|85\.313/);
+  expect(sent.filter((s) => /27\.677|85\.313/.test(s) && !s.startsWith("https://routing.openstreetmap.de/"))).toEqual([]);
   // A second tap forgets it.
   await chip.click();
   await expect(p.locator("[data-me]")).toHaveCount(0);
+  await expect(chips).toHaveCount(4);
   await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(0);
   await ctx.close();
 
-  // Refused (or unavailable): a plain message and the Google Maps link.
+  // The routing service can't be reached: the nearest saved start point stands in, with a straight dashed line.
+  const off = await browser.newContext({ permissions: ["geolocation"], geolocation: here });
+  await off.route("https://routing.openstreetmap.de/**", (route) => route.abort());
+  const second = await off.newPage();
+  await second.goto(`/visit?${OPEN}&motion=fast#find-us`);
+  await expect(film(second)).toHaveAttribute("data-map-state", "done", { timeout: 120_000 });
+  await panel(second).getByRole("button", { name: "From my location" }).click();
+  await expect(panel(second).locator("[data-me=shown]")).toContainText(/You're about [\d.]+ (m|km) from the door/);
+  const saved = panel(second).getByRole("radiogroup", { name: "Coming from" }).getByRole("radio");
+  await expect(saved).toHaveCount(4);
+  await expect(saved.first()).toHaveAttribute("aria-checked", "false");
+  await expect(saved.and(second.locator("[aria-checked=true]"))).toHaveCount(1);
+  await off.close();
+
+  // Location refused: a plain message and the Google Maps link.
   const no = await browser.newContext();
   const other = await no.newPage();
   await other.goto(`/visit?${OPEN}&motion=fast#find-us`);

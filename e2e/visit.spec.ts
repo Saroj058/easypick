@@ -14,7 +14,7 @@ test("visit page: coming soon until opening day, with the opening list @phone", 
   await page.goto("/visit?gl=off");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Visit Easypick");
   await expect(page.locator("[data-status-line]")).toContainText(/OPENING/);
-  await expect(page.locator("[data-status]")).toContainText("OPENING SOON");
+  await expect(page.locator("[data-visit-status]")).toContainText("OPENING SOON");
   await expect(page.getByText("Join the opening list")).toBeVisible();
   await page.screenshot(shot(`visit-${info.project.name}-soon`));
   // In person, before opening day: the area only, and the planned hours.
@@ -32,8 +32,8 @@ test("visit page preview: one screen with the two ways to visit; the receipt is 
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
   // What's on the first screen: the hour in Kathmandu, the status, one headline, two choices.
   await expect(page.locator("[data-ktm-clock]").first()).toHaveText("12:00");
-  await expect(page.locator("[data-status]")).toContainText("OPEN TILL 8 PM");
-  await expect(page.getByText("One planet.")).toBeVisible();
+  await expect(page.locator("[data-visit-status]")).toContainText("OPEN TILL 8 PM");
+  await expect(page.getByText("This way")).toBeVisible();
   const ways = page.getByRole("navigation", { name: "Ways to visit" });
   await expect(ways.getByRole("link")).toHaveCount(2);
   await expect(ways.getByRole("link", { name: "Virtual tour" })).toHaveAttribute("href", "/visit/tour#enter");
@@ -59,13 +59,13 @@ test("visit page preview: one screen with the two ways to visit; the receipt is 
 
 test("visit page: the status and the still follow the clock in Kathmandu", async ({ page }) => {
   await page.goto(`/visit?preview=open&gl=off&now=${at("2026-10-07T12:00+05:45")}`);
-  await expect(page.locator("[data-status]")).toContainText("OPEN TILL 8 PM");
-  await expect(page.locator("img[data-poster]")).toHaveAttribute("src", /earth-day/);
+  await expect(page.locator("[data-visit-status]")).toContainText("OPEN TILL 8 PM");
+  await expect(page.locator("img[data-backdrop]")).toHaveAttribute("src", /store-day-open/);
   await page.goto(`/visit?preview=open&gl=off&now=${at("2026-10-07T21:00+05:45")}`);
-  await expect(page.locator("[data-status]")).toContainText("CLOSED NOW");
+  await expect(page.locator("[data-visit-status]")).toContainText("CLOSED NOW");
   await expect(page.locator("[data-status-line]")).toHaveText(/^CLOSED · OPENS 11 AM TOMORROW · [A-Z]+$/);
   await expect(page.locator("[data-ktm-clock]").first()).toHaveText("21:00");
-  await expect(page.locator("img[data-poster]")).toHaveAttribute("src", /earth-night/);
+  await expect(page.locator("img[data-backdrop]")).toHaveAttribute("src", /store-night-closed/);
   // The test switches are read.
   await page.goto(`/visit?preview=open&motion=fast&gl=off`);
   await expect(film(page)).toHaveAttribute("data-motion", "fast");
@@ -79,8 +79,7 @@ test("visit page works with JavaScript off @phone", async ({ browser }) => {
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
   await expect(page.locator("[data-action=tour]")).toHaveAttribute("href", "/visit/tour#enter");
   // With no film, In person leads to the essentials in words: the address, today's hours, Google Maps.
-  await page.locator("[data-action=in-person]").click();
-  await expect(page).toHaveURL(/#find-us$/);
+  await expect(page.locator("[data-action=in-person]")).toHaveAttribute("href", "#find-us");
   const words = page.locator("#find-us");
   await expect(words.getByText(/Today: 11 AM – 8 PM/)).toBeVisible();
   await expect(words.getByRole("link", { name: "Open in Google Maps" })).toHaveAttribute("href", /google\.com\/maps\/dir/);

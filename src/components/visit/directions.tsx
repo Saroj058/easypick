@@ -278,7 +278,7 @@ export function Directions({
         {locate !== "off" && locate !== "idle" && (
           <p role="status" data-me={locate} className="px-5 pt-3 text-[14px] text-paper/60">
             {locate === "asking" && "Finding you…"}
-            {locate === "shown" && away !== null && (away < 60_000 ? `You're about ${far(away)} from the door in a straight line (the dashed line). ` : "You're a long way from the store. ")}
+            {locate === "shown" && away !== null && (start?.id === "me" ? `The line is the way from where you are: ${far(metres ?? away)} on foot. ` : away < 60_000 ? `You're about ${far(away)} from the door in a straight line (the dashed line). ` : "You're a long way from the store. ")}
             {locate === "failed" && "Couldn't get your location. "}
             {locate !== "asking" && mapsUrl && (
               <>

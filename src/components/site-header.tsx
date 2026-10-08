@@ -146,16 +146,17 @@ export function SiteHeader() {
                   <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
                 </Link>
               </motion.div>
-              {/* The visit page, header tucked away: the way back home, where the logo was. */}
+              {/* The visit page, header tucked away: just the logo (it leads home), nothing behind it. */}
               {visit && !expanded && (
-                <Link href="/" data-visit-back className="pointer-events-auto absolute left-0 top-0 flex h-12 items-center gap-2 whitespace-nowrap rounded-full border border-mist bg-paper px-5 text-sm font-semibold uppercase tracking-[0.06em] shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
-                  <span aria-hidden>←</span> Home
+                <Link href="/" aria-label="Easypick, home" data-visit-back className="pointer-events-auto absolute left-0 top-0 flex h-12 items-center">
+                  <Image src="/brand/logo-white.png" alt="" width={611} height={161} className="h-6 w-auto md:h-7" />
                 </Link>
               )}
             </div>
 
             {/* Links (large screens; phones and tablets use the bottom tab bar). Collapses to a circle on scroll. */}
             <div className="pointer-events-auto absolute left-1/2 hidden -translate-x-1/2 lg:block">
+              <div className={visit && !expanded ? "hidden" : undefined}>
               <AnimatedNavFramer
                 bare
                 logo={null}
@@ -165,14 +166,19 @@ export function SiteHeader() {
                 collapsedIcon={<Ellipsis className="h-6 w-6" aria-hidden />}
                 items={primary.map((l) => ({ name: l.label, href: l.href, active: pathname === l.href || pathname.startsWith(`${l.href}/`) }))}
               />
+              </div>
             </div>
 
             {/* Account, bag, menu: slides away while scrolling down */}
             <div className="relative">
-            {/* Phones have no centre pill: on the visit page the three dots sit here instead. */}
+            {/* The visit page, header tucked away: one capsule that opens it. */}
             {visit && !expanded && (
-              <button type="button" aria-label="Show navigation" onClick={() => setExpanded(true)} className="pointer-events-auto absolute right-0 top-0 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-mist bg-paper shadow-[0_6px_24px_rgba(0,0,0,0.08)] lg:hidden">
-                <Ellipsis className="h-6 w-6" aria-hidden />
+              <button type="button" data-visit-menu onClick={() => setExpanded(true)} className="pointer-events-auto absolute right-0 top-0 z-10 flex h-11 items-center gap-2.5 whitespace-nowrap rounded-full border border-white/30 bg-black/35 px-5 text-[12px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-md transition-colors hover:border-white/70">
+                Menu
+                <span aria-hidden className="flex flex-col gap-[3px]">
+                  <span className="block h-px w-4 bg-white" />
+                  <span className="block h-px w-4 bg-white" />
+                </span>
               </button>
             )}
             <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)}>
