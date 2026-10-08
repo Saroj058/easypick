@@ -117,26 +117,24 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
 
   return (
     <div className="pb-24">
-      {/* The opening: the owner's picture of the box and the cards, a headline, and the two things to do. */}
-      <section className="on-dark relative overflow-hidden bg-[#0b0b0b] text-paper">
-        {/* The picture fills the whole screen under the header. Phones: the box and cards up top, the words over its dark foot. */}
-        <Image src="/gift/hero-phone.webp" alt="" width={900} height={843} priority sizes="100vw" className="absolute inset-x-0 top-0 h-auto w-full md:hidden" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[22%] to-[#0b0b0b] to-[46%] md:hidden" aria-hidden />
-        {/* Larger screens: the words sit on the picture's dark left side. */}
-        <Image src="/gift/hero.webp" alt="" fill priority sizes="100vw" className="object-cover object-right max-md:hidden" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0b0b0b] via-[#0b0b0b]/70 via-35% to-transparent to-60% max-md:hidden" aria-hidden />
-        <div className="container-ep relative flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] items-end pb-6 pt-[62vw] md:min-h-[calc(100svh-88px)] md:items-center md:py-20">
+      {/* The opening: the owner's picture (a warm wall, the box, two cards) fills the screen; the words sit on its open left side. */}
+      <section className="relative overflow-hidden bg-[#f1dcc3] text-ink">
+        {/* Phones: the box and cards at the top, the words over the picture's pale foot. */}
+        <Image src="/gift/hero-light-phone.webp" alt="" width={900} height={804} priority sizes="100vw" className="absolute inset-x-0 top-0 h-auto w-full md:hidden" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[36%] to-[#f1dcc3] to-[48%] md:hidden" aria-hidden />
+        <Image src="/gift/hero-light.webp" alt="" fill priority sizes="100vw" className="object-cover object-right max-md:hidden" />
+        <div className="container-ep relative flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] items-end pb-6 pt-[66vw] md:min-h-[calc(100svh-88px)] md:items-center md:py-20">
           <div className="md:max-w-[50%]">
-            <p className="index text-paper/60">Gifting, simplified</p>
+            <p className="index text-ink/60">Gifting, simplified</p>
             <h1 className="display display-h1 mt-3">
               You know them.
               <br />
               We handle the rest.
             </h1>
-            <p className="mt-3 max-w-[40ch] text-base text-paper/80 md:mt-4 md:text-lg">Whether you know their style, their size, or neither, send them something they&apos;ll love.</p>
+            <p className="mt-3 max-w-[40ch] text-base text-ink/75 md:mt-4 md:text-lg">Whether you know their style, their size, or neither, send them something they&apos;ll love.</p>
             {/* The two things to do, each with its own object: the box opens, the cards fan out. */}
             <nav aria-label="Start a gift" className="mt-6 grid gap-3 sm:grid-cols-2 md:mt-8 md:max-w-[440px] md:grid-cols-1">
-              <a href="#pieces" className="gift-tile group relative flex h-[88px] items-center overflow-hidden rounded-2xl md:h-[104px] border border-paper/25 bg-black/55 pl-5 backdrop-blur-sm transition-colors duration-200 hover:border-paper active:scale-[0.99]">
+              <a href="#pieces" className="gift-tile on-dark group relative flex h-[88px] items-center overflow-hidden rounded-2xl bg-ink pl-5 text-paper shadow-[0_14px_30px_-18px_rgba(0,0,0,0.6)] transition-transform duration-150 active:scale-[0.99] md:h-[104px]">
                 <span className="relative z-10">
                   <span className="display block text-[26px] leading-none">Send a piece</span>
                   <span className="mt-1.5 flex items-center gap-1.5 text-[13px] text-paper/70">
@@ -145,23 +143,23 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                 </span>
                 <GiftBox className="absolute -right-2 bottom-[-18px] w-[118px]" />
               </a>
-              <Link href="/gift-cards#buy" className="group relative flex h-[88px] items-center overflow-hidden rounded-2xl md:h-[104px] border border-volt/70 bg-black/55 pl-5 backdrop-blur-sm transition-colors duration-200 hover:border-volt active:scale-[0.99]">
+              <Link href="/gift-cards#buy" className="group relative flex h-[88px] items-center overflow-hidden rounded-2xl border border-ink/15 bg-paper/85 pl-5 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-transform duration-150 active:scale-[0.99] md:h-[104px]">
                 <span className="relative z-10">
                   <span className="display block text-[26px] leading-none">Send a gift card</span>
-                  <span className="mt-1.5 flex items-center gap-1.5 text-[13px] text-paper/70">
+                  <span className="mt-1.5 flex items-center gap-1.5 text-[13px] text-steel-dark">
                     They choose anything <ArrowIcon className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </span>
                 </span>
                 {/* Three of the cards, held like a hand: they spread when the tile is pointed at */}
                 <span className="absolute -right-3 top-1/2 block h-[84px] w-[120px] -translate-y-1/2" aria-hidden>
                   <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[-14deg] transition-transform duration-300 group-hover:rotate-[-24deg]">
-                    <GiftCardPicture amount={20000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.9)]" />
+                    <GiftCardPicture amount={20000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]" />
                   </span>
                   <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[-4deg] transition-transform duration-300 group-hover:rotate-[-8deg]">
-                    <GiftCardPicture amount={5000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.9)]" />
+                    <GiftCardPicture amount={5000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]" />
                   </span>
                   <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[6deg] transition-transform duration-300 group-hover:rotate-[10deg]">
-                    <GiftCardPicture amount={2000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.9)]" />
+                    <GiftCardPicture amount={2000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]" />
                   </span>
                 </span>
               </Link>
