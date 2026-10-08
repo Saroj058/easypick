@@ -4,7 +4,6 @@ import Link from "next/link";
 import { GiftBox } from "@/components/gift/gift-box";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
-import { bothDates, currentFestival } from "@/lib/festival";
 import { formatPrice } from "@/lib/format";
 import { GIFT_CARD_MIN } from "@/lib/gift-cards";
 import { sellable } from "@/lib/inventory";
@@ -89,7 +88,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
   const cat = ([...Object.keys(categoryLabels), "one"] as Cat[]).find((c) => c === sp.cat) ?? null;
   const shown = Math.min(Math.max(Number(sp.show) || PAGE, PAGE), 600);
 
-  const [all, festival, trending] = await Promise.all([getProducts(), currentFestival(), getTrending()]);
+  const [all, trending] = await Promise.all([getProducts(), getTrending()]);
   const live = all.filter((p) => p.status === "live" && inStock(p));
   const inBudget = (p: Product, m: number | null) => (m ? priceOf(p) <= m : true);
   const inCat = (p: Product, c: Cat | null) => (c === "one" ? oneSize(p) : c ? p.category === c : true);
@@ -127,23 +126,6 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
               <br />
               They pick the size.
             </h1>
-            {festival && (
-              <p className="mt-5 text-[15px] text-paper/80">
-                {festival.open ? (
-                  <>
-                    <span className="tag-volt mr-2 align-middle">Order by {bothDates(festival.orderBy)}</span>
-                    for delivery before the day.
-                  </>
-                ) : (
-                  <>
-                    Too late for delivery. A gift card arrives in minutes.{" "}
-                    <Link href="/gift-cards#buy" className="font-semibold text-paper underline underline-offset-2">
-                      Send a card instead
-                    </Link>
-                  </>
-                )}
-              </p>
-            )}
             <h2 id="budget-h" className="mt-8 font-mono text-[12px] uppercase tracking-[0.16em] text-paper/60">
               What&apos;s the budget?
             </h2>
