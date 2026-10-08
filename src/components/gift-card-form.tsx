@@ -34,7 +34,7 @@ const emailCheck = (v: string) => (v && !EMAIL.test(v) ? "Check the email, like 
 const phoneCheck = (v: string) => (v && !normaliseNepaliMobile(v) ? "10 digits, starting 97 or 98." : null);
 
 /** Buy a gift card: amount (each has its own printed card), who it's for, message and date, with a live preview. */
-export function GiftCardForm({ initialValue = 2000, inSheet = false }: { /** The card it opens on. */ initialValue?: number | "custom"; /** Shown in the sheet over the Gift page, not on a page of its own. */ inSheet?: boolean }) {
+export function GiftCardForm({ initialValue = 2000, initialForMe = false, inSheet = false }: { /** Opens on "Myself". */ initialForMe?: boolean; /** The card it opens on. */ initialValue?: number | "custom"; /** Shown in the sheet over the Gift page, not on a page of its own. */ inSheet?: boolean }) {
   const me = useMe();
   const senderField = usePrefilled(me?.name);
   const phoneField = usePrefilled(me?.phone);
@@ -42,7 +42,7 @@ export function GiftCardForm({ initialValue = 2000, inSheet = false }: { /** The
   const [value, setValue] = useState<number | "custom">(initialValue);
   const [flipped, setFlipped] = useState(false);
   const [custom, setCustom] = useState("");
-  const [forMe, setForMe] = useState(false);
+  const [forMe, setForMe] = useState(initialForMe);
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [anonymous, setAnonymous] = useState(false);

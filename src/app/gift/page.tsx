@@ -252,13 +252,9 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
           )}
         </section>
 
-        {/* The gift cards, shown as what they are: a row of cards to pick from */}
-        <section id="buy" aria-labelledby="cards-h" className="on-dark scroll-mt-24 -mx-4 overflow-hidden bg-ink px-4 py-12 text-paper md:mx-0 md:rounded-2xl md:px-10 md:py-14">
-            <h2 id="cards-h" className="display display-h2">
-              Or let them choose.
-            </h2>
-            <p className="mt-2 max-w-[44ch] text-paper/75">Pick a card and fill it in right here. It reaches them by email in minutes.</p>
-            <GiftCardPicker />
+        {/* Gift cards: this section is where they are chosen and bought (the form opens over the page) */}
+        <section id="buy" aria-labelledby="cards-h" className="scroll-mt-24 rounded-2xl border border-ink p-4 md:p-8">
+          <GiftCardPicker />
         </section>
 
         {/* Two short rows, only while nothing is filtered */}
