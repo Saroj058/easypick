@@ -174,12 +174,12 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* At the end: the drop. The countdown in the middle, the way into the drop beside it. */}
-          <div className="grid items-center gap-x-6 gap-y-4 border-t border-ink/15 pt-5 md:grid-cols-[auto_minmax(0,1fr)] lg:col-span-12 lg:row-start-2">
-            <p className="index text-center text-ink/70 md:text-left">
+          {/* At the end: the drop and its countdown, in the middle. The way into the drop is on the wardrobe above. */}
+          <div className="flex flex-col items-center gap-3 border-t border-ink/15 pt-5 text-center lg:col-span-12 lg:row-start-2">
+            <p className="index text-center text-ink/70">
               {next ? `Drop ${next.slug} opens in` : current ? `${current.name} · out now` : "Kathmandu"}
             </p>
-            <div className="flex justify-center md:justify-end">{next && <Countdown to={next.releaseAt} label={next.name} size="sm" seconds />}</div>
+            <div className="flex justify-center">{next && <Countdown to={next.releaseAt} label={next.name} size="sm" seconds />}</div>
           </div>
         </div>
       </section>

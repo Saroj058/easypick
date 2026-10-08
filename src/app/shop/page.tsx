@@ -36,7 +36,7 @@ const sorts = [
   { key: "price-desc", label: "Price: high to low" },
 ];
 
-type Filters = { category?: string; size?: string; colour?: string; price?: string; fit?: string; sort?: string; sale?: string; new?: string; vault?: string; brand?: string; page?: string };
+type Filters = { q?: string; category?: string; size?: string; colour?: string; price?: string; fit?: string; sort?: string; sale?: string; new?: string; vault?: string; brand?: string; page?: string };
 
 /** Pieces per page: enough to browse, small enough for a phone on mobile data. */
 const PER_PAGE = 48;
@@ -73,6 +73,7 @@ function Chip({ active, href: to, children }: { active: boolean; href: string; c
 export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   const sp = await searchParams;
   const f: Filters = {
+    q: one(sp.q)?.trim().slice(0, 60) || undefined,
     category: one(sp.category),
     size: one(sp.size),
     colour: one(sp.colour),
@@ -92,6 +93,13 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
   const priceOf = (p: Product) => p.salePrice ?? p.price;
   let list = all.filter((p) => p.status !== "scheduled");
+  // Search: every word typed has to be somewhere in the piece's name, kind, colours, fit, brand or tags.
+  const words = (f.q ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length)
+    list = list.filter((p) => {
+      const hay = [p.name, p.shortDescription, categoryLabels[p.category], p.fit, p.brand ?? "", ...p.colours.map((c) => c.name), ...(p.tags ?? [])].join(" ").toLowerCase();
+      return words.every((w) => hay.includes(w));
+    });
   if (f.sale) list = list.filter((p) => p.salePrice);
   if (f.new) list = list.filter((p) => p.isNew);
   if (f.vault) list = list.filter((p) => p.vault);
@@ -110,7 +118,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   // Sold out sinks to the bottom, but keeps its page for sharing and search.
   list = [...list].sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
 
-  const active = Boolean(f.category || f.size || f.colour || f.price || f.fit || f.sale || f.new || f.vault || f.brand);
+  const active = Boolean(f.q || f.category || f.size || f.colour || f.price || f.fit || f.sale || f.new || f.vault || f.brand);
   const anyNew = all.some((p) => p.isNew && p.status !== "scheduled");
   const onSale = all.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = onSale.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -121,69 +129,41 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
   return (
     <div className="container-ep pb-24 pt-10 md:pt-16">
-      <h1 className="display text-[40px] md:text-[72px]">
-        {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
-      </h1>
-      {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
-
-      <div className="mt-8 space-y-3">
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
-          <Chip active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })}>
-            All
-          </Chip>
-          {onSale.length > 0 && (
-            <Chip active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })}>
-              On sale
-            </Chip>
+      {/* One bar, like the home page's Rail: the name on a black tab, search, and Filter (its panel drops below the bar) */}
+      <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-t-2xl border border-ink py-2 pr-3">
+        <h1 className="display on-dark order-1 -my-2 -ml-px flex items-center self-stretch rounded-tl-[15px] bg-ink px-5 py-3 text-[34px] leading-[0.9] text-paper md:text-[44px]">
+          {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
+        </h1>
+        <form action="/shop" role="search" className="order-3 mx-3 flex h-11 min-w-0 flex-1 basis-full items-center gap-2 rounded-full border border-steel pl-4 pr-1 transition-colors focus-within:border-ink lg:order-2 lg:mx-0 lg:basis-0">
+          {/* The other filters stay on while searching */}
+          {(["category","size","colour","price","fit","sort","sale","new","vault","brand"] as const).map((k) => f[k] && <input key={k} type="hidden" name={k} value={f[k]} />)}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-steel-dark" aria-hidden>
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <label htmlFor="shop-q" className="sr-only">
+            Search the shop
+          </label>
+          <input id="shop-q" key={f.q ?? ""} name="q" type="search" defaultValue={f.q ?? ""} placeholder="Search the shop" enterKeyHint="search" autoComplete="off" className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-steel-dark [&::-webkit-search-cancel-button]:hidden" />
+          {f.q && (
+            <Link href={href(f, { q: undefined })} scroll={false} aria-label="Clear the search" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg leading-none hover:bg-mist">
+              <span aria-hidden>×</span>
+            </Link>
           )}
-          {anyNew && (
-            <Chip active={Boolean(f.new)} href={href(f, { new: f.new ? undefined : "1" })}>
-              New in
-            </Chip>
-          )}
-          {(Object.keys(categoryLabels) as Category[])
-            .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
-            .map((c) => (
-            <Chip key={c} active={f.category === c} href={href(f, { category: c })}>
-              {categoryLabels[c]}
-            </Chip>
-          ))}
-        </div>
-
-        {active && (
-          <ul aria-label="Filters on" className="flex flex-wrap gap-2">
-            {(
-              [
-                ["size", f.size && `Size ${f.size}`],
-                ["colour", f.colour],
-                ["price", prices.find((x) => x.key === f.price)?.label],
-                ["fit", fits.find((x) => x.key === f.fit)?.label],
-                ["brand", f.brand],
-                ["vault", f.vault && "The Vault"],
-              ] as [keyof Filters, string | undefined][]
-            )
-              .filter(([, label]) => label)
-              .map(([key, label]) => (
-                <li key={key}>
-                  <Link
-                    href={href(f, { [key]: undefined })}
-                    scroll={false}
-                    className="inline-flex h-11 items-center gap-2 rounded-[2px] bg-photo px-3 text-[13px] font-semibold hover:bg-mist"
-                  >
-                    {label}
-                    <span aria-hidden>×</span>
-                    <span className="sr-only">, remove filter</span>
-                  </Link>
-                </li>
-              ))}
-          </ul>
-        )}
-
-        <details className="group">
-          <summary className="flex h-11 cursor-pointer list-none items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
-            Filter and sort {active && <span className="tag-volt">On</span>}
+          <button type="submit" className="h-9 shrink-0 cursor-pointer rounded-full bg-ink px-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-paper transition-colors hover:bg-volt hover:text-ink">
+            Search
+          </button>
+        </form>
+        <details className="group order-2 ml-auto lg:order-3 lg:ml-0">
+          <summary aria-label="Filter and sort" className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-mist px-4 text-sm font-semibold transition-colors hover:border-ink group-open:border-ink [&::-webkit-details-marker]:hidden">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+              <circle cx="16" cy="7" r="2" />
+              <circle cx="8" cy="17" r="2" />
+            </svg>
+            Filter {active && <span className="tag-volt">On</span>}
           </summary>
-          <div className="mt-3 grid gap-6 border-t border-mist pt-6 md:grid-cols-3 lg:grid-cols-5">
+          <div className="absolute inset-x-[-1px] top-full z-20 grid gap-6 border border-ink bg-paper p-5 shadow-[0_18px_30px_-20px_rgba(0,0,0,0.35)] md:grid-cols-3 lg:grid-cols-5">
             <div>
               <p className="text-sm font-semibold">Size</p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -237,6 +217,63 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           </div>
         </details>
       </div>
+      {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
+
+      <div className="mt-4 space-y-3">
+        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
+          <Chip active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })}>
+            All
+          </Chip>
+          {onSale.length > 0 && (
+            <Chip active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })}>
+              On sale
+            </Chip>
+          )}
+          {anyNew && (
+            <Chip active={Boolean(f.new)} href={href(f, { new: f.new ? undefined : "1" })}>
+              New in
+            </Chip>
+          )}
+          {(Object.keys(categoryLabels) as Category[])
+            .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
+            .map((c) => (
+            <Chip key={c} active={f.category === c} href={href(f, { category: c })}>
+              {categoryLabels[c]}
+            </Chip>
+          ))}
+        </div>
+
+        {active && (
+          <ul aria-label="Filters on" className="flex flex-wrap gap-2">
+            {(
+              [
+                ["q", f.q && `“${f.q}”`],
+                ["size", f.size && `Size ${f.size}`],
+                ["colour", f.colour],
+                ["price", prices.find((x) => x.key === f.price)?.label],
+                ["fit", fits.find((x) => x.key === f.fit)?.label],
+                ["brand", f.brand],
+                ["vault", f.vault && "The Vault"],
+              ] as [keyof Filters, string | undefined][]
+            )
+              .filter(([, label]) => label)
+              .map(([key, label]) => (
+                <li key={key}>
+                  <Link
+                    href={href(f, { [key]: undefined })}
+                    scroll={false}
+                    className="inline-flex h-11 items-center gap-2 rounded-[2px] bg-photo px-3 text-[13px] font-semibold hover:bg-mist"
+                  >
+                    {label}
+                    <span aria-hidden>×</span>
+                    <span className="sr-only">, remove filter</span>
+                  </Link>
+                </li>
+              ))}
+          </ul>
+        )}
+
+      </div>
 
       <p className="mt-6 font-mono text-[13px] text-steel-dark" aria-live="polite">
         {list.length} {list.length === 1 ? "piece" : "pieces"}
@@ -281,7 +318,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
             )}
           </>
         ) : (
-          <p className="py-24 text-center text-steel-dark">Nothing matches that yet. Try another size or colour.</p>
+          <p className="py-24 text-center text-steel-dark">{f.q ? `Nothing matches “${f.q}”. Try another word, or clear the filters.` : "Nothing matches that yet. Try another size or colour."}</p>
         )}
       </div>
       <RecentlyViewed />

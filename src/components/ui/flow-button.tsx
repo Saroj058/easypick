@@ -15,6 +15,7 @@ export function FlowButton({
   disabled,
   "aria-label": ariaLabel,
   solid = false,
+  type = "button",
 }: {
   href?: string;
   onClick?: () => void;
@@ -24,6 +25,8 @@ export function FlowButton({
   "aria-label"?: string;
   /** Black at rest and white on hover, instead of the other way round. */
   solid?: boolean;
+  /** "submit" when it sends the form it sits in. */
+  type?: "button" | "submit";
 }) {
   const classes = `group relative inline-flex h-12 items-center justify-center gap-1 overflow-hidden rounded-[100px] border-[1.5px] px-9 text-[14px] font-semibold uppercase tracking-[0.04em] transition-all duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.95] disabled:pointer-events-none disabled:opacity-40 [@media(hover:hover)]:hover:rounded-[12px] ${solid ? "border-ink bg-ink text-paper [@media(hover:hover)]:hover:text-ink" : "border-ink/40 bg-transparent text-ink [@media(hover:hover)]:hover:border-transparent [@media(hover:hover)]:hover:text-paper"} ${className}`;
   const arrow = solid ? "stroke-paper [@media(hover:hover)]:group-hover:stroke-ink" : "stroke-ink [@media(hover:hover)]:group-hover:stroke-paper";
@@ -54,7 +57,7 @@ export function FlowButton({
       </Link>
     );
   return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-label={ariaLabel} className={classes}>
+    <button type={type} onClick={onClick} disabled={disabled} aria-label={ariaLabel} className={`cursor-pointer ${classes}`}>
       {inside}
     </button>
   );

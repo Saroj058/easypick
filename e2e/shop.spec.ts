@@ -290,3 +290,21 @@ test("footer: one-line drop alert sign-up takes an email or a WhatsApp number", 
   await footer.getByRole("button", { name: "Notify me" }).click();
   await expect(footer.getByText(/You're in\. One email to f•••@example\.com/)).toBeVisible();
 });
+
+test("shop: search narrows the pieces, keeps the other filters, and Filter opens its panel @phone", async ({ page }) => {
+  await page.goto("/shop?category=hoodies");
+  const all = Number((await page.locator("p[aria-live=polite]").first().innerText()).match(/[0-9]+/)![0]);
+  await page.getByLabel("Search the shop").fill("zzzz-no-such-piece");
+  await page.getByRole("search").getByRole("button", { name: "Search", exact: true }).click();
+  // The search is in the address (it works without JavaScript), and the category stays on.
+  await expect(page).toHaveURL(/q=zzzz-no-such-piece/);
+  await expect(page).toHaveURL(/category=hoodies/);
+  await expect(page.getByText(/Nothing matches “zzzz-no-such-piece”/)).toBeVisible();
+  await page.getByRole("link", { name: "Clear the search" }).click();
+  await expect(page).not.toHaveURL(/q=/);
+  await expect(page.locator("p[aria-live=polite]").first()).toContainText(`${all} piece`);
+  // Filter: the same choices as before, in a panel under the bar.
+  await page.locator("summary[aria-label='Filter and sort']").click();
+  await expect(page.getByText("Colour", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Price: low to high" })).toBeVisible();
+});
