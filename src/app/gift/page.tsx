@@ -121,7 +121,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
       <section className="on-dark bg-ink text-paper">
         <div className="container-ep grid items-center gap-10 pb-10 pt-10 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:pb-16 md:pt-20">
           <div>
-            <p className="index text-paper/60">{festival ? `${festival.name} gifts` : "Gifts"}</p>
+            <p className="index text-paper/60">Gifts</p>
             <h1 className="display display-h1 mt-3">
               Gift it.
               <br />
