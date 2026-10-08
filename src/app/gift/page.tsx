@@ -4,10 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AskWhatsApp } from "@/components/ask-whatsapp";
+import { GiftCardPicture, PRINTED_CARDS } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
-import { GIFT_CARD_MIN } from "@/lib/gift-cards";
 import { sellable } from "@/lib/inventory";
 import { categoryLabels, site } from "@/lib/site";
 import { getProducts } from "@/lib/store";
@@ -144,7 +144,6 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                 Send a gift card <ArrowIcon className="h-4 w-4" />
               </Link>
             </nav>
-            <p className="mt-4 text-[13px] text-paper/65">Gift cards from {formatPrice(GIFT_CARD_MIN)} to Rs 1,00,000.</p>
           </div>
         </div>
       </section>
@@ -160,7 +159,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
               [
                 [Ruler, "You know their size", "Pick the piece and the size. We wrap it and deliver it, or you collect it.", "#pieces", "Choose a piece"],
                 [Store, "You don't know their size", "Pick the piece. They choose the size from a link, or try it on in our store.", "#pieces", "Choose a piece"],
-                [CreditCard, "Not sure what they'd like", `Send a gift card from ${formatPrice(GIFT_CARD_MIN)}. It arrives in minutes.`, "/gift-cards#buy", "Send a gift card"],
+                [CreditCard, "Not sure what they'd like", "Send a gift card. It lands in their inbox in minutes, and they choose anything in the store.", "/gift-cards#buy", "Send a gift card"],
               ] as const
             ).map(([Icon, title, words, href, action]) => (
               <li key={title}>
@@ -245,6 +244,32 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
             </div>
           )}
         </section>
+
+        {/* The gift cards, shown as what they are: a row of cards to pick from */}
+        {!filtered && (
+          <section aria-labelledby="cards-h" className="on-dark -mx-4 overflow-hidden bg-ink px-4 py-12 text-paper md:mx-0 md:rounded-[2px] md:px-10 md:py-14">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 id="cards-h" className="display display-h2">
+                  Or let them choose.
+                </h2>
+                <p className="mt-2 max-w-[40ch] text-paper/75">A card for the mountains, a card for the city, a card for the one who has everything.</p>
+              </div>
+              <Link href="/gift-cards#buy" className="inline-flex h-12 items-center gap-2 rounded-full bg-volt px-6 text-[14px] font-semibold uppercase tracking-[0.08em] text-ink transition-transform duration-150 active:scale-[0.98]">
+                Pick a card <ArrowIcon className="h-4 w-4" />
+              </Link>
+            </div>
+            <ul className="-mx-4 mt-8 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 pt-2 md:-mx-10 md:scroll-px-10 md:px-10">
+              {PRINTED_CARDS.map((amount, i) => (
+                <li key={amount} className="w-[68%] shrink-0 snap-start sm:w-[300px]">
+                  <Link href="/gift-cards#buy" aria-label={`Gift card, ${formatPrice(amount)}`} className={`block transition-transform duration-300 hover:-translate-y-1 hover:rotate-0 ${i % 2 ? "rotate-[1.5deg]" : "-rotate-[1.5deg]"}`}>
+                    <GiftCardPicture amount={amount} className="shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)]" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Two short rows, only while nothing is filtered */}
         {!filtered && <Rail id="nosize-h" title="No size to guess." note="One size. Nothing to swap." products={noSize} />}

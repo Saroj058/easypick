@@ -15,6 +15,11 @@ test("gift page: a piece or a card, the three ways, then pieces with plain-link 
   // Then the three ways to gift, so nobody has to work out which one is theirs.
   await expect(page.getByRole("heading", { name: "Three ways to gift" })).toBeVisible();
   await expect(page.getByRole("link", { name: /You don't know their size/ })).toContainText("try it on in our store");
+  // The gift cards are shown as cards to pick from, not as a price.
+  const cards = page.getByRole("region", { name: "Or let them choose." });
+  await expect(cards.getByRole("link", { name: /^Gift card, Rs/ })).toHaveCount(9);
+  await expect(cards.getByRole("link", { name: "Pick a card" })).toHaveAttribute("href", "/gift-cards#buy");
+  await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toBeVisible();
   await page.screenshot(shot(`gift-${info.project.name}`));
 
