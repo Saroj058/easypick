@@ -7,7 +7,7 @@ const shot = (name: string) => ({ path: `test-results/shots/${name}.png`, fullPa
 
 test("gift page: a piece or a card, the three ways, then pieces with plain-link filters @phone", async ({ page }, info) => {
   await page.goto("/gift");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(/Gift it/i);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(/You know them\.\s*We handle the rest\./);
   // The opening offers the two things to do, a piece or a card, with equal weight.
   const start = page.getByRole("navigation", { name: "Start a gift" });
   await expect(start.getByRole("link", { name: "Send a piece" })).toHaveAttribute("href", "#pieces");

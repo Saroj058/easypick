@@ -1136,6 +1136,16 @@
     opacity: 0;
   }
 }
+/* On a tile (the Gift page's "Send a piece"), the lid lifts while the tile is pointed at or focused. */
+.gift-box .gift-lid-rest {
+  transform-box: fill-box;
+  transform-origin: 20% 100%;
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gift-tile:hover .gift-lid-rest,
+.gift-tile:focus-visible .gift-lid-rest {
+  transform: translateY(-14px) rotate(-7deg);
+}
 /* What was in the box comes up one piece after another (--i: 0, 1, 2). */
 .gift-rise {
   animation: fade-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;

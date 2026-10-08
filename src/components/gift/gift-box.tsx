@@ -33,7 +33,7 @@ export function GiftBox({
           </g>
         )}
       </g>
-      <g className={state === "opening" ? "gift-open-lid" : state === "idle" ? "gift-lid" : undefined}>
+      <g className={state === "opening" ? "gift-open-lid" : state === "idle" ? "gift-lid" : "gift-lid-rest"}>
         <rect x="36" y="78" width="308" height="52" rx="4" className="fill-[#232428] stroke-[#3a3b40]" />
         <rect x="170" y="78" width="40" height="52" className="fill-volt" />
         <path d="M190 78c-34-58-92-40-60-8 16 14 44 10 60 8zm0 0c34-58 92-40 60-8-16 14-44 10-60 8z" className="fill-volt stroke-ink" strokeWidth="2" />

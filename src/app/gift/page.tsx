@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AskWhatsApp } from "@/components/ask-whatsapp";
+import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicture, PRINTED_CARDS } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
@@ -128,20 +129,44 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
         <Image src="/gift/hero.webp" alt="" fill priority sizes="100vw" className="object-cover object-right max-md:hidden" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0b0b0b] via-[#0b0b0b]/70 via-35% to-transparent to-60% max-md:hidden" aria-hidden />
         <div className="container-ep relative pb-10 pt-2 md:flex md:min-h-[min(78svh,680px)] md:items-center md:py-20">
-          <div className="md:max-w-[46%]">
-            <p className="index text-paper/60">Gifts</p>
+          <div className="md:max-w-[50%]">
+            <p className="index text-paper/60">Gifting, simplified</p>
             <h1 className="display display-h1 mt-3">
-              Gift it.
+              You know them.
               <br />
-              Size known or not.
+              We handle the rest.
             </h1>
-            <p className="mt-4 max-w-[36ch] text-lg text-paper/80">A piece or a gift card, wrapped and sent in a minute.</p>
-            <nav aria-label="Start a gift" className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a href="#pieces" className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-paper px-7 text-[14px] font-semibold uppercase tracking-[0.08em] text-ink transition-transform duration-150 active:scale-[0.98]">
-                Send a piece <ArrowIcon className="h-4 w-4 rotate-90" />
+            <p className="mt-4 max-w-[40ch] text-lg text-paper/80">Whether you know their style, their size, or neither, send them something they&apos;ll love.</p>
+            {/* The two things to do, each with its own object: the box opens, the cards fan out. */}
+            <nav aria-label="Start a gift" className="mt-8 grid gap-3 sm:grid-cols-2 md:max-w-[440px] md:grid-cols-1">
+              <a href="#pieces" className="gift-tile group relative flex h-[104px] items-center overflow-hidden rounded-2xl border border-paper/25 bg-black/55 pl-5 backdrop-blur-sm transition-colors duration-200 hover:border-paper active:scale-[0.99]">
+                <span className="relative z-10">
+                  <span className="display block text-[26px] leading-none">Send a piece</span>
+                  <span className="mt-1.5 flex items-center gap-1.5 text-[13px] text-paper/70">
+                    Wrapped in the box <ArrowIcon className="h-3.5 w-3.5 rotate-90 transition-transform duration-200 group-hover:translate-y-0.5" />
+                  </span>
+                </span>
+                <GiftBox className="absolute -right-2 bottom-[-18px] w-[118px]" />
               </a>
-              <Link href="/gift-cards#buy" className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-volt px-7 text-[14px] font-semibold uppercase tracking-[0.08em] text-ink transition-transform duration-150 active:scale-[0.98]">
-                Send a gift card <ArrowIcon className="h-4 w-4" />
+              <Link href="/gift-cards#buy" className="group relative flex h-[104px] items-center overflow-hidden rounded-2xl border border-volt/70 bg-black/55 pl-5 backdrop-blur-sm transition-colors duration-200 hover:border-volt active:scale-[0.99]">
+                <span className="relative z-10">
+                  <span className="display block text-[26px] leading-none">Send a gift card</span>
+                  <span className="mt-1.5 flex items-center gap-1.5 text-[13px] text-paper/70">
+                    They choose anything <ArrowIcon className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </span>
+                </span>
+                {/* Three of the cards, held like a hand: they spread when the tile is pointed at */}
+                <span className="absolute -right-3 top-1/2 block h-[84px] w-[120px] -translate-y-1/2" aria-hidden>
+                  <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[-14deg] transition-transform duration-300 group-hover:rotate-[-24deg]">
+                    <GiftCardPicture amount={20000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.9)]" />
+                  </span>
+                  <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[-4deg] transition-transform duration-300 group-hover:rotate-[-8deg]">
+                    <GiftCardPicture amount={5000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.9)]" />
+                  </span>
+                  <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[6deg] transition-transform duration-300 group-hover:rotate-[10deg]">
+                    <GiftCardPicture amount={2000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.9)]" />
+                  </span>
+                </span>
               </Link>
             </nav>
           </div>
