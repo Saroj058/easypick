@@ -35,9 +35,10 @@ import {
 
 // One menu, named for what customers want to do (docs/BLUEPRINT.md, section 05).
 const primary = [
-  { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/fits", label: "Fits", icon: Shirt },
   { href: "/gift", label: "Gift", icon: Gift },
+  // Shop sits in the middle of the dock.
+  { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/vault", label: "The Vault", icon: Gem },
   { href: "/visit", label: "Visit", icon: MapPin },
 ];
