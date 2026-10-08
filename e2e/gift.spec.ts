@@ -5,15 +5,16 @@ import { randomPhone } from "./helpers";
 // Screenshots for a visual check land in test-results/ (not committed).
 const shot = (name: string) => ({ path: `test-results/shots/${name}.png`, fullPage: true });
 
-test("gift page: budget first, then pieces; plain-link filters; the card is one link away @phone", async ({ page }, info) => {
+test("gift page: a piece or a card, the three ways, then pieces with plain-link filters @phone", async ({ page }, info) => {
   await page.goto("/gift");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/Gift it/i);
-  // The card is one honest line: from Rs 1,000.
-  await expect(page.getByRole("link", { name: /Send a gift card, from Rs 1,000/ })).toHaveAttribute("href", "/gift-cards#buy");
-  // The budgets are the blueprint's, and the first screen asks only that.
-  const budget = page.getByRole("navigation", { name: "What's the budget?" });
-  await expect(budget.getByRole("link")).toHaveCount(4);
-  await expect(budget.getByRole("link", { name: /Under Rs 2,000/ })).toContainText(/[0-9]+ pieces/);
+  // The opening offers the two things to do, a piece or a card, with equal weight.
+  const start = page.getByRole("navigation", { name: "Start a gift" });
+  await expect(start.getByRole("link", { name: "Send a piece" })).toHaveAttribute("href", "#pieces");
+  await expect(start.getByRole("link", { name: "Send a gift card" })).toHaveAttribute("href", "/gift-cards#buy");
+  // Then the three ways to gift, so nobody has to work out which one is theirs.
+  await expect(page.getByRole("heading", { name: "Three ways to gift" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /You don't know their size/ })).toContainText("try it on in our store");
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toBeVisible();
   await page.screenshot(shot(`gift-${info.project.name}`));
 

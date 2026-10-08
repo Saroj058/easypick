@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { CreditCard, Ruler, Store } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { AskWhatsApp } from "@/components/ask-whatsapp";
-import { GiftBox } from "@/components/gift/gift-box";
-import { GiftCardPicture } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
@@ -15,8 +14,8 @@ import { getProducts } from "@/lib/store";
 import { getTrending } from "@/lib/trending";
 import type { Product } from "@/lib/types";
 
-// Find a gift ("I am buying for someone"). The page starts from the one question the catalogue can
-// answer honestly, the budget, and goes straight to pieces. Every control is a plain link, so the
+// Find a gift ("I am buying for someone"). The page opens on the two things to do (send a piece,
+// send a gift card), names the three ways to gift, then goes straight to pieces, filtered by budget. Every control is a plain link, so the
 // page works without JavaScript. Pieces are not tagged by who they suit or by occasion, so the page
 // doesn't ask.
 
@@ -115,58 +114,38 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
     return `/gift${s ? `?${s}` : ""}#pieces`;
   };
   const filtered = Boolean(max || cat);
-  const tile = "group flex min-h-[88px] flex-col justify-between rounded-[2px] border border-paper/30 p-4 transition-colors duration-200 hover:border-paper hover:bg-paper hover:text-ink";
 
   return (
     <div className="pb-24">
-      {/* The opening: the gift, and the one question that finds it. */}
-      <section className="on-dark bg-ink text-paper">
-        <div className="container-ep grid items-center gap-10 pb-10 pt-10 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] md:pb-16 md:pt-20">
-          <div>
+      {/* The opening: the owner's picture of the box and the cards, a headline, and the two things to do. */}
+      <section className="on-dark relative overflow-hidden bg-[#0b0b0b] text-paper">
+        {/* Phones: the box and cards first, the words under them. */}
+        <div className="relative aspect-[16/11] md:hidden">
+          <Image src="/gift/hero-phone.webp" alt="" fill priority sizes="100vw" className="object-cover object-[60%_center]" />
+          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-b from-transparent to-[#0b0b0b]" aria-hidden />
+        </div>
+        {/* Larger screens: the picture fills the band; the words sit on its dark left side. */}
+        <Image src="/gift/hero.webp" alt="" fill priority sizes="100vw" className="object-cover object-right max-md:hidden" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0b0b0b] via-[#0b0b0b]/70 via-35% to-transparent to-60% max-md:hidden" aria-hidden />
+        <div className="container-ep relative pb-10 pt-2 md:flex md:min-h-[min(78svh,680px)] md:items-center md:py-20">
+          <div className="md:max-w-[46%]">
             <p className="index text-paper/60">Gifts</p>
             <h1 className="display display-h1 mt-3">
               Gift it.
               <br />
               Size known or not.
             </h1>
-            <h2 id="budget-h" className="mt-8 font-mono text-[12px] uppercase tracking-[0.16em] text-paper/60">
-              What&apos;s the budget?
-            </h2>
-            <nav aria-labelledby="budget-h" className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-              {BUDGETS.map((b) => (
-                <Link key={b} href={q({ max: b, cat: null })} className={tile}>
-                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] opacity-60">Under</span>
-                  <span>
-                    <span className="display block text-[28px] leading-none">{formatPrice(b)}</span>
-                    <span className="mt-1 block text-[13px] opacity-70">
-                      {live.filter((p) => priceOf(p) <= b).length} pieces
-                    </span>
-                  </span>
-                </Link>
-              ))}
-              <Link href={q({ max: null, cat: null })} className={tile}>
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] opacity-60">Any</span>
-                <span>
-                  <span className="display block text-[28px] leading-none">Price</span>
-                  <span className="mt-1 block text-[13px] opacity-70">{live.length} pieces</span>
-                </span>
+            <p className="mt-4 max-w-[36ch] text-lg text-paper/80">A piece or a gift card, wrapped and sent in a minute.</p>
+            <nav aria-label="Start a gift" className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <a href="#pieces" className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-paper px-7 text-[14px] font-semibold uppercase tracking-[0.08em] text-ink transition-transform duration-150 active:scale-[0.98]">
+                Send a piece <ArrowIcon className="h-4 w-4 rotate-90" />
+              </a>
+              <Link href="/gift-cards#buy" className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-volt px-7 text-[14px] font-semibold uppercase tracking-[0.08em] text-ink transition-transform duration-150 active:scale-[0.98]">
+                Send a gift card <ArrowIcon className="h-4 w-4" />
               </Link>
             </nav>
-            {/* The gift card is as much a choice as any piece: a full, bright tile of its own. */}
-            <Link href="/gift-cards#buy" className="group mt-2 flex min-h-[88px] items-center justify-between gap-4 overflow-hidden rounded-[2px] bg-paper p-4 text-ink transition-colors duration-200 hover:bg-volt">
-              <span>
-                <span className="display block text-[24px] leading-none sm:text-[28px]">Send a gift card, from {formatPrice(GIFT_CARD_MIN)}</span>
-                <span className="mt-1 block text-[13px] text-steel-dark group-hover:text-ink">Not sure what they&apos;d like? It arrives in minutes.</span>
-              </span>
-              <span className="flex shrink-0 items-center gap-3">
-                <span className="block w-24 rotate-[-6deg] max-sm:hidden" aria-hidden>
-                  <GiftCardPicture amount={2000} className="shadow-none" />
-                </span>
-                <ArrowIcon className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
-              </span>
-            </Link>
+            <p className="mt-4 text-[13px] text-paper/65">Gift cards from {formatPrice(GIFT_CARD_MIN)} to Rs 1,00,000.</p>
           </div>
-          <GiftBox tag={["FOR THEM", "SIZE: THEIR PICK"]} state="idle" className="mx-auto w-full max-w-[360px] max-md:hidden" />
         </div>
       </section>
 
