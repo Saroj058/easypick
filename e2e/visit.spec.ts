@@ -39,7 +39,7 @@ test("visit page preview: one screen with the two ways to visit; the receipt is 
   await expect(page.locator("[data-guide-line]").first()).toContainText("Namaste, I'm Pick.");
   const ways = page.getByRole("navigation", { name: "Ways to visit" });
   await expect(ways.getByRole("link")).toHaveCount(2);
-  await expect(ways.getByRole("link", { name: "Virtual tour" })).toHaveAttribute("href", "/visit/tour#enter");
+  await expect(ways.getByRole("link", { name: "Virtual tour" })).toHaveAttribute("href", "/visit/tour");
   await expect(ways.getByRole("link", { name: "In person" })).toHaveAttribute("href", "#find-us");
   // Nothing else on the page: no sections, no footer, no tab bar.
   await expect(page.locator("main h2")).toHaveCount(0);
@@ -82,7 +82,7 @@ test("visit page works with JavaScript off @phone", async ({ browser }) => {
   const page = await ctx.newPage();
   await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
-  await expect(page.locator("[data-action=tour]")).toHaveAttribute("href", "/visit/tour#enter");
+  await expect(page.locator("[data-action=tour]")).toHaveAttribute("href", "/visit/tour");
   // The loading screen is for pages that load something: without JavaScript it never covers the page.
   await expect(page.locator("[data-loader]")).toBeHidden();
   await expect(page.locator("[data-action=in-person]")).toBeVisible();

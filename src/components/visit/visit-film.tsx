@@ -8,7 +8,7 @@ import { AlertSignup } from "@/components/alert-signup";
 import { kathmanduClock } from "@/lib/kathmandu-sky";
 import { fromRouting, MAX_LIVE_METRES, routingUrl } from "@/lib/map/live-route";
 import { distance, lengthMeters, minutes, type LngLat, type TravelMode } from "@/lib/map/route";
-import { AREA_CENTRE, FIXTURE_TILES_URL, STATIC_ROUTE, TILES_URL, TOUR_ENTER_URL } from "@/lib/map/tiles";
+import { AREA_CENTRE, FIXTURE_TILES_URL, STATIC_ROUTE, TILES_URL } from "@/lib/map/tiles";
 import { FILM_SECONDS, planFilm, SCENES, sceneStart, type SceneId } from "@/lib/visit/film";
 import { guideLine } from "@/lib/visit/guide";
 import { Directions, googleMapsUrl, walkMinutes, type DirectionsData, type Locate, type Snap, type StartChoice } from "./directions";
@@ -493,7 +493,7 @@ export function VisitFilm({
                   ↓
                 </span>
               </a>
-              <Link href={TOUR_ENTER_URL} data-action="tour" className={`${pill} border border-paper/60 bg-black/30 text-paper backdrop-blur-sm hover:border-paper`}>
+              <Link href="/visit/tour" data-action="tour" className={`${pill} border border-paper/60 bg-black/30 text-paper backdrop-blur-sm hover:border-paper`}>
                 Virtual tour
                 <span aria-hidden className="text-[18px] leading-none">
                   →
