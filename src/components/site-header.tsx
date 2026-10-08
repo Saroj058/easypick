@@ -271,7 +271,7 @@ export function MobileTabBar() {
 
   // Purchase flows have their own pay bar at the bottom instead.
   // …and the store walk-through needs the whole screen.
-  if (pathname.startsWith("/checkout") || pathname.startsWith("/gift/") || pathname === "/gift-cards" || pathname === "/visit" || pathname === "/visit/tour") return null;
+  if (pathname.startsWith("/checkout") || pathname.startsWith("/gift/") || pathname === "/gift-cards" || pathname === "/visit" || pathname === "/visit/tour" || pathname.startsWith("/g/")) return null;
   return (
     <nav
       aria-label="Quick links"

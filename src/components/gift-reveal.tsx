@@ -22,6 +22,7 @@ import type {
   Size,
 } from "@/lib/types";
 import { useFitProfile } from "./fit-finder";
+import { GiftBox, GiftNote } from "./gift/gift-box";
 import { ProductImage } from "./product-image";
 
 export interface RevealData {
@@ -120,7 +121,7 @@ function AfterGift({
               name="thanks"
               rows={2}
               maxLength={200}
-              placeholder="Love it. Thank you!"
+              placeholder="Love it. Thank you."
               className="mt-3 w-full rounded-[2px] border border-steel-dark bg-paper p-4 text-base"
             />
             <p role="alert" className="min-h-5 text-[13px] text-error-light">
@@ -165,7 +166,7 @@ function StorePanel({ code }: { code: string }) {
   const { store } = site;
   return (
     <section aria-labelledby="store-title" className="mt-12 text-center">
-      <h2 id="store-title" className="text-2xl font-semibold">
+      <h2 id="store-title" className="display text-[32px] leading-none">
         It&apos;s waiting for you in the store.
       </h2>
       <p className="mx-auto mt-2 max-w-[36ch] text-steel-dark">
@@ -215,12 +216,15 @@ export function GiftReveal({ data }: { data: RevealData }) {
   const [path, setPath] = useState<"online" | "store">("online");
   const [storeCode, setStoreCode] = useState<string | null>(data.storeCode);
   const [holding, setHolding] = useState(false);
+  const [holdError, setHoldError] = useState(false);
 
   async function holdInStore() {
     setHolding(true);
+    setHoldError(false);
     const res = await tryGiftInStore(data.token);
     setHolding(false);
     if (res.ok && res.code) setStoreCode(res.code);
+    else setHoldError(true);
   }
 
   const first = data.to.split(" ")[0];
@@ -236,14 +240,21 @@ export function GiftReveal({ data }: { data: RevealData }) {
     if (opened && openedByTap.current) openedHeading.current?.focus();
   }, [opened]);
 
+  const unwrapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function open() {
+    if (unwrapping) {
+      // Tapped again while it opens: skip the rest.
+      if (unwrapTimer.current) clearTimeout(unwrapTimer.current);
+      setOpened(true);
+      return;
+    }
     setUnwrapping(true);
     openedByTap.current = true;
     void openGift(data.token);
     // With reduced motion there's no lid animation to wait for.
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (still) setOpened(true);
-    else setTimeout(() => setOpened(true), 700);
+    else unwrapTimer.current = setTimeout(() => setOpened(true), 700);
   }
 
   async function toCard() {
@@ -262,40 +273,25 @@ export function GiftReveal({ data }: { data: RevealData }) {
         ? { code: data.welcomeCode, fresh: false }
         : null;
 
+  // Chosen in this visit (the page's own data is from before the choice), or on an earlier one.
+  const pickup = state.status === "done" ? method === "pickup" : data.chosen?.method === "pickup";
+  const arrived = Boolean(data.deliverOn && new Date(`${data.deliverOn}T23:59:59+05:45`) < new Date());
+
   // ---------- Closed box ----------
   if (!opened) {
     return (
-      <section className="on-dark flex min-h-[calc(100svh-56px)] flex-col items-center justify-center bg-ink px-6 py-16 text-center text-paper">
+      <section className="on-dark flex min-h-[calc(100svh-72px)] flex-col items-center justify-center bg-ink px-6 py-10 text-center text-paper md:min-h-[calc(100svh-88px)]">
         <p className="text-lg text-paper/80">Namaste {first},</p>
         <h1 className="display display-h1 mt-2">
           {data.from ? `${data.from} sent you a gift.` : "You've got a gift."}
         </h1>
 
-        <div className="relative mt-14 h-44 w-44" aria-hidden>
-          {/* box */}
-          <div
-            className={`absolute inset-x-0 bottom-0 h-32 bg-graphite transition-all duration-700 ${unwrapping ? "translate-y-6 opacity-0" : ""}`}
-          >
-            <div className="absolute inset-y-0 left-1/2 w-5 -translate-x-1/2 bg-volt" />
-          </div>
-          {/* lid */}
-          <div
-            className={`absolute inset-x-[-8px] top-4 h-10 bg-[#2a2a2c] transition-all duration-700 ${unwrapping ? "-translate-y-24 rotate-[-12deg] opacity-0" : ""}`}
-          >
-            <div className="absolute inset-y-0 left-1/2 w-5 -translate-x-1/2 bg-volt" />
-          </div>
-        </div>
+        <GiftBox tag={[`FOR ${first.toUpperCase()}`, data.from ? `FROM ${data.from.split(" ")[0].toUpperCase()}` : "FROM A FRIEND"]} state={unwrapping ? "opening" : "idle"} className="mt-8 w-56 max-w-[62vw] md:w-72" />
 
-        <button
-          type="button"
-          onClick={open}
-          disabled={unwrapping}
-          aria-busy={unwrapping}
-          className="btn btn-volt mt-14 min-w-56"
-        >
-          {unwrapping ? "Opening…" : "Open it"}
+        <button type="button" onClick={open} aria-busy={unwrapping} className="btn btn-volt mt-8 min-w-56">
+          {unwrapping ? "Skip" : "Open it"}
         </button>
-        <p className="mt-6 text-[13px] text-paper/60">Private link, just for you.</p>
+        <p className="mt-5 text-[13px] text-paper/70">Already paid for. Nothing to pay.</p>
       </section>
     );
   }
@@ -312,25 +308,18 @@ export function GiftReveal({ data }: { data: RevealData }) {
     p?.variants.some((v) => v.colour === colour && v.available) ?? false;
 
   return (
-    <div className="container-ep max-w-2xl animate-fade-up pb-24 pt-10 md:pt-16">
+    <div className="container-ep max-w-2xl pb-24 pt-10 md:pt-16">
       {!p && (
         <h1 ref={openedHeading} tabIndex={-1} className="sr-only">
           Your gift
         </h1>
       )}
-      {data.message && (
-        <figure className="bg-photo px-6 py-8 text-center md:px-10">
-          <blockquote className="text-xl leading-relaxed md:text-2xl">
-            &ldquo;{data.message}&rdquo;
-          </blockquote>
-          <figcaption className="mt-4 text-steel-dark">
-            {data.from ? `From ${data.from}` : "From someone who thinks of you"}
-          </figcaption>
-        </figure>
-      )}
+      <div className="gift-rise bg-photo px-5 py-6 [--hole:var(--color-photo)]">
+        <GiftNote to={first} from={data.from} message={data.message} placeholder="A gift, just for you." />
+      </div>
 
       {p && (
-        <div className="mt-10 grid grid-cols-[120px_1fr] items-center gap-6 sm:grid-cols-[160px_1fr]">
+        <div className="gift-rise mt-10 grid grid-cols-[120px_1fr] items-center gap-6 [--i:1] sm:grid-cols-[160px_1fr]">
           <ProductImage
             image={p.image}
             category={p.category}
@@ -338,13 +327,13 @@ export function GiftReveal({ data }: { data: RevealData }) {
               p.colours.find((c) => c.name === colour)?.hex ?? p.colours[0].hex
             }
             decorative
-            sizes="160px"
+            sizes="(min-width: 640px) 160px, 120px"
           />
           <div>
             <h1
               ref={openedHeading}
               tabIndex={-1}
-              className="text-2xl font-semibold focus:outline-none"
+              className="display text-[32px] leading-none focus:outline-none"
             >
               {p.name}
             </h1>
@@ -360,7 +349,7 @@ export function GiftReveal({ data }: { data: RevealData }) {
       {/* Turned into a gift card */}
       {card ? (
         <section className="mt-12 text-center">
-          <h2 className="text-2xl font-semibold">It&apos;s a gift card now.</h2>
+          <h2 className="display text-[32px] leading-none">It&apos;s a gift card now.</h2>
           <p className="mt-2 text-steel-dark">
             Use it online or in store, on anything you like. Valid for 12
             months.
@@ -387,23 +376,22 @@ export function GiftReveal({ data }: { data: RevealData }) {
         </>
       ) : done ? (
         <section className="mt-12 text-center">
-          <h2 className="text-2xl font-semibold">
-            {data.status === "delivered" ? "Delivered." : data.chosen?.method === "pickup" ? "We're getting it ready." : "It's on its way."}
+          <h2 className="display text-[32px] leading-none">
+            {data.status === "delivered" ? "Delivered." : pickup ? "We're getting it ready." : "It's on its way."}
           </h2>
           <p className="mt-2 text-steel-dark">
             {data.status === "delivered"
               ? "Enjoy it."
-              : data.chosen?.method === "pickup"
+              : pickup
               ? `Collect it at ${site.store.address ?? `${site.name}, ${site.store.area}`}, open every day ${formatHour(site.store.hours.open)} to ${formatHour(site.store.hours.close)}. We'll text you when it's ready.`
               : data.mode === "set" && !data.chosen
               ? "We'll text you when it's ready."
               : data.deliverOn
-                ? `Arriving ${niceDate(data.deliverOn)}${data.chosen?.slot ? `, ${data.chosen.slot}` : ""}.`
-                : "We'll text you when the rider is on the way."}
+                ? `${arrived ? "Planned for" : "Arriving"} ${niceDate(data.deliverOn)}${data.chosen?.slot ? `, ${data.chosen.slot}` : ""}.`
+                : "We'll tell you when the rider is on the way."}
           </p>
           <p className="mt-6 text-[13px] text-steel-dark">
-            Not quite right? Swap the size or colour within 14 days. The gift
-            receipt in the box has the link.
+            Not quite right? Swap the size within 14 days.
           </p>
           <AfterGift
             token={data.token}
@@ -415,11 +403,11 @@ export function GiftReveal({ data }: { data: RevealData }) {
         </section>
       ) : data.mode === "set" ? (
         <section className="mt-12 text-center">
-          <h2 className="text-2xl font-semibold">It&apos;s on its way.</h2>
+          <h2 className="display text-[32px] leading-none">It&apos;s on its way.</h2>
           <p className="mt-2 text-steel-dark">
             {data.deliverOn
-              ? `Arriving ${niceDate(data.deliverOn)}.`
-              : "We'll text you when it's on the way."}
+              ? `${arrived ? "Planned for" : "Arriving"} ${niceDate(data.deliverOn)}.`
+              : "We'll tell you when it's on the way."}
           </p>
           <p className="mt-6 text-[13px] text-steel-dark">
             Wrong size? Swap it within 14 days with the gift receipt.
@@ -434,8 +422,8 @@ export function GiftReveal({ data }: { data: RevealData }) {
         </section>
       ) : (
         <>
-          <fieldset className="mt-12">
-            <legend className="text-2xl font-semibold">
+          <fieldset className="gift-rise mt-12 [--i:2]">
+            <legend className="display text-[32px] leading-none">
               How would you like to choose your size?
             </legend>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -461,7 +449,7 @@ export function GiftReveal({ data }: { data: RevealData }) {
                     onChange={() => setPath(v)}
                     className="peer sr-only"
                   />
-                  <span className="flex min-h-[88px] flex-col justify-center rounded-[2px] border border-mist px-4 py-3 peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
+                  <span className="flex min-h-[88px] flex-col justify-center rounded-[2px] border border-steel px-4 py-3 peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
                     <span className="font-semibold">{t}</span>
                     <span className="text-[13px] text-steel-dark">{n}</span>
                   </span>
@@ -487,8 +475,13 @@ export function GiftReveal({ data }: { data: RevealData }) {
                 aria-busy={holding}
                 className="btn btn-volt w-full"
               >
-                Hold it for me in the store
+                Get my store code
               </button>
+              {holdError && (
+                <p role="alert" className="text-[14px] text-error-light">
+                  That didn&apos;t go through. Try again in a moment.
+                </p>
+              )}
             </div>
           ) : (
             // Pick size and delivery
@@ -522,7 +515,7 @@ export function GiftReveal({ data }: { data: RevealData }) {
                           className="peer sr-only"
                         />
                         <span
-                          className="block h-11 w-11 rounded-full border border-black/10 ring-offset-2 peer-checked:ring-2 peer-checked:ring-ink"
+                          className="block h-11 w-11 rounded-full border border-steel ring-offset-2 peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ink"
                           style={{ background: c.hex }}
                         />
                         <span className="sr-only">{c.name}</span>
@@ -557,8 +550,8 @@ export function GiftReveal({ data }: { data: RevealData }) {
                           <span
                             className={`flex h-14 items-center justify-center rounded-[2px] border font-mono font-semibold peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-ink ${
                               out
-                                ? "border-mist text-steel line-through"
-                                : "border-mist"
+                                ? "border-mist text-steel-dark line-through"
+                                : "border-steel"
                             }`}
                           >
                             {s}
@@ -568,6 +561,7 @@ export function GiftReveal({ data }: { data: RevealData }) {
                                 aria-hidden
                               />
                             )}
+                            {match?.size === s && <span className="sr-only"> (closest to your measurements)</span>}
                           </span>
                           {out && <span className="sr-only"> sold out</span>}
                         </label>
@@ -601,7 +595,7 @@ export function GiftReveal({ data }: { data: RevealData }) {
                         onChange={() => setMethod(v)}
                         className="peer sr-only"
                       />
-                      <span className="flex min-h-[64px] flex-col justify-center rounded-[2px] border border-mist px-4 py-3 peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink">
+                      <span className="flex min-h-[64px] flex-col justify-center rounded-[2px] border border-steel px-4 py-3 peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
                         <span className="font-semibold">{t}</span>
                         <span className="text-[13px] text-steel-dark">{n}</span>
                       </span>
@@ -668,7 +662,7 @@ export function GiftReveal({ data }: { data: RevealData }) {
                             defaultChecked={i === 1}
                             className="peer sr-only"
                           />
-                          <span className="flex h-12 items-center justify-center rounded-[2px] border border-mist text-[15px] font-semibold capitalize peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink">
+                          <span className="flex h-12 items-center justify-center rounded-[2px] border border-steel text-[15px] font-semibold capitalize peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
                             {s}
                           </span>
                         </label>
@@ -685,28 +679,26 @@ export function GiftReveal({ data }: { data: RevealData }) {
                 >
                   {state.status === "error" ? state.message : ""}
                 </p>
-                <button
-                  type="submit"
-                  className="btn btn-volt mt-2 w-full"
-                  disabled={pending || (!oneSize && !size) || !anyAvailable}
-                  aria-busy={pending}
-                >
-                  {oneSize || size ? "Send it to me" : "Pick a size"}
-                </button>
-                <p className="mt-6 text-center text-[14px] text-steel-dark">
-                  {anyAvailable
-                    ? "Rather choose something else later? "
-                    : "Your size is sold out. "}
-                  <button
-                    type="button"
-                    onClick={() => setConfirmCard(true)}
-                    disabled={converting || confirmCard}
-                    aria-expanded={confirmCard}
-                    className="min-h-11 font-semibold text-ink underline underline-offset-2"
-                  >
-                    Turn it into a gift card
-                  </button>
-                </p>
+                {anyAvailable ? (
+                  <>
+                    <button type="submit" className="btn btn-volt mt-2 w-full" disabled={pending || (!oneSize && !size)} aria-busy={pending}>
+                      {oneSize || size ? (method === "pickup" ? "Keep it for me" : "Send it to me") : "Pick a size"}
+                    </button>
+                    <p className="mt-6 text-center text-[14px] text-steel-dark">
+                      Rather choose something else later?{" "}
+                      <button type="button" onClick={() => setConfirmCard(true)} disabled={converting} aria-expanded={confirmCard} className="min-h-11 font-semibold text-ink underline underline-offset-2">
+                        Turn it into a gift card
+                      </button>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-center font-semibold">It&apos;s sold out in every size.</p>
+                    <button type="button" onClick={() => setConfirmCard(true)} disabled={converting} aria-expanded={confirmCard} className="btn btn-ink mt-3 w-full">
+                      Turn it into a gift card
+                    </button>
+                  </>
+                )}
                 {confirmCard && (
                   <div className="mt-3 bg-photo p-5 text-center text-[15px]" role="group" aria-label="Confirm gift card">
                     <p>
@@ -725,7 +717,7 @@ export function GiftReveal({ data }: { data: RevealData }) {
                 )}
                 {cardError && (
                   <p role="alert" className="mt-2 text-center text-[14px] text-error-light">
-                    We couldn&apos;t change this gift. Refresh the page and try again.
+                    That didn&apos;t go through. Try again in a moment.
                   </p>
                 )}
               </div>

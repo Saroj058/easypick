@@ -275,7 +275,7 @@ export function BuyPanel(props: Props) {
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-            <Link href={`/gift/${slug}`} className="btn btn-outline flex-1">
+            <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}${picked && picked !== "ONE" ? `&size=${picked}` : ""}`} className="btn btn-outline flex-1">
               <GiftIcon className="h-5 w-5" />
               Send as gift
             </Link>

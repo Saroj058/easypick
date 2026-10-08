@@ -8,12 +8,23 @@ import { kathmanduToday } from "@/lib/kathmandu-date";
 import { formatBS } from "@/lib/nepali-date";
 import { site } from "@/lib/site";
 import type { Product, Size } from "@/lib/types";
+import { GiftNote } from "./gift/gift-box";
 import { useMe, usePrefilled } from "./session";
 import { PayWith } from "./pay-with";
 
-const input = "mt-2 h-14 w-full rounded-[2px] border border-steel-dark bg-paper px-4 text-base";
+// scroll-mb: a focused field clears the pay bar that sticks to the bottom on phones.
+const input = "mt-2 h-14 w-full scroll-mb-36 rounded-[2px] border border-steel-dark bg-paper px-4 text-base aria-[invalid=true]:border-2 aria-[invalid=true]:border-error-light";
 const label = "block text-sm font-semibold";
 const STEPS = ["The piece", "Your note", "Send and pay"] as const;
+/** One tap fills the note; every line can be edited after. */
+const NOTES = [
+  ["Birthday", "Happy birthday. Saw this and thought of you."],
+  ["Dashain", "दशैंको शुभकामना। Something new for Tika day."],
+  ["Bhai Tika", "भाइटीकाको शुभकामना। Wear it well."],
+  ["Just because", "No occasion. It just looked like you."],
+  ["Congratulations", "Congratulations. You earned this one."],
+  ["Thank you", "Thank you for everything. This one is on me."],
+] as const;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** Common slips after the @, for a "Did you mean …?" hint. */
@@ -50,9 +61,14 @@ function Choice({ name, value, checked, onChange, title, note }: { name: string;
   return (
     <label className="relative block">
       <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="peer sr-only" />
-      <span className="flex min-h-[64px] flex-col justify-center rounded-[2px] border border-mist px-4 py-3 peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
+      <span className="flex min-h-[64px] flex-col justify-center rounded-[2px] border border-steel px-4 py-3 pr-10 transition-transform duration-150 active:scale-[0.98] peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
         <span className="font-semibold">{title}</span>
         {note && <span className="text-[13px] text-steel-dark">{note}</span>}
+      </span>
+      <span className="pointer-events-none absolute right-3 top-3 grid h-5 w-5 scale-50 place-items-center rounded-full bg-ink text-paper opacity-0 transition-[opacity,scale] duration-200 peer-checked:scale-100 peer-checked:opacity-100" aria-hidden>
+        <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M2.5 6.2l2.3 2.3 4.7-5" />
+        </svg>
       </span>
     </label>
   );
@@ -74,12 +90,8 @@ function MessageCard({
   price: string | null;
 }) {
   return (
-    <figure aria-label="Preview of the gift card" className={`p-5 ${wrap === "premium" ? "bg-ink" : "bg-photo"}`}>
-      <div className="mx-auto max-w-sm bg-paper px-6 py-7 text-center text-ink shadow-[0_1px_0_rgba(0,0,0,0.08)]">
-        <p className="text-[13px] text-steel-dark">For {to.trim() || "them"}</p>
-        <p className="mt-3 min-h-[3.5rem] text-lg leading-relaxed">{message.trim() ? `“${message.trim()}”` : <span className="text-steel">Your message appears here.</span>}</p>
-        <p className="mt-3 text-[13px] text-steel-dark">{from ? `From ${from}` : "From someone who thinks of you"}</p>
-      </div>
+    <figure aria-label="Preview of the gift card" className={`p-5 transition-colors duration-200 ${wrap === "premium" ? "bg-ink [--hole:var(--color-ink)]" : "bg-photo [--hole:var(--color-photo)]"}`}>
+      <GiftNote key={wrap} to={to} from={from} message={message} placeholder="Your note appears here." />
       <figcaption className={`mt-3 text-center text-[12px] ${wrap === "premium" ? "text-paper/70" : "text-steel-dark"}`}>
         {wrap === "premium" ? "In the premium black box" : "In an Easypick bag with tissue"} · {price ? `gift receipt shows ${price}` : "no price inside"}
       </figcaption>
@@ -88,7 +100,7 @@ function MessageCard({
 }
 
 /** Send one piece as a gift in three short steps. "Let them pick the size" is the default. */
-export function GiftForm({ product, festival = null }: { product: Product; festival?: GiftFestival }) {
+export function GiftForm({ product, festival = null, initial }: { product: Product; festival?: GiftFestival; initial?: { colour?: string; size?: string } }) {
   const me = useMe();
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<GiftState, FormData>(placeGiftOrder, { status: "idle" });
@@ -106,9 +118,11 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
   const buyerPhoneRef = useRef<HTMLInputElement>(null);
 
   const oneSize = product.variants.every((v) => v.size === "ONE");
-  const [mode, setMode] = useState<"pick" | "set">(oneSize ? "set" : "pick");
-  const [colour, setColour] = useState(product.colours[0].name);
-  const [size, setSize] = useState<Size | null>(oneSize ? "ONE" : null);
+  const startColour = product.colours.find((c) => c.name === initial?.colour)?.name ?? product.colours[0].name;
+  const startSize = product.variants.find((v) => v.colour === startColour && v.size === initial?.size && v.size !== "ONE" && v.stock - (v.lastPieceOnFloor ? 1 : 0) > 0)?.size ?? null;
+  const [mode, setMode] = useState<"pick" | "set">(oneSize || startSize ? "set" : "pick");
+  const [colour, setColour] = useState(startColour);
+  const [size, setSize] = useState<Size | null>(oneSize ? "ONE" : startSize);
   const [message, setMessage] = useState("");
   const [sender, setSender] = useState<string | null>(null);
   const [anonymous, setAnonymous] = useState(false);
@@ -160,6 +174,7 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
       e.preventDefault();
       fail(text, field);
     };
+    if (deliverOn && (deliverOn < today || deliverOn > addDays(today, 60))) return stop("Pick a date in the next 60 days, or leave it empty.", "g-date");
     if (!EMAIL.test(receiverEmail.trim())) return stop("Add their email address so we can send them the gift link.", "g-remail");
     if (receiverPhone.trim() && !normaliseNepaliMobile(receiverPhone)) return stop("Their mobile number should be 10 digits, like 98XXXXXXXX, or leave it empty.", "g-rphone");
     if (mode === "set" && method === "delivery" && !normaliseNepaliMobile(receiverPhone)) return stop("Add their mobile number so the rider can reach them.", "g-rphone");
@@ -186,7 +201,11 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
               <button
                 type="button"
                 disabled={i >= step}
-                onClick={() => setStep(i)}
+                onClick={() => {
+                  setHint("");
+                  setHintField(null);
+                  setStep(i);
+                }}
                 aria-current={i === step ? "step" : undefined}
                 className={`block min-h-11 w-full border-t-4 pt-2 text-left text-[13px] font-semibold disabled:cursor-default ${i <= step ? "border-ink" : "border-mist text-steel-dark"} ${i < step ? "hover:underline" : ""}`}
               >
@@ -195,18 +214,20 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
             </li>
           ))}
         </ol>
-        <h2 ref={headingRef} tabIndex={-1} className="mt-5 text-2xl font-semibold outline-none">
+        <h2 ref={headingRef} tabIndex={-1} className="display mt-5 text-[32px] leading-none outline-none">
           {STEPS[step]}
         </h2>
       </div>
 
       {/* 1. The piece */}
       <section hidden={step !== 0} className="space-y-8">
+        {oneSize && product.colours.length < 2 && <p className="text-[15px] text-steel-dark">One size, one colour. Nothing to choose here.</p>}
         {!oneSize && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <fieldset className="grid gap-3 sm:grid-cols-2">
+            <legend className="sr-only">Who picks the size</legend>
             <Choice name="modeUi" value="pick" checked={mode === "pick"} onChange={() => setMode("pick")} title="Let them pick the size" note="Recommended. They choose before we send it." />
             <Choice name="modeUi" value="set" checked={mode === "set"} onChange={() => setMode("set")} title="I know their size" note="We pack it and send it." />
-          </div>
+          </fieldset>
         )}
         {product.colours.length > 1 && (
           <fieldset>
@@ -224,14 +245,14 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
                     }}
                     className="peer sr-only"
                   />
-                  <span className="block h-11 w-11 rounded-full border border-black/10 ring-offset-2 peer-checked:ring-2 peer-checked:ring-ink" style={{ background: c.hex }} />
+                  <span className="block h-11 w-11 rounded-full border border-steel ring-offset-2 peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ink" style={{ background: c.hex }} />
                   <span className="sr-only">{c.name}</span>
                 </label>
               ))}
             </div>
             {mode === "pick" && (
               <label className="mt-4 flex min-h-11 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="colourChoice" className="h-5 w-5 accent-[#c6ff3d]" />
+                <input type="checkbox" name="colourChoice" className="h-5 w-5 accent-ink" />
                 Let them change the colour too
               </label>
             )}
@@ -248,7 +269,7 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
                     <input type="radio" name="sizeUi" checked={size === v.size} disabled={out} onChange={() => setSize(v.size)} className="peer sr-only" />
                     <span
                       className={`flex h-14 items-center justify-center rounded-[2px] border font-mono font-semibold peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-ink ${
-                        out ? "border-mist text-steel line-through" : "border-mist"
+                        out ? "border-mist text-steel-dark line-through" : "border-steel"
                       }`}
                     >
                       {v.size}
@@ -267,26 +288,18 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
           </fieldset>
         )}
         {mode === "pick" && (
-          <div className="bg-photo p-5">
-            <p className="font-semibold">How they choose</p>
-            <ol className="mt-3 space-y-3 text-[15px]">
-              <li>
-                <span className="font-semibold">1. We email them a private link.</span>{" "}
-                <span className="text-steel-dark">It opens on their phone or laptop. No app, no account. We text it too if you add their number.</span>
+          <ol className="space-y-2 border-y border-dashed border-ink/30 py-4 font-mono text-[13px]" aria-label="How they choose">
+            {[
+              ["01", "We email them a private link"],
+              ["02", "They pick the size, online or in store"],
+              ["03", "We hold one for them until they do"],
+            ].map(([n, t]) => (
+              <li key={n} className="flex gap-3">
+                <span className="text-steel-dark">{n}</span>
+                <span className="font-sans text-[15px]">{t}</span>
               </li>
-              <li>
-                <span className="font-semibold">2. They pick online, or try it on in the store.</span>{" "}
-                <span className="text-steel-dark">
-                  Online: they tap their size{product.colours.length > 1 ? " (and colour, if you allow it)" : ""}, then delivery or pickup. In store: they show
-                  their gift code at the counter and try the sizes on.
-                </span>
-              </li>
-              <li>
-                <span className="font-semibold">3. We hold one for them meanwhile.</span>{" "}
-                <span className="text-steel-dark">So it can&apos;t sell out before they choose.</span>
-              </li>
-            </ol>
-          </div>
+            ))}
+          </ol>
         )}
       </section>
 
@@ -296,7 +309,7 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
           <label htmlFor="g-rname" className={label}>
             Their name
           </label>
-          <input id="g-rname" {...invalid("g-rname")} name="receiverName" autoComplete="off" value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className={input} />
+          <input id="g-rname" {...invalid("g-rname")} aria-required name="receiverName" autoComplete="off" autoCapitalize="words" enterKeyHint="next" maxLength={60} value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className={input} />
         </div>
         <div>
           <label htmlFor="g-message" className={label}>
@@ -309,33 +322,42 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
             maxLength={site.gifting.messageMax}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Happy Dashain! Thought this was very you."
+            placeholder="Saw this and thought of you."
             aria-describedby="g-message-count"
             className="mt-2 w-full rounded-[2px] border border-steel-dark bg-paper p-4 text-base"
           />
           <p id="g-message-count" className={`mt-1 text-right text-[13px] ${near ? "font-semibold text-[#7a3e00]" : "text-steel-dark"}`} aria-live={near ? "polite" : "off"}>
             {near ? `${site.gifting.messageMax - message.length} characters left` : `${message.length}/${site.gifting.messageMax}`}
           </p>
+          {/* Stuck for words: one tap writes a line to start from. */}
+          <div className="-mx-4 mt-1 flex scroll-px-4 gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Note ideas">
+            {NOTES.map(([name, words]) => (
+              <button key={name} type="button" onClick={() => setMessage(words)} className="inline-flex h-11 shrink-0 items-center rounded-full border border-steel px-4 text-[14px] font-semibold transition-[border-color,scale] duration-150 hover:border-ink active:scale-[0.97]">
+                {name}
+              </button>
+            ))}
+          </div>
         </div>
         {!anonymous && (
           <div>
             <label htmlFor="g-sender" className={label}>
               From
             </label>
-            <input id="g-sender" name="senderName" autoComplete="given-name" value={sender ?? me?.name ?? ""} onChange={(e) => setSender(e.target.value)} className={input} />
+            <input id="g-sender" name="senderName" autoComplete="given-name" autoCapitalize="words" enterKeyHint="next" maxLength={40} value={sender ?? me?.name ?? ""} onChange={(e) => setSender(e.target.value)} className={input} />
           </div>
         )}
         <label className="flex min-h-11 items-center gap-3 text-[15px]">
-          <input type="checkbox" name="anonymous" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} className="h-5 w-5 accent-[#c6ff3d]" />
+          <input type="checkbox" name="anonymous" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} className="h-5 w-5 accent-ink" />
           Send it anonymously
         </label>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <fieldset className="grid gap-3 sm:grid-cols-2">
+          <legend className="sr-only">Wrapping</legend>
           <Choice name="wrapUi" value="standard" checked={wrap === "standard"} onChange={() => setWrap("standard")} title="Easypick bag" note="Tissue and a printed card. Free." />
           <Choice name="wrapUi" value="premium" checked={wrap === "premium"} onChange={() => setWrap("premium")} title="Premium black box" note={`Sealed box and card. ${formatPrice(site.gifting.premiumWrapFee)}.`} />
-        </div>
+        </fieldset>
         {/* Price visibility: shown by default; ticked = they never see what it cost. */}
         <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[15px]">
-          <input type="checkbox" checked={!showPrice} onChange={(e) => setShowPrice(!e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#0a0a0a]" />
+          <input type="checkbox" checked={!showPrice} onChange={(e) => setShowPrice(!e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
           <span>
             Hide the price from them <span className="text-steel-dark">(their card and receipt won&apos;t show what it cost)</span>
           </span>
@@ -352,10 +374,13 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
           <input
             id="g-remail"
             {...invalid("g-remail")}
+            aria-required
             name="receiverEmail"
             type="email"
             inputMode="email"
             autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="name@example.com"
             value={receiverEmail}
             onChange={(e) => setReceiverEmail(e.target.value)}
@@ -386,38 +411,41 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
             name="receiverPhone"
             type="tel"
             inputMode="numeric"
+            autoComplete="off"
+            maxLength={14}
             placeholder="98XXXXXXXX"
             value={receiverPhone}
             onChange={(e) => setReceiverPhone(e.target.value)}
             className={`${input} font-mono`}
           />
-          <p className="mt-1 text-[13px] text-steel-dark">We also text them the link. Never shown to anyone else.</p>
+          <p className="mt-1 text-[13px] text-steel-dark">Add it and we text them the link too.</p>
         </div>
         {mode === "set" && (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <fieldset className="grid gap-3 sm:grid-cols-2">
+              <legend className="sr-only">Delivery or pickup</legend>
               <Choice name="methodUi" value="delivery" checked={method === "delivery"} onChange={() => setMethod("delivery")} title="Deliver to them" note="Kathmandu Valley" />
               <Choice name="methodUi" value="pickup" checked={method === "pickup"} onChange={() => setMethod("pickup")} title="I'll pick it up" note="Free, from the store" />
-            </div>
+            </fieldset>
             {method === "delivery" && (
               <div className="space-y-4">
                 <div>
                   <label htmlFor="g-area" className={label}>
                     Their area
                   </label>
-                  <input id="g-area" {...invalid("g-area")} name="area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Baneshwor, Kathmandu" className={input} />
+                  <input id="g-area" {...invalid("g-area")} aria-required autoComplete="off" name="area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Baneshwor, Kathmandu" className={input} />
                 </div>
                 <div>
                   <label htmlFor="g-landmark" className={label}>
                     Nearby landmark
                   </label>
-                  <input id="g-landmark" {...invalid("g-landmark")} name="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} className={input} />
+                  <input id="g-landmark" {...invalid("g-landmark")} aria-required autoComplete="off" name="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} className={input} />
                 </div>
                 <div>
                   <label htmlFor="g-details" className={label}>
                     House or floor <span className="font-normal text-steel-dark">(optional)</span>
                   </label>
-                  <input id="g-details" name="details" className={input} />
+                  <input id="g-details" name="details" autoComplete="off" className={input} />
                 </div>
               </div>
             )}
@@ -425,10 +453,11 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
         )}
         <div>
           <label htmlFor="g-date" className={label}>
-            {mode === "set" ? "Deliver on" : "Arrive by"} <span className="font-normal text-steel-dark">(optional, e.g. their birthday or Tika day)</span>
+            {mode === "set" ? "Deliver on" : "Arrive by"} <span className="font-normal text-steel-dark">(optional)</span>
           </label>
           <input
             id="g-date"
+            {...(hintField === "g-date" ? { "aria-invalid": true } : {})}
             name="deliverOn"
             type="date"
             min={today}
@@ -473,19 +502,22 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
             id="g-bphone"
             ref={buyerPhoneRef}
             {...invalid("g-bphone")}
+            aria-required
             name="buyerPhone"
             type="tel"
             inputMode="numeric"
+            autoComplete="tel-national"
+            maxLength={14}
             placeholder="98XXXXXXXX"
             {...phoneField}
             className={`${input} font-mono`}
           />
-          <p className="mt-1 text-[13px] text-steel-dark">We&apos;ll tell you when they open it and when it arrives. Never their address.</p>
+          <p className="mt-1 text-[13px] text-steel-dark">We text you when they open it and pick their size.</p>
         </div>
-        <fieldset>
-          <legend className={label}>Pay with</legend>
+        <div>
+          <p className={label}>Pay with</p>
           <PayWith className="mt-2" />
-        </fieldset>
+        </div>
 
         <div className="border-t border-mist pt-6">
           <p className="text-[15px]">
@@ -519,18 +551,26 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
         </div>
       </section>
 
-      <p id="g-hint" role="alert" className="mt-6 min-h-5 text-[14px] text-error-light">
-        {hint || (state.status === "error" ? state.message : "")}
-      </p>
       {/* Stays on screen on phones, with the total, so the next step is always one tap away. */}
-      <div className="sticky bottom-0 z-10 -mx-4 mt-2 border-t border-mist bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
-        <p className="mb-2 flex items-baseline justify-between text-[14px] sm:hidden">
+      <div className="sticky bottom-0 z-20 -mx-4 mt-2 border-t border-mist bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
+        <p id="g-hint" role="alert" className="min-h-5 pb-2 text-[14px] text-error-light sm:mt-6">
+          {hint || (state.status === "error" ? state.message : "")}
+        </p>
+        <p className={`mb-2 flex items-baseline justify-between text-[14px] sm:hidden ${step === STEPS.length - 1 ? "hidden" : ""}`}>
           <span className="text-steel-dark">Total</span>
           <span className="font-mono font-semibold">{formatPrice(total)}</span>
         </p>
         <div className="flex gap-3">
           {step > 0 && (
-            <button type="button" onClick={() => setStep((s) => s - 1)} className="btn btn-outline flex-1">
+            <button
+              type="button"
+              onClick={() => {
+                setHint("");
+                setHintField(null);
+                setStep((s) => s - 1);
+              }}
+              className="btn btn-outline flex-1"
+            >
               Back
             </button>
           )}
@@ -539,7 +579,8 @@ export function GiftForm({ product, festival = null }: { product: Product; festi
               Continue
             </button>
           ) : (
-            <button type="submit" className="btn btn-volt flex-[2]" disabled={pending} aria-busy={pending}>
+            <button type="submit" className="btn btn-volt relative flex-[2] overflow-hidden aria-busy:opacity-100" disabled={pending} aria-busy={pending}>
+              {pending && <span className="visit-load absolute inset-x-0 bottom-0 h-0.5 bg-ink" aria-hidden />}
               {pending ? "One moment…" : `Pay ${formatPrice(total)}`}
             </button>
           )}

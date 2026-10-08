@@ -57,10 +57,10 @@ export function GiftBlock() {
         <Link href="/gift" className="on-dark group relative flex min-h-[300px] flex-col justify-between overflow-hidden bg-ink p-6 text-paper md:p-8">
           <div className="relative z-10 lg:max-w-[55%]">
             <h3 className="display text-[40px] leading-[0.9] md:text-[48px]">Send a gift</h3>
-            <p className="mt-3 text-[15px] text-paper/75">You pay. We text them a link. They choose the size and how to get it.</p>
+            <p className="mt-3 text-[15px] text-paper/75">You pay. We send them a link. They choose the size and how to get it.</p>
             <ol className="mt-5 grid gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-paper/60">
               <li>01 Pick a piece</li>
-              <li>02 Their phone number</li>
+              <li>02 Their email</li>
               <li>03 They pick the size</li>
             </ol>
           </div>

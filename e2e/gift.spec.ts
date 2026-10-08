@@ -5,17 +5,29 @@ import { randomPhone } from "./helpers";
 // Screenshots for a visual check land in test-results/ (not committed).
 const shot = (name: string) => ({ path: `test-results/shots/${name}.png`, fullPage: true });
 
-test("gift page: piece or card, curated rows and filters @phone", async ({ page }, info) => {
+test("gift page: budget first, then pieces; plain-link filters; the card is one link away @phone", async ({ page }, info) => {
   await page.goto("/gift");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/Gift it/i);
-  // The card tile tells the truth: from Rs 1,000, by email and SMS.
-  await expect(page.getByRole("link", { name: /Send a gift card/i })).toContainText(/From Rs 1,000/);
+  // The card is one honest line: from Rs 1,000.
+  await expect(page.getByRole("link", { name: /Send a gift card, from Rs 1,000/ })).toHaveAttribute("href", "/gift-cards#buy");
+  // The budgets are the blueprint's, and the first screen asks only that.
+  const budget = page.getByRole("navigation", { name: "What's the budget?" });
+  await expect(budget.getByRole("link")).toHaveCount(4);
+  await expect(budget.getByRole("link", { name: /Under Rs 2,000/ })).toContainText(/[0-9]+ pieces/);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toBeVisible();
   await page.screenshot(shot(`gift-${info.project.name}`));
 
-  await page.getByRole("link", { name: "Under Rs 1,500" }).click();
-  await expect(page).toHaveURL(/max=1500/);
-  await expect(page.getByRole("link", { name: "Under Rs 1,500" })).toHaveAttribute("aria-current", "page");
+  const chips = page.getByRole("navigation", { name: "Budget", exact: true });
+  await chips.getByRole("link", { name: "Under Rs 2,000" }).click();
+  await expect(page).toHaveURL(/max=2000/);
+  await expect(chips.getByRole("link", { name: "Under Rs 2,000" })).toHaveAttribute("aria-current", "true");
+  await expect(page.getByRole("heading", { name: "Under Rs 2,000." })).toBeVisible();
+  // With a filter on, the curated rows step aside; the kind of piece narrows it further.
+  await expect(page.getByRole("heading", { name: /No size to guess/i })).toHaveCount(0);
+  await page.getByRole("navigation", { name: "Kind of piece" }).getByRole("link", { name: "One size" }).click();
+  await expect(page).toHaveURL(/cat=one/);
+  // No "for her" on a menswear store.
+  await expect(page.getByRole("link", { name: /for her/i })).toHaveCount(0);
 });
 
 test("send a piece: three steps, their name before the note, checks before payment @phone", async ({ page }, info) => {
@@ -30,7 +42,14 @@ test("send a piece: three steps, their name before the note, checks before payme
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.locator("#g-hint")).toContainText(/Add their name/);
   await expect(page.locator("#g-rname")).toBeFocused();
+  await expect(page.locator("#g-rname")).toHaveAttribute("aria-invalid", "true");
   await page.locator("#g-rname").fill("Sita Rai");
+  // The row of note ideas scrolls by itself: the page never becomes wider than the screen.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // Stuck for words: one tap writes the note, and it shows on the tag.
+  await page.getByRole("group", { name: "Note ideas" }).getByRole("button", { name: "Just because" }).click();
+  await expect(page.locator("#g-message")).toHaveValue("No occasion. It just looked like you.");
+  await expect(page.getByRole("figure", { name: /Preview of the gift card/ })).toContainText("It just looked like you.");
   await expect(page.getByRole("figure", { name: /Preview of the gift card/ })).toContainText("For Sita Rai");
   // The price shows unless they tick the box, which sits next to the preview.
   await expect(page.getByRole("figure", { name: /Preview of the gift card/ })).toContainText(/gift receipt shows Rs/);

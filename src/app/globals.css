@@ -1089,20 +1089,60 @@
     radial-gradient(ellipse 80% 60% at 50% 50%, rgb(236 240 247 / 1), rgb(214 222 235 / 1));
 }
 
-/* Gift page, "The box" opening: the lid lifts a little, as if about to be opened. */
+/* The gift box (components/gift/gift-box.tsx). Idle: the lid lifts once and settles, as if about to
+   be opened. Opening (the receiver's link): the lid dips, comes off and fades, then the box sinks away. */
+.gift-box .gift-lid,
+.gift-box .gift-open-lid,
+.gift-box .gift-open-box {
+  transform-box: fill-box;
+  transform-origin: 20% 100%;
+}
 @media (prefers-reduced-motion: no-preference) {
-  .gift-lid {
-    transform-box: fill-box;
-    transform-origin: 20% 100%;
-    animation: gift-lid 3.6s cubic-bezier(0.65, 0, 0.35, 1) infinite alternate;
+  .gift-box .gift-lid {
+    animation: gift-lid 1.8s cubic-bezier(0.65, 0, 0.35, 1) 600ms 2 alternate;
   }
 }
 @keyframes gift-lid {
   0%,
-  55% {
+  35% {
     transform: none;
   }
   100% {
     transform: translateY(-10px) rotate(-3deg);
+  }
+}
+.gift-box .gift-open-lid {
+  animation: gift-open-lid 480ms cubic-bezier(0.3, 0, 0.2, 1) both;
+}
+.gift-box .gift-open-box {
+  transform-origin: 50% 100%;
+  animation: gift-open-box 320ms ease-in 380ms both;
+}
+@keyframes gift-open-lid {
+  15% {
+    transform: translateY(3px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-64px) rotate(-10deg);
+    opacity: 0;
+  }
+}
+@keyframes gift-open-box {
+  to {
+    transform: translateY(12px) scale(0.96);
+    opacity: 0;
+  }
+}
+/* What was in the box comes up one piece after another (--i: 0, 1, 2). */
+.gift-rise {
+  animation: fade-up 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 140ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gift-rise {
+    animation-delay: 0s !important;
   }
 }
