@@ -160,7 +160,7 @@ export function SiteHeader() {
             {!visit && (
               <div className="absolute left-1/2 top-0 hidden -translate-x-1/2 lg:block">
                 <motion.nav aria-label="Main" variants={sideVariants} animate={expanded ? "shown" : "hidden"} inert={!expanded} className={expanded ? "pointer-events-auto" : "pointer-events-none"}>
-                  <Dock edge="top" label="Main" panelHeight={48} itemSize={36} magnification={60} distance={110} className={`${pillChrome(flat)} items-start gap-2 rounded-full border bg-transparent px-2 pt-[5px] dark:bg-transparent`}>
+                  <Dock edge="top" label="Main" panelHeight={48} itemSize={36} magnification={60} distance={110} className={`${pillChrome(flat)} items-start gap-6 rounded-full border bg-transparent px-4 pt-[5px] dark:bg-transparent`}>
                     {primary.map((l) => {
                       const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
                       return (
