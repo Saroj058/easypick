@@ -39,11 +39,11 @@ test("first screen: the city with the route drawn and the store lit, and a clean
   await expect(mapRegion(page).locator("canvas")).toBeVisible();
   await expect(mapRegion(page).locator("[data-map-pin]")).toBeVisible();
   await expect(page.locator("[data-ktm-clock]").first()).toHaveText("12:00");
-  await expect(page.locator("[data-visit-status]")).toContainText(/OPEN TILL 8 PM · .+ · d+ min walk/i);
+  await expect(page.locator("[data-visit-status]")).toContainText(/OPEN TILL 8 PM · .+ · [0-9]+ min walk/i);
   await expect(panel(page)).toHaveAttribute("data-panel", "closed");
   // The top of the page: the logo (it leads home) and one capsule that opens the site's menu.
   await expect(page.locator("[data-visit-back]")).toHaveAttribute("href", "/");
-  await expect(page.getByRole("link", { name: "Easypick home" })).toBeHidden();
+  await expect(page.locator("[data-visit-menu]")).toBeVisible();
   await page.screenshot({ path: `test-results/shots/film-${info.project.name}-open.png` });
   await page.locator("[data-visit-menu]").click();
   await expect(page.locator("[data-visit-menu]")).toHaveCount(0);
@@ -103,7 +103,7 @@ test("the scroll is the film: forwards, backwards, and straight to a scene", asy
   await scrollTo(page, 7);
   await expect(film(page)).toHaveAttribute("data-scene", "route", { timeout: 30_000 });
   await expect(caption).toContainText(/Jhamsikhel Chowk|West, past the café row|Black shutter/);
-  await expect(page.locator("[data-altitude]")).toHaveText(/[d,.]+ (M|KM)/);
+  await expect(page.locator("[data-altitude]")).toHaveText(/[0-9,.]+ (M|KM)/);
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `test-results/shots/film-${info.project.name}-route.png` });
   // Nothing plays by itself while the visitor is scrolling, and the directions wait for the end.
@@ -242,7 +242,9 @@ test("directions: on a phone it's a sheet that opens at half, goes nearly full a
   await expect(p).toHaveAttribute("data-snap", "half");
   await expect(mapRegion(page)).toHaveAttribute("data-look", "1");
 
-  // Dragged down, it rests as a 96 px peek.
+  // Dragged down, it rests as a 96 px peek (once it has settled at half, so the handle is where the pointer goes).
+  await expect.poll(top).toBeGreaterThan(vh * 0.45);
+  await page.waitForTimeout(700);
   const box = (await handle.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
@@ -254,7 +256,8 @@ test("directions: on a phone it's a sheet that opens at half, goes nearly full a
   // The way back is in the sheet: up to the Earth and the two choices.
   await handle.click();
   await expect(p).toHaveAttribute("data-snap", "half");
-  await p.getByRole("button", { name: /The store/ }).click();
+  // (Pressed directly: scrolling the page to bring it into view would wind the film back, since scroll is its clock.)
+  await p.getByRole("button", { name: /The store/ }).dispatchEvent("click");
   await expect(film(page)).toHaveAttribute("data-scene", "open", { timeout: 30_000 });
 });
 

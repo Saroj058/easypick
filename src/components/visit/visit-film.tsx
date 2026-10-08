@@ -134,6 +134,8 @@ export function VisitFilm({
   const mapReady = useRef(false);
   /** The second to open on (a direct link to the directions, or a test), once the page is tall enough to scroll there. */
   const opening = useRef<number | null>(null);
+  /** Set when the visitor asks to go back to the top: focus follows once the first screen is live again. */
+  const refocus = useRef(false);
 
   const [fallback, setFallback] = useState<Fallback>("none");
   const [decided, setDecided] = useState(false);
@@ -288,8 +290,15 @@ export function VisitFilm({
     stopAuto();
     setPlain(false);
     scrollToSecond(0, !still);
-    requestAnimationFrame(() => root.current?.querySelector<HTMLElement>("[data-action=in-person]")?.focus({ preventScroll: true }));
+    refocus.current = true;
   }, [scrollToSecond, still, stopAuto]);
+
+  // Back at the top (the first screen is usable again): the keyboard returns to the choice that started it.
+  useEffect(() => {
+    if (scene !== "open" || !refocus.current) return;
+    refocus.current = false;
+    root.current?.querySelector<HTMLElement>("[data-action=in-person]")?.focus({ preventScroll: true });
+  }, [scene, plain]);
 
   // Opened part-way through: go there as soon as the film's scroll length exists.
   useEffect(() => {
