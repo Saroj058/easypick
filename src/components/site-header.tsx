@@ -80,7 +80,27 @@ export function SiteHeader() {
   // At the very top the header is one full-width bar; once scrolled it splits into floating pills.
   const [atTop, setAtTop] = useState(true);
   const { scrollY } = useScroll();
-  useMotionValueEvent(scrollY, "change", (y) => setAtTop(y < 24));
+  // The three dots the nav tucks into: one more scroll down and they go too; any scroll back up returns them.
+  const [dotsGone, setDotsGone] = useState(false);
+  const dotsFrom = useRef<number | null>(null);
+  const lastY = useRef(0);
+  useMotionValueEvent(scrollY, "change", (y) => {
+    setAtTop(y < 24);
+    const before = lastY.current;
+    const delta = y - before;
+    if (Math.abs(delta) < 6) return;
+    lastY.current = y;
+    if (open) {
+      dotsFrom.current = null;
+      if (dotsGone) setDotsGone(false);
+    } else if (delta < 0) {
+      dotsFrom.current = y;
+      if (dotsGone) setDotsGone(false);
+    } else {
+      if (dotsFrom.current === null) dotsFrom.current = before;
+      if (y - dotsFrom.current > 120 && !dotsGone) setDotsGone(true);
+    }
+  });
 
   // The visit page is one full screen of the store with no header at all: just the logo on the
   // left and a small black Back button on the right.
@@ -176,7 +196,7 @@ export function SiteHeader() {
                   </Dock>
                 </motion.nav>
                 {!expanded && (
-                  <button type="button" aria-label="Show navigation" onClick={() => setExpanded(true)} className="pointer-events-auto absolute left-1/2 top-0 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full border border-mist bg-paper shadow-[0_6px_24px_rgba(0,0,0,0.08)] transition-transform hover:scale-110 active:scale-95">
+                  <button type="button" aria-label="Show navigation" onClick={() => setExpanded(true)} onFocus={() => setDotsGone(false)} className={`absolute left-1/2 top-0 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full border border-mist bg-paper shadow-[0_6px_24px_rgba(0,0,0,0.08)] transition-[transform,opacity,translate] duration-300 hover:scale-110 active:scale-95 ${dotsGone ? "pointer-events-none -translate-y-16 opacity-0" : "pointer-events-auto"}`}>
                     <Ellipsis className="h-6 w-6" aria-hidden />
                   </button>
                 )}
