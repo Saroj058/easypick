@@ -957,17 +957,21 @@
 }
 /* The map's pin, and the one ring it sends when the route arrives. */
 .map-pin {
-  box-shadow: 0 0 0 4px rgba(198, 255, 61, 0.25);
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.55));
 }
-.map-pin.pin-arrived {
+/* Arrived: the pin lands with a small bounce. */
+.pin-arrived .map-pin {
   animation: pin-ring 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes pin-ring {
-  from {
-    box-shadow: 0 0 0 0 rgba(198, 255, 61, 0.55);
+  0% {
+    translate: 0 -18px;
   }
-  to {
-    box-shadow: 0 0 0 24px rgba(198, 255, 61, 0);
+  60% {
+    translate: 0 3px;
+  }
+  100% {
+    translate: 0 0;
   }
 }
 /* The receipt's TOTAL line lands like a stamp. */
@@ -1023,17 +1027,64 @@
     animation: visit-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 }
+/* The Visit page's loading screen. If the page never says it's ready, it still lifts by itself; without JavaScript it never shows. */
+.visit-loader {
+  animation: visit-loader-out 400ms 10s forwards;
+}
+@keyframes visit-loader-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@media (scripting: none) {
+  .visit-loader {
+    display: none;
+  }
+}
+.visit-load {
+  animation: visit-load 1400ms cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes visit-load {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+/* Pick, the Visit page's helper: it bobs a little and blinks. */
+.pick-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pick-bob {
+    animation: pick-bob 2.6s ease-in-out infinite alternate;
+  }
+  .pick-blink {
+    animation: pick-blink 4.2s infinite;
+  }
+}
+@keyframes pick-bob {
+  to {
+    transform: translateY(-4px);
+  }
+}
+@keyframes pick-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.1);
+  }
+}
 /* The cloud between orbit and the city: soft white, thicker in the middle. */
 .visit-cloud {
   background:
     radial-gradient(ellipse 60% 45% at 30% 40%, rgb(255 255 255 / 0.95), transparent 70%),
     radial-gradient(ellipse 55% 50% at 72% 62%, rgb(255 255 255 / 0.9), transparent 72%),
     radial-gradient(ellipse 80% 60% at 50% 50%, rgb(236 240 247 / 1), rgb(214 222 235 / 1));
-}
-/* The beam of light standing on the store once the film arrives. */
-.map-beam {
-  height: 190px;
-  background: linear-gradient(to top, rgb(198 255 61 / 0.95), rgb(198 255 61 / 0.35) 45%, transparent);
-  box-shadow: 0 0 18px 2px rgb(198 255 61 / 0.45);
-  transition: opacity 200ms linear;
 }

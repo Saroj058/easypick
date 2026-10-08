@@ -13,7 +13,7 @@ import { FILM_SECONDS, type FilmPlan } from "@/lib/visit/film";
 
 // The picture of the Visit page's film: Kathmandu as a tilted city at night, drawn by MapLibre
 // from our own tiles (a PMTiles file read in pieces), with its buildings standing up, the route
-// glowing in lime and the store lit as the one bright building. This component decides nothing
+// glowing in lime and one giant pin standing on the store. This component decides nothing
 // about time: every frame it asks for the film's second, asks the plan (lib/visit/film.ts) where
 // the camera is at that second, and puts it there. So scrolling up runs it backwards, and holding
 // still holds it. Once the film has reached its end the map is the visitor's to move.
@@ -59,19 +59,6 @@ export interface DescentMapProps {
 
 const M_PER_DEG_LAT = 110_900;
 const mPerDegLng = (lat: number) => Math.cos((lat * Math.PI) / 180) * 111_320;
-
-/** The store's outline on the map: 5.4 m across the front, 11 m deep, the pin at the middle of the front. */
-function footprint(pin: { lat: number; lng: number }): LngLat[] {
-  const dx = 2.7 / mPerDegLng(pin.lat);
-  const dy = 11 / M_PER_DEG_LAT;
-  return [
-    [pin.lng - dx, pin.lat],
-    [pin.lng + dx, pin.lat],
-    [pin.lng + dx, pin.lat + dy],
-    [pin.lng - dx, pin.lat + dy],
-    [pin.lng - dx, pin.lat],
-  ];
-}
 
 function circle([lng, lat]: LngLat, metres: number): LngLat[] {
   return Array.from({ length: 65 }, (_, i) => {
@@ -128,7 +115,7 @@ export default function DescentMap(props: DescentMapProps) {
     map.addControl(new AttributionControl({ compact: false }), "bottom-left");
 
     let marker: Marker | null = null;
-    let beam: HTMLElement | null = null;
+    let big: HTMLElement | null = null;
     let meMarker: Marker | null = null;
     const parked: Marker[] = [];
     let alive = true;
@@ -192,11 +179,10 @@ export default function DescentMap(props: DescentMapProps) {
       }
       if (Math.abs(f.arrived - shown.arrived) > 0.004) {
         shown.arrived = f.arrived;
-        if (map.getLayer("store-3d")) map.setPaintProperty("store-3d", "fill-extrusion-height", 9 * f.arrived);
         if (map.getLayer("store-glow")) map.setPaintProperty("store-glow", "circle-opacity", 0.5 * f.arrived);
-        // Everything else steps back as the store lights.
+        // Everything else steps back as the pin grows over the door.
         if (map.getLayer("city-3d")) map.setPaintProperty("city-3d", "fill-extrusion-opacity", lerp(0.9, 0.5, f.arrived));
-        if (beam) beam.style.opacity = String(f.arrived);
+        if (big) big.style.scale = String(1 + 0.4 * f.arrived);
         marker?.getElement().classList.toggle("pin-arrived", f.arrived > 0.98);
         if (map.getLayer("soon-fill")) {
           map.setPaintProperty("soon-fill", "fill-opacity", 0.08 * f.arrived);
@@ -240,22 +226,23 @@ export default function DescentMap(props: DescentMapProps) {
       map.addLayer({ id: "head", type: "circle", source: "head", paint: { "circle-color": "#F5F4EF", "circle-radius": 5, "circle-stroke-color": MAP_COLOURS.route, "circle-stroke-width": 2 } });
 
       if (pin) {
-        // The store: the one light building, on a pool of its own light.
-        map.addSource("store", { type: "geojson", data: polygon(footprint(pin)) });
+        // The store: no building, just a pool of light on the ground and one giant pin standing on the spot.
         map.addSource("store-at", { type: "geojson", data: point(here) });
-        map.addLayer({ id: "store-glow", type: "circle", source: "store-at", paint: { "circle-color": "#fff1d6", "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 14, 14, 18.5, 150], "circle-blur": 1, "circle-opacity": 0, "circle-pitch-alignment": "map" } }, "route-glow");
-        map.addLayer({ id: "store-flat", type: "fill", source: "store", paint: { "fill-color": "#2a2b2f", "fill-outline-color": MAP_COLOURS.route } }, "route-glow");
-        map.addLayer({ id: "store-3d", type: "fill-extrusion", source: "store", paint: { "fill-extrusion-color": "#F5F4EF", "fill-extrusion-height": 0, "fill-extrusion-opacity": 1 } });
-        // The pin, and over it a thin beam of lime light (an upright element: it stays vertical however the map tilts).
+        map.addLayer({ id: "store-glow", type: "circle", source: "store-at", paint: { "circle-color": MAP_COLOURS.route, "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 14, 14, 18.5, 150], "circle-blur": 1, "circle-opacity": 0, "circle-pitch-alignment": "map" } }, "route-glow");
         const holder = document.createElement("div");
         holder.className = "relative";
-        beam = document.createElement("span");
-        beam.className = "map-beam pointer-events-none absolute bottom-1 left-1/2 block w-[3px] -translate-x-1/2 opacity-0";
-        const dot = document.createElement("span");
-        dot.className = "map-pin relative block h-4 w-4 rounded-full border-2 border-ink bg-volt";
-        dot.setAttribute("data-map-pin", "");
-        holder.append(beam, dot);
-        marker = new Marker({ element: holder, anchor: "center" }).setLngLat(here).addTo(map);
+        big = document.createElement("div");
+        big.className = "map-pin relative origin-bottom";
+        big.setAttribute("data-map-pin", "");
+        big.innerHTML =
+          '<svg viewBox="0 0 60 78" width="60" height="78" class="block" aria-hidden="true"><path d="M30 2C14.5 2 2 14.3 2 29.6 2 49.5 30 76 30 76s28-26.500 28-46.400C58 14.300 45.500 2 30 2z" fill="#c6ff3d" stroke="#0a0a0a" stroke-width="3"/><circle cx="30" cy="29" r="10" fill="#0a0a0a"/></svg>';
+        // Our name beside the pin, so the store is never just a mark on a map.
+        const name = document.createElement("span");
+        name.className = "pointer-events-none absolute left-full top-1/3 ml-2 -translate-y-1/2 whitespace-nowrap rounded-full bg-ink/85 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-paper";
+        name.setAttribute("data-map-name", "");
+        name.textContent = "Easypick";
+        holder.append(big, name);
+        marker = new Marker({ element: holder, anchor: "bottom" }).setLngLat(here).addTo(map);
       } else {
         // Before opening day: the area, not the address.
         map.addSource("soon", { type: "geojson", data: polygon(circle(AREA_CENTRE, 400)) });

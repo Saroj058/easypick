@@ -28,26 +28,34 @@ const scrollTo = (page: Page, second: number) =>
     window.scrollTo({ top: root.offsetTop + (s / 13) * (root.offsetHeight - window.innerHeight), behavior: "instant" });
   }, second);
 
-test("first screen: the city with the route drawn and the store lit, and a clean top: the logo and one Menu capsule @phone", async ({ page }, info) => {
+test("first screen: the loading mark, then the city with the route drawn and a giant pin on the store, and a clean top: the logo and a Back button @phone", async ({ page }, info) => {
   test.setTimeout(240_000);
   const errors = collect(page);
   await page.goto(`/visit?${OPEN}`);
+  // First the Easypick mark; the page starts once the city is drawn.
+  await expect(page.locator("[data-loader]")).toBeAttached();
   await expect(film(page)).toHaveAttribute("data-film", "on");
   await expect(film(page)).toHaveAttribute("data-fallback", "none");
   await expect(film(page)).toHaveAttribute("data-map-state", "ready", { timeout: 120_000 });
   await expect(film(page)).toHaveAttribute("data-scene", "open");
   await expect(mapRegion(page).locator("canvas")).toBeVisible();
   await expect(mapRegion(page).locator("[data-map-pin]")).toBeVisible();
+  await expect(film(page)).toHaveAttribute("data-loaded", "true");
+  await expect(page.locator("[data-loader]")).toBeHidden();
+  // The store is named on the map, nothing is written across the picture, and Pick says hello.
+  await expect(mapRegion(page).locator("[data-map-name]")).toHaveText("Easypick");
+  await expect(page.getByText("This way")).toHaveCount(0);
+  await expect(page.locator("[data-guide-line]").first()).toContainText(/Namaste, I'm Pick. The lime line is the way to our door, about [0-9]+ minutes on foot/);
   await expect(page.locator("[data-ktm-clock]").first()).toHaveText("12:00");
   await expect(page.locator("[data-visit-status]")).toContainText(/OPEN TILL 8 PM · .+ · [0-9]+ min walk/i);
   await expect(panel(page)).toHaveAttribute("data-panel", "closed");
-  // The top of the page: the logo (it leads home) and one capsule that opens the site's menu.
+  // The top of the page: no header, only the logo (it leads home) and a small Back button.
   await expect(page.locator("[data-visit-back]")).toHaveAttribute("href", "/");
-  await expect(page.locator("[data-visit-menu]")).toBeVisible();
+  await expect(page.locator("[data-visit-leave]")).toHaveText(/Back/);
+  await expect(page.locator("[data-visit-leave]")).toHaveAttribute("href", "/");
+  await expect(page.getByRole("link", { name: "Easypick home" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^Bag, / })).toHaveCount(0);
   await page.screenshot({ path: `test-results/shots/film-${info.project.name}-open.png` });
-  await page.locator("[data-visit-menu]").click();
-  await expect(page.locator("[data-visit-menu]")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Easypick home" })).toBeVisible();
   expect(errors()).toEqual([]);
 });
 
@@ -92,18 +100,17 @@ test("the scroll is the film: forwards, backwards, and straight to a scene", asy
   test.setTimeout(300_000);
   await page.goto(`/visit?${OPEN}`);
   await expect(film(page)).toHaveAttribute("data-map-state", "ready", { timeout: 120_000 });
-  const caption = page.locator("[data-caption]");
+  const caption = page.locator("[data-guide-film] [data-guide-line]");
 
   // Down a little: the camera drops to where the route begins.
   await scrollTo(page, 3);
   await expect(film(page)).toHaveAttribute("data-scene", "street", { timeout: 30_000 });
-  await expect(caption).toContainText("Start here.");
+  await expect(caption).toContainText("We start at ");
 
   // Further: along the route (the caption is the step being walked, and the height is on screen).
   await scrollTo(page, 7);
   await expect(film(page)).toHaveAttribute("data-scene", "route", { timeout: 30_000 });
   await expect(caption).toContainText(/Jhamsikhel Chowk|West, past the café row|Black shutter/);
-  await expect(page.locator("[data-altitude]")).toHaveText(/[0-9,.]+ (M|KM)/);
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `test-results/shots/film-${info.project.name}-route.png` });
   // Nothing plays by itself while the visitor is scrolling, and the directions wait for the end.
@@ -121,12 +128,13 @@ test("the scroll is the film: forwards, backwards, and straight to a scene", asy
   await scrollTo(page, 5);
   await page.getByRole("button", { name: "Go to The door" }).click();
   await expect(film(page)).toHaveAttribute("data-scene", "door", { timeout: 30_000 });
-  await expect(caption).toContainText("One door.");
+  await expect(caption).toContainText("This is us.");
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `test-results/shots/film-${info.project.name}-door.png` });
   await page.locator("[data-skip]").click();
   await expect(film(page)).toHaveAttribute("data-map-state", "done", { timeout: 30_000 });
   await expect(panel(page)).toHaveAttribute("data-panel", "open");
+  await expect(caption).toContainText("Your directions are ready.");
 });
 
 test("a direct link opens on the directions; before opening day the map shows the area only", async ({ page }) => {
@@ -149,6 +157,8 @@ test("a direct link opens on the directions; before opening day the map shows th
   await expect(page.getByText("Join the opening list").first()).toBeVisible();
 });
 
+// In the two tests below the panel's buttons are pressed with a dispatched click: Playwright's own click first scrolls
+// the target to the middle of the window, and on this page scrolling the window rewinds the film.
 test("directions: start chips redraw the route, modes change the minutes, a receipt line moves the map, and every action is a plain link", async ({ page, context }, info) => {
   test.setTimeout(240_000);
   const errors = collect(page);
@@ -167,7 +177,7 @@ test("directions: start chips redraw the route, modes change the minutes, a rece
   const firstReceipt = await p.locator("[data-receipt]").innerText();
   const second = chips.nth(1);
   const name = (await second.innerText()).trim();
-  await second.click();
+  await second.dispatchEvent("click");
   await expect(second).toHaveAttribute("aria-checked", "true");
   await expect(mapRegion(page)).toHaveAttribute("aria-label", `Map: route from ${name} to Easypick`);
   await expect(p).toHaveAttribute("data-panel", "open"); // the panel stays put
@@ -180,7 +190,7 @@ test("directions: start chips redraw the route, modes change the minutes, a rece
   await expect(total).toContainText(/\d+ MIN WALK/);
   const walk = Number((await total.innerText()).match(/(\d+) MIN/)![1]);
   await expect(p.locator("[data-step]").last()).toContainText(`${walk} MIN`);
-  await p.getByRole("radio", { name: /Car/ }).click();
+  await p.getByRole("radio", { name: /Car/ }).dispatchEvent("click");
   await expect(total).toContainText(/\d+ MIN BY CAR/);
   const car = Number((await total.innerText()).match(/(\d+) MIN/)![1]);
   expect(car).toBeLessThanOrEqual(walk);
@@ -188,18 +198,18 @@ test("directions: start chips redraw the route, modes change the minutes, a rece
   const maps = p.getByRole("link", { name: "Open in Google Maps" });
   await expect(maps).toHaveAttribute("href", /google\.com\/maps\/dir\/\?api=1&destination=[\d.]+,[\d.]+&travelmode=driving$/);
   await expect(maps).toHaveAttribute("target", "_blank");
-  await p.getByRole("radio", { name: /Walk/ }).click();
+  await p.getByRole("radio", { name: /Walk/ }).dispatchEvent("click");
   await expect(maps).toHaveAttribute("href", /travelmode=walking$/);
   await expect(p.getByText("QUEUE", { exact: true })).toBeVisible();
 
   // A receipt line shows that spot on the map (the film is over, so the map is the visitor's).
-  await p.getByRole("button", { name: /^Step 1: / }).click();
+  await p.getByRole("button", { name: /^Step 1: / }).dispatchEvent("click");
   await expect(mapRegion(page)).toHaveAttribute("data-look", "0");
 
   // Arriving: the address can be selected and copied, WhatsApp gets the address and the map link, and the tour is one tap away.
   const address = (await p.locator("[data-address]").innerText()).trim();
   expect(await p.locator("[data-address]").evaluate((el) => getComputedStyle(el).userSelect)).toBe("text");
-  await p.getByRole("button", { name: "Copy address" }).click();
+  await p.getByRole("button", { name: "Copy address" }).dispatchEvent("click");
   await expect(p.getByRole("button", { name: "Copied" })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(address);
   const whatsapp = await p.getByRole("link", { name: "WhatsApp" }).getAttribute("href");
@@ -238,7 +248,7 @@ test("directions: on a phone it's a sheet that opens at half, goes nearly full a
   await expect(p).toHaveAttribute("data-snap", "full");
   await expect.poll(top).toBeLessThan(vh * 0.12);
   // A receipt line brings it back down, so the spot can be seen.
-  await p.getByRole("button", { name: /^Step 2: / }).click();
+  await p.getByRole("button", { name: /^Step 2: / }).dispatchEvent("click");
   await expect(p).toHaveAttribute("data-snap", "half");
   await expect(mapRegion(page)).toHaveAttribute("data-look", "1");
 
@@ -321,7 +331,7 @@ test("keyboard: In person plays from the keyboard, focus goes to the directions 
   const p = panel(page);
   await expect(p.getByRole("heading", { name: "Directions" })).toBeFocused();
   // One message for screen readers when the directions are ready.
-  await expect(film(page).locator("[aria-live=polite]").last()).toContainText(/Directions to Easypick: about \d+ minutes on foot/);
+  await expect(film(page).locator("[aria-live=polite]").last()).toContainText("Your directions are ready.");
 
   // Everything that can be tapped in the directions is at least 44 px in one direction and 40 in the other.
   const small = await p.evaluate((root) =>
@@ -371,7 +381,7 @@ test("from my location: the real way from where the visitor is, drawn on the map
   expect(asked).toEqual([]);
 
   const chip = p.getByRole("button", { name: "From my location" });
-  await chip.click();
+  await chip.dispatchEvent("click");
   // The route is theirs: a new first choice, its own receipt, and a dot where they are.
   const chips = p.getByRole("radiogroup", { name: "Coming from" }).getByRole("radio");
   await expect(chips).toHaveCount(5, { timeout: 15_000 });
@@ -391,7 +401,7 @@ test("from my location: the real way from where the visitor is, drawn on the map
   expect(kept).not.toMatch(/27\.677|85\.313/);
   expect(sent.filter((s) => /27\.677|85\.313/.test(s) && !s.startsWith("https://routing.openstreetmap.de/"))).toEqual([]);
   // A second tap forgets it.
-  await chip.click();
+  await chip.dispatchEvent("click");
   await expect(p.locator("[data-me]")).toHaveCount(0);
   await expect(chips).toHaveCount(4);
   await expect(mapRegion(page).locator("[data-map-me]")).toHaveCount(0);
@@ -403,7 +413,7 @@ test("from my location: the real way from where the visitor is, drawn on the map
   const second = await off.newPage();
   await second.goto(`/visit?${OPEN}&motion=fast#find-us`);
   await expect(film(second)).toHaveAttribute("data-map-state", "done", { timeout: 120_000 });
-  await panel(second).getByRole("button", { name: "From my location" }).click();
+  await panel(second).getByRole("button", { name: "From my location" }).dispatchEvent("click");
   await expect(panel(second).locator("[data-me=shown]")).toContainText(/You're about [\d.]+ (m|km) from the door/);
   const saved = panel(second).getByRole("radiogroup", { name: "Coming from" }).getByRole("radio");
   await expect(saved).toHaveCount(4);
@@ -416,7 +426,7 @@ test("from my location: the real way from where the visitor is, drawn on the map
   const other = await no.newPage();
   await other.goto(`/visit?${OPEN}&motion=fast#find-us`);
   await expect(film(other)).toHaveAttribute("data-map-state", "done", { timeout: 120_000 });
-  await panel(other).getByRole("button", { name: "From my location" }).click();
+  await panel(other).getByRole("button", { name: "From my location" }).dispatchEvent("click");
   await expect(panel(other).locator("[data-me=failed]")).toContainText("Couldn't get your location", { timeout: 15_000 });
   await expect(panel(other).locator("[data-me]").getByRole("link", { name: "Google Maps" })).toBeVisible();
   await no.close();

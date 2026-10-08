@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test";
 const shot = (name: string) => ({ path: `test-results/shots/${name}.png`, fullPage: true });
 
 // The Visit page is one film (see e2e/visit-3d.spec.ts for the film itself). These tests cover
-// what doesn't need WebGL: the first screen's HTML (the headline, the status, the two ways to
-// visit), and In person with no film (?gl=off): the directions over a still.
+// what doesn't need WebGL: the first screen's HTML (the loading screen lifting, Pick's hello, the
+// status, the two ways to visit), and In person with no film (?gl=off): the directions over a still.
 // ?now= pins the clock (test switch). The area in the status is whatever an earlier admin test saved.
 const at = (iso: string) => encodeURIComponent(iso);
 const panel = (page: import("@playwright/test").Page) => page.locator("[data-panel=open]");
@@ -30,10 +30,13 @@ test("visit page preview: one screen with the two ways to visit; the receipt is 
   await expect(page.getByText(/Preview: how this page looks/)).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
-  // What's on the first screen: the hour in Kathmandu, the status, one headline, two choices.
+  // First the Easypick mark, then the first screen: the hour in Kathmandu, the status, Pick's hello, two choices. No headline.
+  await expect(page.locator("[data-loader]")).toHaveAttribute("data-loader", "done");
+  await expect(page.locator("[data-loader]")).toBeHidden();
   await expect(page.locator("[data-ktm-clock]").first()).toHaveText("12:00");
   await expect(page.locator("[data-visit-status]")).toContainText("OPEN TILL 8 PM");
-  await expect(page.getByText("This way")).toBeVisible();
+  await expect(page.getByText("This way")).toHaveCount(0);
+  await expect(page.locator("[data-guide-line]").first()).toContainText("Namaste, I'm Pick.");
   const ways = page.getByRole("navigation", { name: "Ways to visit" });
   await expect(ways.getByRole("link")).toHaveCount(2);
   await expect(ways.getByRole("link", { name: "Virtual tour" })).toHaveAttribute("href", "/visit/tour#enter");
@@ -50,6 +53,8 @@ test("visit page preview: one screen with the two ways to visit; the receipt is 
   await expect(p.getByText("QUEUE", { exact: true })).toBeVisible();
   await expect(p.getByText(/01\s+Jhamsikhel Chowk/)).toBeVisible();
   await expect(p.getByText(/^EASYPICK · OPEN TILL 8 PM/)).toBeVisible();
+  // Pick stays with the visitor on the directions.
+  await expect(page.locator("[data-guide-film] [data-guide-line]")).toContainText("Here are the directions.");
   // How the store works, and the week's hours, are in the panel.
   await expect(p.locator("[data-inside]").getByText("Pay it.")).toBeAttached();
   await expect(p.locator("[data-hours] tr")).toHaveCount(7);
@@ -78,6 +83,9 @@ test("visit page works with JavaScript off @phone", async ({ browser }) => {
   await page.goto(`/visit?preview=open&now=${at("2026-10-07T12:00+05:45")}`);
   await expect(page.locator("[data-status-line]")).toHaveText(/^OPEN · TILL 8 PM · [A-Z]+$/);
   await expect(page.locator("[data-action=tour]")).toHaveAttribute("href", "/visit/tour#enter");
+  // The loading screen is for pages that load something: without JavaScript it never covers the page.
+  await expect(page.locator("[data-loader]")).toBeHidden();
+  await expect(page.locator("[data-action=in-person]")).toBeVisible();
   // With no film, In person leads to the essentials in words: the address, today's hours, Google Maps.
   await expect(page.locator("[data-action=in-person]")).toHaveAttribute("href", "#find-us");
   const words = page.locator("#find-us");

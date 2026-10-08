@@ -9,7 +9,8 @@ import { kathmanduClock } from "@/lib/kathmandu-sky";
 import { fromRouting, MAX_LIVE_METRES, routingUrl } from "@/lib/map/live-route";
 import { distance, lengthMeters, minutes, type LngLat, type TravelMode } from "@/lib/map/route";
 import { AREA_CENTRE, FIXTURE_TILES_URL, STATIC_ROUTE, TILES_URL, TOUR_ENTER_URL } from "@/lib/map/tiles";
-import { altitudeLabel, altitudeMetres, FILM_SECONDS, planFilm, SCENES, sceneStart, type SceneId } from "@/lib/visit/film";
+import { FILM_SECONDS, planFilm, SCENES, sceneStart, type SceneId } from "@/lib/visit/film";
+import { guideLine } from "@/lib/visit/guide";
 import { Directions, googleMapsUrl, walkMinutes, type DirectionsData, type Locate, type Snap, type StartChoice } from "./directions";
 
 // The Visit page: one film, and the page's scroll is its clock. It opens on Kathmandu as a tilted
@@ -61,36 +62,33 @@ function hasWebGL(): boolean {
   }
 }
 
-const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/+_<>";
-
-/** A line of type that resolves out of noise when it changes, like a read-out locking on. */
-function Decode({ text, still }: { text: string; still: boolean }) {
-  const el = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const node = el.current;
-    if (!node) return;
-    if (still) {
-      node.textContent = text;
-      return;
-    }
-    const t0 = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - t0) / 520);
-      const fixed = Math.floor(p * text.length);
-      node.textContent = text
-        .split("")
-        .map((ch, i) => (i < fixed || ch === " " || ch === "." ? ch : GLYPHS[(i * 7 + Math.floor(now / 40)) % GLYPHS.length]))
-        .join("");
-      if (p < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [text, still]);
+/** Pick, the helper: a small black shutter with a face and the lime dot. */
+function Pick() {
   return (
-    <span ref={el} aria-hidden>
-      {text}
-    </span>
+    <svg viewBox="0 0 48 48" className="pick-bob h-12 w-12 shrink-0 drop-shadow-[0_4px_14px_rgb(0_0_0/0.55)]" aria-hidden>
+      <rect x="5" y="8" width="38" height="35" rx="12" className="fill-ink stroke-paper" strokeWidth="2" />
+      <path d="M13 36h22" className="stroke-paper/25" strokeWidth="2" strokeLinecap="round" />
+      <g className="pick-blink fill-paper">
+        <ellipse cx="18" cy="22" rx="2.6" ry="3.6" />
+        <ellipse cx="30" cy="22" rx="2.6" ry="3.6" />
+      </g>
+      <path d="M19.5 29.5q4.5 3.5 9 0" fill="none" className="stroke-paper" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="38" cy="11" r="5" className="fill-volt stroke-ink" strokeWidth="2" />
+    </svg>
+  );
+}
+
+/** Pick and the one thing it has to say right now. */
+function Guide({ line, quiet }: { line: string; quiet?: boolean }) {
+  return (
+    <div data-guide className="flex items-end gap-3">
+      <Pick />
+      <p aria-hidden={quiet} className="max-w-[34ch] rounded-2xl rounded-bl-sm border border-paper/15 bg-black/60 px-4 py-3 text-[14px] leading-snug text-paper backdrop-blur-md md:text-[15px]">
+        <span key={line} data-guide-line className="visit-in block">
+          {line}
+        </span>
+      </p>
+    </div>
   );
 }
 
@@ -125,7 +123,6 @@ export function VisitFilm({
   hoursToday: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const altEl = useRef<HTMLSpanElement>(null);
   const fills = useRef<(HTMLSpanElement | null)[]>([]);
   /** The film's second: where scroll points, and where the picture is (easing towards it). */
   const film = useRef({ target: 0, shown: 0 });
@@ -145,7 +142,6 @@ export function VisitFilm({
   const [mapOn, setMapOn] = useState(false);
   const [mapLost, setMapLost] = useState(false);
   const [scene, setScene] = useState<SceneId>("open");
-  const [caption, setCaption] = useState<string | null>(null);
   const [panel, setPanel] = useState(false);
   const [lit, setLit] = useState(-1);
   const [playing, setPlaying] = useState(false);
@@ -315,7 +311,7 @@ export function VisitFilm({
     if (!canFilm) return;
     let frame = 0;
     let last = performance.now();
-    const seen = { scene: "" as string, caption: "" as string | null, panel: false, step: -2 };
+    const seen = { scene: "" as string, panel: false, step: -2 };
     const speed = switches.motion === "fast" ? 8 : 1;
     const loop = (now: number) => {
       frame = requestAnimationFrame(loop);
@@ -337,7 +333,6 @@ export function VisitFilm({
       const t = f.shown;
 
       const fr = planRef.current.frame(t);
-      if (altEl.current) altEl.current.textContent = fr.overview === 0 ? altitudeLabel(altitudeMetres(fr.map.zoom, fr.map.center[1])) : "";
       SCENES.forEach((s, i) => {
         const el = fills.current[i];
         if (!el) return;
@@ -347,10 +342,6 @@ export function VisitFilm({
       if (fr.scene !== seen.scene) {
         seen.scene = fr.scene;
         setScene(fr.scene);
-      }
-      if (fr.caption !== seen.caption) {
-        seen.caption = fr.caption;
-        setCaption(fr.caption);
       }
       if (fr.panel !== seen.panel) {
         seen.panel = fr.panel;
@@ -396,6 +387,10 @@ export function VisitFilm({
   const inFilm = canFilm && scene !== "open";
   const atEnd = scene === "arrive" && panel;
   const sceneIndex = SCENES.findIndex((s) => s.id === scene);
+  /** Nothing starts until the page knows what this device gets and, with the film, the city is drawn. */
+  const loaded = decided && (!canFilm || mapOn);
+  const says = guideLine({ scene, soon: find.soon, area: find.area, from: start?.name ?? null, walk, steps, step: lit, panel, plain: plain || !canFilm, canLocate: locate === "idle" });
+  const hello = guideLine({ scene: "open", soon: find.soon, area: find.area, from: start?.name ?? null, walk, steps, step: -1, panel: false, plain: false, canLocate: false });
   const pill = "flex h-14 items-center justify-center gap-3 rounded-full px-7 text-[14px] font-semibold uppercase tracking-[0.08em] transition-transform duration-150 active:scale-[0.98]";
 
   return (
@@ -405,13 +400,21 @@ export function VisitFilm({
       data-fallback={fallback}
       data-scene={scene}
       data-map-state={!canFilm ? "idle" : mapOn ? (atEnd ? "done" : "ready") : "loading"}
+      data-loaded={loaded}
       data-playing={playing}
       data-motion={switches.motion}
       data-tiles={switches.tiles}
       className="on-dark relative bg-[#0B0C0D] text-paper"
       style={{ height: canFilm ? `${SCREENS * 100}svh` : undefined }}
     >
-      <div className={`${canFilm ? "sticky top-0" : "relative"} h-svh min-h-[540px] overflow-hidden`}>
+      {/* The frame never scrolls inside itself: if a focus or a scroll-into-view nudges it, it goes straight back. */}
+      <div className={`${canFilm ? "sticky top-0" : "relative"} h-svh min-h-[540px] overflow-hidden`}
+        onScroll={(e) => {
+          if (e.target !== e.currentTarget) return;
+          e.currentTarget.scrollTop = 0;
+          e.currentTarget.scrollLeft = 0;
+        }}
+      >
         {/* With no film: a still of the store behind the words. */}
         {decided && !canFilm && (
           // eslint-disable-next-line @next/next/no-img-element -- one small still, sized and compressed by hand
@@ -445,22 +448,7 @@ export function VisitFilm({
         <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent via-40% to-black/85 transition-opacity duration-500 ${atEnd ? "opacity-0" : "opacity-100"}`} aria-hidden />
         <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 via-45% to-transparent transition-opacity duration-500 max-md:hidden ${inFilm ? "opacity-0" : "opacity-100"}`} aria-hidden />
 
-        {/* The read-out: the hour in Kathmandu, and how high the camera is. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center px-4 pt-[calc(env(safe-area-inset-top)+68px)] md:pt-9">
-          <p className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-paper/80 md:text-[11px]">
-            <span>
-              <span className="text-paper/50">Kathmandu</span> <span data-ktm-clock className="tabular-nums">{clock}</span>
-            </span>
-            {inFilm && !atEnd && (
-              <span className="tabular-nums">
-                <span className="text-paper/50">Alt</span> <span ref={altEl} data-altitude />
-              </span>
-            )}
-            {canFilm && !mapOn && <span className="text-paper/60">Loading the map</span>}
-          </p>
-        </div>
-
-        {/* The first screen: the headline and the two ways to visit. It steps aside once the film is under way. */}
+        {/* The first screen: Pick's hello and the two ways to visit, over a clear picture. It steps aside once the film is under way. */}
         <div className={`absolute inset-x-0 bottom-0 transition-[opacity,translate] duration-500 ${inFilm ? "pointer-events-none translate-y-4 opacity-0" : "opacity-100"}`} inert={inFilm}>
           <div className="container-ep pb-[max(22px,calc(env(safe-area-inset-bottom)+16px))] md:pb-14">
             <h1 id="visit-h" className="sr-only">
@@ -470,9 +458,18 @@ export function VisitFilm({
               {status}
             </p>
             {personal && <p className="mb-4 font-mono text-[12px] tracking-[0.1em] text-paper">{personal}</p>}
-            <p className="visit-in flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/80 [animation-delay:120ms] md:text-[11px]" data-visit-status>
+            <div key={loaded ? "in" : "wait"} className={loaded ? "visit-in" : undefined}>
+              <Guide line={hello} />
+            </div>
+            <p key={loaded ? "status-in" : "status"} className="visit-in mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 whitespace-nowrap font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper/80 [animation-delay:120ms] md:text-[11px]" data-visit-status>
               {!find.soon && <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${open ? "bg-volt" : "border border-paper/80"}`} />}
-              {short} <span className="text-paper/45">·</span> {find.area}
+              {short} <span className="text-paper/45">·</span> {find.area} <span className="text-paper/45">·</span>{" "}
+              <span>
+                <span data-ktm-clock className="tabular-nums">
+                  {clock}
+                </span>{" "}
+                <span className="text-paper/55 max-md:hidden">in Kathmandu</span>
+              </span>
               {walk !== null && !find.soon && (
                 <>
                   {" "}
@@ -480,12 +477,7 @@ export function VisitFilm({
                 </>
               )}
             </p>
-            <p aria-hidden className="visit-in display mt-3 text-[clamp(60px,17vw,92px)] leading-[0.84] [animation-delay:200ms] md:text-[clamp(104px,12vw,200px)]">
-              This way
-              <br />
-              in.
-            </p>
-            <nav aria-label="Ways to visit" className="visit-in mt-7 flex flex-col gap-3 [animation-delay:300ms] sm:flex-row md:mt-9">
+            <nav key={loaded ? "ways-in" : "ways"} aria-label="Ways to visit" className="visit-in mt-4 flex flex-col gap-3 [animation-delay:220ms] sm:flex-row md:mt-5">
               <a
                 href={HASH}
                 data-action="in-person"
@@ -543,17 +535,13 @@ export function VisitFilm({
           </div>
         </div>
 
-        {/* The film's words: one line of big type per moment, locking on as it changes. */}
-        {canFilm && (
-          <div aria-hidden data-caption className={`pointer-events-none absolute inset-x-0 bottom-0 transition-opacity duration-300 ${inFilm && caption && !atEnd ? "opacity-100" : "opacity-0"}`}>
-            <div className="container-ep pb-[max(92px,calc(env(safe-area-inset-bottom)+86px))] md:pb-16">
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-paper/65 md:text-[11px]">
-                {String(Math.max(1, sceneIndex)).padStart(2, "0")} / {String(SCENES.length - 2).padStart(2, "0")} · {SCENES[Math.max(0, sceneIndex)].name}
-              </p>
-              <p className="display mt-2 max-w-[14ch] text-[clamp(44px,12vw,72px)] leading-[0.88] [text-shadow:0_2px_24px_rgb(0_0_0/0.6)] md:max-w-[62%] md:text-[clamp(64px,7vw,124px)]">
-                <Decode text={caption ?? ""} still={still} />
-              </p>
-            </div>
+        {/* Through the film and on the directions, Pick says what is on screen and what to do next. */}
+        {(inFilm || plain) && (wide || snap !== "full") && (
+          <div
+            data-guide-film
+            className={`pointer-events-none absolute left-4 right-14 z-30 md:bottom-10 md:left-10 md:right-auto md:top-auto ${plain ? "top-[calc(env(safe-area-inset-top)+136px)]" : "top-[calc(env(safe-area-inset-top)+76px)]"}`}
+          >
+            <Guide line={says} quiet />
           </div>
         )}
 
@@ -674,8 +662,20 @@ export function VisitFilm({
           </div>
         )}
 
+        {/* First, the Easypick mark while the page gets ready. Nothing starts under it. */}
+        <div data-loader={loaded ? "done" : "on"} className={`visit-loader absolute inset-0 z-40 grid place-items-center bg-[#0B0C0D] transition-[opacity,visibility] duration-500 ${loaded ? "invisible opacity-0" : ""}`}>
+          <div role="status" className="flex flex-col items-center gap-7">
+            {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark, already small */}
+            <img src="/brand/mark-white.png" alt="" width={146} height={148} className="tour-spin block h-[72px] w-auto md:h-[88px]" />
+            <span className="relative block h-px w-36 overflow-hidden bg-paper/20">
+              <span className="visit-load absolute inset-0 bg-paper" />
+            </span>
+            <span className="sr-only">{loaded ? "" : "Loading Easypick"}</span>
+          </div>
+        </div>
+
         <p aria-live="polite" className="sr-only">
-          {plain || atEnd ? (find.soon ? "The map shows the area Easypick is opening in." : `Directions to Easypick${walk !== null ? `: about ${walk} minutes on foot` : ""}.`) : inFilm && caption ? caption : ""}
+          {inFilm || plain ? says : ""}
         </p>
       </div>
     </div>

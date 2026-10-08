@@ -1,7 +1,7 @@
 "use client";
 
 import { MotionConfig, motion, useMotionValueEvent, useScroll, type Variants } from "framer-motion";
-import { Ellipsis, Shirt } from "lucide-react";
+import { Ellipsis, Gem, Gift, MapPin, Shirt, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,7 +12,8 @@ import { BagIcon, GiftIcon, ShopIcon, UserIcon } from "./icons";
 import { MobileMenu } from "./mobile-menu";
 import { SearchButton } from "./search";
 import { useMe } from "./session";
-import { AnimatedNavFramer, useScrollCollapse } from "./ui/navigation-menu";
+import { Dock, DockIcon, DockItem, DockLabel } from "./ui/dock";
+import { useScrollCollapse } from "./ui/navigation-menu";
 import { TwentyTwelveOne as SmoothDropdown, type SmoothDropdownItem } from "./ui/smooth-dropdown";
 import { signOut } from "@/app/auth-actions";
 import {
@@ -34,11 +35,11 @@ import {
 
 // One menu, named for what customers want to do (docs/BLUEPRINT.md, section 05).
 const primary = [
-  { href: "/shop", label: "Shop" },
-  { href: "/fits", label: "Fits" },
-  { href: "/gift", label: "Gift" },
-  { href: "/vault", label: "The Vault" },
-  { href: "/visit", label: "Visit" },
+  { href: "/shop", label: "Shop", icon: ShoppingBag },
+  { href: "/fits", label: "Fits", icon: Shirt },
+  { href: "/gift", label: "Gift", icon: Gift },
+  { href: "/vault", label: "The Vault", icon: Gem },
+  { href: "/visit", label: "Visit", icon: MapPin },
 ];
 
 // Everything inside those five, shown in the dropdown once the header becomes pills.
@@ -73,16 +74,17 @@ export function SiteHeader() {
   const { count, ready } = useBag();
   const me = useMe();
   const pathname = usePathname();
-  const [expanded, setExpanded] = useScrollCollapse();
+  const [open, setExpanded] = useScrollCollapse();
 
   // At the very top the header is one full-width bar; once scrolled it splits into floating pills.
   const [atTop, setAtTop] = useState(true);
   const { scrollY } = useScroll();
   useMotionValueEvent(scrollY, "change", (y) => setAtTop(y < 24));
 
-  // The visit page is one full screen of the store: there the header starts tucked away (a back
-  // button and the three dots) and opens when the dots are pressed.
+  // The visit page is one full screen of the store with no header at all: just the logo on the
+  // left and a small black Back button on the right.
   const visit = pathname === "/visit";
+  const expanded = open && !visit;
   const flat = atTop && !visit;
 
   // A new page starts at the top, so everything shows (except on the visit page).
@@ -141,47 +143,54 @@ export function SiteHeader() {
             {/* Logo: slides away while scrolling down */}
             {/* Not inert while tucked away: tabbing to it brings it back (onFocus below). */}
             <div className="relative">
-              <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)}>
+              <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)} className={visit ? "hidden" : undefined}>
                 <Link href="/" aria-label="Easypick home" className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-5`}>
                   <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
                 </Link>
               </motion.div>
-              {/* The visit page, header tucked away: just the logo (it leads home), nothing behind it. */}
-              {visit && !expanded && (
-                <Link href="/" aria-label="Easypick, home" data-visit-back className="pointer-events-auto absolute left-0 top-0 flex h-12 items-center">
+              {/* The visit page: just the logo (it leads home), nothing behind it. */}
+              {visit && (
+                <Link href="/" aria-label="Easypick, home" data-visit-back className="pointer-events-auto flex h-12 items-center">
                   <Image src="/brand/logo-white.png" alt="" width={611} height={161} className="h-6 w-auto md:h-7" />
                 </Link>
               )}
             </div>
 
-            {/* Links (large screens; phones and tablets use the bottom tab bar). Collapses to a circle on scroll. */}
-            <div className="pointer-events-auto absolute left-1/2 hidden -translate-x-1/2 lg:block">
-              <div className={visit && !expanded ? "hidden" : undefined}>
-              <AnimatedNavFramer
-                bare
-                logo={null}
-                expanded={expanded}
-                onExpandedChange={setExpanded}
-                flat={flat}
-                collapsedIcon={<Ellipsis className="h-6 w-6" aria-hidden />}
-                items={primary.map((l) => ({ name: l.label, href: l.href, active: pathname === l.href || pathname.startsWith(`${l.href}/`) }))}
-              />
+            {/* Links (large screens; phones and tablets use the bottom tab bar): a dock whose icons swell under the pointer. Tucks away to a circle on scroll. */}
+            {!visit && (
+              <div className="absolute left-1/2 top-0 hidden -translate-x-1/2 lg:block">
+                <motion.nav aria-label="Main" variants={sideVariants} animate={expanded ? "shown" : "hidden"} inert={!expanded} className={expanded ? "pointer-events-auto" : "pointer-events-none"}>
+                  <Dock edge="top" label="Main" panelHeight={48} itemSize={36} magnification={60} distance={110} className={`${pillChrome(flat)} items-start gap-2 rounded-full border bg-transparent px-2 pt-[5px] dark:bg-transparent`}>
+                    {primary.map((l) => {
+                      const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
+                      return (
+                        <DockItem key={l.href} href={l.href} label={l.label} active={active} className={`aspect-square rounded-full ${active ? "bg-ink text-paper" : "bg-mist/60 text-ink hover:bg-mist"}`}>
+                          <DockLabel className="border-mist bg-ink text-[11px] font-semibold uppercase tracking-[0.08em] text-paper">{l.label}</DockLabel>
+                          <DockIcon>
+                            <l.icon className="h-full w-full" strokeWidth={1.75} aria-hidden />
+                          </DockIcon>
+                        </DockItem>
+                      );
+                    })}
+                  </Dock>
+                </motion.nav>
+                {!expanded && (
+                  <button type="button" aria-label="Show navigation" onClick={() => setExpanded(true)} className="pointer-events-auto absolute left-1/2 top-0 grid h-12 w-12 -translate-x-1/2 place-items-center rounded-full border border-mist bg-paper shadow-[0_6px_24px_rgba(0,0,0,0.08)] transition-transform hover:scale-110 active:scale-95">
+                    <Ellipsis className="h-6 w-6" aria-hidden />
+                  </button>
+                )}
               </div>
-            </div>
+            )}
 
             {/* Account, bag, menu: slides away while scrolling down */}
             <div className="relative">
-            {/* The visit page, header tucked away: one capsule that opens it. */}
-            {visit && !expanded && (
-              <button type="button" data-visit-menu onClick={() => setExpanded(true)} className="pointer-events-auto absolute right-0 top-0 z-10 flex h-11 items-center gap-2.5 whitespace-nowrap rounded-full border border-white/30 bg-black/35 px-5 text-[12px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-md transition-colors hover:border-white/70">
-                Menu
-                <span aria-hidden className="flex flex-col gap-[3px]">
-                  <span className="block h-px w-4 bg-white" />
-                  <span className="block h-px w-4 bg-white" />
-                </span>
-              </button>
+            {/* The visit page: one small black button back to the shop. */}
+            {visit && (
+              <Link href="/" data-visit-leave className="pointer-events-auto flex h-11 items-center gap-2 whitespace-nowrap rounded-full bg-black px-4 text-[12px] font-semibold uppercase tracking-[0.12em] text-white ring-1 ring-white/15 transition-colors hover:bg-neutral-900">
+                <span aria-hidden>←</span> Back
+              </Link>
             )}
-            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)}>
+            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)} className={visit ? "hidden" : undefined}>
               <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-1.5`}>
                 <SearchButton />
                 {account}
