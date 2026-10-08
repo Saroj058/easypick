@@ -122,6 +122,11 @@ test("gift card: chosen on the Gift page, filled in a sheet over it; no separate
   await expect(sheet.getByRole("button", { name: /Pay Rs 50,000|Buy gift card · Rs 50,000/ }).first()).toBeVisible();
   await preview.getByRole("button", { name: "See the back" }).click();
   await expect(preview.getByRole("img", { name: "The back of an Easypick gift card" })).toBeVisible();
+  // Tapping the card itself turns it over as well.
+  await preview.locator("[data-card-flip]").click();
+  await expect(preview.locator("[data-flipped]")).toHaveAttribute("data-flipped", "false");
+  await preview.locator("[data-card-flip]").click();
+  await expect(preview.locator("[data-flipped]")).toHaveAttribute("data-flipped", "true");
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
 

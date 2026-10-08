@@ -215,15 +215,16 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
         <p className="index text-steel-dark">Preview</p>
         <div className="mx-auto mt-3 max-w-[340px] lg:max-w-none">
           {/* Both faces, back to back: "See the back" turns the card over. */}
-          <div className="[perspective:1400px]">
-            <div className={`relative transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [transform-style:preserve-3d] ${flipped ? "[transform:rotateY(180deg)]" : ""}`} data-flipped={flipped}>
-              <div className="[backface-visibility:hidden]" aria-hidden={flipped}>
+          {/* Tapping the card turns it over too. The "See the back" button below does the same for the keyboard and screen readers, so the card stays a picture, not a second button. */}
+          <div onClick={() => setFlipped((f) => !f)} data-card-flip className="cursor-pointer [perspective:1400px]">
+            <span className={`relative block transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] [transform-style:preserve-3d] ${flipped ? "[transform:rotateY(180deg)]" : ""}`} data-flipped={flipped}>
+              <span className="block [backface-visibility:hidden]" aria-hidden={flipped}>
                 <GiftCardPicture amount={amount || null} priority />
-              </div>
-              <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]" aria-hidden={!flipped}>
+              </span>
+              <span className="absolute inset-0 block [backface-visibility:hidden] [transform:rotateY(180deg)]" aria-hidden={!flipped}>
                 <GiftCardPicture amount={null} side="back" fill />
-              </div>
-            </div>
+              </span>
+            </span>
           </div>
         </div>
         <p className="mt-3 flex flex-wrap items-center justify-between gap-x-4 text-[13px] text-steel-dark">
