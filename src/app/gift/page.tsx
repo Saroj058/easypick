@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
+import { BalanceCheck } from "@/app/gift-cards/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicture, PRINTED_CARDS } from "@/components/gift-card-art";
@@ -169,23 +170,24 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
       </section>
 
       <div className="container-ep space-y-14 pt-10 md:space-y-20 md:pt-14">
-        {/* Already holding a gift card: its balance is one tap away */}
-        <section aria-labelledby="balance-h">
-          <Link href="/gift-cards#balance" className="group flex items-center gap-4 rounded-2xl border border-steel p-4 transition-colors duration-200 hover:border-ink md:gap-6 md:p-5">
-            <span className="block w-24 shrink-0 -rotate-3 transition-transform duration-300 group-hover:rotate-0 md:w-32" aria-hidden>
+        {/* Already holding a gift card: type its code right here */}
+        <section aria-labelledby="balance-h" className="flex flex-col gap-5 rounded-2xl border border-steel p-4 md:flex-row md:items-center md:gap-8 md:p-5">
+          <div className="flex items-center gap-4 md:gap-6">
+            <span className="block w-24 shrink-0 -rotate-3 md:w-32" aria-hidden>
               <GiftCardPicture amount={null} side="back" className="shadow-[0_10px_24px_-12px_rgba(0,0,0,0.5)]" />
             </span>
-            <span className="min-w-0 flex-1">
-              <span id="balance-h" className="display block text-[26px] leading-none md:text-[32px]">
+            <div>
+              <h2 id="balance-h" className="display text-[26px] leading-none md:text-[32px]">
                 Got a gift card?
-              </span>
-              <span className="mt-1.5 block text-[14px] text-steel-dark md:text-[15px]">Type its code to see what&apos;s left on it.</span>
-            </span>
-            <span className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-5 text-[13px] font-semibold uppercase tracking-[0.08em] text-paper max-sm:hidden">
-              Check balance <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </span>
-            <ArrowIcon className="h-5 w-5 shrink-0 sm:hidden" />
-          </Link>
+              </h2>
+              <p className="mt-1.5 text-[14px] text-steel-dark md:text-[15px]">Type its code to see what&apos;s left on it.</p>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 md:flex md:justify-center">
+            <div className="w-full max-w-md">
+              <BalanceCheck />
+            </div>
+          </div>
         </section>
 
         {/* The pieces, with budget and kind as plain links */}
@@ -255,7 +257,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
 
         {/* The gift cards, shown as what they are: a row of cards to pick from */}
         {!filtered && (
-          <section aria-labelledby="cards-h" className="on-dark -mx-4 overflow-hidden bg-ink px-4 py-12 text-paper md:mx-0 md:rounded-[2px] md:px-10 md:py-14">
+          <section aria-labelledby="cards-h" className="on-dark -mx-4 overflow-hidden bg-ink px-4 py-12 text-paper md:mx-0 md:rounded-2xl md:px-10 md:py-14">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <h2 id="cards-h" className="display display-h2">
@@ -267,9 +269,9 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                 Pick a card <ArrowIcon className="h-4 w-4" />
               </Link>
             </div>
-            <ul className="-mx-4 mt-8 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 pt-2 md:-mx-10 md:scroll-px-10 md:px-10">
+            <ul className="mt-8 grid grid-cols-2 items-center gap-x-3 gap-y-5 sm:grid-cols-3 md:gap-x-6 md:gap-y-8">
               {PRINTED_CARDS.map((amount, i) => (
-                <li key={amount} className="w-[68%] shrink-0 snap-start sm:w-[300px]">
+                <li key={amount}>
                   <Link href="/gift-cards#buy" aria-label={`Gift card, ${formatPrice(amount)}`} className={`block transition-transform duration-300 hover:-translate-y-1 hover:rotate-0 ${i % 2 ? "rotate-[1.5deg]" : "-rotate-[1.5deg]"}`}>
                     <GiftCardPicture amount={amount} className="shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)]" />
                   </Link>

@@ -12,12 +12,16 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   const start = page.getByRole("navigation", { name: "Start a gift" });
   await expect(start.getByRole("link", { name: "Send a piece" })).toHaveAttribute("href", "#pieces");
   await expect(start.getByRole("link", { name: "Send a gift card" })).toHaveAttribute("href", "/gift-cards#buy");
-  // Right below: someone already holding a gift card can check its balance.
-  await expect(page.getByRole("link", { name: /Got a gift card\?/ })).toHaveAttribute("href", "/gift-cards#balance");
+  // Right below: someone already holding a gift card types its code here, without leaving the page.
+  const balance = page.getByRole("region", { name: "Got a gift card?" });
+  await expect(balance.getByLabel("Gift card code")).toHaveAttribute("placeholder", "EP-XXXX-XXXX");
+  await expect(balance.getByRole("button", { name: "Check" })).toBeVisible();
   await expect(page.getByText("Three ways to gift")).toHaveCount(0);
   // The gift cards are shown as cards to pick from, not as a price.
   const cards = page.getByRole("region", { name: "Or let them choose." });
   await expect(cards.getByRole("link", { name: /^Gift card, Rs/ })).toHaveCount(9);
+  // All nine are in view together: a grid, not a row to swipe through.
+  expect(await cards.getByRole("list").evaluate((el) => getComputedStyle(el).display)).toBe("grid");
   await expect(cards.getByRole("link", { name: "Pick a card" })).toHaveAttribute("href", "/gift-cards#buy");
   await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toBeVisible();
