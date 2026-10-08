@@ -107,7 +107,7 @@ export default async function HomePage() {
 
           {/* Words */}
           <div className="flex flex-col justify-end lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:justify-center lg:pb-10">
-            <p className="eyebrow flex items-center gap-2 text-ink/70">
+            <p className="eyebrow flex w-fit items-center gap-2 rounded-[2px] bg-volt px-3 py-1.5 text-ink">
               <span className="h-1.5 w-1.5 bg-ink" aria-hidden />
               Pick it. Pay it. Wear it.
             </p>
