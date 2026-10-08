@@ -5,6 +5,7 @@ import { RecentlyViewed } from "@/components/local-lists";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
 import { ProductGrid } from "@/components/product-card";
+import { ShopSearch } from "@/components/shop-search";
 import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import type { Category, Fit, Product } from "@/lib/types";
@@ -129,32 +130,14 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
   return (
     <div className="container-ep pb-24 pt-10 md:pt-16">
-      {/* One bar, like the home page's Rail: the name on a black tab, search, and Filter (its panel drops below the bar) */}
+      {/* One bar, like the home page's Rail: the name on a black tab, the same search button, and Filter (its panel drops below the bar) */}
       <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-t-2xl border border-ink py-2 pr-3">
         <h1 className="display on-dark order-1 -my-2 -ml-px flex items-center self-stretch rounded-tl-[15px] bg-ink px-5 py-3 text-[34px] leading-[0.9] text-paper md:text-[44px]">
           {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
         </h1>
-        <form action="/shop" role="search" className="order-3 mx-3 flex h-11 min-w-0 flex-1 basis-full items-center gap-2 rounded-full border border-steel pl-4 pr-1 transition-colors focus-within:border-ink lg:order-2 lg:mx-0 lg:basis-0">
-          {/* The other filters stay on while searching */}
-          {(["category","size","colour","price","fit","sort","sale","new","vault","brand"] as const).map((k) => f[k] && <input key={k} type="hidden" name={k} value={f[k]} />)}
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-steel-dark" aria-hidden>
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-          </svg>
-          <label htmlFor="shop-q" className="sr-only">
-            Search the shop
-          </label>
-          <input id="shop-q" key={f.q ?? ""} name="q" type="search" defaultValue={f.q ?? ""} placeholder="Search the shop" enterKeyHint="search" autoComplete="off" className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-steel-dark [&::-webkit-search-cancel-button]:hidden" />
-          {f.q && (
-            <Link href={href(f, { q: undefined })} scroll={false} aria-label="Clear the search" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg leading-none hover:bg-mist">
-              <span aria-hidden>×</span>
-            </Link>
-          )}
-          <button type="submit" className="h-9 shrink-0 cursor-pointer rounded-full bg-ink px-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-paper transition-colors hover:bg-volt hover:text-ink">
-            Search
-          </button>
-        </form>
-        <details className="group order-2 ml-auto lg:order-3 lg:ml-0">
+        {/* Search: the Rail's round button, opening into a field that searches as they type */}
+        <ShopSearch q={f.q ?? ""} others={{ category: f.category, size: f.size, colour: f.colour, price: f.price, fit: f.fit, sort: f.sort, sale: f.sale, new: f.new, vault: f.vault, brand: f.brand }} />
+        <details className="group order-2 lg:order-3">
           <summary aria-label="Filter and sort" className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-mist px-4 text-sm font-semibold transition-colors hover:border-ink group-open:border-ink [&::-webkit-details-marker]:hidden">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
               <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />

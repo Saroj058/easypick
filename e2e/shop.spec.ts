@@ -294,13 +294,17 @@ test("footer: one-line drop alert sign-up takes an email or a WhatsApp number", 
 test("shop: search narrows the pieces, keeps the other filters, and Filter opens its panel @phone", async ({ page }) => {
   await page.goto("/shop?category=hoodies");
   const all = Number((await page.locator("p[aria-live=polite]").first().innerText()).match(/[0-9]+/)![0]);
-  await page.getByLabel("Search the shop").fill("zzzz-no-such-piece");
-  await page.getByRole("search").getByRole("button", { name: "Search", exact: true }).click();
-  // The search is in the address (it works without JavaScript), and the category stays on.
+  // The same round search button as the Rail: it opens into a field and searches as they type.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Search the shop" }).click();
+    await expect(page.getByRole("textbox", { name: "Search the shop" })).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
+  await page.getByRole("textbox", { name: "Search the shop" }).fill("zzzz-no-such-piece");
+  // The search is in the address (it can be shared), and the category stays on.
   await expect(page).toHaveURL(/q=zzzz-no-such-piece/);
   await expect(page).toHaveURL(/category=hoodies/);
   await expect(page.getByText(/Nothing matches “zzzz-no-such-piece”/)).toBeVisible();
-  await page.getByRole("link", { name: "Clear the search" }).click();
+  await page.getByRole("button", { name: "Close search" }).click();
   await expect(page).not.toHaveURL(/q=/);
   await expect(page.locator("p[aria-live=polite]").first()).toContainText(`${all} piece`);
   // Filter: the same choices as before, in a panel under the bar.
