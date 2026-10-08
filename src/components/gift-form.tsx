@@ -225,8 +225,8 @@ export function GiftForm({ product, festival = null, initial }: { product: Produ
         {!oneSize && (
           <fieldset className="grid gap-3 sm:grid-cols-2">
             <legend className="sr-only">Who picks the size</legend>
-            <Choice name="modeUi" value="pick" checked={mode === "pick"} onChange={() => setMode("pick")} title="Let them pick the size" note="Recommended. They choose before we send it." />
-            <Choice name="modeUi" value="set" checked={mode === "set"} onChange={() => setMode("set")} title="I know their size" note="We pack it and send it." />
+            <Choice name="modeUi" value="pick" checked={mode === "pick"} onChange={() => setMode("pick")} title="Let them pick the size" note="They choose from a link, or try it on in our store." />
+            <Choice name="modeUi" value="set" checked={mode === "set"} onChange={() => setMode("set")} title="I know their size" note="We wrap it and deliver it, or you collect it." />
           </fieldset>
         )}
         {product.colours.length > 1 && (

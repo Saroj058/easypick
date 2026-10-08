@@ -208,6 +208,13 @@ export function QuickBuy({
                   Add to bag
                 </button>
               )}
+              <Link
+                href={`/gift/${product.slug}?colour=${encodeURIComponent(chosen.colour)}${chosen.size !== "ONE" ? `&size=${chosen.size}` : ""}`}
+                onClick={() => setOpen(false)}
+                className="btn btn-outline mt-3 w-full"
+              >
+                Send as gift
+              </Link>
             </>
           ) : (
             <button type="button" disabled className="btn btn-volt mt-8 w-full">

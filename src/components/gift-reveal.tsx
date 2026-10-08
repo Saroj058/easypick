@@ -21,6 +21,7 @@ import type {
   ProductImage as Img,
   Size,
 } from "@/lib/types";
+import { AskWhatsApp } from "./ask-whatsapp";
 import { useFitProfile } from "./fit-finder";
 import { GiftBox, GiftNote } from "./gift/gift-box";
 import { ProductImage } from "./product-image";
@@ -725,6 +726,9 @@ export function GiftReveal({ data }: { data: RevealData }) {
           )}
         </>
       )}
+      <p className="mt-12 border-t border-mist pt-4 text-center">
+        <AskWhatsApp text="Hi Easypick, I need help with a gift I received." label="Stuck? Ask us on WhatsApp" />
+      </p>
     </div>
   );
 }

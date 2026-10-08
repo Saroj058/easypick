@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftForm } from "@/components/gift-form";
 import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
@@ -44,6 +45,7 @@ export default async function SendGiftPage({ params, searchParams }: PageProps<"
                 </Link>
               </div>
             </div>
+            <AskWhatsApp text={`Hi Easypick, I need help sending ${product.name} as a gift.`} label="Stuck? Ask us on WhatsApp" className="mt-2" />
           </div>
         </div>
         {/* min-w-0: a row of chips inside may scroll sideways without widening the page */}

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { CreditCard, Ruler, Store } from "lucide-react";
 import Link from "next/link";
 
+import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
+import { GiftCardArt } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
@@ -124,7 +127,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
             <h1 className="display display-h1 mt-3">
               Gift it.
               <br />
-              They pick the size.
+              Size known or not.
             </h1>
             <h2 id="budget-h" className="mt-8 font-mono text-[12px] uppercase tracking-[0.16em] text-paper/60">
               What&apos;s the budget?
@@ -149,17 +152,56 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                 </span>
               </Link>
             </nav>
-            <p className="mt-5">
-              <Link href="/gift-cards#buy" className="inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold underline underline-offset-4">
-                Not sure? Send a gift card, from {formatPrice(GIFT_CARD_MIN)} <ArrowIcon className="h-4 w-4" />
-              </Link>
-            </p>
+            {/* The gift card is as much a choice as any piece: a full, bright tile of its own. */}
+            <Link href="/gift-cards#buy" className="group mt-2 flex min-h-[88px] items-center justify-between gap-4 overflow-hidden rounded-[2px] bg-paper p-4 text-ink transition-colors duration-200 hover:bg-volt">
+              <span>
+                <span className="display block text-[24px] leading-none sm:text-[28px]">Send a gift card, from {formatPrice(GIFT_CARD_MIN)}</span>
+                <span className="mt-1 block text-[13px] text-steel-dark group-hover:text-ink">Not sure what they&apos;d like? It arrives in minutes.</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-3">
+                <span className="block w-24 rotate-[-6deg] max-sm:hidden" aria-hidden>
+                  <GiftCardArt design="lime" amount={null} />
+                </span>
+                <ArrowIcon className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
+              </span>
+            </Link>
           </div>
           <GiftBox tag={["FOR THEM", "SIZE: THEIR PICK"]} state="idle" className="mx-auto w-full max-w-[360px] max-md:hidden" />
         </div>
       </section>
 
-      <div className="container-ep space-y-14 pt-12 md:space-y-20 md:pt-16">
+      <div className="container-ep space-y-14 pt-10 md:space-y-20 md:pt-14">
+        {/* The three ways to gift, so nobody has to work out which one is theirs */}
+        <section aria-labelledby="ways-h">
+          <h2 id="ways-h" className="font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
+            Three ways to gift
+          </h2>
+          <ul className="mt-3 grid gap-2 md:grid-cols-3 md:gap-3">
+            {(
+              [
+                [Ruler, "You know their size", "Pick the piece and the size. We wrap it and deliver it, or you collect it.", "#pieces", "Choose a piece"],
+                [Store, "You don't know their size", "Pick the piece. They choose the size from a link, or try it on in our store.", "#pieces", "Choose a piece"],
+                [CreditCard, "Not sure what they'd like", `Send a gift card from ${formatPrice(GIFT_CARD_MIN)}. It arrives in minutes.`, "/gift-cards#buy", "Send a gift card"],
+              ] as const
+            ).map(([Icon, title, words, href, action]) => (
+              <li key={title}>
+                <Link href={href} className="group flex h-full items-start gap-4 rounded-[2px] border border-steel p-4 transition-colors duration-200 hover:border-ink md:flex-col md:p-5">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-paper">
+                    <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                  </span>
+                  <span>
+                    <span className="block font-semibold">{title}</span>
+                    <span className="mt-1 block text-[14px] text-steel-dark">{words}</span>
+                    <span className="mt-2 inline-flex items-center gap-1.5 text-[14px] font-semibold underline-offset-4 group-hover:underline">
+                      {action} <ArrowIcon className="h-4 w-4" />
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
         {/* The pieces, with budget and kind as plain links */}
         <section id="pieces" aria-labelledby="pieces-h" className="scroll-mt-20">
           <h2 id="pieces-h" className="display display-h2">
@@ -280,6 +322,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
               Check its balance
             </Link>
           </p>
+          <AskWhatsApp text="Hi Easypick, I need help sending a gift." label="Stuck? Ask us on WhatsApp" />
         </section>
       </div>
     </div>

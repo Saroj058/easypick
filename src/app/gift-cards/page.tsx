@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftCardArt } from "@/components/gift-card-art";
 import { GiftCardForm } from "@/components/gift-card-form";
 import { site } from "@/lib/site";
@@ -27,6 +29,11 @@ export default function GiftCardsPage() {
       <section className="border-b border-mist">
         <div className="container-ep grid items-center gap-10 pb-14 pt-14 md:grid-cols-2 md:pb-20 md:pt-24">
           <div>
+            <nav aria-label="Breadcrumb" className="index text-steel-dark">
+              <Link href="/gift" className="inline-flex min-h-11 items-center hover:underline">
+                Gifts
+              </Link>
+            </nav>
             <h1 className="display display-h1">The easy gift.</h1>
             <p className="mt-4 text-xl text-steel-dark md:text-2xl">Let them pick it.</p>
             <p className="mt-4 max-w-[46ch] text-steel-dark">From Rs 1,000. Sent by email and SMS, used online or in the store, valid for 12 months.</p>
@@ -38,6 +45,12 @@ export default function GiftCardsPage() {
                 Check balance
               </a>
             </div>
+            <p className="mt-4 flex flex-wrap items-center gap-x-5 text-[15px]">
+              <Link href="/gift" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4">
+                Rather send a piece?
+              </Link>
+              <AskWhatsApp text="Hi Easypick, I need help with a gift card." label="Stuck? Ask us on WhatsApp" />
+            </p>
           </div>
           <div className="mx-auto w-full max-w-md md:-rotate-3">
             <GiftCardArt design="pick" amount={2000} />

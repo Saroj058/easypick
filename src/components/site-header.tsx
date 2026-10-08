@@ -1,7 +1,7 @@
 "use client";
 
 import { MotionConfig, motion, useMotionValueEvent, useScroll, type Variants } from "framer-motion";
-import { Ellipsis, Gem, Gift, MapPin, Shirt, ShoppingBag } from "lucide-react";
+import { Ellipsis, Gem, Gift, House, MapPin, Shirt, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,7 +37,8 @@ import {
 const primary = [
   { href: "/fits", label: "Fits", icon: Shirt },
   { href: "/gift", label: "Gift", icon: Gift },
-  // Shop sits in the middle of the dock.
+  // Home and Shop sit in the middle of the dock.
+  { href: "/", label: "Home", icon: House },
   { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/vault", label: "The Vault", icon: Gem },
   { href: "/visit", label: "Visit", icon: MapPin },
