@@ -137,6 +137,15 @@ export async function endAdminSession() {
   (await cookies()).delete(ADMIN_COOKIE);
 }
 
+/**
+ * Drops the staff login from this browser only (other devices stay signed in). Used when the
+ * customer account on this browser logs out, so the next person to use it can't walk into the
+ * admin on a login the owner left behind.
+ */
+export async function forgetAdminHere() {
+  (await cookies()).delete(ADMIN_COOKIE);
+}
+
 /** The signed-in staff member, or null. */
 export const currentStaff = cache(async (): Promise<StaffMember | null> => {
   const raw = (await cookies()).get(ADMIN_COOKIE)?.value;

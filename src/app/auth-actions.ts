@@ -6,6 +6,7 @@ import { endAllSessions, endSession, getCurrentUser, requestCode, safeNext, upda
 import type { FitProfile } from "@/lib/fit-profile";
 import { normaliseNepaliMobile } from "@/lib/format";
 import { syncAccountAlerts } from "@/lib/drop-alerts";
+import { forgetAdminHere } from "@/lib/staff";
 
 // ---------- Phone sign-in (also sign-up) ----------
 
@@ -86,6 +87,8 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
 
 export async function signOut() {
   await endSession();
+  // Logging out of the shop logs this browser out of the admin too: a staff login never outlives it here.
+  await forgetAdminHere();
   redirect("/");
 }
 
@@ -94,6 +97,7 @@ export async function signOutEverywhere() {
   const user = await getCurrentUser();
   if (user) await endAllSessions(user.id);
   else await endSession();
+  await forgetAdminHere();
   redirect("/");
 }
 
