@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { BuyPanel } from "@/components/buy-panel";
 import { RefreshCw, Store, Tag, Truck } from "lucide-react";
 
-import { ChevronIcon } from "@/components/icons";
+import { HangTag } from "@/components/hang-tag";
 import { RecentlyViewed } from "@/components/local-lists";
 import { TrackView } from "@/components/track-view";
 import { ProductGrid } from "@/components/product-card";
@@ -52,7 +52,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
   const related = all.filter((p) => p.slug !== product.slug && p.category === product.category).slice(0, 4);
   const more = related.length ? related : all.filter((p) => p.slug !== product.slug).slice(0, 4);
 
-  const sizes = Object.keys(product.measurements) as Size[];
+  const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
+  const sizes = (Object.keys(product.measurements) as Size[]).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
   const cols = Array.from(new Set(sizes.flatMap((s) => Object.keys(product.measurements[s] ?? {})))) as (keyof typeof measureLabels)[];
 
   const jsonLd = {
@@ -121,7 +122,12 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             colour={product.colours[0]}
             name={product.name}
             description={product.shortDescription}
-            facts={product.details.slice(0, 3)}
+            table={
+              cols.length > 0
+                ? { head: ["Size", ...cols.map((c) => measureLabels[c])], rows: sizes.map((s) => [s, ...cols.map((c) => product.measurements[s]?.[c] ?? "–")]) }
+                : null
+            }
+            tag={<HangTag product={product} size={sizes.includes("M") ? "M" : sizes[0]} className="[--hole:var(--color-paper)]" />}
             details={[`${product.fit[0].toUpperCase()}${product.fit.slice(1)} fit · ${product.gender}`, ...product.details]}
           />
         </div>
@@ -195,77 +201,11 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
       </section>
 
       <div className="container-ep pb-24">
-        <section id="details" aria-label="About this piece" className="mx-auto max-w-[820px] scroll-mt-28 pt-12 md:pt-16">
-          {product.story && <p className="max-w-[58ch] whitespace-pre-line text-[15px] leading-relaxed">{product.story}</p>}
-        <div className="mt-8 divide-y divide-mist border-y border-mist">
-          <details className="group py-4" open>
-            <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
-              Details
-              <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
-            </summary>
-            <ul className="mt-3 space-y-1 text-[15px] text-steel-dark">
-              <li className="capitalize">
-                {product.fit} fit · {product.gender}
-              </li>
-              {product.details.map((d) => (
-                <li key={d}>{d}</li>
-              ))}
-            </ul>
-          </details>
-          {cols.length > 0 && (
-            <details className="group py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
-                Measurements (cm)
-                <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full font-mono text-[14px]">
-                  <thead>
-                    <tr className="text-left text-steel-dark">
-                      <th scope="col" className="py-1 pr-4 font-normal">
-                        Size
-                      </th>
-                      {cols.map((c) => (
-                        <th key={c} scope="col" className="py-1 pr-4 font-normal">
-                          {measureLabels[c]}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sizes.map((s) => (
-                      <tr key={s} className="border-t border-mist">
-                        <th scope="row" className="py-2 pr-4 text-left font-semibold">
-                          {s}
-                        </th>
-                        {cols.map((c) => (
-                          <td key={c} className="py-2 pr-4">
-                            {product.measurements[s]?.[c] ?? "–"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="mt-2 text-[13px] text-steel-dark">Garment measured flat. Chest is measured all the way round.</p>
-            </details>
-          )}
-          <details className="group py-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
-              Pickup, delivery and returns
-              <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
-            </summary>
-            <p className="mt-3 text-[15px] text-steel-dark">
-              Free store pickup. Delivery inside the Kathmandu Valley, free above Rs {site.delivery.freeAbove.toLocaleString("en-IN")}.
-              Exchange your size within 7 days with tags on.{" "}
-              <Link href="/returns" className="underline">
-                Returns policy
-              </Link>
-            </p>
-          </details>
-        </div>
-        </section>
+        {product.story && (
+          <section aria-label="About this piece" className="mx-auto max-w-[820px] pt-12 md:pt-16">
+            <p className="max-w-[58ch] whitespace-pre-line text-[15px] leading-relaxed">{product.story}</p>
+          </section>
+        )}
 
         {more.length > 0 && (
           <section className="mt-24" aria-labelledby="more-heading">

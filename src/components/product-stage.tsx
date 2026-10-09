@@ -3,7 +3,10 @@
 import { useState } from "react";
 
 import type { Category, ProductImage as Img } from "@/lib/types";
-import { ArrowIcon } from "./icons";
+import { Ruler } from "lucide-react";
+import Link from "next/link";
+
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./ui/sheet";
 import { ProductImage } from "./product-image";
 
 // The product page's stage: the piece itself, large and alone in the middle, with a quiet column
@@ -18,8 +21,9 @@ export function ProductStage({
   colour,
   name,
   description,
-  facts,
   details,
+  table,
+  tag,
 }: {
   images: Img[];
   /** The piece cut out of its front photo (public/rack/<slug>.webp), when there is one. */
@@ -28,12 +32,15 @@ export function ProductStage({
   colour: { name: string; hex: string };
   name: string;
   description: string;
-  /** Two or three short lines about the cloth and make. */
-  facts: string[];
-  /** Everything on the details list: shown in the column on desktop. */
+  /** The details list: fit, cloth, make, care. */
   details: string[];
+  /** The size chart in cm: a heading row and one row per size. Opens in a pop-up. */
+  table: { head: string[]; rows: (string | number)[][] } | null;
+  /** The hang tag of the piece (price and measurements), hung small at the top corner. */
+  tag?: React.ReactNode;
 }) {
   const [view, setView] = useState(0);
+  const [measuring, setMeasuring] = useState(false);
   const shown = images[Math.min(view, images.length - 1)];
   const floating = view === 0 && cutout;
 
@@ -60,40 +67,43 @@ export function ProductStage({
               ))}
             </ol>
           )}
-          <div className="min-w-0 max-lg:hidden">
-            {/* The page's heading on desktop; on phones this column is hidden and the buying panel carries it */}
-            <h1 className="text-[17px] font-medium uppercase tracking-[0.2em]">{name}</h1>
-            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark">{colour.name}</p>
-            <p className="mt-6 max-w-[28ch] text-[13px] leading-relaxed text-ink/80">{description}</p>
-            <p className="mt-7 font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark">Details</p>
-            <ul className="mt-2.5 max-w-[30ch] space-y-1.5 border-t border-ink/15 pt-3 text-[13px] leading-snug text-ink/85">
+          <div className="min-w-0">
+            {/* The page's heading on desktop; on phones the buying panel carries the name, so it is hidden here */}
+            <div className="max-lg:hidden">
+              <h1 className="text-[17px] font-medium uppercase tracking-[0.2em]">{name}</h1>
+              <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark">{colour.name}</p>
+              <p className="mt-6 max-w-[28ch] text-[13px] leading-relaxed text-ink/80">{description}</p>
+            </div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark lg:mt-7">Details</p>
+            <ul className="mt-2.5 space-y-1.5 border-t border-ink/15 pt-3 text-[13px] leading-snug text-ink/85 lg:max-w-[30ch]">
               {details.map((d) => (
                 <li key={d}>{d}</li>
               ))}
             </ul>
-            <a href="#details" className="group mt-5 inline-flex min-h-11 items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em]">
-              See the details
-              <ArrowIcon className="h-3.5 w-3.5 -rotate-45 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-            </a>
+            {/* The size chart opens in a pop-up, so the page stays one screen */}
+            {table && (
+              <button
+                type="button"
+                onClick={() => setMeasuring(true)}
+                className="group mt-5 inline-flex h-11 cursor-pointer items-center gap-2.5 rounded-full border border-ink/30 bg-paper px-5 text-[12px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]"
+              >
+                <Ruler aria-hidden className="h-4 w-4" strokeWidth={1.8} />
+                Measurements (cm)
+              </button>
+            )}
           </div>
         </div>
-        {/* What it is made of: a swatch of its colour and two or three short lines */}
-        {facts.length > 0 && (
-          <div className="flex min-w-0 items-center gap-4 overflow-hidden max-lg:mt-2 lg:hidden">
-            <span aria-hidden className="h-12 w-12 shrink-0 rounded-full border border-ink/10 shadow-[inset_0_-6px_10px_rgba(0,0,0,0.12),inset_0_4px_8px_rgba(255,255,255,0.35)]" style={{ background: colour.hex }} />
-            <ul className="min-w-0 flex-1 space-y-1 font-mono text-[10.5px] uppercase leading-snug tracking-[0.14em] text-ink/80">
-              {facts.map((f) => (
-                <li key={f} className="truncate">
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
 
       {/* The piece */}
       <div className="relative order-1 flex min-h-[62svh] items-center justify-center px-6 pb-4 pt-12 lg:order-2 lg:min-h-0 lg:px-10 lg:py-10">
+        {/* Its tag, small, on a string at the top corner: the fixed price and the measurements */}
+        {tag && (
+          <div aria-hidden className="pointer-events-none absolute right-3 top-10 z-10 h-[124px] w-[76px] lg:right-8 lg:top-0 lg:h-[168px] lg:w-[96px]">
+            <span className="absolute left-1/2 top-0 block h-6 w-px bg-ink/40 lg:h-10" />
+            <div className="absolute left-1/2 top-4 w-[200px] origin-top -translate-x-1/2 scale-[0.38] [filter:drop-shadow(0_8px_12px_rgba(0,0,0,0.16))] lg:top-8 lg:scale-[0.48]">{tag}</div>
+          </div>
+        )}
         {floating ? (
           <div className="relative flex h-full max-h-[70svh] w-full items-center justify-center">
             <span aria-hidden className="absolute inset-x-[22%] bottom-[2%] h-[5%] rounded-[50%] bg-ink/25 blur-2xl" />
@@ -106,6 +116,51 @@ export function ProductStage({
           </div>
         )}
       </div>
+
+      {table && (
+        <Sheet open={measuring} onOpenChange={setMeasuring}>
+          <SheetContent side="bottom" className="mx-auto max-h-[90dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[18px] border-mist bg-paper px-5 pb-6 pt-5 text-ink md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:rounded-[18px] md:px-8 md:pb-8 md:pt-7">
+            <SheetTitle className="display pr-10 text-[30px] leading-none">Measurements</SheetTitle>
+            <SheetDescription className="mt-1 text-[14px] text-steel-dark">{name}, in centimetres.</SheetDescription>
+            <div className="mt-5 overflow-x-auto">
+              <table className="w-full font-mono text-[14px]">
+                <thead>
+                  <tr className="text-left text-steel-dark">
+                    {table.head.map((h) => (
+                      <th key={h} scope="col" className="py-1.5 pr-4 font-normal">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.map((row) => (
+                    <tr key={String(row[0])} className="border-t border-mist">
+                      {row.map((cell, i) =>
+                        i === 0 ? (
+                          <th key={i} scope="row" className="py-2.5 pr-4 text-left font-semibold">
+                            {cell}
+                          </th>
+                        ) : (
+                          <td key={i} className="py-2.5 pr-4 tabular-nums">
+                            {cell}
+                          </td>
+                        ),
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-4 text-[13px] text-steel-dark">
+              Garment measured flat. Chest is measured all the way round. Wrong size? Exchange it within 7 days with tags on.{" "}
+              <Link href="/returns" className="underline underline-offset-2">
+                Returns policy
+              </Link>
+            </p>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }
