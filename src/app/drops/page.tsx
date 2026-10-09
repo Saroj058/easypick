@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { Countdown } from "@/components/countdown";
-import { DropCoverflow, type DropPiece } from "@/components/drop-coverflow";
+import { DropStrip, type DropPiece } from "@/components/drop-strip";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { FlowButton } from "@/components/ui/flow-button";
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 // The page is the clothes: each drop is one band with its pieces as a row of cards swiped sideways
-// (the middle one faces out, large; see components/drop-coverflow.tsx), every one a click from its
+// (the middle one faces out, large; see components/drop-strip.tsx), every one a click from its
 // own page. What can be bought comes first (out now), then what is coming
 // (with its countdown), then what sold through, kept small. The alert sign-up is at the top.
 
@@ -62,7 +62,8 @@ export default async function DropsPage() {
   const archive = drops.filter((d) => state(d) === "archive");
 
   return (
-    <div className="container-ep pb-24 pt-12 md:pt-20">
+    <div className="overflow-x-clip">
+      <div className="container-ep pb-24 pt-12 md:pt-20">
       <div className="flex items-end justify-between gap-4">
         <h1 className="display display-h1">Drops</h1>
         <p className="index pb-2 text-right text-steel-dark">Every other Friday · 6 PM</p>
@@ -105,7 +106,7 @@ export default async function DropsPage() {
                     <FlowButton href={`/drop/${d.slug}`} text={`Shop Drop ${d.slug}`} solid />
                   </div>
                 </div>
-                <DropCoverflow pieces={asPieces(items)} label={d.name} />
+                <DropStrip pieces={asPieces(items)} label={d.name} />
               </article>
             );
           })}
@@ -137,7 +138,7 @@ export default async function DropsPage() {
                     )}
                   </div>
                 </div>
-                <DropCoverflow pieces={asPieces(of(d))} label={d.name} />
+                <DropStrip pieces={asPieces(of(d))} label={d.name} />
               </article>
             );
           })}
@@ -177,6 +178,7 @@ export default async function DropsPage() {
           </ul>
         </section>
       )}
+      </div>
     </div>
   );
 }
