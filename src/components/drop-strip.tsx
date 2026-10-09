@@ -277,11 +277,18 @@ export function DropStrip({ pieces, label, soon = false }: { pieces: DropPiece[]
 
       {/* How far along the strip: a thin line, in place of arrows */}
       <div className="mt-5 flex flex-col items-center">
-        <div aria-hidden className="flex gap-1.5">
-          {pieces.map((p, i) => (
-            <span key={p.id} className={`h-[2px] rounded-full transition-[width,background-color] duration-300 ${i === active ? "w-7 bg-ink" : "w-3 bg-ink/20"}`} />
-          ))}
-        </div>
+        {n <= 12 ? (
+          <div aria-hidden className="flex gap-1.5">
+            {pieces.map((p, i) => (
+              <span key={p.id} className={`h-[2px] rounded-full transition-[width,background-color] duration-300 ${i === active ? "w-7 bg-ink" : "w-3 bg-ink/20"}`} />
+            ))}
+          </div>
+        ) : (
+          // Too many for a dash each: say where they are instead.
+          <p aria-hidden className="font-mono text-[11px] tabular-nums tracking-[0.14em] text-steel-dark">
+            <span className="font-semibold text-ink">{String(active + 1).padStart(2, "0")}</span> / {String(n).padStart(2, "0")}
+          </p>
+        )}
       </div>
 
       {soon ? (

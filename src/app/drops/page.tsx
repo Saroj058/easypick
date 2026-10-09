@@ -116,12 +116,12 @@ export default async function DropsPage() {
       {/* Coming: the countdown sits with the drop it is about */}
       {upcoming.length > 0 ? (
         <section aria-labelledby="drops-coming" className="mt-16 md:mt-24">
-          <h2 id="drops-coming" className="index">
+          <h2 id="drops-coming" className="sr-only">
             Coming
           </h2>
           {upcoming.map((d) => {
             return (
-              <article key={d.slug} className="mt-4 border-t border-ink pt-6 [&+article]:mt-14 md:[&+article]:mt-20">
+              <article key={d.slug} className="border-t border-ink pt-6 [&+article]:mt-14 md:[&+article]:mt-20">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                   <div className="min-w-0">
                     <p className="index text-steel-dark">Coming soon</p>
