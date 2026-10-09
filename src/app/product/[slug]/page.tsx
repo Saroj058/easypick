@@ -100,7 +100,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
       <section className="border-b border-ink/10 lg:grid lg:min-h-[calc(100svh-88px)] lg:grid-cols-[minmax(0,1fr)_minmax(380px,31%)]">
         {/* The stage stays in view while a long buying panel scrolls beside it */}
         <div className="relative lg:sticky lg:top-[88px] lg:h-[calc(100svh-88px)] lg:self-start">
-          <nav aria-label="Breadcrumb" className="absolute right-4 top-4 z-10 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark lg:left-10 lg:right-auto lg:top-6">
+          <nav aria-label="Breadcrumb" className="absolute right-4 top-4 z-10 font-mono text-[12px] uppercase tracking-[0.14em] text-steel-dark lg:left-10 lg:right-auto lg:top-6">
             <ol className="flex gap-2">
               <li>
                 <Link href="/shop" className="hover:text-ink hover:underline">
@@ -132,9 +132,9 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           />
         </div>
 
-        <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-9">
+        <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-6">
           <div className="lg:sticky lg:top-28">
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
               {product.brand ? <span>{product.brand}</span> : drop ? <span>{drop.name}</span> : <span>{categoryLabels[product.category]}</span>}
               {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
               {product.edition && (
@@ -148,15 +148,15 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               {/* Phones: the name and colour (the left column, which carries them on desktop, is hidden there) */}
               <div className="min-w-0 lg:hidden">
                 <h1 className="text-[22px] font-medium uppercase leading-snug tracking-[0.16em] md:text-[24px]">{product.name}</h1>
-                <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
+                <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
                   {product.colours[0].name} · {product.fit} fit
                 </p>
               </div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark max-lg:hidden">Fixed price · VAT incl.</p>
+              <p className="font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark max-lg:hidden">Fixed price · VAT incl.</p>
               {/* The price, fixed: the same on the tag in the store */}
-              <p className="shrink-0 text-right font-mono text-[20px] tabular-nums leading-snug">
+              <p className="shrink-0 text-right font-mono text-[21px] tabular-nums leading-snug">
                 {formatPrice(product.salePrice ?? product.price)}
-                {product.salePrice && <s className="block text-[12px] text-steel-dark">{formatPrice(product.price)}</s>}
+                {product.salePrice && <s className="block text-[13px] text-steel-dark">{formatPrice(product.price)}</s>}
               </p>
             </div>
             <p className="mt-4 text-[15px] text-steel-dark lg:hidden">{product.shortDescription}</p>
@@ -180,7 +180,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             </div>
 
             {/* Four plain promises, small */}
-            <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-ink/15 pt-6 font-mono text-[10.5px] uppercase leading-snug tracking-[0.12em] text-ink/80">
+            <ul className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-ink/15 pt-5 font-mono text-[12px] uppercase leading-snug tracking-[0.12em] text-ink/80">
               {[
                 { icon: Tag, a: "Fixed price", b: "Same in store" },
                 { icon: Store, a: "Free pickup", b: "Kathmandu store" },

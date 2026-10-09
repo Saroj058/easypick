@@ -145,13 +145,13 @@ export function BuyPanel(props: Props) {
               onClick={() => setFitOpen((o) => !o)}
               aria-expanded={fitOpen}
               aria-controls={`fit-${slug}`}
-              className="min-h-11 text-[13px] underline underline-offset-2"
+              className="min-h-11 text-[14px] underline underline-offset-2"
             >
               {hasFit(profile) ? "Edit my fit" : "Match my size in cm"}
             </button>
           </div>
           {match && (
-            <p className="mb-1 flex items-center gap-2 text-[13px]">
+            <p className="mb-1 flex items-center gap-2 text-[14px]">
               <span className="h-2 w-2 shrink-0 bg-volt ring-1 ring-ink" aria-hidden />
               <span>
                 <span className="font-semibold">Your fit: {match.size}</span>
@@ -160,7 +160,7 @@ export function BuyPanel(props: Props) {
             </p>
           )}
           {autoSize && (
-            <p className="mb-1 text-[13px] text-steel-dark">We picked your size. Tap another to change it.</p>
+            <p className="mb-1 text-[14px] text-steel-dark">We picked your size. Tap another to change it.</p>
           )}
           {fitOpen && (
             <div id={`fit-${slug}`} className="my-4 border border-mist bg-photo p-4">
@@ -198,13 +198,13 @@ export function BuyPanel(props: Props) {
                         </>
                       )}
                     </span>
-                    <span className="text-[11px] leading-tight no-underline">{label}</span>
+                    <span className="text-[12px] leading-tight no-underline">{label}</span>
                   </span>
                 </label>
               );
             })}
           </div>
-          <p className="mt-2 min-h-5 text-[12px] text-steel-dark" aria-live="polite">
+          <p className="mt-2 min-h-5 text-[13px] text-steel-dark" aria-live="polite">
             {error ? "Couldn't check stock. Retrying…" : checked ? "" : "Checking stock…"}
           </p>
           <RestockForm
@@ -215,23 +215,23 @@ export function BuyPanel(props: Props) {
         </fieldset>
       )}
 
-      {props.modelNote && <p className="mt-2 text-[13px] text-steel-dark">{props.modelNote}</p>}
+      {props.modelNote && <p className="mt-2 text-[14px] text-steel-dark">{props.modelNote}</p>}
 
-      <div className="mt-6 flex gap-2.5">
+      <div className="mt-4 flex gap-2.5">
         {status === "live" ? (
           <>
             {variant && sellable > 0 ? (
-              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
+              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
                 Buy now
                 <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             ) : (
-              <button type="button" disabled className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink/15 text-ink/55">
+              <button type="button" disabled className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink/15 text-ink/55">
                 Pick a size
               </button>
             )}
             {canBag && (
-              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper cursor-pointer disabled:cursor-default disabled:border-ink/25 disabled:text-ink/40 disabled:hover:bg-paper disabled:hover:text-ink/40">
+              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper cursor-pointer disabled:cursor-default disabled:border-ink/25 disabled:text-ink/40 disabled:hover:bg-paper disabled:hover:text-ink/40">
                 <ShoppingBag aria-hidden className="h-4 w-4" strokeWidth={1.8} />
                 {added ? "Added" : "Add to bag"}
               </button>
@@ -239,10 +239,10 @@ export function BuyPanel(props: Props) {
           </>
         ) : (
           <>
-            <Link href="/alerts" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
+            <Link href="/alerts" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
               Notify me
             </Link>
-            <Link href="/drops" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper">
+            <Link href="/drops" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper">
               {status === "scheduled" ? props.dropLabel ?? "See the drop" : "See the drop"}
             </Link>
           </>
@@ -255,11 +255,11 @@ export function BuyPanel(props: Props) {
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
           <div className="mt-3 flex gap-2.5">
-            <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}${picked && picked !== "ONE" ? `&size=${picked}` : ""}`} className="group flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[12.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
+            <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}${picked && picked !== "ONE" ? `&size=${picked}` : ""}`} className="group flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
               <GiftIcon className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5" />
               Send as gift
             </Link>
-            <Link href={`/visit?try=${slug}`} className="group flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[12.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
+            <Link href={`/visit?try=${slug}`} className="group flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
               <MapPin aria-hidden className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5" strokeWidth={1.8} />
               Try in store
             </Link>

@@ -59,7 +59,7 @@ export function ProductStage({
                     aria-label={`View ${i + 1}: ${img.kind}`}
                     onClick={() => setView(i)}
                     onMouseEnter={() => setView(i)}
-                    className={`flex h-9 w-9 cursor-pointer items-end pb-1.5 font-mono text-[11px] tabular-nums tracking-[0.1em] transition-colors duration-200 after:absolute after:bottom-0 after:left-0 after:h-px after:w-5 after:origin-left after:bg-ink after:transition-transform after:duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink relative ${i === view ? "text-ink after:scale-x-100" : "text-steel-dark after:scale-x-0 hover:text-ink"}`}
+                    className={`flex h-9 w-9 cursor-pointer items-end pb-1.5 font-mono text-[12px] tabular-nums tracking-[0.1em] transition-colors duration-200 after:absolute after:bottom-0 after:left-0 after:h-px after:w-5 after:origin-left after:bg-ink after:transition-transform after:duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink relative ${i === view ? "text-ink after:scale-x-100" : "text-steel-dark after:scale-x-0 hover:text-ink"}`}
                   >
                     {String(i + 1).padStart(2, "0")}
                   </button>
@@ -70,12 +70,12 @@ export function ProductStage({
           <div className="min-w-0">
             {/* The page's heading on desktop; on phones the buying panel carries the name, so it is hidden here */}
             <div className="max-lg:hidden">
-              <h1 className="text-[17px] font-medium uppercase tracking-[0.2em]">{name}</h1>
-              <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark">{colour.name}</p>
-              <p className="mt-6 max-w-[28ch] text-[13px] leading-relaxed text-ink/80">{description}</p>
+              <h1 className="text-[19px] font-medium uppercase tracking-[0.2em]">{name}</h1>
+              <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.18em] text-steel-dark">{colour.name}</p>
+              <p className="mt-6 max-w-[28ch] text-[14px] leading-relaxed text-ink/80">{description}</p>
             </div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark lg:mt-7">Details</p>
-            <ul className="mt-2.5 space-y-1.5 border-t border-ink/15 pt-3 text-[13px] leading-snug text-ink/85 lg:max-w-[30ch]">
+            <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-steel-dark lg:mt-7">Details</p>
+            <ul className="mt-2.5 space-y-1.5 border-t border-ink/15 pt-3 text-[14px] leading-snug text-ink/85 lg:max-w-[30ch]">
               {details.map((d) => (
                 <li key={d}>{d}</li>
               ))}
@@ -85,7 +85,7 @@ export function ProductStage({
               <button
                 type="button"
                 onClick={() => setMeasuring(true)}
-                className="group mt-5 inline-flex h-11 cursor-pointer items-center gap-2.5 rounded-full border border-ink/30 bg-paper px-5 text-[12px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]"
+                className="group mt-5 inline-flex h-11 cursor-pointer items-center gap-2.5 rounded-full border border-ink/30 bg-paper px-5 text-[13px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]"
               >
                 <Ruler aria-hidden className="h-4 w-4" strokeWidth={1.8} />
                 Measurements (cm)
@@ -152,7 +152,7 @@ export function ProductStage({
                 </tbody>
               </table>
             </div>
-            <p className="mt-4 text-[13px] text-steel-dark">
+            <p className="mt-4 text-[14px] text-steel-dark">
               Garment measured flat. Chest is measured all the way round. Wrong size? Exchange it within 7 days with tags on.{" "}
               <Link href="/returns" className="underline underline-offset-2">
                 Returns policy
