@@ -31,11 +31,6 @@ export const revalidate = 60;
 // Easypick hang tag: a fixed price, measurements in cm, a SKU. Numbers shown are
 // computed from stock data, never decorative.
 
-function luminance(hex: string) {
-  const n = parseInt(hex.slice(1), 16);
-  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-}
-
 const STOREY = 7;
 /** The two storeys of the hero's shelf: what hangs on the upper rail, and on the lower one. */
 // Jackets hang with the bottoms so the lower rail isn't only trousers and caps.
@@ -54,13 +49,8 @@ function pickStorey(products: Product[], kinds: Category[]): RackPiece[] {
   for (let round = 0; chosen.length < STOREY && byKind.some((list) => list.length > round); round++) {
     for (const list of byKind) if (list[round] && chosen.length < STOREY) chosen.push(list[round]);
   }
-  let last = "";
-  return chosen.map((product) => {
-    const colours = [...product.colours].sort((a, b) => luminance(b.hex) - luminance(a.hex));
-    const colour = colours.find((c) => c.name !== last) ?? colours[0];
-    last = colour.name;
-    return { product, colour };
-  });
+  // The rail hangs each piece's own front photo, so the colour named is the one photographed: its first.
+  return chosen.map((product) => ({ product, colour: product.colours[0] }));
 }
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
@@ -102,7 +92,7 @@ export default async function HomePage() {
       <section aria-labelledby="hero-title" className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
-          <div className="on-dark relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-graphite text-paper md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
+          <div className="relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-[linear-gradient(180deg,#f1f0ec_0%,#e6e5e0_55%,#d9d8d2_100%)] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
             <HeroRack top={upper} bottom={lower} />
             {/* The way into the drop, on the wardrobe itself: in the middle of the card's foot (top on phones, where the foot holds the piece bar). The same sweeping pill as the Rail's "Show all", on white. */}
             <div className="absolute inset-x-0 bottom-[70px] z-30 flex justify-center md:bottom-6 lg:bottom-7">
