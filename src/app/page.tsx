@@ -72,7 +72,10 @@ export default async function HomePage() {
   const rest = inTurn(["bottoms", "jackets"]);
   const upperList = tops.slice(0, 5);
   const lowerList = rest.slice(0, 5);
-  const spare = [...tops.slice(5), ...rest.slice(5)];
+  // Left over from the other rail first; then, sooner than leave a hanger bare, a piece that has sold out
+  // (its sizes show struck through, and its page still opens).
+  const soldOut = range.filter((p) => p.status === "sold_out" && RACK_CUTOUTS.has(p.slug) && p.category !== "accessories");
+  const spare = [...tops.slice(5), ...rest.slice(5), ...soldOut];
   while (upperList.length < 5 && spare.length) upperList.push(spare.shift()!);
   while (lowerList.length < 5 && spare.length) lowerList.push(spare.shift()!);
   const upperRail = upperList.map(asPiece);
