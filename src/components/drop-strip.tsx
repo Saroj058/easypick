@@ -4,10 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { formatPrice } from "@/lib/format";
-import type { Category, ProductImage as Img } from "@/lib/types";
+import { useMySize } from "@/lib/my-size";
+import type { BagLine } from "@/lib/types";
+import { PieceControls, type RailPiece } from "./home/rail-wall";
 import { ArrowIcon } from "./icons";
 import { ProductImage } from "./product-image";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./ui/sheet";
 
 // A drop's pieces as one long strip (owner's reference, 10 Oct 2026; planned by three agents):
 //  - it runs from one edge of the screen to the other, whatever the screen's width (the page that
@@ -25,19 +29,8 @@ import { ProductImage } from "./product-image";
 // cards are moved by writing their styles directly, one frame at a time; React only hears when a
 // different card reaches the centre. Not the home page's cover-flow (ui/coverflow-carousel.tsx).
 
-export interface DropPiece {
-  id: string;
-  slug: string;
-  name: string;
-  price: number;
-  image: Img;
-  category: Category;
-  hex: string;
-  /** Sizes of the first colour, in order, with what is left of each. */
-  sizes: { size: string; stock: number }[];
-  /** Nothing left in any size. */
-  gone: boolean;
-}
+/** The pieces are the home page's rail pieces, so the controls under the strip are the rail's own. */
+export type DropPiece = RailPiece;
 
 /** Blank tiles past each end, so a short drop still reads as a long strip. Never products. */
 const GHOSTS = 5;
@@ -69,8 +62,11 @@ function look(d: number, still: boolean, ghost: boolean) {
   };
 }
 
-export function DropStrip({ pieces, label, quiet = false }: { pieces: DropPiece[]; label: string; /** A drop that is not on sale: shown muted. */ quiet?: boolean }) {
+export function DropStrip({ pieces, label, soon = false }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean }) {
   const router = useRouter();
+  const mySize = useMySize();
+  /** The piece being bought in the pop-up (the rail's Buy now, without leaving the page). */
+  const [buying, setBuying] = useState<BagLine | null>(null);
   const n = pieces.length;
   const start = Math.floor((n - 1) / 2);
   const [active, setActive] = useState(start);
@@ -164,8 +160,7 @@ export function DropStrip({ pieces, label, quiet = false }: { pieces: DropPiece[
 
   const piece = pieces[Math.min(active, n - 1)];
   if (!piece) return null;
-  const left = piece.sizes.reduce((sum, v) => sum + v.stock, 0);
-  const oneSize = piece.sizes.length === 1 && piece.sizes[0].size === "ONE";
+  const gone = (p: DropPiece) => p.status === "sold_out" || p.colours.every((c) => c.sizes.every((v) => v.left <= 0));
 
   return (
     <div className="mt-6">
@@ -229,10 +224,10 @@ export function DropStrip({ pieces, label, quiet = false }: { pieces: DropPiece[
           drag.current = null;
           if (g?.locked) go(pos.current);
         }}
-        className="relative mx-[calc(50%-50vw)] h-[calc(var(--w)*1.32)] cursor-grab touch-pan-y select-none overflow-hidden bg-[#f6f5f2] outline-none [--w:clamp(176px,20vw,248px)] [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] focus-visible:shadow-[inset_0_0_0_2px_var(--color-ink)] active:cursor-grabbing"
+        className="relative mx-[calc(50%-50vw)] h-[calc(var(--w)*1.32)] cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none [--w:clamp(176px,20vw,248px)] [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] focus-visible:shadow-[inset_0_0_0_2px_var(--color-ink)] active:cursor-grabbing"
       >
         {/* The band of light the cards sit on */}
-        <div aria-hidden className="absolute inset-x-0 top-1/2 h-[46%] -translate-y-1/2 bg-[linear-gradient(180deg,rgba(255,255,255,0),#ffffff_50%,rgba(255,255,255,0))]" />
+        <div aria-hidden className="absolute inset-x-0 top-1/2 h-[46%] -translate-y-1/2 bg-[linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,0.045)_50%,rgba(0,0,0,0))]" />
 
         {Array.from({ length: n + GHOSTS * 2 }, (_, k) => {
           const i = k - GHOSTS;
@@ -273,52 +268,53 @@ export function DropStrip({ pieces, label, quiet = false }: { pieces: DropPiece[
             >
               {/* The photo is 4:5 and the card a little squarer: it is cropped from the foot */}
               <span className="pointer-events-none absolute inset-x-0 -top-[4%] block">
-                <ProductImage image={p.image} category={p.category} colourHex={p.hex} decorative priority={Math.abs(i - start) < 2} sizes="(min-width: 1240px) 248px, (min-width: 880px) 20vw, 176px" className={quiet || p.gone ? "opacity-60 grayscale" : ""} />
+                <ProductImage image={p.image} category={p.category} colourHex={p.colours[0]?.hex ?? "#888888"} decorative priority={Math.abs(i - start) < 2} sizes="(min-width: 1240px) 248px, (min-width: 880px) 20vw, 176px" className={!soon && gone(p) ? "opacity-60 grayscale" : ""} />
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* The piece at the centre */}
-      <div className="mt-5 flex flex-col items-center text-center" aria-live="polite">
-        {/* How far along the strip: a thin line, in place of arrows */}
+      {/* How far along the strip: a thin line, in place of arrows */}
+      <div className="mt-5 flex flex-col items-center">
         <div aria-hidden className="flex gap-1.5">
           {pieces.map((p, i) => (
             <span key={p.id} className={`h-[2px] rounded-full transition-[width,background-color] duration-300 ${i === active ? "w-7 bg-ink" : "w-3 bg-ink/20"}`} />
           ))}
         </div>
-        <h4 className="mt-4 text-lg font-semibold">{piece.name}</h4>
-        <p className="mt-1 flex flex-wrap items-center justify-center gap-x-3 font-mono text-[13px]">
-          <span className="tabular-nums">{formatPrice(piece.price)}</span>
-          <span aria-hidden className="text-steel-dark">
-            ·
-          </span>
-          {piece.gone ? (
-            <span className="text-steel-dark">Gone</span>
-          ) : oneSize ? (
-            <span>One size</span>
-          ) : (
-            <span className="relative flex gap-2.5">
-              <span className="sr-only">Sizes: </span>
-              {piece.sizes.map((v) =>
-                v.stock > 0 ? (
-                  <span key={v.size}>{v.size}</span>
-                ) : (
-                  <s key={v.size} className="text-steel-dark">
-                    {v.size}
-                  </s>
-                ),
-              )}
-            </span>
-          )}
-          {!piece.gone && !quiet && left <= 3 && <span className="bg-ink px-1.5 py-0.5 text-[11px] uppercase tracking-[0.08em] text-paper">{left} left</span>}
-        </p>
-        <Link href={`/product/${piece.slug}`} className="group mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
-          View piece
-          <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-        </Link>
       </div>
+
+      {soon ? (
+        <div className="mt-4 flex flex-col items-center text-center" aria-live="polite">
+          <h4 className="text-lg font-semibold">{piece.name}</h4>
+          <p className="mt-1 font-mono text-[13px] tabular-nums">{formatPrice(piece.price)}</p>
+          <Link href={`/product/${piece.slug}`} className="group mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
+            View piece
+            <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+          </Link>
+        </div>
+      ) : (
+        // The home rail's controls, as they are there: name and price, colour, size, Buy now and the bag.
+        <div className="mt-4" aria-live="polite">
+          <PieceControls key={piece.id} piece={piece} mySize={mySize} onAdded={() => {}} onBuy={setBuying} />
+        </div>
+      )}
+
+      {/* Buy now: the piece and the payment form in a pop-up, without leaving the page (the rail's own). */}
+      <Sheet open={buying !== null} onOpenChange={(o) => !o && setBuying(null)}>
+        <SheetContent side="right" className="w-full overflow-y-auto border-mist bg-paper p-5 pt-6 sm:max-w-md">
+          <SheetTitle className="display text-[34px] leading-none">Buy now</SheetTitle>
+          {buying && (
+            <>
+              <SheetDescription className="mt-2 text-[14px] text-steel-dark">
+                {buying.name} · {buying.colour}
+                {buying.size === "ONE" ? "" : ` · ${buying.size}`} · {formatPrice(buying.price)}
+              </SheetDescription>
+              <CheckoutForm buyNow={buying} />
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

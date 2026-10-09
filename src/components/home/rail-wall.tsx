@@ -156,7 +156,7 @@ const Arrow = ({ className = "" }: { className?: string }) => (
  * Everything about the piece at the centre of a rail: its name and price, whether it comes in
  * their size, and the two ways to take it. The photo itself is in the carousel above.
  */
-function PieceControls({
+export function PieceControls({
   piece,
   mySize,
   onAdded,

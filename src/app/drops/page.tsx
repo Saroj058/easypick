@@ -4,13 +4,14 @@ import Link from "next/link";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { Countdown } from "@/components/countdown";
-import { DropStrip, type DropPiece } from "@/components/drop-strip";
+import { DropStrip } from "@/components/drop-strip";
+import { toRailPiece } from "@/components/home/rail";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { FlowButton } from "@/components/ui/flow-button";
 import { formatDropTime } from "@/lib/format";
 import { getDropTimeline, getDrops, getProducts, isReleased } from "@/lib/store";
-import type { Drop, Product, Size } from "@/lib/types";
+import type { Drop } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -27,29 +28,6 @@ export const metadata: Metadata = {
 // of the store carrying its name and the alert sign-up.
 
 type State = "upcoming" | "out" | "archive";
-const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
-
-/** What the carousel needs of each piece: its photo, name, fixed price and the sizes left. */
-function asPieces(items: Product[]): DropPiece[] {
-  return items.map((p) => {
-    const colour = p.colours[0];
-    const sizes = p.variants
-      .filter((v) => v.colour === colour.name)
-      .sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size))
-      .map((v) => ({ size: v.size as string, stock: v.stock }));
-    return {
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      price: p.salePrice ?? p.price,
-      image: p.images[0],
-      category: p.category,
-      hex: colour.hex,
-      sizes,
-      gone: p.status === "sold_out" || p.variants.every((v) => v.stock <= 0),
-    };
-  });
-}
 
 export default async function DropsPage() {
   const [drops, products, { next }] = await Promise.all([getDrops(), getProducts(), getDropTimeline()]);
@@ -128,7 +106,7 @@ export default async function DropsPage() {
                     <FlowButton href={`/drop/${d.slug}`} text={`Shop Drop ${d.slug}`} solid />
                   </div>
                 </div>
-                <DropStrip pieces={asPieces(items)} label={d.name} />
+                <DropStrip pieces={items.map(toRailPiece)} label={d.name} />
               </article>
             );
           })}
@@ -142,25 +120,23 @@ export default async function DropsPage() {
             Coming
           </h2>
           {upcoming.map((d) => {
-            const first = next?.slug === d.slug;
             return (
               <article key={d.slug} className="mt-4 border-t border-ink pt-6 [&+article]:mt-14 md:[&+article]:mt-20">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                   <div className="min-w-0">
-                    <h3 className="display text-[clamp(2.2rem,1.8rem+2.4vw,3.6rem)] leading-[0.9]">
-                      <Link href={`/drop/${d.slug}`} className="inline-block hover:underline hover:decoration-2 hover:underline-offset-4">
+                    <p className="index text-steel-dark">
+                      <Link href={`/drop/${d.slug}`} className="hover:text-ink hover:underline">
                         {d.name}
                       </Link>
-                    </h3>
-                    <p className="mt-2 font-mono text-[13px]">Arrives {formatDropTime(d.releaseAt, { bs: true })}</p>
-                    {first && (
-                      <div className="mt-4">
-                        <Countdown to={d.releaseAt} label={d.name} size="sm" />
-                      </div>
-                    )}
+                    </p>
+                    <h3 className="display mt-2 text-[clamp(3.2rem,2.2rem+5.5vw,7rem)] leading-[0.84]">Coming soon</h3>
+                    <p className="mt-4 font-mono text-[15px] uppercase tracking-[0.08em] md:text-[17px]">{formatDropTime(d.releaseAt, { bs: true })}</p>
+                  </div>
+                  <div className="shrink-0">
+                    <Countdown to={d.releaseAt} label={d.name} />
                   </div>
                 </div>
-                <DropStrip pieces={asPieces(of(d))} label={d.name} />
+                <DropStrip pieces={of(d).map(toRailPiece)} label={d.name} soon />
               </article>
             );
           })}

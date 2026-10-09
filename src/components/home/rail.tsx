@@ -27,7 +27,8 @@ function listed(names: string[]) {
   return `${[names[0], ...rest.slice(0, -1)].join(", ")} and ${rest[rest.length - 1]}`;
 }
 
-function toPiece(p: Product): RailPiece {
+/** A product as the rail (and the drops page) shows it: its colours that can be bought, sizes in order, what is left. */
+export function toRailPiece(p: Product): RailPiece {
   const colours: RailColour[] = p.colours.map((c) => ({
     name: c.name,
     hex: c.hex,
@@ -93,7 +94,7 @@ export function Rail({ products }: { products: Product[] }) {
     href: `/shop?category=${s.kinds.join(",")}`,
     total: s.pieces.length,
     // A few more than a rail shows, so a budget or the sort still fills it.
-    pieces: s.pieces.slice(0, SECTION_SHOWN * 3).map(toPiece),
+    pieces: s.pieces.slice(0, SECTION_SHOWN * 3).map(toRailPiece),
   }));
 
   const prices = live.map((p) => p.salePrice ?? p.price);
