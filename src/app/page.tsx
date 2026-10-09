@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 import { Countdown } from "@/components/countdown";
 import { FitsTeaser } from "@/components/home/fits-teaser";
+import { HeroNiche } from "@/components/hero-niche";
 import { GiftBlock } from "@/components/home/gift-block";
 import { ShinyLink } from "@/components/ui/shiny-button";
 import { OurStore } from "@/components/home/our-store";
@@ -67,11 +67,9 @@ export default async function HomePage() {
       <section aria-labelledby="hero-title" className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
-          <div className="relative -mx-4 aspect-[1339/1174] overflow-hidden bg-[#d9cfc3] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:self-center">
-            {/* The wardrobe: the owner's picture of the lit niche (hangers on two rails, accessories on the
-                top shelf, plants). The clothes are off the rails for now (owner, 9 Oct 2026); the tappable
-                rack is still in components/hero-rack.tsx for when they go back. */}
-            <Image src="/rack/niche.webp" alt="The Easypick wardrobe: a lit niche in the wall with two rails of wooden hangers, caps and accessories on the top shelf, and plants" fill priority sizes="(min-width: 1024px) 58vw, 100vw" className="object-cover object-center" />
+          <div className="relative -mx-4 aspect-[1339/1174] overflow-hidden bg-[#f3f3f1] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:self-center">
+            {/* The wardrobe: a white hollow niche built on the page (components/hero-niche.tsx), empty hangers for now */}
+            <HeroNiche plants />
             {/* The way into the drop, on the wardrobe itself: in the middle of the card's foot. The same sweeping pill as the Rail's "Show all", on white. */}
             <div className="absolute inset-x-0 bottom-4 z-30 flex justify-center md:bottom-6 lg:bottom-7">
               <ShinyLink href={drop ? `/drop/${drop.slug}` : "/drops"} className="[&>span]:bg-paper [&>span]:px-6 [&>span]:py-3 [&>span]:shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)]">
