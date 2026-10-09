@@ -1,7 +1,7 @@
 "use client";
 
 import { MotionConfig, motion, useMotionValueEvent, useScroll, type Variants } from "framer-motion";
-import { Gem, Gift, House, MapPin, Shirt, ShoppingBag } from "lucide-react";
+import { Flame, Gem, Gift, House, MapPin, Shirt, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,6 +35,7 @@ import {
 
 // One menu, named for what customers want to do (docs/BLUEPRINT.md, section 05).
 const primary = [
+  { href: "/drops", label: "Drops", icon: Flame },
   { href: "/fits", label: "Fits", icon: Shirt },
   { href: "/gift", label: "Gift", icon: Gift },
   // Home and Shop sit in the middle of the dock.

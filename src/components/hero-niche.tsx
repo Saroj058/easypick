@@ -1,3 +1,8 @@
+import Link from "next/link";
+
+import { formatPrice } from "@/lib/format";
+import type { Category } from "@/lib/types";
+
 // The home page's wardrobe: a hollow niche cut into the white page, built here (no photograph),
 // after the owner's sample picture, in white instead of warm.
 //
@@ -9,9 +14,31 @@
 //  - under each shelf a steel rail runs from one side wall to the other, with five slim black
 //    hangers on it;
 //  - one plant bottom right, on the floor ledge.
-// The clothes are off the rails for now (owner, 9 Oct 2026): the tappable rack is in hero-rack.tsx.
+// The shop's own pieces hang from the hangers (their product photos, cut out); each leads to its page.
 
 const HANGERS = 5;
+
+/** A piece hung in the niche: its own product photo, cut out (public/rack/<slug>.webp, from scripts/rack-cutouts.mjs). */
+export interface NichePiece {
+  slug: string;
+  name: string;
+  price: number;
+  category: Category;
+}
+
+/** The pieces with a cut-out photo. A new product needs scripts/rack-cutouts.mjs run, and its slug added here. */
+export const NICHE_CUTOUTS = new Set(["boxy-pocket-tee", "brushed-crewneck", "coach-jacket", "everyday-hoodie", "fleece-quarter-zip", "oversized-heavy-tee", "relaxed-straight-jean", "six-panel-cap", "tapered-jogger", "washed-co-ord-set", "wide-cargo-pant"]);
+
+// How each kind hangs, relative to its hanger: how wide it is, and where its top sits (tops cover
+// the hanger's shoulders; trousers hang from its bar).
+const HANG: Record<Category, { width: string; top: string }> = {
+  tees: { width: "168%", top: "24%" },
+  hoodies: { width: "176%", top: "12%" },
+  jackets: { width: "172%", top: "16%" },
+  "co-ords": { width: "128%", top: "22%" },
+  bottoms: { width: "104%", top: "74%" },
+  accessories: { width: "90%", top: "60%" },
+};
 /** How deep the recess looks, as a share of its own size: shallow, as in the sample. */
 const D = "3.6%";
 const W = "rgba(255,255,255,";
@@ -62,7 +89,7 @@ function Plant({ kind, className = "" }: { kind: "up" | "trail"; className?: str
  * One shelf with the rail under it. `top` is where the shelf sits on the back wall. Light comes off
  * the wall just above the shelf and from under it; the rail runs wall to wall with its hangers.
  */
-function Shelf({ top, items }: { top: string; items?: React.ReactNode }) {
+function Shelf({ top, items, pieces = [], clearRight = false }: { top: string; items?: React.ReactNode; /** What hangs on the rail, left to right (five at most). */ pieces?: NichePiece[]; /** Keep the right end clear (the plant stands there). */ clearRight?: boolean }) {
   return (
     <div className="absolute inset-x-0" style={{ top }}>
       {/* Light on the wall just above the shelf, from a strip along its back edge */}
@@ -84,21 +111,43 @@ function Shelf({ top, items }: { top: string; items?: React.ReactNode }) {
         <span key={side} aria-hidden className={`absolute ${side} top-[19px] z-[3] h-[10px] w-[4px] -translate-y-1/2 rounded-[1px] bg-[linear-gradient(180deg,#f4f4f4,#8c8c8c_60%,#666)] md:top-[33.5px] md:h-[17px] md:w-[6px]`} />
       ))}
       {/* Five hangers along it: each hook loops over the rail and the hanger hangs below */}
-      <ul aria-hidden className="absolute inset-x-[11%] top-[11px] z-[4] flex justify-between md:top-[19px]">
-        {Array.from({ length: HANGERS }, (_, i) => (
-          <li key={i} className="w-[10.5%] [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
-            <Hanger />
-          </li>
-        ))}
+      <ul className={`absolute top-[11px] z-[4] flex justify-between md:top-[19px] ${clearRight ? "left-[7%] right-[21%]" : "inset-x-[9%]"}`}>
+        {Array.from({ length: HANGERS }, (_, i) => {
+          const piece = pieces[i];
+          return (
+            <li key={i} className="relative w-[10.5%]">
+              <span aria-hidden className="block [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
+                <Hanger />
+              </span>
+              {piece && (
+                // The piece itself, hanging: it leads to its page, and lifts a little when pointed at.
+                <Link
+                  href={`/product/${piece.slug}`}
+                  aria-label={`${piece.name}, ${formatPrice(piece.price)}`}
+                  title={`${piece.name} · ${formatPrice(piece.price)}`}
+                  className="group absolute left-1/2 z-[1] block -translate-x-1/2 origin-top transition-transform duration-300 hover:z-10 hover:scale-[1.06] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  style={{ width: HANG[piece.category].width, top: HANG[piece.category].top }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- the piece's own photo, cut out; small and already compressed */}
+                  <img src={`/rack/${piece.slug}.webp`} alt="" draggable={false} className="block h-auto w-full [filter:drop-shadow(7px_10px_7px_rgba(0,0,0,0.25))]" />
+                  {/* Its name and price, shown when it is pointed at or focused */}
+                  <span className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-2.5 py-1 font-mono text-[10px] font-semibold text-paper opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                    {piece.name} · {formatPrice(piece.price)}
+                  </span>
+                </Link>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
 }
 
-export function HeroNiche() {
+export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. */ upper: NichePiece[]; /** Bottoms and jackets, on the second. */ lower: NichePiece[]; /** The cap on the accessories shelf, if it is on sale. */ cap: NichePiece | null }) {
   return (
     // No room is drawn round it: the white page is the wall, and this is a hole cut into the screen.
-    <div role="img" aria-label="The Easypick wardrobe: a lit white hollow in the page with a shelf for accessories, two rails of hangers and plants" className="absolute inset-0">
+    <div role="group" aria-label="The Easypick wardrobe: pieces from the shop, hung in a lit white hollow" className="absolute inset-0">
       <div className="absolute inset-0 shadow-[0_0_0_1px_rgba(0,0,0,0.09)]">
         {/* The four faces of the recess, in perspective: ceiling in soft shade, sides, and the lit floor ledge */}
         <div aria-hidden className="absolute inset-x-0 top-0 bg-[linear-gradient(180deg,#d8d8d5,#ecece9)]" style={{ height: D, clipPath: `polygon(0 0,100% 0,calc(100% - ${D}) 100%,${D} 100%)` }} />
@@ -120,20 +169,23 @@ export function HeroNiche() {
           {/* Top compartment: accessories, with a trailing plant at the left end of the shelf */}
           <Shelf
             top="17%"
+            pieces={upper}
             items={
               <>
                 <Plant kind="trail" className="w-[11%]" />
-                <div className="ml-[3%] flex w-[40%] items-end justify-between">
-                  {[0, 1, 2, 3].map((i) => (
-                    // eslint-disable-next-line @next/next/no-img-element -- the cap's own photo, cut out
-                    <img key={i} src="/rack/six-panel-cap.webp" alt="" draggable={false} className="h-auto w-[19%] [filter:drop-shadow(4px_3px_3px_rgba(0,0,0,0.3))]" />
-                  ))}
-                </div>
+                {cap && (
+                  <Link href={`/product/${cap.slug}`} aria-label={`${cap.name}, ${formatPrice(cap.price)}`} title={`${cap.name} · ${formatPrice(cap.price)}`} className="ml-[3%] flex w-[40%] items-end justify-between transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+                    {[0, 1, 2, 3].map((i) => (
+                      // eslint-disable-next-line @next/next/no-img-element -- the cap's own photo, cut out
+                      <img key={i} src="/rack/six-panel-cap.webp" alt="" draggable={false} className="h-auto w-[19%] [filter:drop-shadow(4px_3px_3px_rgba(0,0,0,0.3))]" />
+                    ))}
+                  </Link>
+                )}
               </>
             }
           />
           {/* Second shelf: the two clothes compartments are above and below it */}
-          <Shelf top="57%" />
+          <Shelf top="57%" pieces={lower} clearRight />
 
           {/* One plant, bottom right, on the floor ledge */}
           <div className="absolute bottom-0 right-[2.5%] z-[5] w-[11%]">

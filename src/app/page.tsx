@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Countdown } from "@/components/countdown";
 import { FitsTeaser } from "@/components/home/fits-teaser";
-import { HeroNiche } from "@/components/hero-niche";
+import { HeroNiche, NICHE_CUTOUTS, type NichePiece } from "@/components/hero-niche";
 import { GiftBlock } from "@/components/home/gift-block";
 import { FlowButton } from "@/components/ui/flow-button";
 import { OurStore } from "@/components/home/our-store";
@@ -55,6 +55,20 @@ export default async function HomePage() {
   // Vault pieces have their own section; the shelf and the rail hold the house range.
   const range = products.filter((p) => !p.vault);
 
+  // What hangs in the hero's niche: live pieces that have a cut-out photo. Tops on the first rail,
+  // bottoms and jackets on the second (kinds taken in turn, so a rail isn't all one thing), five each.
+  const hung = range.filter((p) => p.status === "live" && NICHE_CUTOUTS.has(p.slug));
+  const asPiece = (p: (typeof hung)[number]): NichePiece => ({ slug: p.slug, name: p.name, price: p.salePrice ?? p.price, category: p.category });
+  const rail = (kinds: string[]) => {
+    const lists = kinds.map((k) => hung.filter((p) => p.category === k));
+    const picked: NichePiece[] = [];
+    for (let round = 0; picked.length < 5 && lists.some((l) => l.length > round); round++) for (const l of lists) if (l[round] && picked.length < 5) picked.push(asPiece(l[round]));
+    return picked;
+  };
+  const upperRail = rail(["tees", "hoodies", "co-ords"]);
+  const lowerRail = rail(["bottoms", "jackets"]);
+  const capPiece = hung.find((p) => p.slug === "six-panel-cap");
+
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
@@ -69,8 +83,8 @@ export default async function HomePage() {
           {/* Stage */}
           <div className="lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:self-center">
             <div className="relative -mx-4 aspect-[4/3] overflow-hidden bg-paper text-ink md:-mx-8 lg:mx-0">
-              {/* The wardrobe: a white hollow niche built on the page (components/hero-niche.tsx), empty hangers for now */}
-              <HeroNiche />
+              {/* The wardrobe: a white hollow niche built on the page (components/hero-niche.tsx), with the shop's pieces hung in it */}
+              <HeroNiche upper={upperRail} lower={lowerRail} cap={capPiece ? asPiece(capPiece) : null} />
             </div>
             {/* The way into the drop: right below the hollow, in black */}
             <div className="mt-4 flex justify-center md:mt-5">
