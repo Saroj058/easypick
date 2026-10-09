@@ -6,12 +6,12 @@
 //  - light strips along the top inside edge, both sides and the bottom, and under / above each shelf;
 //  - two thin white shelves make three compartments: accessories on top (a trailing plant at its
 //    left end), then two for clothes;
-//  - under each shelf a steel rail runs from one side wall to the other, with twelve slim black
+//  - under each shelf a steel rail runs from one side wall to the other, with five slim black
 //    hangers on it;
 //  - one plant bottom right, on the floor ledge.
 // The clothes are off the rails for now (owner, 9 Oct 2026): the tappable rack is in hero-rack.tsx.
 
-const HANGERS = 12;
+const HANGERS = 5;
 /** How deep the recess looks, as a share of its own size: shallow, as in the sample. */
 const D = "3.6%";
 const W = "rgba(255,255,255,";
@@ -83,10 +83,10 @@ function Shelf({ top, items }: { top: string; items?: React.ReactNode }) {
       {["left-0", "right-0"].map((side) => (
         <span key={side} aria-hidden className={`absolute ${side} top-[19px] z-[3] h-[10px] w-[4px] -translate-y-1/2 rounded-[1px] bg-[linear-gradient(180deg,#f4f4f4,#8c8c8c_60%,#666)] md:top-[33.5px] md:h-[17px] md:w-[6px]`} />
       ))}
-      {/* Twelve hangers along it: each hook loops over the rail and the hanger hangs below */}
-      <ul aria-hidden className="absolute inset-x-[9%] top-[13px] z-[4] flex justify-between md:top-[24px]">
+      {/* Five hangers along it: each hook loops over the rail and the hanger hangs below */}
+      <ul aria-hidden className="absolute inset-x-[11%] top-[11px] z-[4] flex justify-between md:top-[19px]">
         {Array.from({ length: HANGERS }, (_, i) => (
-          <li key={i} className="w-[6.4%] [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
+          <li key={i} className="w-[10.5%] [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
             <Hanger />
           </li>
         ))}
@@ -109,7 +109,7 @@ export function HeroNiche() {
         {/* The back wall: a touch off white, so the light on it shows */}
         <div className="absolute bg-[#e9e9e6]" style={{ inset: D }}>
           {/* Soft shade in the middle of each compartment, away from the lights */}
-          <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(0,0,0,0.035)_14%,rgba(0,0,0,0)_24%,rgba(0,0,0,0.04)_46%,rgba(0,0,0,0)_58%,rgba(0,0,0,0.04)_82%,rgba(0,0,0,0)_100%)]" />
+          <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(0,0,0,0.03)_9%,rgba(0,0,0,0)_15%,rgba(0,0,0,0.04)_38%,rgba(0,0,0,0)_53%,rgba(0,0,0,0.04)_80%,rgba(0,0,0,0)_100%)]" />
           {/* Light strips round the inside of the recess */}
           <div aria-hidden className="absolute inset-x-0 top-0 z-[1] h-[2px] bg-white shadow-[0_0_10px_3px_rgba(255,255,255,0.95)]" />
           <Wash from="top" reach="17%" />
@@ -119,7 +119,7 @@ export function HeroNiche() {
 
           {/* Top compartment: accessories, with a trailing plant at the left end of the shelf */}
           <Shelf
-            top="27%"
+            top="17%"
             items={
               <>
                 <Plant kind="trail" className="w-[11%]" />
@@ -133,7 +133,7 @@ export function HeroNiche() {
             }
           />
           {/* Second shelf: the two clothes compartments are above and below it */}
-          <Shelf top="62%" />
+          <Shelf top="57%" />
 
           {/* One plant, bottom right, on the floor ledge */}
           <div className="absolute bottom-0 right-[2.5%] z-[5] w-[11%]">
