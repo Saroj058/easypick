@@ -73,14 +73,13 @@ function Rail({ id, title, note, products }: { id: string; title: string; note?:
   );
 }
 
-function Chip({ href, on, children }: { href: string; on: boolean; children: React.ReactNode }) {
+/** One choice in the finder. Budgets are segments of one control; kinds are quiet words with a line under the chosen one. */
+function Chip({ href, on, tab = false, children }: { href: string; on: boolean; tab?: boolean; children: React.ReactNode }) {
+  const look = tab
+    ? `px-1 font-medium after:absolute after:inset-x-1 after:bottom-1.5 after:h-[2px] after:origin-left after:bg-ink after:transition-transform after:duration-200 ${on ? "text-ink after:scale-x-100" : "text-steel-dark after:scale-x-0 hover:text-ink"}`
+    : `flex-1 justify-center rounded-full px-2 font-semibold sm:flex-none sm:px-4 ${on ? "bg-ink text-paper shadow-[0_4px_10px_-4px_rgba(0,0,0,0.5)]" : "text-ink/70 hover:text-ink"}`;
   return (
-    <Link
-      href={href}
-      scroll={false}
-      aria-current={on ? "true" : undefined}
-      className={`inline-flex h-11 shrink-0 items-center rounded-full border px-4 text-sm font-semibold transition-[background-color,border-color,scale] duration-150 active:scale-[0.97] ${on ? "border-ink bg-ink text-paper" : "border-steel hover:border-ink"}`}
-    >
+    <Link href={href} scroll={false} aria-current={on ? "true" : undefined} className={`relative inline-flex h-11 shrink-0 items-center whitespace-nowrap text-sm transition-[background-color,color,scale] duration-150 active:scale-[0.97] ${look}`}>
       {children}
     </Link>
   );
@@ -189,33 +188,50 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
 
         {/* The pieces, with budget and kind as plain links */}
         <section id="pieces" aria-labelledby="pieces-h" className="scroll-mt-20">
-          <h2 id="pieces-h" className="display display-h2">
-            {max ? `Under ${formatPrice(max)}.` : "Every piece."}
-          </h2>
-          <nav aria-label="Budget" className="-mx-4 mt-6 flex scroll-px-4 gap-2 overflow-x-auto px-4 pb-1">
-            <Chip href={q({ max: null })} on={!max}>
-              Any price
-            </Chip>
-            {BUDGETS.map((b) => (
-              <Chip key={b} href={q({ max: b })} on={max === b}>
-                Under {formatPrice(b)}
-              </Chip>
-            ))}
-          </nav>
-          <nav aria-label="Kind of piece" className="-mx-4 mt-2 flex scroll-px-4 gap-2 overflow-x-auto px-4 pb-1">
-            <Chip href={q({ cat: null })} on={!cat}>
-              Anything
-            </Chip>
-            {cats.map((c) => (
-              <Chip key={c} href={q({ cat: c })} on={cat === c}>
-                {c === "one" ? "One size" : categoryLabels[c]}
-              </Chip>
-            ))}
-          </nav>
-          <p className="mt-4 text-[14px] text-steel-dark">
-            {every.length} {every.length === 1 ? "piece" : "pieces"}
-            {max ? ", best first" : ", cheapest first"}
-          </p>
+          <div className="flex items-end justify-between gap-4">
+            <h2 id="pieces-h" className="display display-h2">
+              {max ? `Under ${formatPrice(max)}.` : "Every piece."}
+            </h2>
+            <p className="index shrink-0 pb-1 text-right text-steel-dark">
+              {every.length} {every.length === 1 ? "piece" : "pieces"}
+              <span className="max-sm:hidden">{max ? " · best first" : " · cheapest first"}</span>
+            </p>
+          </div>
+          {/* The finder: one thin outlined card. Budget is a single control; kind is a row of words. */}
+          <div className="mt-5 rounded-2xl border border-ink">
+            <div className="flex items-center gap-3 px-3 py-2 md:px-4">
+              <span className="index w-14 shrink-0 text-steel-dark max-sm:hidden">Budget</span>
+              <nav aria-label="Budget" className="flex min-w-0 gap-1 rounded-full bg-mist p-1 max-sm:flex-1">
+                <Chip href={q({ max: null })} on={!max}>
+                  Any<span className="max-sm:sr-only">&nbsp;price</span>
+                </Chip>
+                {BUDGETS.map((b) => (
+                  <Chip key={b} href={q({ max: b })} on={max === b}>
+                    <span className="max-sm:sr-only">Under&nbsp;</span>
+                    {formatPrice(b)}
+                  </Chip>
+                ))}
+              </nav>
+            </div>
+            <div className="flex items-center gap-3 border-t border-ink/15 px-3 md:px-4">
+              <span className="index w-14 shrink-0 text-steel-dark max-sm:hidden">Kind</span>
+              <nav aria-label="Kind of piece" className="flex min-w-0 flex-1 gap-4 overflow-x-auto md:gap-6">
+                <Chip tab href={q({ cat: null })} on={!cat}>
+                  Anything
+                </Chip>
+                {cats.map((c) => (
+                  <Chip tab key={c} href={q({ cat: c })} on={cat === c}>
+                    {c === "one" ? "One size" : categoryLabels[c]}
+                  </Chip>
+                ))}
+              </nav>
+              {filtered && (
+                <Link href={q({ max: null, cat: null })} scroll={false} className="inline-flex h-11 shrink-0 items-center text-[13px] font-semibold underline underline-offset-4">
+                  Clear
+                </Link>
+              )}
+            </div>
+          </div>
           {every.length > 0 ? (
             <ul key={`${max}-${cat}`} className="mt-6 grid animate-fade-up grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
               {every.slice(0, shown).map((p, i) => (
