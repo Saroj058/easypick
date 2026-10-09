@@ -36,9 +36,9 @@ const CUTOUTS = new Set([
 // How wide each piece hangs relative to its slot, and how far it sits up over its hanger (tops
 // cover the hanger's shoulders; trousers hang from its clips; a cap hangs from a short hook).
 const fit: Record<Category, { w: string; tuck: string }> = {
-  tees: { w: "w-[112%]", tuck: "-mt-[25%]" },
-  hoodies: { w: "w-[116%]", tuck: "-mt-[30%]" },
-  jackets: { w: "w-[116%]", tuck: "-mt-[28%]" },
+  tees: { w: "w-[104%]", tuck: "-mt-[21%]" },
+  hoodies: { w: "w-[106%]", tuck: "-mt-[27%]" },
+  jackets: { w: "w-[106%]", tuck: "-mt-[24%]" },
   bottoms: { w: "w-[54%]", tuck: "-mt-[7%]" },
   "co-ords": { w: "w-[86%]", tuck: "-mt-[24%]" },
   accessories: { w: "w-[70%]", tuck: "-mt-[2%]" },
@@ -80,7 +80,7 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
           const i = offset + n;
           const on = i === active;
           return (
-            <li key={product.id} className={`relative -mx-[22px] w-[96px] shrink-0 sm:-mx-[26px] sm:w-[120px] xl:-mx-[30px] xl:w-[150px] ${on ? "z-10" : ""}`}>
+            <li key={product.id} className={`relative -mx-[18px] w-[96px] shrink-0 sm:-mx-[16px] sm:w-[120px] xl:-mx-[22px] xl:w-[150px] ${on ? "z-10" : ""}`}>
               <button
                 type="button"
                 onClick={() => setActive(i)}

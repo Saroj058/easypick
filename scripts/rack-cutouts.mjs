@@ -50,9 +50,9 @@ for (const slug of readdirSync(SRC)) {
   // Alpha: 0 on the background, then a one-pixel blur so the edge isn't jagged.
   const alpha = Buffer.alloc(w * h);
   for (let k = 0; k < w * h; k++) alpha[k] = seen[k] ? 0 : 255;
-  const softened = await sharp(alpha, { raw: { width: w, height: h, channels: 1 } }).blur(1.6).raw().toBuffer({ resolveWithObject: true });
+  const softened = await sharp(alpha, { raw: { width: w, height: h, channels: 1 } }).blur(2.2).raw().toBuffer({ resolveWithObject: true });
   const step = softened.info.channels; // sharp may hand a grey image back with more than one channel
-  for (let k = 0; k < w * h; k++) data[k * 4 + 3] = seen[k] ? 0 : Math.max(0, Math.min(255, (softened.data[k * step] - 110) * 1.9)); // pulled in a touch, so no pale rim of studio grey is left
+  for (let k = 0; k < w * h; k++) data[k * 4 + 3] = seen[k] ? 0 : Math.max(0, Math.min(255, (softened.data[k * step] - 165) * 3)); // pulled in a touch, so no pale rim of studio grey is left
 
   // Crop to the garment itself.
   let x0 = w, y0 = h, x1 = 0, y1 = 0;
