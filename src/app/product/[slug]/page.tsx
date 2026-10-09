@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { BuyPanel } from "@/components/buy-panel";
 import { RefreshCw, Store, Tag, Truck } from "lucide-react";
 
-import { HangTag } from "@/components/hang-tag";
 import { ChevronIcon } from "@/components/icons";
 import { RecentlyViewed } from "@/components/local-lists";
 import { TrackView } from "@/components/track-view";
@@ -124,13 +123,11 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             name={product.name}
             description={product.shortDescription}
             facts={product.details.slice(0, 3)}
-            details={[`${product.fit[0].toUpperCase()}${product.fit.slice(1)} fit · ${product.gender}`, ...product.details]}
-            tag={<HangTag product={product} size={sizes.includes("M") ? "M" : sizes[0]} className="[--hole:var(--color-paper)]" />}
           />
         </div>
 
-        <div className="border-ink/10 bg-[#f6f6f3] px-4 py-7 md:px-8 lg:border-l lg:px-9 lg:py-7">
-          <div>
+        <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-12">
+          <div className="lg:sticky lg:top-28">
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
               {product.brand ? <span>{product.brand}</span> : drop ? <span>{drop.name}</span> : <span>{categoryLabels[product.category]}</span>}
               {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
@@ -141,10 +138,10 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               )}
               {product.status === "scheduled" && drop && <span className="text-ink">Arrives {formatDropTime(drop.releaseAt, { bs: true })}</span>}
             </p>
-            <div className="mt-3 flex items-start justify-between gap-6">
+            <div className="mt-5 flex items-start justify-between gap-6">
               <div className="min-w-0">
-                <h1 className="text-[20px] font-medium uppercase leading-snug tracking-[0.16em] md:text-[22px]">{product.name}</h1>
-                <p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
+                <h1 className="text-[22px] font-medium uppercase leading-snug tracking-[0.16em] md:text-[24px]">{product.name}</h1>
+                <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
                   {product.colours[0].name} · {product.fit} fit
                 </p>
               </div>
@@ -156,7 +153,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             </div>
             <p className="mt-4 text-[15px] text-steel-dark lg:hidden">{product.shortDescription}</p>
 
-            <div className="mt-4 border-t border-ink/15 pt-4">
+            <div className="mt-6 border-t border-ink/15 pt-6">
               <BuyPanel
                 slug={product.slug}
                 name={product.name}
@@ -176,7 +173,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             </div>
 
             {/* Four plain promises, small */}
-            <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-ink/15 pt-4 font-mono text-[10.5px] uppercase leading-snug tracking-[0.12em] text-ink/80">
+            <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-ink/15 pt-6 font-mono text-[10.5px] uppercase leading-snug tracking-[0.12em] text-ink/80">
               {[
                 { icon: Tag, a: "Fixed price", b: "Same in store" },
                 { icon: Store, a: "Free pickup", b: "Kathmandu store" },

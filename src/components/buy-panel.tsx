@@ -11,7 +11,7 @@ import { useAddToBag } from "./bag-gate";
 import { RestockForm } from "./restock-form";
 import { SaveButton } from "./saved";
 import { useMe } from "./session";
-import { ArrowIcon, GiftIcon } from "./icons";
+import { GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
 
 const POLL_MS = 45_000;
@@ -103,14 +103,18 @@ export function BuyPanel(props: Props) {
 
   return (
     <div>
-      {/* The price is in the heading above this panel; delivery and pickup are under "Pickup, delivery
-          and returns". Save sits at the foot, beside the WhatsApp line. */}
+      {/* The price, VAT and the fixed-price promise are on the hang tag beside the photo; delivery and
+          pickup are under "Pickup, delivery and returns". Here: only Save. */}
+      <div className="flex justify-end">
+        <SaveButton slug={slug} name={name} />
+      </div>
+
       {colours.length > 1 && (
-        <fieldset>
+        <fieldset className="mt-8">
           <legend className="text-sm font-semibold">
             Colour <span className="font-normal text-steel-dark">· {colour.name}</span>
           </legend>
-          <div className="mt-2.5 flex gap-3">
+          <div className="mt-3 flex gap-3">
             {colours.map((c) => (
               <label key={c.name} className="relative cursor-pointer">
                 <input
@@ -125,7 +129,7 @@ export function BuyPanel(props: Props) {
                   className="peer sr-only"
                 />
                 <span
-                  className="block h-9 w-9 rounded-full border border-black/10 ring-offset-2 ring-offset-[#f6f6f3] peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ink"
+                  className="block h-11 w-11 rounded-full border border-black/10 ring-offset-2 peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ink"
                   style={{ background: c.hex }}
                 />
                 <span className="sr-only">{c.name}</span>
@@ -136,7 +140,7 @@ export function BuyPanel(props: Props) {
       )}
 
       {status === "live" && !oneSize && (
-        <fieldset className={colours.length > 1 ? "mt-5" : ""}>
+        <fieldset className="mt-8">
           <div className="flex items-baseline justify-between">
             <legend className="text-sm font-semibold">Size</legend>
             <button
@@ -144,7 +148,7 @@ export function BuyPanel(props: Props) {
               onClick={() => setFitOpen((o) => !o)}
               aria-expanded={fitOpen}
               aria-controls={`fit-${slug}`}
-              className="min-h-9 text-[13px] underline underline-offset-2"
+              className="min-h-11 text-[13px] underline underline-offset-2"
             >
               {hasFit(profile) ? "Edit my fit" : "Match my size in cm"}
             </button>
@@ -166,7 +170,7 @@ export function BuyPanel(props: Props) {
               <FitFinder compact onSaved={() => setFitOpen(false)} />
             </div>
           )}
-          <div className="mt-1.5 grid grid-cols-4 gap-2">
+          <div className="mt-3 grid grid-cols-4 gap-2">
             {sizes.map((s) => {
               const st = stockFor(s);
               const n = st ? st.stock - (st.inStoreOnly ? 1 : 0) : null;
@@ -184,7 +188,7 @@ export function BuyPanel(props: Props) {
                     className="peer sr-only"
                   />
                   <span
-                    className={`flex h-[52px] flex-col items-center justify-center rounded-xl border bg-paper text-center transition-colors peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink ${
+                    className={`flex h-[60px] flex-col items-center justify-center rounded-[2px] border text-center transition-colors peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink ${
                       out ? "border-mist bg-photo text-steel line-through" : "border-mist hover:border-ink"
                     }`}
                   >
@@ -203,7 +207,7 @@ export function BuyPanel(props: Props) {
               );
             })}
           </div>
-          <p className="mt-1.5 min-h-4 text-[12px] text-steel-dark" aria-live="polite">
+          <p className="mt-2 min-h-5 text-[12px] text-steel-dark" aria-live="polite">
             {error ? "Couldn't check stock. Retrying…" : checked ? "" : "Checking stock…"}
           </p>
           <RestockForm
@@ -216,31 +220,30 @@ export function BuyPanel(props: Props) {
 
       {props.modelNote && <p className="mt-2 text-[13px] text-steel-dark">{props.modelNote}</p>}
 
-      <div className="mt-3 flex gap-2.5">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         {status === "live" ? (
           <>
             {variant && sellable > 0 ? (
-              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="group flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-semibold uppercase tracking-[0.1em] transition-[background-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
+              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="btn btn-volt flex-1">
                 Buy now
-                <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             ) : (
-              <button type="button" disabled className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-semibold uppercase tracking-[0.1em] transition-[background-color,color,scale] duration-200 active:scale-[0.98] bg-ink/15 text-ink/55">
+              <button type="button" disabled className="btn btn-volt flex-1">
                 Pick a size
               </button>
             )}
             {canBag && (
-              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-semibold uppercase tracking-[0.1em] transition-[background-color,color,scale] duration-200 active:scale-[0.98] cursor-pointer border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper disabled:cursor-default disabled:border-ink/25 disabled:text-ink/40 disabled:hover:bg-paper disabled:hover:text-ink/40">
+              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="btn btn-ink flex-1">
                 {added ? "Added" : "Add to bag"}
               </button>
             )}
           </>
         ) : (
           <>
-            <Link href="/alerts" className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-semibold uppercase tracking-[0.1em] transition-[background-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
+            <Link href="/alerts" className="btn btn-volt flex-1">
               Notify me
             </Link>
-            <Link href="/drops" className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full text-[13px] font-semibold uppercase tracking-[0.1em] transition-[background-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper">
+            <Link href="/drops" className="btn btn-outline flex-1">
               {status === "scheduled" ? props.dropLabel ?? "See the drop" : "See the drop"}
             </Link>
           </>
@@ -251,22 +254,19 @@ export function BuyPanel(props: Props) {
       )}
       {status === "live" && (
         <>
-          <p className="mt-2 text-[12px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
-          <div className="mt-3 flex gap-2.5">
-            <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}${picked && picked !== "ONE" ? `&size=${picked}` : ""}`} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full border border-ink/25 text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors duration-200 hover:border-ink">
-              <GiftIcon className="h-4 w-4" />
+          <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}${picked && picked !== "ONE" ? `&size=${picked}` : ""}`} className="btn btn-outline flex-1">
+              <GiftIcon className="h-5 w-5" />
               Send as gift
             </Link>
-            <Link href={`/visit?try=${slug}`} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full border border-ink/25 text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors duration-200 hover:border-ink">
+            <Link href={`/visit?try=${slug}`} className="btn btn-outline flex-1">
               Try in store
             </Link>
           </div>
+          <AskWhatsApp className="mt-3" text={`Hi Easypick, a question about ${name} (${colour.name}${size ? `, ${size}` : ""}): `} />
         </>
       )}
-      <div className="mt-2 flex items-center justify-between gap-3">
-        {status === "live" ? <AskWhatsApp text={`Hi Easypick, a question about ${name} (${colour.name}${size ? `, ${size}` : ""}): `} /> : <span />}
-        <SaveButton slug={slug} name={name} />
-      </div>
       <p className="sr-only" role="status">
         {added ? `${name}, ${colour.name}, size ${size} added to bag` : ""}
       </p>
