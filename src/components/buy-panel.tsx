@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import { MapPin, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -11,7 +11,7 @@ import { AskWhatsApp } from "./ask-whatsapp";
 import { useAddToBag } from "./bag-gate";
 import { RestockForm } from "./restock-form";
 import { useMe } from "./session";
-import { GiftIcon } from "./icons";
+import { ArrowIcon, GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
 
 const POLL_MS = 45_000;
@@ -217,30 +217,32 @@ export function BuyPanel(props: Props) {
 
       {props.modelNote && <p className="mt-2 text-[13px] text-steel-dark">{props.modelNote}</p>}
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-6 flex gap-2.5">
         {status === "live" ? (
           <>
             {variant && sellable > 0 ? (
-              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="btn btn-volt flex-1">
+              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
                 Buy now
+                <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             ) : (
-              <button type="button" disabled className="btn btn-volt flex-1">
+              <button type="button" disabled className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink/15 text-ink/55">
                 Pick a size
               </button>
             )}
             {canBag && (
-              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="btn btn-ink flex-1">
+              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper cursor-pointer disabled:cursor-default disabled:border-ink/25 disabled:text-ink/40 disabled:hover:bg-paper disabled:hover:text-ink/40">
+                <ShoppingBag aria-hidden className="h-4 w-4" strokeWidth={1.8} />
                 {added ? "Added" : "Add to bag"}
               </button>
             )}
           </>
         ) : (
           <>
-            <Link href="/alerts" className="btn btn-volt flex-1">
+            <Link href="/alerts" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
               Notify me
             </Link>
-            <Link href="/drops" className="btn btn-outline flex-1">
+            <Link href="/drops" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper">
               {status === "scheduled" ? props.dropLabel ?? "See the drop" : "See the drop"}
             </Link>
           </>
