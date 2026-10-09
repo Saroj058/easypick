@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { formatPrice } from "@/lib/format";
@@ -46,6 +47,22 @@ const HANG: Record<Category, { width: string; top: string }> = {
   accessories: { width: "90%", top: "60%" },
 };
 
+// Pieces photographed already hanging (public/rack/hung/<slug>.webp, cut from the owner's wardrobe
+// photograph by scripts/rack-hung.mjs): real drape, on their own hanger, cut off level where they
+// meet the rail. The number is the piece's width against its hanger slot, true to the photograph.
+const HUNG: Record<string, number> = {
+  "oversized-heavy-tee": 189,
+  "everyday-hoodie": 216,
+  "boxy-pocket-tee": 173,
+  "brushed-crewneck": 210,
+  "washed-co-ord-set": 174,
+  "tapered-jogger": 120,
+  "coach-jacket": 208,
+  "relaxed-straight-jean": 123,
+  "fleece-quarter-zip": 200,
+  "wide-cargo-pant": 132,
+};
+
 /** A wash of light coming off one edge of a box, brightest at the edge. */
 function Wash({ from, reach, strength = 1 }: { from: "top" | "bottom" | "left" | "right"; reach: string; strength?: number }) {
   const along = from === "top" || from === "bottom";
@@ -64,11 +81,11 @@ function Wash({ from, reach, strength = 1 }: { from: "top" | "bottom" | "left" |
 }
 
 /** A black hanger with a steel hook, drawn so it stays crisp at any size. Tops get the shaped one; trousers a bar with two clips. */
-function Hanger({ clips = false }: { clips?: boolean }) {
+function Hanger({ clips = false, hookOnly = false }: { clips?: boolean; /** The piece's photograph has its own hanger: only the hook over the rail is drawn. */ hookOnly?: boolean }) {
   return (
     <svg viewBox="0 0 60 66" className="block h-auto w-full overflow-visible" aria-hidden>
       <path d="M30 24 V15 q0 -7 5.5 -7 q5.5 0 5 5.5" fill="none" stroke="#8e8e8e" strokeWidth="1.8" strokeLinecap="round" />
-      {clips ? (
+      {hookOnly ? null : clips ? (
         <>
           <path d="M30 23 V30" stroke="#8e8e8e" strokeWidth="1.8" />
           <path d="M7 31 H53" stroke="#141414" strokeWidth="3.6" strokeLinecap="round" />
@@ -210,9 +227,11 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
   const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
 
   /** A piece that can be picked: pointing at it or tapping it shows its details and tag in the bottom compartment. */
+  const router = useRouter();
   const pick = (piece: NichePiece) => ({
     type: "button" as const,
-    onClick: () => setActiveSlug(piece.product.slug),
+    // The first tap picks it; a tap on the piece already picked opens its page.
+    onClick: () => (piece.product.slug === activeSlug ? router.push(`/product/${piece.product.slug}`) : setActiveSlug(piece.product.slug)),
     onMouseEnter: () => setActiveSlug(piece.product.slug),
     onFocus: () => setActiveSlug(piece.product.slug),
     "aria-pressed": piece.product.slug === activeSlug,
@@ -245,19 +264,20 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
         {Array.from({ length: HANGERS }, (_, i) => {
           const piece = pieces[i];
           const on = piece?.product.slug === activeSlug;
+          const hung = piece ? HUNG[piece.product.slug] : undefined;
           return (
             <li key={i} className={`relative w-[9.2%] ${on ? "z-10" : piece?.product.category === "bottoms" ? "z-[1]" : ""}`}>
               <span aria-hidden className="block [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
-                <Hanger clips={piece?.product.category === "bottoms"} />
+                <Hanger clips={piece?.product.category === "bottoms"} hookOnly={Boolean(hung)} />
               </span>
               {piece && (
                 <button
                   {...pick(piece)}
-                  className={`absolute left-1/2 block -translate-x-1/2 origin-top cursor-pointer transition-transform duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${on ? "scale-[1.07]" : ""}`}
-                  style={{ width: HANG[piece.product.category].width, top: HANG[piece.product.category].top }}
+                  className={`absolute left-1/2 block -translate-x-1/2 origin-top cursor-pointer transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${hung ? "top-[9px] md:top-[17px]" : ""} ${on ? "rotate-[-3deg] scale-[1.06]" : "[@media(hover:hover)]:hover:rotate-[-2deg]"}`}
+                  style={hung ? { width: `${hung}%` } : { width: HANG[piece.product.category].width, top: HANG[piece.product.category].top }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- the piece's own photo, cut out; small and already compressed */}
-                  <img src={`/rack/${piece.product.slug}.webp`} alt="" draggable={false} className={`block h-auto w-full transition-[filter] duration-300 ${on ? "[filter:drop-shadow(9px_14px_9px_rgba(0,0,0,0.34))]" : "[filter:drop-shadow(6px_9px_6px_rgba(0,0,0,0.22))]"}`} />
+                  <img src={hung ? `/rack/hung/${piece.product.slug}.webp` : `/rack/${piece.product.slug}.webp`} alt="" draggable={false} className={`block h-auto w-full transition-[filter] duration-300 ${on ? "[filter:drop-shadow(9px_14px_9px_rgba(0,0,0,0.34))]" : "[filter:drop-shadow(6px_9px_6px_rgba(0,0,0,0.22))]"}`} />
                 </button>
               )}
             </li>
