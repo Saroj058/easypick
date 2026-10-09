@@ -3,15 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BuyPanel } from "@/components/buy-panel";
-import { HangTag } from "@/components/hang-tag";
+import { RefreshCw, Store, Tag, Truck } from "lucide-react";
+
 import { ChevronIcon } from "@/components/icons";
 import { RecentlyViewed } from "@/components/local-lists";
 import { TrackView } from "@/components/track-view";
 import { TryOnLive } from "@/components/try-on-live";
 import { ProductGrid } from "@/components/product-card";
 import { RecordView } from "@/components/saved";
-import { ProductImage } from "@/components/product-image";
-import { formatDropTime } from "@/lib/format";
+import { ProductStage } from "@/components/product-stage";
+import { formatDropTime, formatPrice } from "@/lib/format";
+import { RACK_CUTOUTS } from "@/lib/rack-cutouts";
 import { categoryLabels, site } from "@/lib/site";
 import { jsonLd as toJsonLd } from "@/lib/json-ld";
 import { getDrop, getProduct, getProducts } from "@/lib/store";
@@ -53,7 +55,6 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
 
   const sizes = Object.keys(product.measurements) as Size[];
   const cols = Array.from(new Set(sizes.flatMap((s) => Object.keys(product.measurements[s] ?? {})))) as (keyof typeof measureLabels)[];
-  const hex = product.colours[0].hex;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -94,170 +95,176 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={toJsonLd(jsonLd)} />
 
-      <div className="container-ep pb-24 pt-6 md:pt-10">
-        <nav aria-label="Breadcrumb" className="mb-6 text-[13px] text-steel-dark">
-          <ol className="flex gap-2">
-            <li>
-              <Link href="/shop" className="hover:underline">
-                Shop
-              </Link>
-            </li>
-            <li aria-hidden>/</li>
-            <li>
-              <Link href={`/shop?category=${product.category}`} className="hover:underline">
-                {categoryLabels[product.category]}
-              </Link>
-            </li>
-          </ol>
-        </nav>
+      {/* The first screen: the piece alone in the middle with a quiet column beside it, and the buying
+          panel down the right on a faint tint. One column on phones. */}
+      <section className="border-b border-ink/10 lg:grid lg:min-h-[calc(100svh-88px)] lg:grid-cols-[minmax(0,1fr)_minmax(380px,31%)]">
+        {/* The stage stays in view while a long buying panel scrolls beside it */}
+        <div className="relative lg:sticky lg:top-[88px] lg:h-[calc(100svh-88px)] lg:self-start">
+          <nav aria-label="Breadcrumb" className="absolute right-4 top-4 z-10 font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark lg:left-10 lg:right-auto lg:top-6">
+            <ol className="flex gap-2">
+              <li>
+                <Link href="/shop" className="hover:text-ink hover:underline">
+                  Shop
+                </Link>
+              </li>
+              <li aria-hidden>/</li>
+              <li>
+                <Link href={`/shop?category=${product.category}`} className="hover:text-ink hover:underline">
+                  {categoryLabels[product.category]}
+                </Link>
+              </li>
+            </ol>
+          </nav>
+          <ProductStage
+            images={product.images}
+            cutout={RACK_CUTOUTS.has(product.slug) ? `/rack/${product.slug}.webp` : null}
+            category={product.category}
+            colour={product.colours[0]}
+            name={product.name}
+            description={product.shortDescription}
+            facts={product.details.slice(0, 3)}
+          />
+        </div>
 
-        <div className="grid gap-10 lg:grid-cols-12">
-          {/* Gallery: swipe on phones, grid on desktop */}
-          <div className="relative -mx-4 lg:col-span-7 lg:mx-0 lg:pb-[250px]">
-            <ul
-              className={`flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 lg:grid lg:gap-3 lg:overflow-visible lg:px-0 ${
-                product.images.length > 1 ? "lg:grid-cols-2" : "lg:grid-cols-1"
-              }`}
-            >
-              {product.images.map((img, i) => (
-                <li key={i} className={`relative shrink-0 snap-center lg:w-auto ${product.images.length > 1 ? "w-[86%]" : "w-full"}`}>
-                  <ProductImage
-                    image={img}
-                    category={product.category}
-                    colourHex={hex}
-                    priority={i === 0}
-                    sizes={product.images.length > 1 ? "(min-width: 1024px) 30vw, 86vw" : "(min-width: 1024px) 55vw, 100vw"}
-                  />
+        <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-12">
+          <div className="lg:sticky lg:top-28">
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
+              {product.brand ? <span>{product.brand}</span> : drop ? <span>{drop.name}</span> : <span>{categoryLabels[product.category]}</span>}
+              {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
+              {product.edition && (
+                <span className="text-ink">
+                  {String(product.edition.no).padStart(2, "0")} / {String(product.edition.of).padStart(2, "0")}
+                </span>
+              )}
+              {product.status === "scheduled" && drop && <span className="text-ink">Arrives {formatDropTime(drop.releaseAt, { bs: true })}</span>}
+            </p>
+            <div className="mt-5 flex items-start justify-between gap-6">
+              <div className="min-w-0">
+                <h1 className="text-[22px] font-medium uppercase leading-snug tracking-[0.16em] md:text-[24px]">{product.name}</h1>
+                <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
+                  {product.colours[0].name} · {product.fit} fit
+                </p>
+              </div>
+              {/* The price, fixed: the same on the tag in the store */}
+              <p className="shrink-0 text-right font-mono text-[20px] tabular-nums leading-snug">
+                {formatPrice(product.salePrice ?? product.price)}
+                {product.salePrice && <s className="block text-[12px] text-steel-dark">{formatPrice(product.price)}</s>}
+              </p>
+            </div>
+            <p className="mt-4 text-[15px] text-steel-dark lg:hidden">{product.shortDescription}</p>
+
+            <div className="mt-6 border-t border-ink/15 pt-6">
+              <BuyPanel
+                slug={product.slug}
+                name={product.name}
+                price={product.price}
+                salePrice={product.salePrice}
+                colours={product.colours}
+                variants={product.variants}
+                status={product.status}
+                fit={product.fit}
+                // No on-model photos, so the "Model is … and wears …" note is left out.
+                category={product.category}
+                measurements={product.measurements}
+                vault={product.vault}
+                dropLabel={drop ? `Drops ${formatDropTime(drop.releaseAt)}` : undefined}
+              />
+              {product.tryOn && <TryOnLive slug={product.slug} />}
+            </div>
+
+            {/* Four plain promises, small */}
+            <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-ink/15 pt-6 font-mono text-[10.5px] uppercase leading-snug tracking-[0.12em] text-ink/80">
+              {[
+                { icon: Tag, a: "Fixed price", b: "Same in store" },
+                { icon: Store, a: "Free pickup", b: "Kathmandu store" },
+                { icon: RefreshCw, a: "Exchange", b: "Within 7 days" },
+                { icon: Truck, a: "Delivery", b: "In the Valley" },
+              ].map(({ icon: Icon, a, b }) => (
+                <li key={a} className="flex items-start gap-2">
+                  <Icon aria-hidden className="mt-px h-4 w-4 shrink-0" strokeWidth={1.5} />
+                  <span>
+                    {a}
+                    <span className="block text-steel-dark">{b}</span>
+                  </span>
                 </li>
               ))}
             </ul>
-            {/* The same tag that hangs on the piece in the store (price, cm, RFID), pinned at the
-                bottom of the photo and hanging below it. The shadow is on the wrapper because the
-                tag's cut corners would clip it. */}
-            <div className="pointer-events-none absolute right-10 top-full z-10 -mt-3 origin-top-right scale-[0.6] md:right-10 md:scale-[0.8] lg:top-[calc(100%-250px)] lg:right-8 xl:scale-90">
-              <div className="tag-hang flex flex-col items-center [filter:drop-shadow(0_0_0.6px_rgba(0,0,0,0.45))_drop-shadow(0_8px_14px_rgba(0,0,0,0.14))]" aria-hidden>
-                <span className="h-3.5 w-3.5 rounded-full border-2 border-ink/60 bg-paper" />
-                <span className="h-9 w-px bg-ink/60" />
-                <HangTag product={product} size={sizes.includes("M") ? "M" : sizes[0]} className="[--hole:var(--color-mist)]" />
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5">
-            <div className="lg:sticky lg:top-24">
-              {product.status === "scheduled" && drop && (
-                <span className="tag-volt mb-4">
-                  {drop.name} · {formatDropTime(drop.releaseAt, { bs: true })}
-                </span>
-              )}
-              {/* On phones and tablets the tag hangs down beside the title, so the title leaves room. */}
-              <div className="pr-[128px] md:pr-[196px] lg:pr-0">
-                {(product.brand || product.edition) && (
-                  <p className="mb-2 flex flex-wrap items-center gap-x-3 font-mono text-[12px] uppercase tracking-[0.14em] text-steel-dark">
-                    {product.brand && <span>{product.brand}</span>}
-                    {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
-                    {product.edition && (
-                      <span className="text-ink">
-                        {String(product.edition.no).padStart(2, "0")} / {String(product.edition.of).padStart(2, "0")}
-                      </span>
-                    )}
-                  </p>
-                )}
-                <h1 className="display text-[40px] md:text-[56px]">{product.name}</h1>
-                <p className="mt-2 text-steel-dark">{product.shortDescription}</p>
-                {product.story && <p className="mt-4 max-w-[46ch] whitespace-pre-line text-[15px] leading-relaxed">{product.story}</p>}
-              </div>
-
-              <div className="mt-6">
-                <BuyPanel
-                  slug={product.slug}
-                  name={product.name}
-                  price={product.price}
-                  salePrice={product.salePrice}
-                  colours={product.colours}
-                  variants={product.variants}
-                  status={product.status}
-                  fit={product.fit}
-                  // No on-model photos, so the "Model is … and wears …" note is left out.
-                  category={product.category}
-                  measurements={product.measurements}
-                  vault={product.vault}
-                  dropLabel={drop ? `Drops ${formatDropTime(drop.releaseAt)}` : undefined}
-                />
-                {product.tryOn && <TryOnLive slug={product.slug} />}
-              </div>
-
-              <div className="mt-10 divide-y divide-mist border-y border-mist">
-                <details className="group py-4" open>
-                  <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
-                    Details
-                    <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <ul className="mt-3 space-y-1 text-[15px] text-steel-dark">
-                    <li className="capitalize">
-                      {product.fit} fit · {product.gender}
-                    </li>
-                    {product.details.map((d) => (
-                      <li key={d}>{d}</li>
-                    ))}
-                  </ul>
-                </details>
-                {cols.length > 0 && (
-                  <details className="group py-4">
-                    <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
-                      Measurements (cm)
-                      <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
-                    </summary>
-                    <div className="mt-3 overflow-x-auto">
-                      <table className="w-full font-mono text-[14px]">
-                        <thead>
-                          <tr className="text-left text-steel-dark">
-                            <th scope="col" className="py-1 pr-4 font-normal">
-                              Size
-                            </th>
-                            {cols.map((c) => (
-                              <th key={c} scope="col" className="py-1 pr-4 font-normal">
-                                {measureLabels[c]}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sizes.map((s) => (
-                            <tr key={s} className="border-t border-mist">
-                              <th scope="row" className="py-2 pr-4 text-left font-semibold">
-                                {s}
-                              </th>
-                              {cols.map((c) => (
-                                <td key={c} className="py-2 pr-4">
-                                  {product.measurements[s]?.[c] ?? "–"}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="mt-2 text-[13px] text-steel-dark">Garment measured flat. Chest is measured all the way round.</p>
-                  </details>
-                )}
-                <details className="group py-4">
-                  <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
-                    Pickup, delivery and returns
-                    <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
-                  </summary>
-                  <p className="mt-3 text-[15px] text-steel-dark">
-                    Free store pickup. Delivery inside the Kathmandu Valley, free above Rs {site.delivery.freeAbove.toLocaleString("en-IN")}.
-                    Exchange your size within 7 days with tags on.{" "}
-                    <Link href="/returns" className="underline">
-                      Returns policy
-                    </Link>
-                  </p>
-                </details>
-              </div>
-            </div>
           </div>
         </div>
+      </section>
+
+      <div className="container-ep pb-24">
+        <section id="details" aria-label="About this piece" className="mx-auto max-w-[820px] scroll-mt-28 pt-12 md:pt-16">
+          {product.story && <p className="max-w-[58ch] whitespace-pre-line text-[15px] leading-relaxed">{product.story}</p>}
+        <div className="mt-8 divide-y divide-mist border-y border-mist">
+          <details className="group py-4" open>
+            <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
+              Details
+              <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
+            </summary>
+            <ul className="mt-3 space-y-1 text-[15px] text-steel-dark">
+              <li className="capitalize">
+                {product.fit} fit · {product.gender}
+              </li>
+              {product.details.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+          </details>
+          {cols.length > 0 && (
+            <details className="group py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
+                Measurements (cm)
+                <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full font-mono text-[14px]">
+                  <thead>
+                    <tr className="text-left text-steel-dark">
+                      <th scope="col" className="py-1 pr-4 font-normal">
+                        Size
+                      </th>
+                      {cols.map((c) => (
+                        <th key={c} scope="col" className="py-1 pr-4 font-normal">
+                          {measureLabels[c]}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sizes.map((s) => (
+                      <tr key={s} className="border-t border-mist">
+                        <th scope="row" className="py-2 pr-4 text-left font-semibold">
+                          {s}
+                        </th>
+                        {cols.map((c) => (
+                          <td key={c} className="py-2 pr-4">
+                            {product.measurements[s]?.[c] ?? "–"}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-[13px] text-steel-dark">Garment measured flat. Chest is measured all the way round.</p>
+            </details>
+          )}
+          <details className="group py-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between font-semibold">
+              Pickup, delivery and returns
+              <ChevronIcon className="h-5 w-5 transition-transform group-open:rotate-180" />
+            </summary>
+            <p className="mt-3 text-[15px] text-steel-dark">
+              Free store pickup. Delivery inside the Kathmandu Valley, free above Rs {site.delivery.freeAbove.toLocaleString("en-IN")}.
+              Exchange your size within 7 days with tags on.{" "}
+              <Link href="/returns" className="underline">
+                Returns policy
+              </Link>
+            </p>
+          </details>
+        </div>
+        </section>
 
         {more.length > 0 && (
           <section className="mt-24" aria-labelledby="more-heading">
