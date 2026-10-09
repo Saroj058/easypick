@@ -35,9 +35,9 @@ export function ProductStage({
   const floating = view === 0 && cutout;
 
   return (
-    <div className="relative grid h-full lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+    <div className="relative grid h-full grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
       {/* The column: which view, and what the piece is. Its name is said once, in the buying panel's heading. */}
-      <div className="order-2 flex flex-col px-4 pb-8 pt-2 md:px-8 lg:order-1 lg:py-12 lg:pl-10 lg:pr-0">
+      <div className="order-2 flex min-w-0 flex-col px-4 pb-8 pt-2 md:px-8 lg:order-1 lg:py-12 lg:pl-10 lg:pr-0">
         <div className="flex flex-1 gap-10 lg:items-center">
           {images.length > 1 && (
             <ol aria-label="Views of this piece" className="flex shrink-0 flex-row gap-1 max-lg:absolute max-lg:left-4 max-lg:top-3 lg:flex-col">
@@ -71,9 +71,9 @@ export function ProductStage({
         </div>
         {/* What it is made of: a swatch of its colour and two or three short lines */}
         {facts.length > 0 && (
-          <div className="flex items-center gap-4 max-lg:mt-2">
+          <div className="flex min-w-0 items-center gap-4 overflow-hidden max-lg:mt-2">
             <span aria-hidden className="h-12 w-12 shrink-0 rounded-full border border-ink/10 shadow-[inset_0_-6px_10px_rgba(0,0,0,0.12),inset_0_4px_8px_rgba(255,255,255,0.35)]" style={{ background: colour.hex }} />
-            <ul className="min-w-0 space-y-1 font-mono text-[10.5px] uppercase leading-snug tracking-[0.14em] text-ink/80">
+            <ul className="min-w-0 flex-1 space-y-1 font-mono text-[10.5px] uppercase leading-snug tracking-[0.14em] text-ink/80">
               {facts.map((f) => (
                 <li key={f} className="truncate">
                   {f}
