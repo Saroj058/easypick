@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { describeMatch, hasFit, matchSize } from "@/lib/fit-profile";
-import { formatPrice } from "@/lib/format";
-import { site } from "@/lib/site";
 import { stockFromVariants } from "@/lib/live-stock";
 import type { Colour, LiveStock, Product, Size } from "@/lib/types";
 import { AskWhatsApp } from "./ask-whatsapp";
@@ -105,28 +103,11 @@ export function BuyPanel(props: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
-        <p className="font-mono text-2xl">
-          {props.salePrice ? (
-            <>
-              {formatPrice(props.salePrice)} <s className="text-lg text-steel-dark">{formatPrice(props.price)}</s>
-            </>
-          ) : (
-            formatPrice(props.price)
-          )}
-        </p>
+      {/* The price, VAT and the fixed-price promise are on the hang tag beside the photo; delivery and
+          pickup are under "Pickup, delivery and returns". Here: only Save. */}
+      <div className="flex justify-end">
         <SaveButton slug={slug} name={name} />
       </div>
-      <p className="mt-1 text-[13px] text-steel-dark">Price shown. No DM needed. VAT included.</p>
-      <p className="mt-1 text-[13px] text-steel-dark">
-        Free pickup at the store · Valley delivery {formatPrice(site.delivery.flatFee)}, free over {formatPrice(site.delivery.freeAbove)}
-      </p>
-      <p className="mt-1 text-[13px] text-steel-dark">
-        Gift cards accepted ·{" "}
-        <Link href="/gift#buy" className="underline underline-offset-2">
-          Give one
-        </Link>
-      </p>
 
       {colours.length > 1 && (
         <fieldset className="mt-8">

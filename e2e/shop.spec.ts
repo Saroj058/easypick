@@ -9,7 +9,10 @@ test("home, shop and a product page load @phone", async ({ page }) => {
   await page.locator('a[href="/product/everyday-hoodie"]').first().click();
   await page.waitForURL(/\/product\/everyday-hoodie/);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByText(/Free pickup at the store/)).toBeVisible();
+  // The price is on the hang tag, so the panel doesn't repeat it or the delivery lines.
+  await expect(page.getByText(/No DM needed/)).toHaveCount(0);
+  await expect(page.getByText(/Gift cards accepted/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Save/ }).first()).toBeVisible();
 });
 
 test("home: the rail (cover-flow rows, size asked once, buy or bag, search), then Designer Fits @phone", async ({ page }) => {
