@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Countdown } from "@/components/countdown";
 import { FitsTeaser } from "@/components/home/fits-teaser";
-import { HeroNiche, type NichePiece } from "@/components/hero-niche";
+import { HeroPiece } from "@/components/hero-piece";
 import { GiftBlock } from "@/components/home/gift-block";
 import { FlowButton } from "@/components/ui/flow-button";
 import { OurStore } from "@/components/home/our-store";
@@ -56,31 +56,12 @@ export default async function HomePage() {
   // Vault pieces have their own section; the shelf and the rail hold the house range.
   const range = products.filter((p) => !p.vault);
 
-  // What hangs in the hero's niche: live pieces that have a cut-out photo. Tops on the first rail,
-  // bottoms and jackets on the second (kinds taken in turn, so a rail isn't all one thing). Each rail
-  // has five hangers; an empty one takes a piece the other rail had no room for, so every hanger
-  // carries something different.
-  const hung = range.filter((p) => p.status === "live" && RACK_CUTOUTS.has(p.slug) && p.category !== "accessories");
-  const asPiece = (p: (typeof hung)[number]): NichePiece => ({ product: p, colour: p.colours[0] });
-  const inTurn = (kinds: string[]) => {
-    const lists = kinds.map((k) => hung.filter((p) => p.category === k));
-    const out: typeof hung = [];
-    for (let round = 0; lists.some((l) => l.length > round); round++) for (const l of lists) if (l[round]) out.push(l[round]);
-    return out;
-  };
-  const tops = inTurn(["tees", "hoodies", "co-ords"]);
-  const rest = inTurn(["bottoms", "jackets"]);
-  const upperList = tops.slice(0, 5);
-  const lowerList = rest.slice(0, 5);
-  // Left over from the other rail first; then, sooner than leave a hanger bare, a piece that has sold out
-  // (its sizes show struck through, and its page still opens).
-  const soldOut = range.filter((p) => p.status === "sold_out" && RACK_CUTOUTS.has(p.slug) && p.category !== "accessories");
-  const spare = [...tops.slice(5), ...rest.slice(5), ...soldOut];
-  while (upperList.length < 5 && spare.length) upperList.push(spare.shift()!);
-  while (lowerList.length < 5 && spare.length) lowerList.push(spare.shift()!);
-  const upperRail = upperList.map(asPiece);
-  const lowerRail = lowerList.map(asPiece);
-  const capProduct = range.find((p) => p.status === "live" && p.slug === "six-panel-cap");
+  // The hero shows one piece at a time, with its price tag: the live pieces that have a cut-out photo,
+  // kinds taken in turn (a hoodie, a tee, a jacket, trousers, …) so the row under it is a mix.
+  const shown = range.filter((p) => p.status === "live" && RACK_CUTOUTS.has(p.slug));
+  const kinds = ["hoodies", "tees", "jackets", "bottoms", "co-ords", "accessories"].map((k) => shown.filter((p) => p.category === k));
+  const heroPieces: typeof shown = [];
+  for (let round = 0; kinds.some((l) => l.length > round); round++) for (const l of kinds) if (l[round]) heroPieces.push(l[round]);
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -90,14 +71,13 @@ export default async function HomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(orgLd)} />
-      {/* 01 — Hero: the rail, a tag, and the drop's numbers */}
+      {/* 01 — Hero: one piece and its price tag, the words, and the drop's numbers */}
       <section aria-labelledby="hero-title" className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
-          <div className="lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:self-center">
-            {/* The wardrobe: a white hollow built on the page, with the shop's pieces hung in it; the picked
-                piece's name and tag show under it. */}
-            <HeroNiche upper={upperRail} lower={lowerRail} cap={capProduct ? { product: capProduct, colour: capProduct.colours[0] } : null} />
+          <div className="min-w-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:self-center">
+            {/* One piece, large, with its price tag hanging beside it; the row under it switches the piece */}
+            <HeroPiece pieces={heroPieces.map((p) => ({ product: p, colour: p.colours[0] }))} />
           </div>
 
           {/* Words */}
