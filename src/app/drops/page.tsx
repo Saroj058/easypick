@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { AlertSignup } from "@/components/alert-signup";
@@ -22,7 +23,8 @@ export const metadata: Metadata = {
 // The page is the clothes: each drop is one band with its pieces as a row of cards swiped sideways
 // (the middle one faces out, large; see components/drop-strip.tsx), every one a click from its
 // own page. What can be bought comes first (out now), then what is coming
-// (with its countdown), then what sold through, kept small. The alert sign-up is at the top.
+// (with its countdown), then what sold through, kept small. The page opens with a full-screen picture
+// of the store carrying its name and the alert sign-up.
 
 type State = "upcoming" | "out" | "archive";
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
@@ -63,25 +65,45 @@ export default async function DropsPage() {
 
   return (
     <div className="overflow-x-clip">
-      <div className="container-ep pb-24 pt-12 md:pt-20">
-      <div className="flex items-end justify-between gap-4">
-        <h1 className="display display-h1">Drops</h1>
-        <p className="index pb-2 text-right text-steel-dark">Every other Friday · 6 PM</p>
-      </div>
+      {/* The opening: one full screen of the store at dusk (the owner's picture and concept, 10 Oct 2026).
+          The page's name and what the alert is for on the left; when drops happen and the sign-up, on a
+          sheet of dark glass, on the right. The picture is decoration: every word is real text over it. */}
+      <section aria-labelledby="drops-title" className="on-dark relative isolate overflow-hidden bg-[#0c0c0c] text-paper">
+        <Image src="/drops/hero.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover object-[62%_center] max-md:hidden" />
+        <Image src="/drops/hero-phone.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover md:hidden" />
+        {/* Shade for the words: darker on the left and at the foot, lighter where the rail and the sign are */}
+        <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(0,0,0,0.72)_0%,rgba(0,0,0,0.38)_42%,rgba(0,0,0,0.3)_100%)] max-md:bg-[linear-gradient(180deg,rgba(0,0,0,0.35)_0%,rgba(0,0,0,0.55)_45%,rgba(0,0,0,0.85)_100%)]" />
 
-      {/* The alert sign-up, first thing on the page: one message on each drop day */}
-      <section aria-labelledby="drops-alert" className="mt-8 flex flex-col gap-5 border-y border-ink py-6 md:mt-10 md:flex-row md:items-center md:justify-between">
-        <h2 id="drops-alert" className="display text-[clamp(1.8rem,1.5rem+1.6vw,2.6rem)] leading-[0.95]">
-          {next ? `Be told when ${next.name} lands.` : "Be told about the next one."}
-        </h2>
-        <div className="w-full md:max-w-[420px]">
-          <AlertSignup source={next ? `drops-${next.slug}` : "drops"} />
+        <div className="container-ep grid min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] content-end gap-8 py-8 md:min-h-[calc(100svh-88px)] md:grid-cols-[minmax(0,1fr)_minmax(0,430px)] md:content-center md:items-center md:gap-12 md:py-14">
+          <div className="min-w-0">
+            <h1 id="drops-title" className="display text-[clamp(4.5rem,2.6rem+10vw,11.5rem)] leading-[0.8]">
+              Drops
+            </h1>
+            <span aria-hidden className="mt-5 block h-1 w-14 bg-volt md:mt-7" />
+            <h2 id="drops-alert" className="mt-5 font-mono text-[clamp(0.95rem,0.8rem+0.7vw,1.45rem)] uppercase leading-snug tracking-[0.14em] md:mt-6">
+              {next ? `Be told when ${next.name} lands.` : "Be told about the next one."}
+            </h2>
+            <p className="mt-3 max-w-[34ch] text-[15px] leading-relaxed text-paper/75 md:text-[17px]">Small batches. Fixed prices. Be the first to know, straight to your WhatsApp or email.</p>
+          </div>
+
+          <div className="min-w-0">
+            <p className="index text-paper/85 md:text-right">
+              Every other Friday · 6 PM
+              <span aria-hidden className="mt-2 block h-0.5 w-10 bg-volt md:ml-auto" />
+            </p>
+            {/* The sign-up, on dark glass */}
+            <div className="mt-5 rounded-2xl border border-paper/15 bg-black/45 p-4 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-md md:mt-7 md:p-6">
+              <AlertSignup dark source={next ? `drops-${next.slug}` : "drops"} />
+            </div>
+          </div>
         </div>
       </section>
 
+      <div className="container-ep pb-24 pt-10 md:pt-16">
+
       {/* Out now: what can be bought today */}
       {out.length > 0 && (
-        <section aria-labelledby="drops-out" className="mt-10 md:mt-14">
+        <section aria-labelledby="drops-out">
           <h2 id="drops-out" className="index flex items-center gap-2">
             <span aria-hidden className="h-2 w-2 rounded-full bg-volt ring-1 ring-ink/30" />
             Out now
