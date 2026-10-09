@@ -124,16 +124,16 @@ export default async function DropsPage() {
               <article key={d.slug} className="mt-4 border-t border-ink pt-6 [&+article]:mt-14 md:[&+article]:mt-20">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                   <div className="min-w-0">
-                    <p className="index text-steel-dark">
-                      <Link href={`/drop/${d.slug}`} className="hover:text-ink hover:underline">
+                    <p className="index text-steel-dark">Coming soon</p>
+                    <h3 className="display mt-2 text-[clamp(2.6rem,2rem+3vw,4.5rem)] leading-[0.9]">
+                      <Link href={`/drop/${d.slug}`} className="inline-block hover:underline hover:decoration-2 hover:underline-offset-4">
                         {d.name}
                       </Link>
-                    </p>
-                    <h3 className="display mt-2 text-[clamp(3.2rem,2.2rem+5.5vw,7rem)] leading-[0.84]">Coming soon</h3>
-                    <p className="mt-4 font-mono text-[15px] uppercase tracking-[0.08em] md:text-[17px]">{formatDropTime(d.releaseAt, { bs: true })}</p>
+                    </h3>
+                    <p className="mt-2 font-mono text-[13px]">Arrives {formatDropTime(d.releaseAt, { bs: true })}</p>
                   </div>
                   <div className="shrink-0">
-                    <Countdown to={d.releaseAt} label={d.name} />
+                    <Countdown to={d.releaseAt} label={d.name} size="sm" />
                   </div>
                 </div>
                 <DropStrip pieces={of(d).map(toRailPiece)} label={d.name} soon />
