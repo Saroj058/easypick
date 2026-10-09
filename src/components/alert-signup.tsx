@@ -24,12 +24,12 @@ export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean;
 
   const id = `alert-${source}`;
   const muted = dark ? "text-paper/70" : "text-steel-dark";
-  const field = `h-14 w-full min-w-0 scroll-mb-32 sm:flex-1 rounded-[2px] border px-4 text-base ${
-    dark ? "border-paper/50 bg-graphite text-paper placeholder:text-paper/60" : "border-steel-dark bg-paper placeholder:text-steel-dark"
-  }`;
+  // The field has no box of its own: it sits inside one rounded bar with the button at its end.
+  const field = `h-11 w-full min-w-0 flex-1 scroll-mb-32 bg-transparent px-3 text-base outline-none ${dark ? "text-paper placeholder:text-paper/55" : "placeholder:text-steel-dark"}`;
+  // WhatsApp / Email: two halves of one small switch.
   const tab = (on: boolean) =>
-    `h-11 flex-1 border px-4 text-sm font-semibold ${
-      on ? (dark ? "border-paper bg-paper text-ink" : "border-ink bg-ink text-paper") : dark ? "border-paper/40 text-paper" : "border-mist hover:border-ink"
+    `h-9 cursor-pointer rounded-full px-4 text-[13px] font-semibold transition-colors duration-200 ${
+      on ? (dark ? "bg-paper text-ink" : "bg-ink text-paper") : dark ? "text-paper/75 hover:text-paper" : "text-ink/65 hover:text-ink"
     }`;
 
   return (
@@ -45,7 +45,7 @@ export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean;
     >
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="channel" value={channel} />
-      <div role="radiogroup" aria-label="How to reach you" className="flex gap-2">
+      <div role="radiogroup" aria-label="How to reach you" className={`inline-flex gap-1 rounded-full p-1 ${dark ? "bg-paper/10" : "bg-mist"}`}>
         <button type="button" role="radio" aria-checked={channel === "whatsapp"} onClick={() => setChannel("whatsapp")} className={tab(channel === "whatsapp")}>
           WhatsApp
         </button>
@@ -54,13 +54,15 @@ export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean;
         </button>
       </div>
 
-      <label htmlFor={`${id}-contact`} className="mt-4 block text-sm font-semibold">
-        {channel === "email" ? "Email address" : "WhatsApp number"}
-      </label>
-      <p id={`${id}-hint`} className={`mt-1 text-[13px] ${muted}`}>
-        {channel === "email" ? "We only use it for drop alerts" : "10 digits, starts with 97 or 98"}
-      </p>
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3">
+        <label htmlFor={`${id}-contact`} className="text-sm font-semibold">
+          {channel === "email" ? "Email address" : "WhatsApp number"}
+        </label>
+        <p id={`${id}-hint`} className={`text-[12px] ${muted}`}>
+          {channel === "email" ? "We only use it for drop alerts" : "10 digits, starts with 97 or 98"}
+        </p>
+      </div>
+      <div className={`mt-2 flex items-center gap-1 rounded-full border p-1.5 transition-[border-color,box-shadow] duration-200 ${dark ? "border-paper/40 focus-within:border-paper" : "border-ink/30 bg-paper focus-within:border-ink focus-within:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]"}`}>
         {channel === "email" ? (
           <input
             key="email"
@@ -90,13 +92,18 @@ export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean;
             className={`${field} font-mono`}
           />
         )}
-        <button type="submit" className="btn btn-volt w-full shrink-0 sm:w-auto" aria-busy={pending} disabled={pending}>
+        <button
+          type="submit"
+          className={`group flex h-11 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-full px-5 text-[13px] font-semibold uppercase tracking-[0.08em] transition-[background-color,scale] duration-200 active:scale-[0.97] disabled:opacity-50 ${dark ? "bg-volt text-ink hover:bg-[#b5f020]" : "bg-ink text-paper hover:bg-ink/85"}`}
+          aria-busy={pending}
+          disabled={pending}
+        >
           Notify me
           {pending && <span className="sr-only"> (sending)</span>}
         </button>
       </div>
-      <label className={`mt-2 flex min-h-11 items-center gap-3 py-2 text-[13px] ${muted}`}>
-        <input type="checkbox" name="consent" required className="h-5 w-5 shrink-0 accent-[#c6ff3d]" />
+      <label className={`mt-2 flex min-h-11 cursor-pointer items-center gap-2.5 py-1.5 text-[12.5px] ${muted}`}>
+        <input type="checkbox" name="consent" required className={`h-[18px] w-[18px] shrink-0 ${dark ? "accent-[#c6ff3d]" : "accent-ink"}`} />
         <span>
           Send me one {channel === "email" ? "email" : "WhatsApp message"} on each drop day. Every message has a link to stop.
         </span>

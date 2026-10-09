@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 // The page is the clothes: each drop is one band with its pieces as a row of cards swiped sideways
 // (the middle one faces out, large; see components/drop-coverflow.tsx), every one a click from its
 // own page. What can be bought comes first (out now), then what is coming
-// (with its countdown and the alert sign-up), then what sold through, kept small.
+// (with its countdown), then what sold through, kept small. The alert sign-up is at the top.
 
 type State = "upcoming" | "out" | "archive";
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
@@ -61,19 +61,22 @@ export default async function DropsPage() {
   const upcoming = drops.filter((d) => state(d) === "upcoming").reverse();
   const archive = drops.filter((d) => state(d) === "archive");
 
-  /** The alert sign-up, once: beside the next drop if there is one, else on its own after what is out. */
-  const signup = (source: string) => (
-    <div className="w-full md:max-w-[420px]">
-      <AlertSignup source={source} />
-    </div>
-  );
-
   return (
     <div className="container-ep pb-24 pt-12 md:pt-20">
       <div className="flex items-end justify-between gap-4">
         <h1 className="display display-h1">Drops</h1>
         <p className="index pb-2 text-right text-steel-dark">Every other Friday · 6 PM</p>
       </div>
+
+      {/* The alert sign-up, first thing on the page: one message on each drop day */}
+      <section aria-labelledby="drops-alert" className="mt-8 flex flex-col gap-5 border-y border-ink py-6 md:mt-10 md:flex-row md:items-center md:justify-between">
+        <h2 id="drops-alert" className="display text-[clamp(1.8rem,1.5rem+1.6vw,2.6rem)] leading-[0.95]">
+          {next ? `Be told when ${next.name} lands.` : "Be told about the next one."}
+        </h2>
+        <div className="w-full md:max-w-[420px]">
+          <AlertSignup source={next ? `drops-${next.slug}` : "drops"} />
+        </div>
+      </section>
 
       {/* Out now: what can be bought today */}
       {out.length > 0 && (
@@ -109,7 +112,7 @@ export default async function DropsPage() {
         </section>
       )}
 
-      {/* Coming: the countdown and the alert sit with the drop they are about */}
+      {/* Coming: the countdown sits with the drop it is about */}
       {upcoming.length > 0 ? (
         <section aria-labelledby="drops-coming" className="mt-16 md:mt-24">
           <h2 id="drops-coming" className="index">
@@ -133,21 +136,13 @@ export default async function DropsPage() {
                       </div>
                     )}
                   </div>
-                  {first && signup(`drops-${d.slug}`)}
                 </div>
                 <DropCoverflow pieces={asPieces(of(d))} label={d.name} />
               </article>
             );
           })}
         </section>
-      ) : (
-        <section aria-labelledby="drops-alert" className="mt-16 flex flex-col gap-5 border-t border-ink pt-6 md:mt-24 md:flex-row md:items-center md:justify-between">
-          <h2 id="drops-alert" className="display text-[clamp(1.8rem,1.5rem+1.6vw,2.6rem)] leading-[0.95]">
-            Be told about the next one.
-          </h2>
-          {signup("drops")}
-        </section>
-      )}
+      ) : null}
 
       {/* Sold through: kept, and kept small */}
       {archive.length > 0 && (
