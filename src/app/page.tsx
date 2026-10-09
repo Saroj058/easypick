@@ -31,23 +31,25 @@ export const revalidate = 60;
 // Easypick hang tag: a fixed price, measurements in cm, a SKU. Numbers shown are
 // computed from stock data, never decorative.
 
-const STOREY = 7;
+/** How many pieces hang on each rail: few enough that every one has air around it, like a real shop rail. */
+const UPPER_COUNT = 5;
+const LOWER_COUNT = 5;
 /** The two storeys of the hero's shelf: what hangs on the upper rail, and on the lower one. */
 // Jackets hang with the bottoms so the lower rail isn't only trousers and caps.
 const UPPER: Category[] = ["tees", "hoodies", "co-ords"];
 const LOWER: Category[] = ["bottoms", "jackets", "accessories"];
 
 /**
- * Up to seven live pieces for one storey, kinds mixed along the rail, each in a colour that
+ * A few live pieces for one storey, kinds mixed along the rail, each in a colour that
  * differs from its neighbour where the piece has a choice, so the rail reads as a range.
  */
-function pickStorey(products: Product[], kinds: Category[]): RackPiece[] {
+function pickStorey(products: Product[], kinds: Category[], count: number): RackPiece[] {
   const live = products.filter((p) => p.status === "live");
   const byKind = kinds.map((k) => live.filter((p) => p.category === k));
   const chosen: Product[] = [];
   // One of each kind in turn, until the rail is full or the kinds run out.
-  for (let round = 0; chosen.length < STOREY && byKind.some((list) => list.length > round); round++) {
-    for (const list of byKind) if (list[round] && chosen.length < STOREY) chosen.push(list[round]);
+  for (let round = 0; chosen.length < count && byKind.some((list) => list.length > round); round++) {
+    for (const list of byKind) if (list[round] && chosen.length < count) chosen.push(list[round]);
   }
   // The rail hangs each piece's own front photo, so the colour named is the one photographed: its first.
   return chosen.map((product) => ({ product, colour: product.colours[0] }));
@@ -77,8 +79,8 @@ export default async function HomePage() {
   const drop = current ?? next;
   // Vault pieces have their own section; the shelf and the rail hold the house range.
   const range = products.filter((p) => !p.vault);
-  const upper = pickStorey(range, UPPER);
-  const lower = pickStorey(range, LOWER);
+  const upper = pickStorey(range, UPPER, UPPER_COUNT);
+  const lower = pickStorey(range, LOWER, LOWER_COUNT);
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -92,7 +94,9 @@ export default async function HomePage() {
       <section aria-labelledby="hero-title" className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
-          <div className="relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-[linear-gradient(180deg,#f1f0ec_0%,#e6e5e0_55%,#d9d8d2_100%)] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
+          <div className="relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-[linear-gradient(180deg,#f6f0e6_0%,#f1eadf_60%,#e7dfd2_100%)] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
+            {/* Plaster: a fine grain over the wall, under everything hung on it */}
+            <div className="visit-grain pointer-events-none absolute inset-0 opacity-[0.09] mix-blend-multiply" aria-hidden />
             <HeroRack top={upper} bottom={lower} />
             {/* The way into the drop, on the wardrobe itself: in the middle of the card's foot (top on phones, where the foot holds the piece bar). The same sweeping pill as the Rail's "Show all", on white. */}
             <div className="absolute inset-x-0 bottom-[70px] z-30 flex justify-center md:bottom-6 lg:bottom-7">

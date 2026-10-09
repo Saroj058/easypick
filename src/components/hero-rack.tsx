@@ -37,9 +37,9 @@ const CUTOUTS = new Set([
 // cover the hanger's shoulders; trousers hang from its clips; a cap hangs from a short hook).
 const fit: Record<Category, { w: string; tuck: string }> = {
   tees: { w: "w-[104%]", tuck: "-mt-[21%]" },
-  hoodies: { w: "w-[106%]", tuck: "-mt-[27%]" },
-  jackets: { w: "w-[106%]", tuck: "-mt-[24%]" },
-  bottoms: { w: "w-[54%]", tuck: "-mt-[7%]" },
+  hoodies: { w: "w-[108%]", tuck: "-mt-[27%]" },
+  jackets: { w: "w-[108%]", tuck: "-mt-[25%]" },
+  bottoms: { w: "w-[58%]", tuck: "-mt-[7%]" },
   "co-ords": { w: "w-[86%]", tuck: "-mt-[24%]" },
   accessories: { w: "w-[70%]", tuck: "-mt-[2%]" },
 };
@@ -58,7 +58,7 @@ function Hanger({ category }: { category: Category }) {
 
 /**
  * A two-storey shelf: tops on the upper rail; bottoms, jackets and extras on the lower one, up to
- * seven pieces each. Tap or hover a piece to bring it forward; its colour and the sizes it
+ * a few pieces each, with room between them. Tap or hover a piece to bring it forward; its colour and the sizes it
  * comes in show at the bottom left, and its tag (price, measurements in cm) at the bottom right.
  */
 export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[] }) {
@@ -72,22 +72,25 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
 
   const storey = (pieces: RackPiece[], offset: number, at: string, label: string) => (
     <>
-      {/* The rail: a photographed steel rod, edge to edge */}
+      {/* The shelf above the rail, and the warm light under it washing down the wall */}
+      <div className={`absolute inset-x-[3%] ${at} h-[26%] -translate-y-[14px] bg-[linear-gradient(180deg,rgba(255,226,178,0.95)_0%,rgba(255,236,205,0.45)_30%,transparent_100%)] blur-[5px] md:-translate-y-[20px]`} aria-hidden />
+      <div className={`absolute inset-x-[2%] ${at} h-[7px] -translate-y-[20px] rounded-[1px] bg-[#fdfbf7] shadow-[0_3px_5px_rgba(90,70,40,0.28)] md:h-[10px] md:-translate-y-[30px]`} aria-hidden />
+      {/* The rail: a photographed steel rod under the shelf */}
       {/* eslint-disable-next-line @next/next/no-img-element -- one thin strip of a photograph, stretched along the rail */}
-      <img src="/rack/rail.webp" alt="" aria-hidden draggable={false} className={`absolute inset-x-0 ${at} h-[9px] w-full -translate-y-1/2 object-fill drop-shadow-[0_3px_3px_rgba(0,0,0,0.25)] md:h-[12px]`} />
-      <ul className={`absolute inset-x-0 ${at} flex items-start justify-center`} aria-label={label}>
+      <img src="/rack/rail.webp" alt="" aria-hidden draggable={false} className={`absolute inset-x-[4%] ${at} z-[1] h-[5px] w-[92%] -translate-y-1/2 object-fill drop-shadow-[0_4px_3px_rgba(90,70,40,0.3)] md:h-[7px]`} />
+      <ul className={`absolute inset-x-[5%] ${at} flex items-start justify-between`} aria-label={label}>
         {pieces.map(({ product, colour }, n) => {
           const i = offset + n;
           const on = i === active;
           return (
-            <li key={product.id} className={`relative -mx-[18px] w-[96px] shrink-0 sm:-mx-[16px] sm:w-[120px] xl:-mx-[22px] xl:w-[150px] ${on ? "z-10" : ""}`}>
+            <li key={product.id} className={`relative w-[18%] shrink-0 ${on ? "z-10" : ""}`}>
               <button
                 type="button"
                 onClick={() => setActive(i)}
                 onMouseEnter={() => setActive(i)}
                 aria-pressed={on}
                 aria-label={`${product.name}, ${colour.name}, ${formatPrice(product.salePrice ?? product.price)}`}
-                className={`-mt-[5px] flex w-full cursor-pointer flex-col items-center transition-[filter,transform] duration-300 md:-mt-[7px] ${on ? "translate-y-1.5 [filter:drop-shadow(0_14px_14px_rgba(0,0,0,0.32))]" : "[filter:drop-shadow(0_8px_8px_rgba(0,0,0,0.18))_saturate(0.9)_brightness(0.97)] hover:translate-y-0.5"}`}
+                className={`-mt-[3px] flex w-full cursor-pointer flex-col items-center transition-[filter,transform] duration-300 md:-mt-[5px] origin-top ${on ? "rotate-[1.2deg] [filter:drop-shadow(4px_12px_10px_rgba(90,70,40,0.4))]" : "[filter:drop-shadow(2px_7px_6px_rgba(90,70,40,0.28))] hover:rotate-[0.6deg]"}`}
               >
                 <Hanger category={product.category} />
                 <span className={`relative z-10 block ${fit[product.category].w} ${fit[product.category].tuck}`}>
@@ -108,8 +111,8 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
 
   return (
     <>
-      {storey(top, 0, "top-[6%]", "Tops on the upper rail")}
-      {storey(bottom, top.length, "top-[44%] md:top-[42%]", "Bottoms, jackets and extras on the lower rail")}
+      {storey(top, 0, "top-[9%]", "Tops on the upper rail")}
+      {storey(bottom, top.length, "top-[46%] md:top-[45%]", "Bottoms, jackets and extras on the lower rail")}
 
       <p className="sr-only" aria-live="polite">
         {sel.product.name}, {sel.colour.name}, {formatPrice(sel.product.salePrice ?? sel.product.price)}
