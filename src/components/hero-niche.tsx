@@ -213,17 +213,18 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
           const on = piece?.product.slug === activeSlug;
           const hung = piece ? HUNG[piece.product.slug] : undefined;
           return (
-            <li key={i} className={`relative w-[9.2%] ${on ? "z-10" : piece?.product.category === "bottoms" ? "z-[1]" : ""}`}>
+            <li key={i} className={`relative w-[9.2%] [perspective:700px] ${on ? "z-10" : piece?.product.category === "bottoms" ? "z-[1]" : ""}`}>
               <span aria-hidden className="block [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
                 <Hanger clips={piece?.product.category === "bottoms"} hookOnly={Boolean(hung)} />
               </span>
               {piece && (
                 <button
                   {...pick(piece)}
-                  className={`absolute left-1/2 block -translate-x-1/2 origin-top cursor-pointer transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${hung ? "top-[9px] md:top-[17px]" : ""} ${on ? "rotate-[-3deg] scale-[1.06]" : "[@media(hover:hover)]:hover:rotate-[-2deg]"}`}
+                  className={`absolute left-1/2 block -translate-x-1/2 origin-top cursor-pointer transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none ${hung ? "top-[9px] md:top-[17px]" : ""} ${on ? "scale-[1.08] [transform:rotateY(0deg)]" : "[transform:rotateY(-56deg)]"}`}
                   style={hung ? { width: `${hung}%` } : { width: HANG[piece.product.category].width, top: HANG[piece.product.category].top }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- the piece's own photo, cut out; small and already compressed */}
+                  {/* As on a real rail, a piece hangs turned side-on; the picked one turns on its hook to face out. */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- the piece's own photo, cut out; small and already compressed */}
                   <img src={hung ? `/rack/hung/${piece.product.slug}.webp` : `/rack/${piece.product.slug}.webp`} alt="" draggable={false} className={`block h-auto w-full transition-[filter] duration-300 ${on ? "[filter:drop-shadow(9px_14px_9px_rgba(0,0,0,0.34))]" : "[filter:drop-shadow(6px_9px_6px_rgba(0,0,0,0.22))]"}`} />
                 </button>
               )}
