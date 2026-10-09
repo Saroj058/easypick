@@ -26,7 +26,7 @@ export interface NichePiece {
   colour: { name: string; hex: string };
 }
 
-const HANGERS = 5;
+const HANGERS = 10;
 /** How deep the recess looks, as a share of its own size: shallow, as in the sample. */
 const D = "7%";
 const W = "rgba(255,255,255,";
@@ -169,26 +169,31 @@ function Accessory({ name, cut = false, className = "" }: { name: string; cut?: 
 }
 
 export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. */ upper: NichePiece[]; /** Bottoms and jackets, on the second. */ lower: NichePiece[]; /** The cap on the accessories shelf, if it is on sale. */ cap: NichePiece | null }) {
-  const all = [...upper, ...lower, ...(cap ? [cap] : [])];
-  const [activeSlug, setActiveSlug] = useState(upper[Math.min(1, upper.length - 1)]?.product.slug ?? all[0]?.product.slug ?? null);
-  const sel = all.find((p) => p.product.slug === activeSlug) ?? all[0] ?? null;
+  // Ten hangers a rail, as in a shop: each piece hangs there more than once (a rail carries a run of
+  // sizes), so the rail is full however few pieces are on sale.
+  const fill = (list: NichePiece[]) => (list.length ? Array.from({ length: HANGERS }, (_, i) => list[Math.floor((i * list.length) / HANGERS)]) : []);
+  const rails: Record<string, NichePiece[]> = { upper: fill(upper), lower: fill(lower) };
+  // Which hanger is picked ("upper:2"), not which product: a piece's twin along the rail stays side-on.
+  const [activeKey, setActiveKey] = useState<string>("upper:2");
+  const [activeRail, activeIndex] = activeKey.split(":");
+  const sel = (activeRail === "cap" ? cap : rails[activeRail]?.[Number(activeIndex)]) ?? rails.upper[0] ?? rails.lower[0] ?? null;
   const sizes = sel ? sel.product.variants.filter((v) => v.colour === sel.colour.name).sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)) : [];
   const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
 
   /** A piece that can be picked: pointing at it or tapping it shows its details and tag in the bottom compartment. */
   const router = useRouter();
-  const pick = (piece: NichePiece) => ({
+  const pick = (piece: NichePiece, key: string) => ({
     type: "button" as const,
     // The first tap picks it; a tap on the piece already picked opens its page.
-    onClick: () => (piece.product.slug === activeSlug ? router.push(`/product/${piece.product.slug}`) : setActiveSlug(piece.product.slug)),
-    onMouseEnter: () => setActiveSlug(piece.product.slug),
-    onFocus: () => setActiveSlug(piece.product.slug),
-    "aria-pressed": piece.product.slug === activeSlug,
+    onClick: () => (key === activeKey ? router.push(`/product/${piece.product.slug}`) : setActiveKey(key)),
+    onMouseEnter: () => setActiveKey(key),
+    onFocus: () => setActiveKey(key),
+    "aria-pressed": key === activeKey,
     "aria-label": `${piece.product.name}, ${piece.colour.name}, ${formatPrice(piece.product.salePrice ?? piece.product.price)}`,
   });
 
   /** One shelf with the rail under it and what hangs there. */
-  const shelf = (top: string, pieces: NichePiece[], items?: React.ReactNode, /** No shelf above: the rail hangs straight under the ceiling. */ bare = false) => (
+  const shelf = (top: string, rail: "upper" | "lower", items?: React.ReactNode, /** No shelf above: the rail hangs straight under the ceiling. */ bare = false) => (
     <div className="absolute inset-x-0" style={{ top }}>
       {/* Light on the wall just above the shelf, from a strip along its back edge */}
       <div className="absolute inset-x-0 bottom-full h-[clamp(14px,3.4vw,40px)]">
@@ -212,18 +217,18 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
       {/* Packed close and side-on, as on a real rail; the picked piece's slot opens wide and its neighbours slide along to make room. */}
       <ul className="absolute inset-x-[4%] top-[11px] z-[4] flex justify-center [container-type:inline-size] md:top-[19px]">
         {Array.from({ length: HANGERS }, (_, i) => {
-          const piece = pieces[i];
-          const on = piece?.product.slug === activeSlug;
+          const piece = rails[rail][i];
+          const on = `${rail}:${i}` === activeKey;
           const hung = piece ? HUNG[piece.product.slug] : undefined;
           return (
-            <li key={i} className={`relative flex justify-center transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${on ? "z-10 w-[24cqw]" : "w-[7.4cqw]"}`}>
+            <li key={i} className={`relative flex justify-center transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${on ? "z-10 w-[23cqw]" : "w-[6.6cqw]"}`}>
               <div className="relative w-[7.9cqw] shrink-0 [perspective:700px]">
               <span aria-hidden className="block [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
                 <Hanger clips={piece?.product.category === "bottoms"} hookOnly={Boolean(hung)} />
               </span>
               {piece && (
                 <button
-                  {...pick(piece)}
+                  {...pick(piece, `${rail}:${i}`)}
                   className={`absolute left-1/2 block -translate-x-1/2 origin-top cursor-pointer transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none ${hung ? "top-[9px] md:top-[17px]" : ""} ${on ? "scale-[1.08] [transform:rotateY(0deg)]" : "[transform:rotateY(-74deg)]"}`}
                   style={hung ? { width: `${hung}%` } : { width: HANG[piece.product.category].width, top: HANG[piece.product.category].top }}
                 >
@@ -265,11 +270,11 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
             {/* The short top compartment: accessories and display pieces. Under its shelf, the tops. */}
             {shelf(
               ACCESSORIES ? "11%" : "-1%",
-              upper,
+              "upper",
               <>
                 <Plant className="w-[9.5%]" />
                 {cap && (
-                  <button {...pick(cap)} className={`w-[8%] cursor-pointer transition-transform duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${cap.product.slug === activeSlug ? "-translate-y-0.5 scale-[1.08]" : ""}`}>
+                  <button {...pick(cap, "cap")} className={`w-[8%] cursor-pointer transition-transform duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${activeKey === "cap" ? "-translate-y-0.5 scale-[1.08]" : ""}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- the cap's own photo, cut out */}
                     <img src={`/rack/${cap.product.slug}.webp`} alt="" draggable={false} className={`block h-auto w-full ${shade}`} />
                   </button>
@@ -288,7 +293,7 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
               !ACCESSORIES,
             )}
             {/* Second shelf: under it, the bottoms and jackets */}
-            {shelf(ACCESSORIES ? "44%" : "38.5%", lower)}
+            {shelf(ACCESSORIES ? "44%" : "38.5%", "lower")}
 
             {/* The bottom compartment: the picked piece's details on the left, its tag on the right */}
             <div className="absolute inset-x-0 bottom-0" style={{ top: ACCESSORIES ? "77%" : "78%" }}>
