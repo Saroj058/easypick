@@ -153,69 +153,16 @@ function BookRow({ className = "" }: { className?: string }) {
   );
 }
 
-/** A pair of sneakers, side on: black uppers on white soles, one a little behind the other. */
-function Sneakers({ className = "" }: { className?: string }) {
-  const shoe = (
-    <>
-      <path d="M5 30 V17 q0 -6 6 -6 h9 q4 0 7 5 q7 9 26 11 q20 2 30 6 q4 2 4 5 H5 Z" fill="#161616" />
-      <path d="M27 16 q7 9 22 11" fill="none" stroke="#f4f4f2" strokeWidth="1.1" strokeDasharray="1.6 2.6" />
-      <path d="M5 21 h7 v8 h-7 Z" fill="#c6ff3d" />
-      <path d="M3 33 H88 q3 0 3 3 v2 q0 3 -3 3 H7 q-4 0 -4 -4 Z" fill="#f6f6f4" stroke="#c9c9c6" strokeWidth="0.8" />
-    </>
-  );
+/**
+ * A photographed display piece for the accessories shelf (public/rack/acc/<name>.webp).
+ * The beanie is cut out. The sneakers, sunglasses and bottle have white parts that can't be told
+ * from a white background, so instead of being cut out their white is made see-through (how far a
+ * pixel is from white is how solid it is): the wall shows through and their own soft shadows stay.
+ */
+function Accessory({ name, cut = false, className = "" }: { name: string; cut?: boolean; className?: string }) {
   return (
-    <svg viewBox="0 0 104 46" aria-hidden className={`block h-auto shrink-0 overflow-visible ${shade} ${className}`}>
-      <g transform="translate(12 -4)" opacity="0.92">
-        {shoe}
-      </g>
-      {shoe}
-    </svg>
-  );
-}
-
-/** A beanie, cuff folded up. */
-function Beanie({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 60 46" aria-hidden className={`block h-auto shrink-0 ${shade} ${className}`}>
-      <path d="M7 32 q0 -29 23 -29 q23 0 23 29 Z" fill="#55613a" />
-      {[16, 23, 30, 37, 44].map((x) => (
-        <path key={x} d={`M${x} 31 Q${30 + (x - 30) * 0.75} 14 30 4`} fill="none" stroke="#454f2f" strokeWidth="0.9" />
-      ))}
-      <rect x="4" y="30" width="52" height="14" rx="2.5" fill="#4a5532" />
-      {Array.from({ length: 12 }, (_, k) => (
-        <path key={k} d={`M${8 + k * 4} 31 v12`} stroke="#3d4729" strokeWidth="0.9" />
-      ))}
-    </svg>
-  );
-}
-
-/** Sunglasses, folded open on the shelf. */
-function Sunglasses({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 100 34" aria-hidden className={`block h-auto shrink-0 ${shade} ${className}`}>
-      <path d="M6 9 L1 4 M94 9 L99 4" stroke="#141414" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M44 12 q6 -4 12 0" fill="none" stroke="#141414" strokeWidth="2.6" />
-      {[5, 55].map((x) => (
-        <g key={x}>
-          <rect x={x} y="6" width="40" height="25" rx="9" fill="#111" />
-          <rect x={x + 3} y="9" width="34" height="19" rx="7" fill="#2b2b2b" />
-          <path d={`M${x + 8} 24 L${x + 20} 11`} stroke="#fff" strokeOpacity="0.28" strokeWidth="2.4" strokeLinecap="round" />
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-/** A fragrance bottle: clear glass, a black cap. */
-function Bottle({ className = "" }: { className?: string }) {
-  return (
-    <div aria-hidden className={`relative aspect-[1/1.5] shrink-0 ${shade} ${className}`}>
-      <span className="absolute inset-x-[30%] top-0 h-[26%] rounded-[2px] bg-[linear-gradient(90deg,#0f0f0f,#3a3a3a_45%,#151515)]" />
-      <span className="absolute inset-x-0 bottom-0 top-[24%] rounded-[12%] border border-black/15 bg-[linear-gradient(90deg,#d9d9d6,#ffffff_35%,#ecece9_70%,#c9c9c6)]">
-        <span className="absolute inset-x-[10%] bottom-[8%] top-[38%] rounded-[8%] bg-[linear-gradient(90deg,#b88a3a,#e2bd6c_40%,#b9892f)] opacity-80" />
-        <span className="absolute inset-x-[22%] top-[52%] h-[20%] bg-paper" />
-      </span>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element -- a small photograph, already compressed
+    <img src={`/rack/acc/${name}.webp`} alt="" aria-hidden draggable={false} className={`block h-auto shrink-0 ${cut ? shade : ""} ${className}`} />
   );
 }
 
@@ -322,13 +269,13 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
                   </button>
                 )}
                 <BookStack className="w-[10%]" />
-                <Sneakers className="w-[13%]" />
+                <Accessory name="sneakers-clear" className="-mb-[0.4%] w-[13.5%]" />
                 <BookRow className="w-[8%]" />
-                <Beanie className="w-[7%]" />
-                <Bottle className="w-[3.4%]" />
+                <Accessory name="beanie" cut className="w-[6.4%]" />
+                <Accessory name="bottle-clear" className="-mb-[0.3%] w-[2.7%]" />
                 {/* Sunglasses resting on the last stack of books */}
                 <div className="flex w-[9%] shrink-0 flex-col items-center">
-                  <Sunglasses className="mb-[2%] w-[78%]" />
+                  <Accessory name="sunglasses-clear" className="-mb-[6%] w-[84%]" />
                   <BookStack className="w-full" />
                 </div>
               </>,
