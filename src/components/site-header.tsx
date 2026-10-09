@@ -93,7 +93,7 @@ export function SiteHeader() {
   // A new page starts at the top, so everything shows (except on the visit page).
   useEffect(() => setExpanded(pathname !== "/visit"), [pathname, setExpanded]);
 
-  // A small Back button on the right of the header (before search, account and bag) on every page that is reached from another one (a piece, a
+  // A small Back button at the left end of the header (before the logo) on every page that is reached from another one (a piece, a
   // drop, the bag, checkout, an order…). The pages the menu itself leads to don't need it. It goes
   // back the way they came; if this is the first page they opened (a shared link), there is nothing
   // to go back to, so it goes up to the page this one belongs under.
@@ -176,7 +176,17 @@ export function SiteHeader() {
             {/* Logo: slides away while scrolling down */}
             {/* Not inert while tucked away: tabbing to it brings it back (onFocus below). */}
             <div className="relative">
-              <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)} className={visit ? "hidden" : undefined}>
+              <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)} className={visit ? "hidden" : "flex items-center gap-2"}>
+                {showBack && (
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    aria-label="Go back"
+                    className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} group flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-mist bg-paper transition-[border-color,scale] duration-200 hover:border-ink active:scale-95 md:h-11 md:w-11`}
+                  >
+                    <ArrowLeft aria-hidden className="h-[18px] w-[18px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={1.8} />
+                  </button>
+                )}
                 <Link href="/" aria-label="Easypick home" className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-5`}>
                   <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
                 </Link>
@@ -218,17 +228,7 @@ export function SiteHeader() {
                 <span aria-hidden>←</span> Back
               </Link>
             )}
-            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)} className={visit ? "hidden" : "flex items-center gap-2"}>
-            {showBack && (
-              <button
-                type="button"
-                onClick={goBack}
-                aria-label="Go back"
-                className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} group flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-mist bg-paper transition-[border-color,scale] duration-200 hover:border-ink active:scale-95 md:h-11 md:w-11`}
-              >
-                <ArrowLeft aria-hidden className="h-[18px] w-[18px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={1.8} />
-              </button>
-            )}
+            <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)} className={visit ? "hidden" : undefined}>
               <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-1.5`}>
                 <SearchButton />
                 {account}
