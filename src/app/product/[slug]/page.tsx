@@ -143,6 +143,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                 </span>
               )}
               {product.status === "scheduled" && drop && <span className="text-ink">Arrives {formatDropTime(drop.releaseAt, { bs: true })}</span>}
+              {/* The price itself is on the hang tag; this says what kind of price it is */}
+              <span className="ml-auto">Fixed price · VAT incl.</span>
             </p>
             {/* Phones only: the name, colour and price (on desktop the left column carries the name, and the
                 price is on the hang tag beside the piece, so the panel does not repeat them) */}
