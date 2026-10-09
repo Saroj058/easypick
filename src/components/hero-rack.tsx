@@ -72,13 +72,18 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
 
   const storey = (pieces: RackPiece[], offset: number, at: string, label: string) => (
     <>
-      {/* The shelf above the rail, and the warm light under it washing down the wall */}
-      <div className={`absolute inset-x-[3%] ${at} h-[26%] -translate-y-[14px] bg-[linear-gradient(180deg,rgba(255,226,178,0.95)_0%,rgba(255,236,205,0.45)_30%,transparent_100%)] blur-[5px] md:-translate-y-[20px]`} aria-hidden />
-      <div className={`absolute inset-x-[2%] ${at} h-[7px] -translate-y-[20px] rounded-[1px] bg-[#fdfbf7] shadow-[0_3px_5px_rgba(90,70,40,0.28)] md:h-[10px] md:-translate-y-[30px]`} aria-hidden />
-      {/* The rail: a photographed steel rod under the shelf */}
+      {/* The shelf: a slab that stands out from the back wall. Its lit front edge, its shaded
+          underside, the warm light under it, and the shadow it throws down the wall. */}
+      <div className={`absolute inset-x-[4.5%] ${at} h-[26%] -translate-y-[10px] bg-[linear-gradient(180deg,rgba(255,224,170,0.95)_0%,rgba(255,236,205,0.4)_32%,transparent_100%)] blur-[5px] md:-translate-y-[16px]`} aria-hidden />
+      <div className={`absolute inset-x-[4.5%] ${at} h-[5px] -translate-y-[13px] bg-[linear-gradient(180deg,#b9ab93,#d6cab5)] md:h-[8px] md:-translate-y-[20px]`} aria-hidden />
+      <div className={`absolute inset-x-[3.5%] ${at} h-[8px] -translate-y-[21px] rounded-[1px] bg-[linear-gradient(180deg,#ffffff,#f3ece0)] shadow-[0_10px_14px_-4px_rgba(70,50,20,0.35)] md:h-[12px] md:-translate-y-[32px]`} aria-hidden />
+      {/* Two brackets hold the rail out from the wall, under the shelf */}
+      <span className={`absolute left-[7%] ${at} h-[13px] w-[3px] -translate-y-full rounded-full bg-[linear-gradient(90deg,#6f6f6f,#bdbdbd,#6f6f6f)] md:h-[20px] md:w-[4px]`} aria-hidden />
+      <span className={`absolute right-[7%] ${at} h-[13px] w-[3px] -translate-y-full rounded-full bg-[linear-gradient(90deg,#6f6f6f,#bdbdbd,#6f6f6f)] md:h-[20px] md:w-[4px]`} aria-hidden />
+      {/* The rail: a photographed steel rod. It stands off the wall, so its shadow falls well below it. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- one thin strip of a photograph, stretched along the rail */}
-      <img src="/rack/rail.webp" alt="" aria-hidden draggable={false} className={`absolute inset-x-[4%] ${at} z-[1] h-[5px] w-[92%] -translate-y-1/2 object-fill drop-shadow-[0_4px_3px_rgba(90,70,40,0.3)] md:h-[7px]`} />
-      <ul className={`absolute inset-x-[5%] ${at} flex items-start justify-between`} aria-label={label}>
+      <img src="/rack/rail.webp" alt="" aria-hidden draggable={false} className={`absolute inset-x-[6%] ${at} z-[1] h-[5px] w-[88%] -translate-y-1/2 object-fill drop-shadow-[0_16px_5px_rgba(70,50,20,0.22)] md:h-[8px]`} />
+      <ul className={`absolute inset-x-[8%] ${at} flex items-start justify-between`} aria-label={label}>
         {pieces.map(({ product, colour }, n) => {
           const i = offset + n;
           const on = i === active;
@@ -90,7 +95,7 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
                 onMouseEnter={() => setActive(i)}
                 aria-pressed={on}
                 aria-label={`${product.name}, ${colour.name}, ${formatPrice(product.salePrice ?? product.price)}`}
-                className={`-mt-[3px] flex w-full cursor-pointer flex-col items-center transition-[filter,transform] duration-300 md:-mt-[5px] origin-top ${on ? "rotate-[1.2deg] [filter:drop-shadow(4px_12px_10px_rgba(90,70,40,0.4))]" : "[filter:drop-shadow(2px_7px_6px_rgba(90,70,40,0.28))] hover:rotate-[0.6deg]"}`}
+                className={`-mt-[3px] flex w-full cursor-pointer flex-col items-center transition-[filter,transform] duration-300 md:-mt-[5px] origin-top ${on ? "scale-[1.04] rotate-[1.2deg] [filter:drop-shadow(12px_22px_14px_rgba(70,50,20,0.38))]" : "[filter:drop-shadow(9px_16px_10px_rgba(70,50,20,0.26))] hover:rotate-[0.6deg]"}`}
               >
                 <Hanger category={product.category} />
                 <span className={`relative z-10 block ${fit[product.category].w} ${fit[product.category].tuck}`}>
@@ -111,8 +116,8 @@ export function HeroRack({ top, bottom }: { top: RackPiece[]; bottom: RackPiece[
 
   return (
     <>
-      {storey(top, 0, "top-[9%]", "Tops on the upper rail")}
-      {storey(bottom, top.length, "top-[46%] md:top-[45%]", "Bottoms, jackets and extras on the lower rail")}
+      {storey(top, 0, "top-[12%]", "Tops on the upper rail")}
+      {storey(bottom, top.length, "top-[48%] md:top-[47%]", "Bottoms, jackets and extras on the lower rail")}
 
       <p className="sr-only" aria-live="polite">
         {sel.product.name}, {sel.colour.name}, {formatPrice(sel.product.salePrice ?? sel.product.price)}

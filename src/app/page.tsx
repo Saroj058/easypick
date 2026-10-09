@@ -94,7 +94,14 @@ export default async function HomePage() {
       <section aria-labelledby="hero-title" className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
-          <div className="relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-[linear-gradient(180deg,#f6f0e6_0%,#f1eadf_60%,#e7dfd2_100%)] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
+          <div className="relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-[linear-gradient(180deg,#ece4d6_0%,#efe8dc_45%,#e9e1d3_100%)] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
+            {/* A niche set into the wall: its back wall is this stage; the four faces below are its ceiling,
+                side walls and floor, drawn in perspective so the recess reads as a real place to hang things. */}
+            <div className="pointer-events-none absolute inset-0 shadow-[inset_0_26px_40px_-18px_rgba(70,50,20,0.45),inset_26px_0_40px_-22px_rgba(70,50,20,0.35),inset_-26px_0_40px_-22px_rgba(70,50,20,0.35)]" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[4.5%] bg-[linear-gradient(180deg,#cfc3ae,#e2d8c6)] [clip-path:polygon(0_0,100%_0,95.5%_100%,4.5%_100%)]" aria-hidden />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-[4.5%] bg-[linear-gradient(90deg,#d8cdb9,#e9e0cf)] [clip-path:polygon(0_0,100%_4.5%,100%_94%,0_100%)]" aria-hidden />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-[4.5%] bg-[linear-gradient(270deg,#c9bda8,#dfd5c2)] [clip-path:polygon(100%_0,0_4.5%,0_94%,100%_100%)]" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[6%] bg-[linear-gradient(180deg,#f4eee3,#fffdf8)] [clip-path:polygon(4.5%_0,95.5%_0,100%_100%,0_100%)]" aria-hidden />
             {/* Plaster: a fine grain over the wall, under everything hung on it */}
             <div className="visit-grain pointer-events-none absolute inset-0 opacity-[0.09] mix-blend-multiply" aria-hidden />
             <HeroRack top={upper} bottom={lower} />
