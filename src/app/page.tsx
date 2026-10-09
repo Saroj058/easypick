@@ -95,7 +95,7 @@ export default async function HomePage() {
             {/* The wardrobe: a white hollow built on the page, with the shop's pieces hung in it; the picked
                 piece's name and tag show under it, either side of the way into the drop. */}
             <HeroNiche upper={upperRail} lower={lowerRail} cap={capProduct ? { product: capProduct, colour: capProduct.colours[0] } : null}>
-              <FlowButton href={drop ? `/drop/${drop.slug}` : "/drops"} text={drop ? `Shop Drop ${drop.slug}` : "See the drops"} solid />
+              <FlowButton href={drop ? `/drop/${drop.slug}` : "/drops"} text={drop ? `Shop Drop ${drop.slug}` : "See the drops"} />
             </HeroNiche>
           </div>
 
