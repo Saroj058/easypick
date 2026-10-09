@@ -3,10 +3,11 @@ import Link from "next/link";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { Countdown } from "@/components/countdown";
+import { DropCoverflow, type DropPiece } from "@/components/drop-coverflow";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { FlowButton } from "@/components/ui/flow-button";
-import { formatDropTime, formatPrice } from "@/lib/format";
+import { formatDropTime } from "@/lib/format";
 import { getDropTimeline, getDrops, getProducts, isReleased } from "@/lib/store";
 import type { Drop, Product, Size } from "@/lib/types";
 
@@ -18,80 +19,34 @@ export const metadata: Metadata = {
   alternates: { canonical: "/drops" },
 };
 
-// The page is the clothes: each drop is one band with a row of its pieces, large, every one a
-// single click from its own page. What can be bought comes first (out now), then what is coming
+// The page is the clothes: each drop is one band with its pieces as a row of cards swiped sideways
+// (the middle one faces out, large; see components/drop-coverflow.tsx), every one a click from its
+// own page. What can be bought comes first (out now), then what is coming
 // (with its countdown and the alert sign-up), then what sold through, kept small.
 
 type State = "upcoming" | "out" | "archive";
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
-/** One piece in a drop's row: its photo, name and fixed price; its sizes slide up when pointed at. */
-function Piece({ p, quiet = false, priority = false }: { p: Product; quiet?: boolean; priority?: boolean }) {
-  const colour = p.colours[0];
-  const sizes = p.variants.filter((v) => v.colour === colour.name).sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
-  const left = p.variants.reduce((n, v) => n + v.stock, 0);
-  const gone = p.status === "sold_out" || left === 0;
-  const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
-  const sizeLine = oneSize
-    ? "One size"
-    : sizes.map((v) =>
-        v.stock > 0 ? (
-          <span key={v.sku}>{v.size}</span>
-        ) : (
-          <s key={v.sku} className="text-steel-dark">
-            {v.size}
-          </s>
-        ),
-      );
-  return (
-    // "relative": the screen-reader-only "Sizes:" label is absolutely placed, and without a positioned
-    // parent inside the swipe row it escapes the row's clipping and makes the whole page wider on phones.
-    <li className="relative w-[68%] shrink-0 snap-start sm:w-[42%] md:w-auto">
-      <Link href={`/product/${p.slug}`} className="group block">
-        <div className="relative overflow-hidden">
-          <ProductImage
-            image={p.images[0]}
-            category={p.category}
-            colourHex={colour.hex}
-            decorative
-            priority={priority}
-            sizes="(min-width: 768px) 25vw, 68vw"
-            className={`transition-transform duration-500 ease-out [@media(hover:hover)]:group-hover:scale-[1.04] ${quiet || gone ? "opacity-55 grayscale" : ""}`}
-          />
-          {gone ? (
-            <span className="index absolute left-2 top-2 bg-paper px-2 py-1">Gone</span>
-          ) : (
-            !quiet && left <= 3 && <span className="index absolute left-2 top-2 bg-ink px-2 py-1 text-paper">{left} left</span>
-          )}
-          {/* The sizes, sliding up from the photo's foot when it is pointed at */}
-          <p aria-hidden className="absolute inset-x-0 bottom-0 flex translate-y-full justify-center gap-3 bg-paper/95 py-2.5 font-mono text-[12px] transition-transform duration-300 ease-out [@media(hover:hover)]:group-hover:translate-y-0">
-            {sizeLine}
-          </p>
-        </div>
-        <div className="mt-3 flex items-baseline justify-between gap-3">
-          <h4 className="min-w-0 truncate text-[15px] font-semibold group-hover:underline">{p.name}</h4>
-          <p className="shrink-0 font-mono text-[13px] tabular-nums">{formatPrice(p.salePrice ?? p.price)}</p>
-        </div>
-        {/* On touch screens nothing is hidden behind pointing: the sizes are always there */}
-        <p className="mt-1 flex gap-2.5 font-mono text-[12px] text-ink/80 [@media(hover:hover)]:hidden">
-          <span className="sr-only">Sizes: </span>
-          {sizeLine}
-        </p>
-      </Link>
-    </li>
-  );
-}
-
-/** A drop's pieces in one row: a swipe row on phones, four across on desktop. */
-function Row({ items, quiet = false, lead = false }: { items: Product[]; quiet?: boolean; lead?: boolean }) {
-  if (items.length === 0) return null;
-  return (
-    <ul className="-mx-4 mt-6 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-4 md:gap-x-5 md:gap-y-10 md:overflow-visible md:px-0 md:pb-0">
-      {items.map((p, i) => (
-        <Piece key={p.id} p={p} quiet={quiet} priority={lead && i < 2} />
-      ))}
-    </ul>
-  );
+/** What the carousel needs of each piece: its photo, name, fixed price and the sizes left. */
+function asPieces(items: Product[]): DropPiece[] {
+  return items.map((p) => {
+    const colour = p.colours[0];
+    const sizes = p.variants
+      .filter((v) => v.colour === colour.name)
+      .sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size))
+      .map((v) => ({ size: v.size as string, stock: v.stock }));
+    return {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      price: p.salePrice ?? p.price,
+      image: p.images[0],
+      category: p.category,
+      hex: colour.hex,
+      sizes,
+      gone: p.status === "sold_out" || p.variants.every((v) => v.stock <= 0),
+    };
+  });
 }
 
 export default async function DropsPage() {
@@ -127,7 +82,7 @@ export default async function DropsPage() {
             <span aria-hidden className="h-2 w-2 rounded-full bg-volt ring-1 ring-ink/30" />
             Out now
           </h2>
-          {out.map((d, i) => {
+          {out.map((d) => {
             const items = of(d);
             return (
               <article key={d.slug} className="mt-4 border-t border-ink pt-6 [&+article]:mt-14 md:[&+article]:mt-20">
@@ -147,7 +102,7 @@ export default async function DropsPage() {
                     <FlowButton href={`/drop/${d.slug}`} text={`Shop Drop ${d.slug}`} solid />
                   </div>
                 </div>
-                <Row items={items} lead={i === 0} />
+                <DropCoverflow pieces={asPieces(items)} label={d.name} />
               </article>
             );
           })}
@@ -180,7 +135,7 @@ export default async function DropsPage() {
                   </div>
                   {first && signup(`drops-${d.slug}`)}
                 </div>
-                <Row items={of(d)} />
+                <DropCoverflow pieces={asPieces(of(d))} label={d.name} />
               </article>
             );
           })}
