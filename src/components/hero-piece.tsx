@@ -50,7 +50,7 @@ export function HeroPiece({ pieces }: { pieces: HeroPieceItem[] }) {
         </Link>
 
         {/* Its tag, on a string: it swings once each time the piece changes */}
-        <div className="pointer-events-none absolute right-0 top-[10%] flex w-[104px] flex-col items-center md:top-[14%] md:w-[190px]" aria-hidden>
+        <div className="pointer-events-none absolute right-0 top-[10%] flex w-[92px] flex-col items-center md:top-[16%] md:w-[152px]" aria-hidden>
           <motion.div
             key={sel.product.slug}
             initial={still ? false : { rotate: 9 }}
@@ -59,8 +59,8 @@ export function HeroPiece({ pieces }: { pieces: HeroPieceItem[] }) {
             className="flex origin-top flex-col items-center"
           >
             <span className="block h-10 w-px bg-ink/40 md:h-16" />
-            <div className="-mt-3 h-[144px] w-[104px] md:h-[262px] md:w-[190px]">
-              <div className="w-[200px] origin-top-left scale-[0.52] [filter:drop-shadow(0_10px_16px_rgba(0,0,0,0.18))] md:scale-95">
+            <div className="-mt-3 h-[128px] w-[92px] md:h-[210px] md:w-[152px]">
+              <div className="w-[200px] origin-top-left scale-[0.46] [filter:drop-shadow(0_10px_16px_rgba(0,0,0,0.18))] md:scale-[0.76]">
                 <HangTag product={sel.product} colour={sel.colour.name} className="[--hole:var(--color-paper)]" />
               </div>
             </div>
