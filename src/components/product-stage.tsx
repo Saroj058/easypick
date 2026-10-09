@@ -85,9 +85,9 @@ export function ProductStage({
               <button
                 type="button"
                 onClick={() => setMeasuring(true)}
-                className="group mt-5 inline-flex h-11 cursor-pointer items-center gap-2.5 rounded-full border border-ink/30 bg-paper px-5 text-[13px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]"
+                className="group mt-4 inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border border-ink/30 bg-paper px-3.5 text-[11.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]"
               >
-                <Ruler aria-hidden className="h-4 w-4" strokeWidth={1.8} />
+                <Ruler aria-hidden className="h-3.5 w-3.5" strokeWidth={1.8} />
                 Measurements (cm)
               </button>
             )}
