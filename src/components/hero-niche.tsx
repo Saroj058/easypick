@@ -28,7 +28,7 @@ export interface NichePiece {
 
 const HANGERS = 5;
 /** How deep the recess looks, as a share of its own size: shallow, as in the sample. */
-const D = "3.6%";
+const D = "7%";
 const W = "rgba(255,255,255,";
 /** The accessories compartment on top (plant, cap, books, sneakers…). Off for now (owner, 9 Oct 2026): just the two rails of clothes. */
 const ACCESSORIES = false;
@@ -209,20 +209,22 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
         <span key={side} aria-hidden className={`absolute ${side} top-[19px] z-[3] h-[10px] w-[4px] -translate-y-1/2 rounded-[1px] bg-[linear-gradient(180deg,#f4f4f4,#8c8c8c_60%,#666)] md:top-[33.5px] md:h-[17px] md:w-[6px]`} />
       ))}
       {/* Five hangers along it, each with a piece */}
-      <ul className="absolute inset-x-[10.5%] top-[11px] z-[4] flex justify-between md:top-[19px]">
+      {/* Packed close and side-on, as on a real rail; the picked piece's slot opens wide and its neighbours slide along to make room. */}
+      <ul className="absolute inset-x-[4%] top-[11px] z-[4] flex justify-center [container-type:inline-size] md:top-[19px]">
         {Array.from({ length: HANGERS }, (_, i) => {
           const piece = pieces[i];
           const on = piece?.product.slug === activeSlug;
           const hung = piece ? HUNG[piece.product.slug] : undefined;
           return (
-            <li key={i} className={`relative w-[9.2%] [perspective:700px] ${on ? "z-10" : piece?.product.category === "bottoms" ? "z-[1]" : ""}`}>
+            <li key={i} className={`relative flex justify-center transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${on ? "z-10 w-[24cqw]" : "w-[7.4cqw]"}`}>
+              <div className="relative w-[7.9cqw] shrink-0 [perspective:700px]">
               <span aria-hidden className="block [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
                 <Hanger clips={piece?.product.category === "bottoms"} hookOnly={Boolean(hung)} />
               </span>
               {piece && (
                 <button
                   {...pick(piece)}
-                  className={`absolute left-1/2 block -translate-x-1/2 origin-top cursor-pointer transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none ${hung ? "top-[9px] md:top-[17px]" : ""} ${on ? "scale-[1.08] [transform:rotateY(0deg)]" : "[transform:rotateY(-56deg)]"}`}
+                  className={`absolute left-1/2 block -translate-x-1/2 origin-top cursor-pointer transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none ${hung ? "top-[9px] md:top-[17px]" : ""} ${on ? "scale-[1.08] [transform:rotateY(0deg)]" : "[transform:rotateY(-74deg)]"}`}
                   style={hung ? { width: `${hung}%` } : { width: HANG[piece.product.category].width, top: HANG[piece.product.category].top }}
                 >
                   {/* As on a real rail, a piece hangs turned side-on; the picked one turns on its hook to face out. */}
@@ -230,6 +232,7 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
                   <img src={hung ? `/rack/hung/${piece.product.slug}.webp` : `/rack/${piece.product.slug}.webp`} alt="" draggable={false} className={`block h-auto w-full transition-[filter] duration-300 ${on ? "[filter:drop-shadow(9px_14px_9px_rgba(0,0,0,0.34))]" : "[filter:drop-shadow(6px_9px_6px_rgba(0,0,0,0.22))]"}`} />
                 </button>
               )}
+              </div>
             </li>
           );
         })}
@@ -327,8 +330,8 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
                     <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                   </Link>
                   {/* The tag: the piece's fixed price and its measurements in cm */}
-                  <div className="relative h-[104px] w-[80px] shrink-0 self-end max-md:hidden" aria-hidden>
-                    <div className="absolute bottom-0 left-0 w-[200px] origin-bottom-left rotate-[3deg] scale-[0.4] [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.18))]">
+                  <div className="relative h-[92px] w-[72px] shrink-0 self-end max-md:hidden" aria-hidden>
+                    <div className="absolute bottom-0 left-0 w-[200px] origin-bottom-left rotate-[3deg] scale-[0.36] [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.18))]">
                       <HangTag key={sel.product.id} product={sel.product} colour={sel.colour.name} className="animate-fade-up [--hole:var(--color-mist)]" />
                     </div>
                   </div>
