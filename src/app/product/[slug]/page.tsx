@@ -144,16 +144,16 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               )}
               {product.status === "scheduled" && drop && <span className="text-ink">Arrives {formatDropTime(drop.releaseAt, { bs: true })}</span>}
             </p>
-            <div className="mt-5 flex items-start justify-between gap-6 lg:mt-3 lg:items-baseline">
-              {/* Phones: the name and colour (the left column, which carries them on desktop, is hidden there) */}
-              <div className="min-w-0 lg:hidden">
+            {/* Phones only: the name, colour and price (on desktop the left column carries the name, and the
+                price is on the hang tag beside the piece, so the panel does not repeat them) */}
+            <div className="mt-5 flex items-start justify-between gap-6 lg:hidden">
+              <div className="min-w-0">
                 <h1 className="text-[22px] font-medium uppercase leading-snug tracking-[0.16em] md:text-[24px]">{product.name}</h1>
                 <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
                   {product.colours[0].name} · {product.fit} fit
                 </p>
               </div>
-              <p className="font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark max-lg:hidden">Fixed price · VAT incl.</p>
-              {/* The price, fixed: the same on the tag in the store */}
+              {/* The tag is small on a phone, so the price is said here too */}
               <p className="shrink-0 text-right font-mono text-[21px] tabular-nums leading-snug">
                 {formatPrice(product.salePrice ?? product.price)}
                 {product.salePrice && <s className="block text-[13px] text-steel-dark">{formatPrice(product.price)}</s>}
@@ -161,7 +161,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             </div>
             <p className="mt-4 text-[15px] text-steel-dark lg:hidden">{product.shortDescription}</p>
 
-            <div className="mt-6 border-t border-ink/15 pt-6 lg:mt-4">
+            <div className="mt-6 border-t border-ink/15 pt-6 lg:mt-5">
               <BuyPanel
                 slug={product.slug}
                 name={product.name}
@@ -210,7 +210,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
         {more.length > 0 && (
           <section className="mt-24" aria-labelledby="more-heading">
             <h2 id="more-heading" className="display text-[28px] md:text-[44px]">
-              Wear it with
+              You may also like
             </h2>
             <div className="mt-8">
               <ProductGrid products={more} />
