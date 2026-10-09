@@ -8,7 +8,6 @@ import { RefreshCw, Store, Tag, Truck } from "lucide-react";
 import { ChevronIcon } from "@/components/icons";
 import { RecentlyViewed } from "@/components/local-lists";
 import { TrackView } from "@/components/track-view";
-import { TryOnLive } from "@/components/try-on-live";
 import { ProductGrid } from "@/components/product-card";
 import { RecordView } from "@/components/saved";
 import { ProductStage } from "@/components/product-stage";
@@ -172,7 +171,6 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                 vault={product.vault}
                 dropLabel={drop ? `Drops ${formatDropTime(drop.releaseAt)}` : undefined}
               />
-              {product.tryOn && <TryOnLive slug={product.slug} />}
             </div>
 
             {/* Four plain promises, small */}

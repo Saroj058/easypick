@@ -14,9 +14,6 @@ const supabaseOrigin = (() => {
 })();
 // The Find us map reads its tiles (one PMTiles file, in pieces) from this Supabase Storage bucket.
 const mapTilesOrigin = "https://dfhbezpxijxoqpompiku.supabase.co https://routing.openstreetmap.de";
-// Live try-on (Anywear's widget, components/try-on-live.tsx). Its script, frame and camera are
-// allowed on one address only: a product page opened with ?try=1, which the shopper asks for.
-const tryOnOrigin = "https://anywear.decart.ai";
 const cspFor = (extra: string) => [
   "default-src 'self'",
   // 'unsafe-eval' only in development: React uses eval there for better error stacks.
@@ -65,15 +62,6 @@ const nextConfig: NextConfig = {
     const privateLinks = [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "X-Robots-Tag", value: "noindex" }];
     return [
       { source: "/:path*", headers: common },
-      // After the rule above, so these two replace its values on this one address.
-      {
-        source: "/product/:slug",
-        has: [{ type: "query", key: "try", value: "1" }],
-        headers: [
-          { key: "Content-Security-Policy", value: cspFor(` ${tryOnOrigin}`) },
-          { key: "Permissions-Policy", value: `camera=(self "${tryOnOrigin}"), microphone=(), geolocation=(self), payment=()` },
-        ],
-      },
       { source: "/g/:path*", headers: privateLinks },
       { source: "/order/:path*", headers: privateLinks },
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },

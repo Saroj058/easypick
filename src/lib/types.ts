@@ -73,8 +73,6 @@ export interface Product {
   edition?: { no: number; of: number };
   /** A few lines about the piece, shown on its page. */
   story?: string;
-  /** The owner switched on live try-on (the shopper's camera, through Anywear) for this piece. */
-  tryOn?: boolean;
 }
 
 export interface Drop {
