@@ -169,14 +169,14 @@ function Diffuser({ className = "" }: { className?: string }) {
   );
 }
 
-export function HeroNiche({ upper, lower, cap, children }: { /** Tops, on the first rail. */ upper: NichePiece[]; /** Bottoms and jackets, on the second. */ lower: NichePiece[]; /** The cap on the accessories shelf, if it is on sale. */ cap: NichePiece | null; /** Shown under the hollow, in the middle (the way into the drop). */ children?: React.ReactNode }) {
+export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. */ upper: NichePiece[]; /** Bottoms and jackets, on the second. */ lower: NichePiece[]; /** The cap on the accessories shelf, if it is on sale. */ cap: NichePiece | null }) {
   const all = [...upper, ...lower, ...(cap ? [cap] : [])];
   const [activeSlug, setActiveSlug] = useState(upper[Math.min(1, upper.length - 1)]?.product.slug ?? all[0]?.product.slug ?? null);
   const sel = all.find((p) => p.product.slug === activeSlug) ?? all[0] ?? null;
   const sizes = sel ? sel.product.variants.filter((v) => v.colour === sel.colour.name).sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)) : [];
   const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
 
-  /** A piece that can be picked: pointing at it or tapping it shows its tag below. */
+  /** A piece that can be picked: pointing at it or tapping it shows its details and tag in the bottom compartment. */
   const pick = (piece: NichePiece) => ({
     type: "button" as const,
     onClick: () => setActiveSlug(piece.product.slug),
@@ -237,7 +237,7 @@ export function HeroNiche({ upper, lower, cap, children }: { /** Tops, on the fi
   return (
     <div>
       {/* No room is drawn round it: the white page is the wall, and this is a hole cut into the screen. */}
-      <div role="group" aria-label="The Easypick wardrobe: pieces from the shop, hung in a lit white hollow" className="relative -mx-4 aspect-[4/3] overflow-hidden bg-paper text-ink md:-mx-8 lg:mx-0">
+      <div role="group" aria-label="The Easypick wardrobe: pieces from the shop, hung in a lit white hollow" className="relative -mx-4 aspect-[7/6] overflow-hidden bg-paper text-ink md:-mx-8 lg:mx-0">
         <div className="absolute inset-0 shadow-[0_0_0_1px_rgba(0,0,0,0.09)]">
           {/* The four faces of the recess, in perspective: ceiling in soft shade, sides, and the lit floor ledge */}
           <div aria-hidden className="absolute inset-x-0 top-0 bg-[linear-gradient(180deg,#d8d8d5,#ecece9)]" style={{ height: D, clipPath: `polygon(0 0,100% 0,calc(100% - ${D}) 100%,${D} 100%)` }} />
@@ -258,7 +258,7 @@ export function HeroNiche({ upper, lower, cap, children }: { /** Tops, on the fi
 
             {/* The short top compartment: accessories and display pieces. Under its shelf, the tops. */}
             {shelf(
-              "13.5%",
+              "11%",
               upper,
               <>
                 <Plant className="w-[9.5%]" />
@@ -277,59 +277,60 @@ export function HeroNiche({ upper, lower, cap, children }: { /** Tops, on the fi
               </>,
             )}
             {/* Second shelf: under it, the bottoms and jackets */}
-            {shelf("56.5%", lower)}
+            {shelf("44%", lower)}
+
+            {/* The bottom compartment: the picked piece's details on the left, its tag on the right */}
+            <div className="absolute inset-x-0 bottom-0" style={{ top: "77%" }}>
+              <div aria-hidden className="relative z-10 -mx-[1%] h-[7px] bg-[linear-gradient(180deg,#ffffff_0%,#ffffff_60%,#ececea_100%)] shadow-[0_2px_3px_rgba(0,0,0,0.16)] md:h-[11px]" />
+              <div className="relative h-0">
+                <div aria-hidden className="absolute inset-x-0 top-0 z-[1] h-[2px] bg-white shadow-[0_0_8px_2px_rgba(255,255,255,0.95)]" />
+                <Wash from="top" reach="clamp(30px,7vw,80px)" />
+              </div>
+              {sel && (
+                <div className="absolute inset-x-[4%] bottom-[5%] top-[9px] z-[5] flex items-center justify-between gap-3 md:top-[13px]">
+                  <div className="min-w-0" aria-live="polite">
+                    <p className="truncate text-[14px] font-semibold md:text-lg">{sel.product.name}</p>
+                    <p className="flex items-center gap-2 text-[12px] text-ink/75 md:mt-1 md:text-[14px]">
+                      <span aria-hidden className="h-3 w-3 rounded-full border border-ink/30 md:h-3.5 md:w-3.5" style={{ background: sel.colour.hex }} />
+                      {sel.colour.name}
+                      <span className="font-mono text-ink md:hidden">· {formatPrice(sel.product.salePrice ?? sel.product.price)}</span>
+                    </p>
+                    <p className="flex gap-2.5 font-mono text-[12px] text-ink/85 md:mt-1 md:gap-3 md:text-[13px]">
+                      <span className="sr-only">Sizes: </span>
+                      {oneSize
+                        ? "One size"
+                        : sizes.map((v) =>
+                            v.stock > 0 ? (
+                              <span key={v.sku}>
+                                {v.size}
+                                {v.stock <= 3 && <sup className="ml-px text-[9px] text-ink/70">{v.stock}</sup>}
+                              </span>
+                            ) : (
+                              <s key={v.sku} className="text-steel-dark">
+                                {v.size}
+                                <span className="sr-only"> sold out</span>
+                              </s>
+                            ),
+                          )}
+                    </p>
+                  </div>
+                  <Link href={`/product/${sel.product.slug}`} className="group inline-flex min-h-11 shrink-0 items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.06em] md:text-sm">
+                    View piece
+                    <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </Link>
+                  {/* The tag: the piece's fixed price and its measurements in cm */}
+                  <div className="relative h-[104px] w-[80px] shrink-0 self-end max-md:hidden" aria-hidden>
+                    <div className="absolute bottom-0 left-0 w-[200px] origin-bottom-left rotate-[3deg] scale-[0.4] [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.18))]">
+                      <HangTag key={sel.product.id} product={sel.product} colour={sel.colour.name} className="animate-fade-up [--hole:var(--color-mist)]" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Under the hollow: the picked piece on the left, the way into the drop in the middle, its tag on the right */}
-      <div className="mt-4 grid items-end gap-4 md:mt-5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-        {sel ? (
-          <div className="min-w-0 max-md:order-2" aria-live="polite">
-            <p className="truncate text-lg font-semibold">{sel.product.name}</p>
-            <p className="mt-1 flex items-center gap-2 text-[14px] text-ink/75">
-              <span aria-hidden className="h-3.5 w-3.5 rounded-full border border-ink/30" style={{ background: sel.colour.hex }} />
-              {sel.colour.name}
-              <span className="font-mono text-[13px] text-ink md:hidden">· {formatPrice(sel.product.salePrice ?? sel.product.price)}</span>
-            </p>
-            <p className="mt-1.5 flex gap-3 font-mono text-[13px] text-ink/85">
-              <span className="sr-only">Sizes: </span>
-              {oneSize
-                ? "One size"
-                : sizes.map((v) =>
-                    v.stock > 0 ? (
-                      <span key={v.sku}>
-                        {v.size}
-                        {v.stock <= 3 && <sup className="ml-px text-[9px] text-ink/70">{v.stock}</sup>}
-                      </span>
-                    ) : (
-                      <s key={v.sku} className="text-steel-dark">
-                        {v.size}
-                        <span className="sr-only"> sold out</span>
-                      </s>
-                    ),
-                  )}
-            </p>
-            <Link href={`/product/${sel.product.slug}`} className="group mt-1 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
-              View piece
-              <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </Link>
-          </div>
-        ) : (
-          <span />
-        )}
-        <div className="flex justify-center max-md:order-1">{children}</div>
-        {/* The tag: the piece's fixed price and its measurements in cm */}
-        <div className="flex justify-end max-md:hidden">
-          {sel && (
-            <div className="relative h-[130px] w-[100px] shrink-0" aria-hidden>
-              <div className="absolute bottom-0 left-0 w-[200px] origin-bottom-left rotate-[3deg] scale-50 [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.18))]">
-                <HangTag key={sel.product.id} product={sel.product} colour={sel.colour.name} className="animate-fade-up [--hole:var(--color-mist)]" />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
