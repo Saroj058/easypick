@@ -221,17 +221,17 @@ export function BuyPanel(props: Props) {
         {status === "live" ? (
           <>
             {variant && sellable > 0 ? (
-              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
+              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-volt text-ink hover:bg-[#b5f020]">
                 Buy now
                 <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Link>
             ) : (
-              <button type="button" disabled className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink/15 text-ink/55">
+              <button type="button" disabled className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-volt/45 text-ink/55">
                 Pick a size
               </button>
             )}
             {canBag && (
-              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper cursor-pointer disabled:cursor-default disabled:border-ink/25 disabled:text-ink/40 disabled:hover:bg-paper disabled:hover:text-ink/40">
+              <button type="button" onClick={addToBag} disabled={!variant || sellable <= 0} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper cursor-pointer disabled:cursor-default disabled:border-ink/25 disabled:text-ink/40 disabled:hover:bg-paper disabled:hover:text-ink/40">
                 <ShoppingBag aria-hidden className="h-4 w-4" strokeWidth={1.8} />
                 {added ? "Added" : "Add to bag"}
               </button>
@@ -239,10 +239,10 @@ export function BuyPanel(props: Props) {
           </>
         ) : (
           <>
-            <Link href="/alerts" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-ink text-paper hover:bg-ink/85">
+            <Link href="/alerts" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-volt text-ink hover:bg-[#b5f020]">
               Notify me
             </Link>
-            <Link href="/drops" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper">
+            <Link href="/drops" className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] border-[1.5px] border-ink bg-paper hover:bg-ink hover:text-paper">
               {status === "scheduled" ? props.dropLabel ?? "See the drop" : "See the drop"}
             </Link>
           </>
