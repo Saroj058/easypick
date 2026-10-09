@@ -538,7 +538,7 @@ function Shelf({
   id,
   label,
   showAll,
-  pieces,
+  pieces: every,
   mySize,
   onAdded,
   onBuy,
@@ -546,19 +546,17 @@ function Shelf({
   index: number;
   id: string;
   label: string;
-  /** Where "Show all" goes; none while searching. */
+  /** Where "Show all" goes; none while searching the whole rail (the shelf's own search is off then too). */
   showAll: string | null;
   pieces: RailPiece[];
   mySize: string | null;
   onAdded: (line: { sku: string; name: string }) => void;
   onBuy: (line: BagLine) => void;
 }) {
-  const router = useRouter();
-  // A long row goes round in a ring from its first piece; a short one starts on its middle piece, so both sides are filled.
-  const loop = pieces.length >= 5;
-  const start = loop ? 0 : Math.floor((pieces.length - 1) / 2);
-  const [active, setActive] = useState(start);
-  const piece = pieces[Math.min(active, pieces.length - 1)];
+  // The shelf's own search: it only looks through this shelf's pieces.
+  const [query, setQuery] = useState("");
+  const q = query.trim();
+  const pieces = q ? searchProducts(every, q) : every;
 
   return (
     <section
@@ -566,8 +564,8 @@ function Shelf({
       aria-labelledby={`rail-${id}-title`}
       className={`scroll-mt-24 ${index === 0 ? "pt-8" : "pt-10 md:pt-14"}`}
     >
-      {/* The section's name, set large, with how many pieces hang here; Show all on the right. */}
-      <div className="flex items-end justify-between gap-4">
+      {/* The section's name, set large, with how many pieces hang here; its own search and Show all on the right. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <h3
           id={`rail-${id}-title`}
           className="display min-w-0 text-[34px] leading-[0.86] md:text-[44px]"
@@ -581,15 +579,69 @@ function Shelf({
           </span>
         </h3>
         {showAll && (
-          <ShinyLink
-            href={showAll}
-            aria-label={`Show all ${label.toLowerCase()}`}
-          >
-            Show all <Arrow />
-          </ShinyLink>
+          <div className={`flex min-w-0 items-center justify-end gap-3 ${q ? "max-sm:basis-full" : ""} sm:flex-1`}>
+            <ExpandingSearchDock
+              value={query}
+              onChange={setQuery}
+              label={`Search ${label.toLowerCase()}`}
+              placeholder={`Search ${label.toLowerCase()}`}
+              className="min-w-0 flex-1"
+            />
+            <ShinyLink
+              href={showAll}
+              aria-label={`Show all ${label.toLowerCase()}`}
+            >
+              Show all <Arrow />
+            </ShinyLink>
+          </div>
         )}
       </div>
 
+      {pieces.length > 0 ? (
+        <ShelfRow
+          // A new set of matches starts the row again at its first piece.
+          key={pieces.map((x) => x.id).join(",")}
+          index={index}
+          label={label}
+          pieces={pieces}
+          mySize={mySize}
+          onAdded={onAdded}
+          onBuy={onBuy}
+        />
+      ) : (
+        <p role="status" className="py-10 text-center text-steel-dark">
+          Nothing in {label.toLowerCase()} matches &ldquo;{q}&rdquo;.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** A shelf's row: the pieces in a cover-flow, the count, and the centre piece's controls. */
+function ShelfRow({
+  index,
+  label,
+  pieces,
+  mySize,
+  onAdded,
+  onBuy,
+}: {
+  index: number;
+  label: string;
+  pieces: RailPiece[];
+  mySize: string | null;
+  onAdded: (line: { sku: string; name: string }) => void;
+  onBuy: (line: BagLine) => void;
+}) {
+  const router = useRouter();
+  // A long row goes round in a ring from its first piece; a short one starts on its middle piece, so both sides are filled.
+  const loop = pieces.length >= 5;
+  const start = loop ? 0 : Math.floor((pieces.length - 1) / 2);
+  const [active, setActive] = useState(start);
+  const piece = pieces[Math.min(active, pieces.length - 1)];
+
+  return (
+    <>
       <CoverflowCarousel
         count={pieces.length}
         aspect={1.25}
@@ -641,7 +693,7 @@ function Shelf({
           onBuy={onBuy}
         />
       </div>
-    </section>
+    </>
   );
 }
 
