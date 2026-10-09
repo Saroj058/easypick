@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Countdown } from "@/components/countdown";
-import { HeroRack, type RackPiece } from "@/components/hero-rack";
 import { FitsTeaser } from "@/components/home/fits-teaser";
 import { GiftBlock } from "@/components/home/gift-block";
 import { ShinyLink } from "@/components/ui/shiny-button";
@@ -23,37 +23,12 @@ import { site } from "@/lib/site";
 import { getDropTimeline, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
 import { designerFits } from "@/lib/occasions";
-import type { Category, Product } from "@/lib/types";
 
 export const revalidate = 60;
 
 // Concept: "the tag is the store". The page is built from what's printed on an
 // Easypick hang tag: a fixed price, measurements in cm, a SKU. Numbers shown are
 // computed from stock data, never decorative.
-
-/** How many pieces hang on each rail: few enough that every one has air around it, like a real shop rail. */
-const UPPER_COUNT = 5;
-const LOWER_COUNT = 5;
-/** The two storeys of the hero's shelf: what hangs on the upper rail, and on the lower one. */
-// Jackets hang with the bottoms so the lower rail isn't only trousers and caps.
-const UPPER: Category[] = ["tees", "hoodies", "co-ords"];
-const LOWER: Category[] = ["bottoms", "jackets", "accessories"];
-
-/**
- * A few live pieces for one storey, kinds mixed along the rail, each in a colour that
- * differs from its neighbour where the piece has a choice, so the rail reads as a range.
- */
-function pickStorey(products: Product[], kinds: Category[], count: number): RackPiece[] {
-  const live = products.filter((p) => p.status === "live");
-  const byKind = kinds.map((k) => live.filter((p) => p.category === k));
-  const chosen: Product[] = [];
-  // One of each kind in turn, until the rail is full or the kinds run out.
-  for (let round = 0; chosen.length < count && byKind.some((list) => list.length > round); round++) {
-    for (const list of byKind) if (list[round] && chosen.length < count) chosen.push(list[round]);
-  }
-  // The rail hangs each piece's own front photo, so the colour named is the one photographed: its first.
-  return chosen.map((product) => ({ product, colour: product.colours[0] }));
-}
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -79,8 +54,6 @@ export default async function HomePage() {
   const drop = current ?? next;
   // Vault pieces have their own section; the shelf and the rail hold the house range.
   const range = products.filter((p) => !p.vault);
-  const upper = pickStorey(range, UPPER, UPPER_COUNT);
-  const lower = pickStorey(range, LOWER, LOWER_COUNT);
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -94,19 +67,13 @@ export default async function HomePage() {
       <section aria-labelledby="hero-title" className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
-          <div className="relative -mx-4 h-[46svh] min-h-[360px] overflow-hidden bg-[linear-gradient(180deg,#ece4d6_0%,#efe8dc_45%,#e9e1d3_100%)] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:h-auto lg:min-h-[560px]">
-            {/* A niche set into the wall: its back wall is this stage; the four faces below are its ceiling,
-                side walls and floor, drawn in perspective so the recess reads as a real place to hang things. */}
-            <div className="pointer-events-none absolute inset-0 shadow-[inset_0_26px_40px_-18px_rgba(70,50,20,0.45),inset_26px_0_40px_-22px_rgba(70,50,20,0.35),inset_-26px_0_40px_-22px_rgba(70,50,20,0.35)]" aria-hidden />
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-[4.5%] bg-[linear-gradient(180deg,#cfc3ae,#e2d8c6)] [clip-path:polygon(0_0,100%_0,95.5%_100%,4.5%_100%)]" aria-hidden />
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-[4.5%] bg-[linear-gradient(90deg,#d8cdb9,#e9e0cf)] [clip-path:polygon(0_0,100%_4.5%,100%_94%,0_100%)]" aria-hidden />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-[4.5%] bg-[linear-gradient(270deg,#c9bda8,#dfd5c2)] [clip-path:polygon(100%_0,0_4.5%,0_94%,100%_100%)]" aria-hidden />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[6%] bg-[linear-gradient(180deg,#f4eee3,#fffdf8)] [clip-path:polygon(4.5%_0,95.5%_0,100%_100%,0_100%)]" aria-hidden />
-            {/* Plaster: a fine grain over the wall, under everything hung on it */}
-            <div className="visit-grain pointer-events-none absolute inset-0 opacity-[0.09] mix-blend-multiply" aria-hidden />
-            <HeroRack top={upper} bottom={lower} />
-            {/* The way into the drop, on the wardrobe itself: in the middle of the card's foot (top on phones, where the foot holds the piece bar). The same sweeping pill as the Rail's "Show all", on white. */}
-            <div className="absolute inset-x-0 bottom-[70px] z-30 flex justify-center md:bottom-6 lg:bottom-7">
+          <div className="relative -mx-4 aspect-[1339/1174] overflow-hidden bg-[#d9cfc3] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:self-center">
+            {/* The wardrobe: the owner's picture of the lit niche (hangers on two rails, accessories on the
+                top shelf, plants). The clothes are off the rails for now (owner, 9 Oct 2026); the tappable
+                rack is still in components/hero-rack.tsx for when they go back. */}
+            <Image src="/rack/niche.webp" alt="The Easypick wardrobe: a lit niche in the wall with two rails of wooden hangers, caps and accessories on the top shelf, and plants" fill priority sizes="(min-width: 1024px) 58vw, 100vw" className="object-cover object-center" />
+            {/* The way into the drop, on the wardrobe itself: in the middle of the card's foot. The same sweeping pill as the Rail's "Show all", on white. */}
+            <div className="absolute inset-x-0 bottom-4 z-30 flex justify-center md:bottom-6 lg:bottom-7">
               <ShinyLink href={drop ? `/drop/${drop.slug}` : "/drops"} className="[&>span]:bg-paper [&>span]:px-6 [&>span]:py-3 [&>span]:shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)]">
                 {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
               </ShinyLink>
