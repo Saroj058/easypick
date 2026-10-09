@@ -19,6 +19,7 @@ export function ProductStage({
   name,
   description,
   facts,
+  details,
 }: {
   images: Img[];
   /** The piece cut out of its front photo (public/rack/<slug>.webp), when there is one. */
@@ -29,6 +30,8 @@ export function ProductStage({
   description: string;
   /** Two or three short lines about the cloth and make. */
   facts: string[];
+  /** Everything on the details list: shown in the column on desktop. */
+  details: string[];
 }) {
   const [view, setView] = useState(0);
   const shown = images[Math.min(view, images.length - 1)];
@@ -36,7 +39,7 @@ export function ProductStage({
 
   return (
     <div className="relative grid h-full grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
-      {/* The column: which view, and what the piece is. Its name is said once, in the buying panel's heading. */}
+      {/* The column: which view, and what the piece is. Its name is the page's heading on desktop. */}
       <div className="order-2 flex min-w-0 flex-col px-4 pb-8 pt-2 md:px-8 lg:order-1 lg:py-12 lg:pl-10 lg:pr-0">
         <div className="flex flex-1 gap-10 lg:items-center">
           {images.length > 1 && (
@@ -58,12 +61,17 @@ export function ProductStage({
             </ol>
           )}
           <div className="min-w-0 max-lg:hidden">
-            <p aria-hidden className="text-[17px] font-medium uppercase tracking-[0.2em]">
-              {name}
-            </p>
+            {/* The page's heading on desktop; on phones this column is hidden and the buying panel carries it */}
+            <h1 className="text-[17px] font-medium uppercase tracking-[0.2em]">{name}</h1>
             <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark">{colour.name}</p>
-            <p className="mt-8 max-w-[26ch] text-[13px] leading-relaxed text-ink/80">{description}</p>
-            <a href="#details" className="group mt-8 inline-flex min-h-11 items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em]">
+            <p className="mt-6 max-w-[28ch] text-[13px] leading-relaxed text-ink/80">{description}</p>
+            <p className="mt-7 font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark">Details</p>
+            <ul className="mt-2.5 max-w-[30ch] space-y-1.5 border-t border-ink/15 pt-3 text-[13px] leading-snug text-ink/85">
+              {details.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+            <a href="#details" className="group mt-5 inline-flex min-h-11 items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em]">
               See the details
               <ArrowIcon className="h-3.5 w-3.5 -rotate-45 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </a>
@@ -71,7 +79,7 @@ export function ProductStage({
         </div>
         {/* What it is made of: a swatch of its colour and two or three short lines */}
         {facts.length > 0 && (
-          <div className="flex min-w-0 items-center gap-4 overflow-hidden max-lg:mt-2">
+          <div className="flex min-w-0 items-center gap-4 overflow-hidden max-lg:mt-2 lg:hidden">
             <span aria-hidden className="h-12 w-12 shrink-0 rounded-full border border-ink/10 shadow-[inset_0_-6px_10px_rgba(0,0,0,0.12),inset_0_4px_8px_rgba(255,255,255,0.35)]" style={{ background: colour.hex }} />
             <ul className="min-w-0 flex-1 space-y-1 font-mono text-[10.5px] uppercase leading-snug tracking-[0.14em] text-ink/80">
               {facts.map((f) => (

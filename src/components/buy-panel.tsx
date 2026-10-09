@@ -1,5 +1,6 @@
 "use client";
 
+import { MapPin } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -9,7 +10,6 @@ import type { Colour, LiveStock, Product, Size } from "@/lib/types";
 import { AskWhatsApp } from "./ask-whatsapp";
 import { useAddToBag } from "./bag-gate";
 import { RestockForm } from "./restock-form";
-import { SaveButton } from "./saved";
 import { useMe } from "./session";
 import { GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
@@ -103,14 +103,11 @@ export function BuyPanel(props: Props) {
 
   return (
     <div>
-      {/* The price, VAT and the fixed-price promise are on the hang tag beside the photo; delivery and
-          pickup are under "Pickup, delivery and returns". Here: only Save. */}
-      <div className="flex justify-end">
-        <SaveButton slug={slug} name={name} />
-      </div>
-
+      {/* The price is in the heading above this panel; delivery and pickup are under "Pickup, delivery
+          and returns". (The Save button was taken off this page: owner, 9 Oct 2026. Pieces are still
+          saved with the heart on the shop's tiles.) */}
       {colours.length > 1 && (
-        <fieldset className="mt-8">
+        <fieldset>
           <legend className="text-sm font-semibold">
             Colour <span className="font-normal text-steel-dark">· {colour.name}</span>
           </legend>
@@ -140,7 +137,7 @@ export function BuyPanel(props: Props) {
       )}
 
       {status === "live" && !oneSize && (
-        <fieldset className="mt-8">
+        <fieldset className={colours.length > 1 ? "mt-6" : ""}>
           <div className="flex items-baseline justify-between">
             <legend className="text-sm font-semibold">Size</legend>
             <button
@@ -255,12 +252,13 @@ export function BuyPanel(props: Props) {
       {status === "live" && (
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-            <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}${picked && picked !== "ONE" ? `&size=${picked}` : ""}`} className="btn btn-outline flex-1">
-              <GiftIcon className="h-5 w-5" />
+          <div className="mt-3 flex gap-2.5">
+            <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}${picked && picked !== "ONE" ? `&size=${picked}` : ""}`} className="group flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[12.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
+              <GiftIcon className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5" />
               Send as gift
             </Link>
-            <Link href={`/visit?try=${slug}`} className="btn btn-outline flex-1">
+            <Link href={`/visit?try=${slug}`} className="group flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[12.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
+              <MapPin aria-hidden className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5" strokeWidth={1.8} />
               Try in store
             </Link>
           </div>

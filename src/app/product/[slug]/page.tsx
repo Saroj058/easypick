@@ -123,10 +123,11 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             name={product.name}
             description={product.shortDescription}
             facts={product.details.slice(0, 3)}
+            details={[`${product.fit[0].toUpperCase()}${product.fit.slice(1)} fit · ${product.gender}`, ...product.details]}
           />
         </div>
 
-        <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-12">
+        <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-9">
           <div className="lg:sticky lg:top-28">
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
               {product.brand ? <span>{product.brand}</span> : drop ? <span>{drop.name}</span> : <span>{categoryLabels[product.category]}</span>}
@@ -138,13 +139,15 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
               )}
               {product.status === "scheduled" && drop && <span className="text-ink">Arrives {formatDropTime(drop.releaseAt, { bs: true })}</span>}
             </p>
-            <div className="mt-5 flex items-start justify-between gap-6">
-              <div className="min-w-0">
+            <div className="mt-5 flex items-start justify-between gap-6 lg:mt-3 lg:items-baseline">
+              {/* Phones: the name and colour (the left column, which carries them on desktop, is hidden there) */}
+              <div className="min-w-0 lg:hidden">
                 <h1 className="text-[22px] font-medium uppercase leading-snug tracking-[0.16em] md:text-[24px]">{product.name}</h1>
                 <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">
                   {product.colours[0].name} · {product.fit} fit
                 </p>
               </div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark max-lg:hidden">Fixed price · VAT incl.</p>
               {/* The price, fixed: the same on the tag in the store */}
               <p className="shrink-0 text-right font-mono text-[20px] tabular-nums leading-snug">
                 {formatPrice(product.salePrice ?? product.price)}
@@ -153,7 +156,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             </div>
             <p className="mt-4 text-[15px] text-steel-dark lg:hidden">{product.shortDescription}</p>
 
-            <div className="mt-6 border-t border-ink/15 pt-6">
+            <div className="mt-6 border-t border-ink/15 pt-6 lg:mt-4">
               <BuyPanel
                 slug={product.slug}
                 name={product.name}
