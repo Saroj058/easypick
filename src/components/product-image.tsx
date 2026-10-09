@@ -2,7 +2,8 @@ import Image from "next/image";
 
 import type { Category, ProductImage as Img } from "@/lib/types";
 
-// Until real photos exist, products render as a technical flat: the garment in its
+// Until real photos exist, a product shows a stand-in photograph of its kind of garment in its own
+// colour (see standIn below). A kind with no stand-in still renders as a technical flat: the garment in its
 // own colour with seams, stitching and trims drawn in. Real photos replace this
 // automatically once `src` is set.
 
@@ -143,6 +144,38 @@ export function GarmentSvg({
   );
 }
 
+// A product with no photo of its own shows a stand-in: a neutral photograph of the same kind of
+// garment (public/stand-ins/<kind>.webp, from scripts/stand-ins.mjs), dyed to the product's colour.
+// The kind is read from the product's name; a kind with no picture falls back to its category's.
+const STAND_INS = new Set(["tee", "pocket-tee", "hoodie", "crewneck", "quarter-zip", "jacket", "jeans", "jogger", "cargo", "cap", "set"]);
+const KINDS: [RegExp, string][] = [
+  [/\bset\b|co-?ord/, "set"],
+  [/bucket hat/, "bucket-hat"],
+  [/\bcap\b|\bhat\b|beanie/, "cap"],
+  [/bandana/, "bandana"],
+  [/belt/, "belt"],
+  [/polo/, "polo"],
+  [/henley|long[- ]sleeve/, "henley"],
+  [/pocket tee/, "pocket-tee"],
+  [/\btee\b|t-shirt/, "tee"],
+  [/hoodie/, "hoodie"],
+  [/quarter|half[- ]zip|fleece/, "quarter-zip"],
+  [/crew|sweatshirt|sweater/, "crewneck"],
+  [/overshirt|shacket|shirt/, "overshirt"],
+  [/jacket|bomber|windbreaker/, "jacket"],
+  [/short/, "shorts"],
+  [/jean|denim/, "jeans"],
+  [/jogger|sweatpant|track pant/, "jogger"],
+  [/cargo|carpenter|pant|trouser/, "cargo"],
+];
+const BY_CATEGORY: Record<Category, string> = { tees: "tee", hoodies: "hoodie", jackets: "jacket", bottoms: "cargo", "co-ords": "set", accessories: "cap" };
+function standIn(name: string, category: Category): string | null {
+  const n = name.toLowerCase();
+  const kind = KINDS.find(([re]) => re.test(n))?.[1];
+  if (kind && STAND_INS.has(kind)) return kind;
+  return STAND_INS.has(BY_CATEGORY[category]) ? BY_CATEGORY[category] : null;
+}
+
 export function ProductImage({
   image,
   category,
@@ -165,6 +198,24 @@ export function ProductImage({
     return (
       <div className={`relative aspect-[4/5] overflow-hidden bg-photo ${className}`}>
         <Image src={image.src} alt={decorative ? "" : image.alt} fill sizes={sizes} priority={priority} className="object-cover" />
+      </div>
+    );
+  }
+
+  const kind = standIn(image.alt, category);
+  if (kind) {
+    const src = `/stand-ins/${kind}.webp`;
+    const a11y = decorative ? { "aria-hidden": true } : { role: "img", "aria-label": image.alt };
+    return (
+      <div {...a11y} className={`relative aspect-[4/5] overflow-hidden bg-photo ${className}`}>
+        {/* The colour, in the garment's shape; over it the grey photograph, multiplied in for its folds and seams, and a little of it screened back for the highlights a dark colour would lose */}
+        <div className="absolute inset-0 m-auto h-[76%] w-[76%] isolate [filter:drop-shadow(0_10px_12px_rgba(0,0,0,0.16))]" style={image.kind === "detail" ? { transform: "scale(2) translate(-6%, 8%)" } : undefined}>
+          <div className="absolute inset-0" style={{ backgroundColor: colourHex, maskImage: `url(${src})`, WebkitMaskImage: `url(${src})`, maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }} />
+          {/* eslint-disable-next-line @next/next/no-img-element -- a small neutral photograph, used as a blend layer */}
+          <img src={src} alt="" draggable={false} loading={priority ? "eager" : "lazy"} className="absolute inset-0 h-full w-full object-contain mix-blend-multiply" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- the same photograph, for highlights */}
+          <img src={src} alt="" draggable={false} loading="lazy" className="absolute inset-0 h-full w-full object-contain opacity-[0.16] mix-blend-screen" />
+        </div>
       </div>
     );
   }
