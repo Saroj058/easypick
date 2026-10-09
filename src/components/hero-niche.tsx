@@ -5,15 +5,16 @@
 //    each one a bright hairline with a wide soft wash coming off it;
 //  - the ceiling, side walls and floor of the recess are drawn in perspective, the ceiling in shade
 //    and the floor lit;
-//  - shelves are slabs that throw a shadow, rails stand off the wall on brackets, and the hangers and
-//    plants cast shadows onto the wall behind them;
-//  - the room's polished floor picks up the niche's light.
+//  - two shelves divide it into three compartments (accessories on top, clothes in the two below);
+//    in each clothes compartment a steel rail runs from one side wall to the other, and the hangers
+//    and plants cast shadows onto the wall behind them;
+//  - no room is drawn round it: the white page is the wall, so the hollow sits in the screen itself.
 // The top shelf is for accessories. The clothes are off the rails for now (owner, 9 Oct 2026): the
 // tappable rack is in hero-rack.tsx for when they go back.
 
-const HANGERS = 9;
+const HANGERS = 7;
 /** How deep the recess looks, as a share of its own size. */
-const D = "6.5%";
+const D = "7.5%";
 const LIGHT = "rgba(255,255,255,";
 
 /** A light strip: a bright hairline along one edge and the wash of light coming off it. */
@@ -56,17 +57,16 @@ function Storey({ top, items }: { top: string; items?: React.ReactNode }) {
       <div className="relative h-0">
         <Strip edge="top" reach="clamp(70px,18vw,170px)" />
       </div>
-      {/* Brackets drop from the shelf to hold the rail out from the wall */}
-      {["left-[4%]", "right-[4%]"].map((side) => (
-        <span key={side} aria-hidden className={`absolute ${side} top-[13px] z-[2] h-[15px] w-[3px] rounded-full bg-[linear-gradient(90deg,#5d5d5d,#e2e2e2_45%,#7a7a7a)] md:top-[20px] md:h-[24px] md:w-[5px]`} />
-      ))}
-      {/* The rail: a photographed steel rod, with its shadow falling on the wall well below it */}
+      {/* The rail: a steel rod fixed between the two side walls, a round flange where it meets each one */}
       {/* eslint-disable-next-line @next/next/no-img-element -- one thin strip of a photographed steel rod, stretched along the rail */}
-      <img src="/rack/rail.webp" alt="" aria-hidden draggable={false} className="absolute inset-x-[3%] top-[26px] z-[2] h-[5px] w-[94%] object-fill grayscale [filter:grayscale(1)_contrast(1.15)_drop-shadow(0_16px_6px_rgba(0,0,0,0.2))] md:top-[40px] md:h-[9px]" />
+      <img src="/rack/rail.webp" alt="" aria-hidden draggable={false} className="absolute inset-x-0 top-[42px] z-[2] h-[5px] w-full object-fill [filter:grayscale(1)_contrast(1.15)_drop-shadow(0_16px_6px_rgba(0,0,0,0.2))] md:top-[64px] md:h-[9px]" />
+      {["left-0 -translate-x-1/2", "right-0 translate-x-1/2"].map((side) => (
+        <span key={side} aria-hidden className={`absolute ${side} top-[44.5px] z-[3] h-[13px] w-[7px] -translate-y-1/2 rounded-[2px] bg-[linear-gradient(180deg,#f2f2f2,#8a8a8a_55%,#5f5f5f)] shadow-[0_2px_3px_rgba(0,0,0,0.3)] md:top-[68.5px] md:h-[20px] md:w-[10px]`} />
+      ))}
       {/* Black hangers, evenly along the rail */}
-      <ul aria-hidden className="absolute inset-x-[8%] top-[22px] z-[3] flex justify-between md:top-[34px]">
+      <ul aria-hidden className="absolute inset-x-[8%] top-[38px] z-[3] flex justify-between md:top-[58px]">
         {Array.from({ length: HANGERS }, (_, i) => (
-          <li key={i} className="w-[9.4%] [filter:drop-shadow(9px_13px_6px_rgba(0,0,0,0.2))]">
+          <li key={i} className="w-[12%] [filter:drop-shadow(9px_13px_6px_rgba(0,0,0,0.2))]">
             {/* eslint-disable-next-line @next/next/no-img-element -- a small cut-out photograph of a hanger */}
             <img src="/rack/hanger.webp" alt="" width={652} height={340} draggable={false} className="block h-auto w-full" />
           </li>
@@ -78,15 +78,10 @@ function Storey({ top, items }: { top: string; items?: React.ReactNode }) {
 
 export function HeroNiche() {
   return (
-    <div role="img" aria-label="The Easypick wardrobe: a lit white niche in the wall with two rails of hangers, a shelf for accessories and plants" className="absolute inset-0 bg-[linear-gradient(180deg,#f2f2f0_0%,#ececea_84%)]">
-      {/* The room's polished floor, picking up the light from the niche */}
-      <div aria-hidden className="absolute inset-x-0 bottom-0 h-[16%] bg-[linear-gradient(180deg,#d2d2cf_0%,#e4e4e1_30%,#efefed_100%)]">
-        <div className="absolute inset-x-[8%] top-0 h-[70%] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.95),rgba(255,255,255,0)_70%)]" />
-        <div className="absolute inset-x-0 top-0 h-px bg-black/10" />
-      </div>
-
-      {/* The opening in the wall */}
-      <div className="absolute inset-x-[5%] bottom-[14%] top-[6%] shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_0_22px_rgba(255,255,255,0.9)]">
+    // No room is drawn round it: the page itself is the wall, and this is a hole cut into the screen.
+    <div role="img" aria-label="The Easypick wardrobe: a lit white hollow in the page with a shelf for accessories, two rails of hangers and plants" className="absolute inset-0">
+      {/* The opening: its edge is the page's own surface, with a hairline where the cut is */}
+      <div className="absolute inset-0 shadow-[0_0_0_1px_rgba(0,0,0,0.10)]">
         {/* Ceiling (in shade), side walls and floor (lit) of the recess, in perspective */}
         <div aria-hidden className="absolute inset-x-0 top-0 bg-[linear-gradient(180deg,#b4b4b1,#cfcfcc)]" style={{ height: D, clipPath: `polygon(0 0,100% 0,calc(100% - ${D}) 100%,${D} 100%)` }} />
         <div aria-hidden className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,#c6c6c3,#f1f1ef)]" style={{ width: D, clipPath: `polygon(0 0,100% ${D},100% calc(100% - ${D}),0 100%)` }} />
@@ -104,7 +99,7 @@ export function HeroNiche() {
           <div aria-hidden className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]" />
 
           <Storey
-            top="21%"
+            top="24%"
             items={
               <>
                 <Plant kind="trail" className="w-[14%]" />
@@ -115,11 +110,11 @@ export function HeroNiche() {
                     <img key={i} src="/rack/six-panel-cap.webp" alt="" draggable={false} className={`h-auto w-[21%] [filter:drop-shadow(6px_4px_4px_rgba(0,0,0,0.3))] ${i === 1 ? "-scale-x-100" : ""}`} />
                   ))}
                 </div>
-                <Plant kind="up" className="w-[9%]" />
+                <span className="w-[14%]" />
               </>
             }
           />
-          <Storey top="57%" />
+          <Storey top="60%" />
 
           {/* A plant standing on the floor of the recess */}
           <div className="absolute bottom-0 right-[4%] z-[4] w-[14%]">
