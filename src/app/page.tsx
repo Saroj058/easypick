@@ -69,7 +69,7 @@ export default async function HomePage() {
           {/* Stage */}
           <div className="relative -mx-4 aspect-[1339/1174] overflow-hidden bg-[#f3f3f1] text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:self-center">
             {/* The wardrobe: a white hollow niche built on the page (components/hero-niche.tsx), empty hangers for now */}
-            <HeroNiche plants />
+            <HeroNiche />
             {/* The way into the drop, on the wardrobe itself: in the middle of the card's foot. The same sweeping pill as the Rail's "Show all", on white. */}
             <div className="absolute inset-x-0 bottom-4 z-30 flex justify-center md:bottom-6 lg:bottom-7">
               <ShinyLink href={drop ? `/drop/${drop.slug}` : "/drops"} className="[&>span]:bg-paper [&>span]:px-6 [&>span]:py-3 [&>span]:shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)]">
