@@ -56,12 +56,19 @@ export default async function HomePage() {
   // Vault pieces have their own section; the shelf and the rail hold the house range.
   const range = products.filter((p) => !p.vault);
 
-  // The hero shows one piece at a time, with its price tag: the live pieces that have a cut-out photo,
-  // kinds taken in turn (a hoodie, a tee, a jacket, trousers, …) so the row under it is a mix.
-  const shown = range.filter((p) => p.status === "live" && RACK_CUTOUTS.has(p.slug));
-  const kinds = ["hoodies", "tees", "jackets", "bottoms", "co-ords", "accessories"].map((k) => shown.filter((p) => p.category === k));
-  const heroPieces: typeof shown = [];
-  for (let round = 0; kinds.some((l) => l.length > round); round++) for (const l of kinds) if (l[round]) heroPieces.push(l[round]);
+  // The hero shows one piece at a time, with its price tag: every piece that has a cut-out photo
+  // (owner, 9 Oct 2026: all of them, not only what is on sale today; one that is sold out or still
+  // to come says so), kinds taken in turn (a hoodie, a tee, a jacket, trousers, …) so the row under
+  // it is a mix. What can be bought now comes first.
+  const withPhoto = range.filter((p) => RACK_CUTOUTS.has(p.slug));
+  const buyable = (p: (typeof range)[number]) => p.status === "live" && p.variants.some((v) => v.stock > 0);
+  const inTurn = (list: typeof withPhoto) => {
+    const kinds = ["hoodies", "tees", "jackets", "bottoms", "co-ords", "accessories"].map((k) => list.filter((p) => p.category === k));
+    const out: typeof withPhoto = [];
+    for (let round = 0; kinds.some((l) => l.length > round); round++) for (const l of kinds) if (l[round]) out.push(l[round]);
+    return out;
+  };
+  const heroPieces = [...inTurn(withPhoto.filter(buyable)), ...inTurn(withPhoto.filter((p) => !buyable(p)))];
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -77,7 +84,7 @@ export default async function HomePage() {
           {/* Stage */}
           <div className="min-w-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:self-center">
             {/* One piece, large, with its price tag hanging beside it; the row under it switches the piece */}
-            <HeroPiece pieces={heroPieces.map((p) => ({ product: p, colour: p.colours[0] }))} />
+            <HeroPiece pieces={heroPieces.map((p) => ({ product: p, colour: p.colours[0], note: buyable(p) ? null : p.status === "scheduled" ? "Coming soon" : "Sold out" }))} />
           </div>
 
           {/* Words */}
