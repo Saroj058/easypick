@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -20,6 +21,11 @@ import { ArrowIcon } from "./icons";
 //    the shop's own pieces hang from them (their product photos, cut out).
 // Picking a piece (pointing at it, tapping it, or tabbing to it) shows its name, colour, sizes and
 // its hang tag under the hollow, with the way to its page.
+
+// The clothes as 3D garments, once their models are in (three.js stays out of the first load).
+const HeroNiche3D = dynamic(() => import("./hero-niche-3d"), { ssr: false });
+/** The pieces that have a 3D model (see MODELS in hero-niche-3d.tsx). Only these hang in the wardrobe. */
+const MODELLED = new Set(["oversized-heavy-tee", "boxy-pocket-tee", "everyday-hoodie", "brushed-crewneck", "coach-jacket", "fleece-quarter-zip", "relaxed-straight-jean", "tapered-jogger", "wide-cargo-pant"]);
 
 export interface NichePiece {
   product: Product;
@@ -172,7 +178,11 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
   // Ten hangers a rail, as in a shop: each piece hangs there more than once (a rail carries a run of
   // sizes), so the rail is full however few pieces are on sale.
   const fill = (list: NichePiece[]) => (list.length ? Array.from({ length: HANGERS }, (_, i) => list[Math.floor((i * list.length) / HANGERS)]) : []);
-  const rails: Record<string, NichePiece[]> = { upper: fill(upper), lower: fill(lower) };
+  const modelled = (list: NichePiece[]) => list.filter((p) => MODELLED.has(p.product.slug));
+  const rails: Record<string, NichePiece[]> = { upper: fill(modelled(upper)), lower: fill(modelled(lower)) };
+  /** The 3D garments are in and drawn: the flat pictures under them are hidden (their buttons stay, for keyboards and screen readers). */
+  const [solid, setSolid] = useState(false);
+  const hung = (["upper", "lower"] as const).map((rail) => rails[rail].map((p, i) => ({ key: `${rail}:${i}`, slug: p.product.slug, long: p.product.category === "bottoms" })));
   // Which hanger is picked ("upper:2"), not which product: a piece's twin along the rail stays side-on.
   const [activeKey, setActiveKey] = useState<string>("upper:2");
   const [activeRail, activeIndex] = activeKey.split(":");
@@ -215,7 +225,7 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
       ))}
       {/* Five hangers along it, each with a piece */}
       {/* Packed close and side-on, as on a real rail; the picked piece's slot opens wide and its neighbours slide along to make room. */}
-      <ul className="absolute inset-x-[4%] top-[11px] z-[4] flex justify-center [container-type:inline-size] md:top-[19px]">
+      <ul className={`absolute inset-x-[4%] top-[11px] z-[4] flex justify-center [container-type:inline-size] md:top-[19px] ${solid ? "pointer-events-none opacity-0" : ""}`}>
         {Array.from({ length: HANGERS }, (_, i) => {
           const piece = rails[rail][i];
           const on = `${rail}:${i}` === activeKey;
@@ -294,6 +304,11 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
             )}
             {/* Second shelf: under it, the bottoms and jackets */}
             {shelf(ACCESSORIES ? "44%" : "38.5%", "lower")}
+
+            {/* The same clothes as 3D garments, drawn over the rails once their models are in */}
+            <div className="absolute inset-x-0 top-0 z-[6] h-[78%] [filter:drop-shadow(6px_9px_6px_rgba(0,0,0,0.24))]">
+              <HeroNiche3D rails={hung} activeKey={activeKey} onPick={setActiveKey} onOpen={(key) => { const [rail, i] = key.split(":"); const piece = rails[rail]?.[Number(i)]; if (piece) router.push(`/product/${piece.product.slug}`); }} onReady={() => setSolid(true)} />
+            </div>
 
             {/* The bottom compartment: the picked piece's details on the left, its tag on the right */}
             <div className="absolute inset-x-0 bottom-0" style={{ top: ACCESSORIES ? "77%" : "78%" }}>
