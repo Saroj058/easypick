@@ -10,7 +10,7 @@ import { ExpandingSearchDock } from "./ui/expanding-search-dock";
  * searches as they type by putting the words in the address (?q=), where the page reads them, so a
  * search can be shared or bookmarked and the other filters stay on.
  */
-export function ShopSearch({ q, others }: { q: string; /** The filters already on, kept while searching. */ others: Record<string, string | undefined> }) {
+export function ShopSearch({ q, others, path = "/shop", label = "Search the shop", snug = false }: { q: string; /** The filters already on, kept while searching. */ others: Record<string, string | undefined>; /** The page it searches (the gift page uses it too). */ path?: string; label?: string; /** Closed, take only the button's width (it shares a row with other things). */ snug?: boolean }) {
   const router = useRouter();
   const [value, setValue] = useState(q);
   const [open, setOpen] = useState(q !== "");
@@ -33,7 +33,7 @@ export function ShopSearch({ q, others }: { q: string; /** The filters already o
         const words = next.trim().slice(0, 60);
         if (words) params.set("q", words);
         const s = params.toString();
-        router.replace(s ? `/shop?${s}` : "/shop", { scroll: false });
+        router.replace(s ? `${path}?${s}` : path, { scroll: false });
       },
       next ? 280 : 0,
     );
@@ -41,8 +41,8 @@ export function ShopSearch({ q, others }: { q: string; /** The filters already o
 
   return (
     // Closed, it is one round button in the bar. Open on a phone, it takes a row of its own.
-    <div className={`order-2 flex min-w-0 flex-1 justify-end ${open || value ? "max-lg:order-3 max-lg:basis-full max-lg:px-3" : ""}`}>
-      <ExpandingSearchDock value={value} onChange={search} onOpenChange={setOpen} label="Search the shop" placeholder="Search the shop" className="min-w-0 flex-1" />
+    <div className={`order-2 flex min-w-0 justify-end ${snug && !(open || value) ? "flex-none" : "flex-1"} ${open || value ? `max-lg:order-3 max-lg:basis-full ${snug ? "max-lg:pb-2" : "max-lg:px-3"}` : ""}`}>
+      <ExpandingSearchDock value={value} onChange={search} onOpenChange={setOpen} label={label} placeholder={label} className="min-w-0 flex-1" />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicker } from "@/components/gift/gift-card-picker";
+import { ShopSearch } from "@/components/shop-search";
 import { GiftCardPicture } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
@@ -89,6 +90,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
   const sp = await searchParams;
   const max = BUDGETS.find((b) => String(b) === sp.max) ?? null;
   const cat = ([...Object.keys(categoryLabels), "one"] as Cat[]).find((c) => c === sp.cat) ?? null;
+  const search = (Array.isArray(sp.q) ? sp.q[0] : sp.q)?.trim().slice(0, 60) ?? "";
   const shown = Math.min(Math.max(Number(sp.show) || PAGE, PAGE), 600);
 
   const [all, trending] = await Promise.all([getProducts(), getTrending()]);
@@ -97,24 +99,32 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
   const inCat = (p: Product, c: Cat | null) => (c === "one" ? oneSize(p) : c ? p.category === c : true);
 
   // With a budget, the best that money buys comes first; without one, the small everyday gifts do.
-  const every = live.filter((p) => inBudget(p, max) && inCat(p, cat)).sort((a, b) => (max ? priceOf(b) - priceOf(a) : priceOf(a) - priceOf(b)));
+  // Search, as in the shop: every word typed has to be somewhere in the piece's name, kind, colours, fit, brand or tags.
+  const words = search.toLowerCase().split(/s+/).filter(Boolean);
+  const found = (p: Product) => {
+    if (!words.length) return true;
+    const hay = [p.name, p.shortDescription, categoryLabels[p.category], p.fit, p.brand ?? "", ...p.colours.map((c) => c.name), ...(p.tags ?? [])].join(" ").toLowerCase();
+    return words.every((w) => hay.includes(w));
+  };
+  const every = live.filter((p) => inBudget(p, max) && inCat(p, cat) && found(p)).sort((a, b) => (max ? priceOf(b) - priceOf(a) : priceOf(a) - priceOf(b)));
   const noSize = live.filter(oneSize);
   const liveSlugs = new Set(live.map((p) => p.slug));
   const popular = trending.items.map((i) => i.product).filter((p) => liveSlugs.has(p.slug));
   const popularTitle = trending.mode === "trending" ? "What people are buying." : trending.label === "Staff picks" ? "Staff picks." : "From the latest drop.";
   const cats = ([...Object.keys(categoryLabels), "one"] as Cat[]).filter((c) => live.some((p) => inBudget(p, max) && inCat(p, c)));
 
-  const q = (next: { max?: number | null; cat?: Cat | null; show?: number }) => {
+  const q = (next: { max?: number | null; cat?: Cat | null; show?: number; search?: null }) => {
     const u = new URLSearchParams();
     const m = next.max === undefined ? max : next.max;
     const c = next.cat === undefined ? cat : next.cat;
     if (m) u.set("max", String(m));
     if (c) u.set("cat", c);
+    if (search && next.search !== null) u.set("q", search);
     if (next.show) u.set("show", String(next.show));
     const s = u.toString();
     return `/gift${s ? `?${s}` : ""}#pieces`;
   };
-  const filtered = Boolean(max || cat);
+  const filtered = Boolean(max || cat || search);
 
   return (
     <div className="pb-24">
@@ -213,7 +223,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                 ))}
               </nav>
             </div>
-            <div className="flex items-center gap-3 border-t border-ink/15 px-3 md:px-4">
+            <div className="flex flex-wrap items-center gap-x-3 border-t border-ink/15 px-3 py-1 md:px-4">
               <span className="index w-14 shrink-0 text-steel-dark max-sm:hidden">Kind</span>
               <nav aria-label="Kind of piece" className="flex min-w-0 flex-1 gap-4 overflow-x-auto md:gap-6">
                 <Chip tab href={q({ cat: null })} on={!cat}>
@@ -226,10 +236,12 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
                 ))}
               </nav>
               {filtered && (
-                <Link href={q({ max: null, cat: null })} scroll={false} className="inline-flex h-11 shrink-0 items-center text-[13px] font-semibold underline underline-offset-4">
+                <Link href={q({ max: null, cat: null, search: null })} scroll={false} className="inline-flex h-11 shrink-0 items-center text-[13px] font-semibold underline underline-offset-4">
                   Clear
                 </Link>
               )}
+              {/* Search: the shop's round button, opening into a field that searches as they type */}
+              <ShopSearch snug q={search} path="/gift" label="Search the gifts" others={{ max: max ? String(max) : undefined, cat: cat ?? undefined }} />
             </div>
           </div>
           {every.length > 0 ? (
@@ -250,7 +262,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
           ) : (
             <p className="mt-6">
               Nothing here right now.{" "}
-              <Link href={q({ max: null, cat: null })} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
+              <Link href={q({ max: null, cat: null, search: null })} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
                 Show every piece
               </Link>{" "}
               or{" "}
