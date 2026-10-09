@@ -1,56 +1,59 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 import { formatPrice } from "@/lib/format";
-import type { Category } from "@/lib/types";
+import type { Category, Product, Size } from "@/lib/types";
+import { HangTag } from "./hang-tag";
+import { ArrowIcon } from "./icons";
 
 // The home page's wardrobe: a hollow niche cut into the white page, built here (no photograph),
 // after the owner's sample picture, in white instead of warm.
 //
-// Layout, copied from the sample:
 //  - a shallow recess: a thin ceiling, two thin side walls and a white floor ledge round a back wall;
-//  - light strips along the top inside edge, both sides and the bottom, and under / above each shelf;
-//  - two thin white shelves make three compartments: accessories on top (a trailing plant at its
-//    left end), then two for clothes;
-//  - under each shelf a steel rail runs from one side wall to the other, with five slim black
-//    hangers on it;
-//  - one plant bottom right, on the floor ledge.
-// The shop's own pieces hang from the hangers (their product photos, cut out); each leads to its page.
+//  - light along the top inside edge, both sides and the bottom, and under / above each shelf;
+//  - two thin white shelves make three compartments: a short one on top for accessories (a trailing
+//    plant, the cap, books and other display pieces), then two tall ones for clothes;
+//  - under each shelf a steel rail runs from one side wall to the other, with five black hangers;
+//    the shop's own pieces hang from them (their product photos, cut out).
+// Picking a piece (pointing at it, tapping it, or tabbing to it) shows its name, colour, sizes and
+// its hang tag under the hollow, with the way to its page.
 
-const HANGERS = 5;
-
-/** A piece hung in the niche: its own product photo, cut out (public/rack/<slug>.webp, from scripts/rack-cutouts.mjs). */
 export interface NichePiece {
-  slug: string;
-  name: string;
-  price: number;
-  category: Category;
+  product: Product;
+  colour: { name: string; hex: string };
 }
 
-/** The pieces with a cut-out photo. A new product needs scripts/rack-cutouts.mjs run, and its slug added here. */
-export const NICHE_CUTOUTS = new Set(["boxy-pocket-tee", "brushed-crewneck", "coach-jacket", "everyday-hoodie", "fleece-quarter-zip", "oversized-heavy-tee", "relaxed-straight-jean", "six-panel-cap", "tapered-jogger", "washed-co-ord-set", "wide-cargo-pant"]);
-
-// How each kind hangs, relative to its hanger: how wide it is, and where its top sits (tops cover
-// the hanger's shoulders; trousers hang from its bar).
-const HANG: Record<Category, { width: string; top: string }> = {
-  tees: { width: "168%", top: "24%" },
-  hoodies: { width: "176%", top: "12%" },
-  jackets: { width: "172%", top: "16%" },
-  "co-ords": { width: "128%", top: "22%" },
-  bottoms: { width: "104%", top: "74%" },
-  accessories: { width: "90%", top: "60%" },
-};
+const HANGERS = 5;
 /** How deep the recess looks, as a share of its own size: shallow, as in the sample. */
 const D = "3.6%";
 const W = "rgba(255,255,255,";
+const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
+
+// How each kind hangs, measured against its hanger (a real hanger is about 42 cm across):
+//  - tops sit on the hanger's shoulders, so the hanger's neck shows in the collar and only its hook
+//    is above the piece; laid out with the sleeves, a tee is about twice the hanger's width, a hoodie
+//    or jacket a little more;
+//  - trousers hang from a clip hanger by the waistband: narrow at the top, and the longest thing on
+//    the rail.
+const HANG: Record<Category, { width: string; top: string }> = {
+  tees: { width: "196%", top: "27%" },
+  hoodies: { width: "206%", top: "9%" },
+  jackets: { width: "200%", top: "15%" },
+  "co-ords": { width: "150%", top: "24%" },
+  bottoms: { width: "112%", top: "50%" },
+  accessories: { width: "90%", top: "60%" },
+};
 
 /** A wash of light coming off one edge of a box, brightest at the edge. */
-function Wash({ from, reach, strength = 1, className = "" }: { from: "top" | "bottom" | "left" | "right"; reach: string; strength?: number; className?: string }) {
+function Wash({ from, reach, strength = 1 }: { from: "top" | "bottom" | "left" | "right"; reach: string; strength?: number }) {
   const along = from === "top" || from === "bottom";
   const angle = { top: "180deg", bottom: "0deg", left: "90deg", right: "270deg" }[from];
   return (
     <div
       aria-hidden
-      className={`pointer-events-none absolute ${className}`}
+      className="pointer-events-none absolute"
       style={{
         [from]: 0,
         ...(along ? { left: 0, right: 0, height: reach } : { top: 0, bottom: 0, width: reach }),
@@ -60,44 +63,138 @@ function Wash({ from, reach, strength = 1, className = "" }: { from: "top" | "bo
   );
 }
 
-/** A slim black hanger with a steel hook, drawn so it stays crisp at any size. */
-function Hanger() {
+/** A black hanger with a steel hook, drawn so it stays crisp at any size. Tops get the shaped one; trousers a bar with two clips. */
+function Hanger({ clips = false }: { clips?: boolean }) {
   return (
     <svg viewBox="0 0 60 66" className="block h-auto w-full overflow-visible" aria-hidden>
       <path d="M30 24 V15 q0 -7 5.5 -7 q5.5 0 5 5.5" fill="none" stroke="#8e8e8e" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M30 23 L5 47 q-3.5 3.5 1 6 H54 q4.500 -2.500 1 -6 Z" fill="none" stroke="#141414" strokeWidth="4.2" strokeLinejoin="round" />
+      {clips ? (
+        <>
+          <path d="M30 23 V30" stroke="#8e8e8e" strokeWidth="1.8" />
+          <path d="M7 31 H53" stroke="#141414" strokeWidth="3.6" strokeLinecap="round" />
+          {[12, 43].map((x) => (
+            <g key={x}>
+              <rect x={x} y="28" width="5.5" height="11" rx="1" fill="#b9b9b9" stroke="#6f6f6f" strokeWidth="0.6" />
+              <rect x={x + 1.4} y="35" width="2.7" height="3" fill="#6f6f6f" />
+            </g>
+          ))}
+        </>
+      ) : (
+        <path d="M30 23 L5 47 q-3.5 3.5 1 6 H54 q4.500 -2.500 1 -6 Z" fill="none" stroke="#141414" strokeWidth="4.2" strokeLinejoin="round" />
+      )}
     </svg>
   );
 }
 
-/** A plant in a white pot: the leaves are a cut-out photograph, the pot is drawn so it matches the niche. */
-function Plant({ kind, className = "" }: { kind: "up" | "trail"; className?: string }) {
-  const up = kind === "up";
+/** The trailing plant: the leaves are a cut-out photograph, the white pot is drawn so it matches the niche. */
+function Plant({ className = "" }: { className?: string }) {
   return (
-    <div aria-hidden className={`relative shrink-0 [filter:drop-shadow(8px_8px_7px_rgba(0,0,0,0.2))] ${up ? "aspect-[1/1.42]" : "aspect-[1/0.72]"} ${className}`}>
-      <span
-        className="absolute rounded-b-[18%] bg-[linear-gradient(90deg,#d2d2cf,#ffffff_30%,#f5f5f3_66%,#c4c4c1)] [clip-path:polygon(0_0,100%_0,87%_100%,13%_100%)]"
-        style={up ? { left: "24%", width: "48%", top: "67%", bottom: 0 } : { left: "31%", width: "37%", top: "38%", bottom: 0 }}
-      />
+    <div aria-hidden className={`relative aspect-[1/0.72] shrink-0 [filter:drop-shadow(6px_6px_5px_rgba(0,0,0,0.2))] ${className}`}>
+      <span className="absolute rounded-b-[18%] bg-[linear-gradient(90deg,#d2d2cf,#ffffff_30%,#f5f5f3_66%,#c4c4c1)] [clip-path:polygon(0_0,100%_0,87%_100%,13%_100%)]" style={{ left: "31%", width: "37%", top: "38%", bottom: 0 }} />
       {/* eslint-disable-next-line @next/next/no-img-element -- a small cut-out photograph of the leaves */}
-      <img src={up ? "/rack/plant-up.webp" : "/rack/plant-trail.webp"} alt="" draggable={false} className="absolute left-0 top-0 block h-auto w-full max-w-none" />
+      <img src="/rack/plant-trail.webp" alt="" draggable={false} className="absolute left-0 top-0 block h-auto w-full max-w-none" />
     </div>
   );
 }
 
-/**
- * One shelf with the rail under it. `top` is where the shelf sits on the back wall. Light comes off
- * the wall just above the shelf and from under it; the rail runs wall to wall with its hangers.
- */
-function Shelf({ top, items, pieces = [], clearRight = false }: { top: string; items?: React.ReactNode; /** What hangs on the rail, left to right (five at most). */ pieces?: NichePiece[]; /** Keep the right end clear (the plant stands there). */ clearRight?: boolean }) {
+const shade = "[filter:drop-shadow(4px_3px_3px_rgba(0,0,0,0.22))]";
+
+/** Books lying in a stack, for the accessories shelf. */
+function BookStack({ className = "" }: { className?: string }) {
   return (
+    <div aria-hidden className={`flex shrink-0 flex-col items-center ${shade} ${className}`}>
+      {[
+        ["82%", "#c6ff3d"],
+        ["94%", "#ecebe6"],
+        ["100%", "#141414"],
+      ].map(([w, c]) => (
+        <span key={c} className="relative block aspect-[8/1] rounded-[1px]" style={{ width: w, background: c }}>
+          <span className="absolute inset-y-[22%] right-[6%] w-[12%] bg-white/55" />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Books standing in a row, the last one leaning. */
+function BookRow({ className = "" }: { className?: string }) {
+  const books = [
+    ["100%", "#141414"],
+    ["86%", "#ecebe6"],
+    ["94%", "#55613a"],
+    ["78%", "#8e8e93"],
+    ["90%", "#f4f4f2"],
+  ];
+  return (
+    <div aria-hidden className={`flex aspect-[1/0.78] shrink-0 items-end gap-[3%] ${shade} ${className}`}>
+      {books.map(([h, c], i) => (
+        <span key={i} className={`relative block flex-1 rounded-[1px] ${i === books.length - 1 ? "origin-bottom-left rotate-[9deg]" : ""}`} style={{ height: h, background: c }}>
+          <span className="absolute inset-x-[25%] top-[12%] h-[6%] bg-white/50" />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Folded tees in a neat pile. */
+function FoldedPile({ className = "" }: { className?: string }) {
+  return (
+    <div aria-hidden className={`flex shrink-0 flex-col ${shade} ${className}`}>
+      {["#f4f4f2", "#55613a", "#141414", "#1f2a44"].map((c) => (
+        <span key={c} className="block aspect-[6.5/1] rounded-[30%/50%] border-b border-black/15" style={{ background: c }} />
+      ))}
+    </div>
+  );
+}
+
+/** A small box with a lid, and a diffuser with reeds: two quiet display pieces. */
+function Box({ className = "" }: { className?: string }) {
+  return (
+    <div aria-hidden className={`shrink-0 ${shade} ${className}`}>
+      <span className="block aspect-[5/1] -mx-[4%] rounded-[1px] bg-[#1c1c1c]" />
+      <span className="block aspect-[1.7/1] bg-[linear-gradient(90deg,#141414,#2a2a2a_50%,#101010)]">
+        <span className="mx-auto block h-full w-[18%] bg-volt" />
+      </span>
+    </div>
+  );
+}
+function Diffuser({ className = "" }: { className?: string }) {
+  return (
+    <div aria-hidden className={`relative aspect-[1/2.4] shrink-0 ${shade} ${className}`}>
+      {[-14, -4, 6, 15].map((r) => (
+        <span key={r} className="absolute bottom-[40%] left-1/2 h-[62%] w-px origin-bottom bg-[#3a3a3a]" style={{ transform: `rotate(${r}deg)` }} />
+      ))}
+      <span className="absolute inset-x-[18%] bottom-0 h-[42%] rounded-[12%] bg-[linear-gradient(90deg,#0f0f0f,#3a3a3a_45%,#151515)]" />
+    </div>
+  );
+}
+
+export function HeroNiche({ upper, lower, cap, children }: { /** Tops, on the first rail. */ upper: NichePiece[]; /** Bottoms and jackets, on the second. */ lower: NichePiece[]; /** The cap on the accessories shelf, if it is on sale. */ cap: NichePiece | null; /** Shown under the hollow, in the middle (the way into the drop). */ children?: React.ReactNode }) {
+  const all = [...upper, ...lower, ...(cap ? [cap] : [])];
+  const [activeSlug, setActiveSlug] = useState(upper[Math.min(1, upper.length - 1)]?.product.slug ?? all[0]?.product.slug ?? null);
+  const sel = all.find((p) => p.product.slug === activeSlug) ?? all[0] ?? null;
+  const sizes = sel ? sel.product.variants.filter((v) => v.colour === sel.colour.name).sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)) : [];
+  const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
+
+  /** A piece that can be picked: pointing at it or tapping it shows its tag below. */
+  const pick = (piece: NichePiece) => ({
+    type: "button" as const,
+    onClick: () => setActiveSlug(piece.product.slug),
+    onMouseEnter: () => setActiveSlug(piece.product.slug),
+    onFocus: () => setActiveSlug(piece.product.slug),
+    "aria-pressed": piece.product.slug === activeSlug,
+    "aria-label": `${piece.product.name}, ${piece.colour.name}, ${formatPrice(piece.product.salePrice ?? piece.product.price)}`,
+  });
+
+  /** One shelf with the rail under it and what hangs there. */
+  const shelf = (top: string, pieces: NichePiece[], items?: React.ReactNode) => (
     <div className="absolute inset-x-0" style={{ top }}>
       {/* Light on the wall just above the shelf, from a strip along its back edge */}
-      <div className="absolute inset-x-0 bottom-full h-[clamp(22px,5vw,56px)]">
+      <div className="absolute inset-x-0 bottom-full h-[clamp(14px,3.4vw,40px)]">
         <Wash from="bottom" reach="100%" strength={0.95} />
       </div>
       {/* What stands on the shelf */}
-      {items && <div className="absolute inset-x-[1.5%] bottom-full z-20 flex items-end">{items}</div>}
+      {items && <div className="absolute inset-x-[1.5%] bottom-full z-20 flex items-end justify-between">{items}</div>}
       {/* The shelf: a thin white slab let into both side walls, with its shadow under it */}
       <div aria-hidden className="relative z-10 -mx-[1%] h-[7px] bg-[linear-gradient(180deg,#ffffff_0%,#ffffff_60%,#ececea_100%)] shadow-[0_2px_3px_rgba(0,0,0,0.16)] md:h-[11px]" />
       {/* The light strip under the shelf */}
@@ -110,31 +207,25 @@ function Shelf({ top, items, pieces = [], clearRight = false }: { top: string; i
       {["left-0", "right-0"].map((side) => (
         <span key={side} aria-hidden className={`absolute ${side} top-[19px] z-[3] h-[10px] w-[4px] -translate-y-1/2 rounded-[1px] bg-[linear-gradient(180deg,#f4f4f4,#8c8c8c_60%,#666)] md:top-[33.5px] md:h-[17px] md:w-[6px]`} />
       ))}
-      {/* Five hangers along it: each hook loops over the rail and the hanger hangs below */}
-      <ul className={`absolute top-[11px] z-[4] flex justify-between md:top-[19px] ${clearRight ? "left-[7%] right-[21%]" : "inset-x-[9%]"}`}>
+      {/* Five hangers along it, each with a piece */}
+      <ul className="absolute inset-x-[10.5%] top-[11px] z-[4] flex justify-between md:top-[19px]">
         {Array.from({ length: HANGERS }, (_, i) => {
           const piece = pieces[i];
+          const on = piece?.product.slug === activeSlug;
           return (
-            <li key={i} className="relative w-[10.5%]">
+            <li key={i} className={`relative w-[9.2%] ${on ? "z-10" : piece?.product.category === "bottoms" ? "z-[1]" : ""}`}>
               <span aria-hidden className="block [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
-                <Hanger />
+                <Hanger clips={piece?.product.category === "bottoms"} />
               </span>
               {piece && (
-                // The piece itself, hanging: it leads to its page, and lifts a little when pointed at.
-                <Link
-                  href={`/product/${piece.slug}`}
-                  aria-label={`${piece.name}, ${formatPrice(piece.price)}`}
-                  title={`${piece.name} · ${formatPrice(piece.price)}`}
-                  className="group absolute left-1/2 z-[1] block -translate-x-1/2 origin-top transition-transform duration-300 hover:z-10 hover:scale-[1.06] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                  style={{ width: HANG[piece.category].width, top: HANG[piece.category].top }}
+                <button
+                  {...pick(piece)}
+                  className={`absolute left-1/2 block -translate-x-1/2 origin-top cursor-pointer transition-transform duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${on ? "scale-[1.07]" : ""}`}
+                  style={{ width: HANG[piece.product.category].width, top: HANG[piece.product.category].top }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- the piece's own photo, cut out; small and already compressed */}
-                  <img src={`/rack/${piece.slug}.webp`} alt="" draggable={false} className="block h-auto w-full [filter:drop-shadow(7px_10px_7px_rgba(0,0,0,0.25))]" />
-                  {/* Its name and price, shown when it is pointed at or focused */}
-                  <span className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-2.5 py-1 font-mono text-[10px] font-semibold text-paper opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-                    {piece.name} · {formatPrice(piece.price)}
-                  </span>
-                </Link>
+                  <img src={`/rack/${piece.product.slug}.webp`} alt="" draggable={false} className={`block h-auto w-full transition-[filter] duration-300 ${on ? "[filter:drop-shadow(9px_14px_9px_rgba(0,0,0,0.34))]" : "[filter:drop-shadow(6px_9px_6px_rgba(0,0,0,0.22))]"}`} />
+                </button>
               )}
             </li>
           );
@@ -142,55 +233,101 @@ function Shelf({ top, items, pieces = [], clearRight = false }: { top: string; i
       </ul>
     </div>
   );
-}
 
-export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. */ upper: NichePiece[]; /** Bottoms and jackets, on the second. */ lower: NichePiece[]; /** The cap on the accessories shelf, if it is on sale. */ cap: NichePiece | null }) {
   return (
-    // No room is drawn round it: the white page is the wall, and this is a hole cut into the screen.
-    <div role="group" aria-label="The Easypick wardrobe: pieces from the shop, hung in a lit white hollow" className="absolute inset-0">
-      <div className="absolute inset-0 shadow-[0_0_0_1px_rgba(0,0,0,0.09)]">
-        {/* The four faces of the recess, in perspective: ceiling in soft shade, sides, and the lit floor ledge */}
-        <div aria-hidden className="absolute inset-x-0 top-0 bg-[linear-gradient(180deg,#d8d8d5,#ecece9)]" style={{ height: D, clipPath: `polygon(0 0,100% 0,calc(100% - ${D}) 100%,${D} 100%)` }} />
-        <div aria-hidden className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,#e0e0dd,#f6f6f4)]" style={{ width: D, clipPath: `polygon(0 0,100% ${D},100% calc(100% - ${D}),0 100%)` }} />
-        <div aria-hidden className="absolute inset-y-0 right-0 bg-[linear-gradient(270deg,#dadad7,#f4f4f2)]" style={{ width: D, clipPath: `polygon(100% 0,0 ${D},0 calc(100% - ${D}),100% 100%)` }} />
-        <div aria-hidden className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,#ffffff,#f3f3f1)]" style={{ height: D, clipPath: `polygon(${D} 0,calc(100% - ${D}) 0,100% 100%,0 100%)` }} />
+    <div>
+      {/* No room is drawn round it: the white page is the wall, and this is a hole cut into the screen. */}
+      <div role="group" aria-label="The Easypick wardrobe: pieces from the shop, hung in a lit white hollow" className="relative -mx-4 aspect-[4/3] overflow-hidden bg-paper text-ink md:-mx-8 lg:mx-0">
+        <div className="absolute inset-0 shadow-[0_0_0_1px_rgba(0,0,0,0.09)]">
+          {/* The four faces of the recess, in perspective: ceiling in soft shade, sides, and the lit floor ledge */}
+          <div aria-hidden className="absolute inset-x-0 top-0 bg-[linear-gradient(180deg,#d8d8d5,#ecece9)]" style={{ height: D, clipPath: `polygon(0 0,100% 0,calc(100% - ${D}) 100%,${D} 100%)` }} />
+          <div aria-hidden className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,#e0e0dd,#f6f6f4)]" style={{ width: D, clipPath: `polygon(0 0,100% ${D},100% calc(100% - ${D}),0 100%)` }} />
+          <div aria-hidden className="absolute inset-y-0 right-0 bg-[linear-gradient(270deg,#dadad7,#f4f4f2)]" style={{ width: D, clipPath: `polygon(100% 0,0 ${D},0 calc(100% - ${D}),100% 100%)` }} />
+          <div aria-hidden className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,#ffffff,#f3f3f1)]" style={{ height: D, clipPath: `polygon(${D} 0,calc(100% - ${D}) 0,100% 100%,0 100%)` }} />
 
-        {/* The back wall: a touch off white, so the light on it shows */}
-        <div className="absolute bg-[#e9e9e6]" style={{ inset: D }}>
-          {/* Soft shade in the middle of each compartment, away from the lights */}
-          <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(0,0,0,0.03)_9%,rgba(0,0,0,0)_15%,rgba(0,0,0,0.04)_38%,rgba(0,0,0,0)_53%,rgba(0,0,0,0.04)_80%,rgba(0,0,0,0)_100%)]" />
-          {/* Light strips round the inside of the recess */}
-          <div aria-hidden className="absolute inset-x-0 top-0 z-[1] h-[2px] bg-white shadow-[0_0_10px_3px_rgba(255,255,255,0.95)]" />
-          <Wash from="top" reach="17%" />
-          <Wash from="bottom" reach="15%" />
-          <Wash from="left" reach="5%" strength={0.9} />
-          <Wash from="right" reach="5%" strength={0.9} />
+          {/* The back wall: a touch off white, so the light on it shows */}
+          <div className="absolute bg-[#e9e9e6]" style={{ inset: D }}>
+            {/* Soft shade in the middle of each compartment, away from the lights */}
+            <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(0,0,0,0.025)_7%,rgba(0,0,0,0)_12%,rgba(0,0,0,0.04)_36%,rgba(0,0,0,0)_52%,rgba(0,0,0,0.04)_80%,rgba(0,0,0,0)_100%)]" />
+            {/* Light strips round the inside of the recess */}
+            <div aria-hidden className="absolute inset-x-0 top-0 z-[1] h-[2px] bg-white shadow-[0_0_10px_3px_rgba(255,255,255,0.95)]" />
+            <Wash from="top" reach="13%" />
+            <Wash from="bottom" reach="15%" />
+            <Wash from="left" reach="5%" strength={0.9} />
+            <Wash from="right" reach="5%" strength={0.9} />
 
-          {/* Top compartment: accessories, with a trailing plant at the left end of the shelf */}
-          <Shelf
-            top="17%"
-            pieces={upper}
-            items={
+            {/* The short top compartment: accessories and display pieces. Under its shelf, the tops. */}
+            {shelf(
+              "13.5%",
+              upper,
               <>
-                <Plant kind="trail" className="w-[11%]" />
+                <Plant className="w-[9.5%]" />
                 {cap && (
-                  <Link href={`/product/${cap.slug}`} aria-label={`${cap.name}, ${formatPrice(cap.price)}`} title={`${cap.name} · ${formatPrice(cap.price)}`} className="ml-[3%] flex w-[40%] items-end justify-between transition-transform duration-300 hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
-                    {[0, 1, 2, 3].map((i) => (
-                      // eslint-disable-next-line @next/next/no-img-element -- the cap's own photo, cut out
-                      <img key={i} src="/rack/six-panel-cap.webp" alt="" draggable={false} className="h-auto w-[19%] [filter:drop-shadow(4px_3px_3px_rgba(0,0,0,0.3))]" />
-                    ))}
-                  </Link>
+                  <button {...pick(cap)} className={`w-[8%] cursor-pointer transition-transform duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${cap.product.slug === activeSlug ? "-translate-y-0.5 scale-[1.08]" : ""}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- the cap's own photo, cut out */}
+                    <img src={`/rack/${cap.product.slug}.webp`} alt="" draggable={false} className={`block h-auto w-full ${shade}`} />
+                  </button>
                 )}
-              </>
-            }
-          />
-          {/* Second shelf: the two clothes compartments are above and below it */}
-          <Shelf top="57%" pieces={lower} clearRight />
-
-          {/* One plant, bottom right, on the floor ledge */}
-          <div className="absolute bottom-0 right-[2.5%] z-[5] w-[11%]">
-            <Plant kind="up" className="w-full" />
+                <BookStack className="w-[10%]" />
+                <FoldedPile className="w-[9%]" />
+                <BookRow className="w-[8%]" />
+                <Box className="w-[5.5%]" />
+                <Diffuser className="w-[3.2%]" />
+                <BookStack className="w-[8%]" />
+              </>,
+            )}
+            {/* Second shelf: under it, the bottoms and jackets */}
+            {shelf("56.5%", lower)}
           </div>
+        </div>
+      </div>
+
+      {/* Under the hollow: the picked piece on the left, the way into the drop in the middle, its tag on the right */}
+      <div className="mt-4 grid items-end gap-4 md:mt-5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        {sel ? (
+          <div className="min-w-0 max-md:order-2" aria-live="polite">
+            <p className="truncate text-lg font-semibold">{sel.product.name}</p>
+            <p className="mt-1 flex items-center gap-2 text-[14px] text-ink/75">
+              <span aria-hidden className="h-3.5 w-3.5 rounded-full border border-ink/30" style={{ background: sel.colour.hex }} />
+              {sel.colour.name}
+              <span className="font-mono text-[13px] text-ink md:hidden">· {formatPrice(sel.product.salePrice ?? sel.product.price)}</span>
+            </p>
+            <p className="mt-1.5 flex gap-3 font-mono text-[13px] text-ink/85">
+              <span className="sr-only">Sizes: </span>
+              {oneSize
+                ? "One size"
+                : sizes.map((v) =>
+                    v.stock > 0 ? (
+                      <span key={v.sku}>
+                        {v.size}
+                        {v.stock <= 3 && <sup className="ml-px text-[9px] text-ink/70">{v.stock}</sup>}
+                      </span>
+                    ) : (
+                      <s key={v.sku} className="text-steel-dark">
+                        {v.size}
+                        <span className="sr-only"> sold out</span>
+                      </s>
+                    ),
+                  )}
+            </p>
+            <Link href={`/product/${sel.product.slug}`} className="group mt-1 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
+              View piece
+              <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </Link>
+          </div>
+        ) : (
+          <span />
+        )}
+        <div className="flex justify-center max-md:order-1">{children}</div>
+        {/* The tag: the piece's fixed price and its measurements in cm */}
+        <div className="flex justify-end max-md:hidden">
+          {sel && (
+            <div className="relative h-[130px] w-[100px] shrink-0" aria-hidden>
+              <div className="absolute bottom-0 left-0 w-[200px] origin-bottom-left rotate-[3deg] scale-50 [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.18))]">
+                <HangTag key={sel.product.id} product={sel.product} colour={sel.colour.name} className="animate-fade-up [--hole:var(--color-mist)]" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Countdown } from "@/components/countdown";
 import { FitsTeaser } from "@/components/home/fits-teaser";
-import { HeroNiche, NICHE_CUTOUTS, type NichePiece } from "@/components/hero-niche";
+import { HeroNiche, type NichePiece } from "@/components/hero-niche";
 import { GiftBlock } from "@/components/home/gift-block";
 import { FlowButton } from "@/components/ui/flow-button";
 import { OurStore } from "@/components/home/our-store";
@@ -19,6 +19,7 @@ import { getStoreInfo } from "@/lib/store-info";
 import { formatDropTime, formatPrice } from "@/lib/format";
 import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
+import { RACK_CUTOUTS } from "@/lib/rack-cutouts";
 import { site } from "@/lib/site";
 import { getDropTimeline, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
@@ -56,18 +57,27 @@ export default async function HomePage() {
   const range = products.filter((p) => !p.vault);
 
   // What hangs in the hero's niche: live pieces that have a cut-out photo. Tops on the first rail,
-  // bottoms and jackets on the second (kinds taken in turn, so a rail isn't all one thing), five each.
-  const hung = range.filter((p) => p.status === "live" && NICHE_CUTOUTS.has(p.slug));
-  const asPiece = (p: (typeof hung)[number]): NichePiece => ({ slug: p.slug, name: p.name, price: p.salePrice ?? p.price, category: p.category });
-  const rail = (kinds: string[]) => {
+  // bottoms and jackets on the second (kinds taken in turn, so a rail isn't all one thing). Each rail
+  // has five hangers; an empty one takes a piece the other rail had no room for, so every hanger
+  // carries something different.
+  const hung = range.filter((p) => p.status === "live" && RACK_CUTOUTS.has(p.slug) && p.category !== "accessories");
+  const asPiece = (p: (typeof hung)[number]): NichePiece => ({ product: p, colour: p.colours[0] });
+  const inTurn = (kinds: string[]) => {
     const lists = kinds.map((k) => hung.filter((p) => p.category === k));
-    const picked: NichePiece[] = [];
-    for (let round = 0; picked.length < 5 && lists.some((l) => l.length > round); round++) for (const l of lists) if (l[round] && picked.length < 5) picked.push(asPiece(l[round]));
-    return picked;
+    const out: typeof hung = [];
+    for (let round = 0; lists.some((l) => l.length > round); round++) for (const l of lists) if (l[round]) out.push(l[round]);
+    return out;
   };
-  const upperRail = rail(["tees", "hoodies", "co-ords"]);
-  const lowerRail = rail(["bottoms", "jackets"]);
-  const capPiece = hung.find((p) => p.slug === "six-panel-cap");
+  const tops = inTurn(["tees", "hoodies", "co-ords"]);
+  const rest = inTurn(["bottoms", "jackets"]);
+  const upperList = tops.slice(0, 5);
+  const lowerList = rest.slice(0, 5);
+  const spare = [...tops.slice(5), ...rest.slice(5)];
+  while (upperList.length < 5 && spare.length) upperList.push(spare.shift()!);
+  while (lowerList.length < 5 && spare.length) lowerList.push(spare.shift()!);
+  const upperRail = upperList.map(asPiece);
+  const lowerRail = lowerList.map(asPiece);
+  const capProduct = range.find((p) => p.status === "live" && p.slug === "six-panel-cap");
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
@@ -82,14 +92,11 @@ export default async function HomePage() {
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
           <div className="lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:self-center">
-            <div className="relative -mx-4 aspect-[4/3] overflow-hidden bg-paper text-ink md:-mx-8 lg:mx-0">
-              {/* The wardrobe: a white hollow niche built on the page (components/hero-niche.tsx), with the shop's pieces hung in it */}
-              <HeroNiche upper={upperRail} lower={lowerRail} cap={capPiece ? asPiece(capPiece) : null} />
-            </div>
-            {/* The way into the drop: right below the hollow, in black */}
-            <div className="mt-4 flex justify-center md:mt-5">
+            {/* The wardrobe: a white hollow built on the page, with the shop's pieces hung in it; the picked
+                piece's name and tag show under it, either side of the way into the drop. */}
+            <HeroNiche upper={upperRail} lower={lowerRail} cap={capProduct ? { product: capProduct, colour: capProduct.colours[0] } : null}>
               <FlowButton href={drop ? `/drop/${drop.slug}` : "/drops"} text={drop ? `Shop Drop ${drop.slug}` : "See the drops"} solid />
-            </div>
+            </HeroNiche>
           </div>
 
           {/* Words */}
