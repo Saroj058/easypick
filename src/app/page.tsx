@@ -5,7 +5,7 @@ import { Countdown } from "@/components/countdown";
 import { FitsTeaser } from "@/components/home/fits-teaser";
 import { HeroNiche } from "@/components/hero-niche";
 import { GiftBlock } from "@/components/home/gift-block";
-import { ShinyLink } from "@/components/ui/shiny-button";
+import { FlowButton } from "@/components/ui/flow-button";
 import { OurStore } from "@/components/home/our-store";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
@@ -67,9 +67,15 @@ export default async function HomePage() {
       <section aria-labelledby="hero-title" className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
-          <div className="relative -mx-4 aspect-[4/3] overflow-hidden bg-paper text-ink md:-mx-8 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:mx-0 lg:self-center">
-            {/* The wardrobe: a white hollow niche built on the page (components/hero-niche.tsx), empty hangers for now */}
-            <HeroNiche />
+          <div className="lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:self-center">
+            <div className="relative -mx-4 aspect-[4/3] overflow-hidden bg-paper text-ink md:-mx-8 lg:mx-0">
+              {/* The wardrobe: a white hollow niche built on the page (components/hero-niche.tsx), empty hangers for now */}
+              <HeroNiche />
+            </div>
+            {/* The way into the drop: right below the hollow, in black */}
+            <div className="mt-4 flex justify-center md:mt-5">
+              <FlowButton href={drop ? `/drop/${drop.slug}` : "/drops"} text={drop ? `Shop Drop ${drop.slug}` : "See the drops"} solid />
+            </div>
           </div>
 
           {/* Words */}
@@ -137,10 +143,6 @@ export default async function HomePage() {
               {next ? `Drop ${next.slug} opens in` : current ? `${current.name} · out now` : "Kathmandu"}
             </p>
             <div className="flex justify-center">{next && <Countdown to={next.releaseAt} label={next.name} size="sm" seconds />}</div>
-            {/* The way into the drop: outside the hollow, under it. The same sweeping pill as the Rail's "Show all". */}
-            <ShinyLink href={drop ? `/drop/${drop.slug}` : "/drops"} className="[&>span]:px-7 [&>span]:py-3">
-              {drop ? `Shop Drop ${drop.slug}` : "See the drops"}
-            </ShinyLink>
           </div>
         </div>
       </section>
