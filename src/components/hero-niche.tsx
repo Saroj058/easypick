@@ -30,6 +30,8 @@ const HANGERS = 5;
 /** How deep the recess looks, as a share of its own size: shallow, as in the sample. */
 const D = "3.6%";
 const W = "rgba(255,255,255,";
+/** The accessories compartment on top (plant, cap, books, sneakers…). Off for now (owner, 9 Oct 2026): just the two rails of clothes. */
+const ACCESSORIES = false;
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
 // How each kind hangs, measured against its hanger (a real hanger is about 42 cm across):
@@ -49,18 +51,18 @@ const HANG: Record<Category, { width: string; top: string }> = {
 
 // Pieces photographed already hanging (public/rack/hung/<slug>.webp, cut from the owner's wardrobe
 // photograph by scripts/rack-hung.mjs): real drape, on their own hanger, cut off level where they
-// meet the rail. The number is the piece's width against its hanger slot, true to the photograph.
+// meet the rail. The number is the piece's width against its hanger slot: the photograph's proportions, a little enlarged.
 const HUNG: Record<string, number> = {
-  "oversized-heavy-tee": 189,
-  "everyday-hoodie": 216,
-  "boxy-pocket-tee": 173,
-  "brushed-crewneck": 210,
-  "washed-co-ord-set": 174,
-  "tapered-jogger": 120,
-  "coach-jacket": 208,
-  "relaxed-straight-jean": 123,
-  "fleece-quarter-zip": 200,
-  "wide-cargo-pant": 132,
+  "oversized-heavy-tee": 223,
+  "everyday-hoodie": 255,
+  "boxy-pocket-tee": 204,
+  "brushed-crewneck": 248,
+  "washed-co-ord-set": 205,
+  "tapered-jogger": 142,
+  "coach-jacket": 245,
+  "relaxed-straight-jean": 145,
+  "fleece-quarter-zip": 236,
+  "wide-cargo-pant": 156,
 };
 
 /** A wash of light coming off one edge of a box, brightest at the edge. */
@@ -186,16 +188,16 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
   });
 
   /** One shelf with the rail under it and what hangs there. */
-  const shelf = (top: string, pieces: NichePiece[], items?: React.ReactNode) => (
+  const shelf = (top: string, pieces: NichePiece[], items?: React.ReactNode, /** No shelf above: the rail hangs straight under the ceiling. */ bare = false) => (
     <div className="absolute inset-x-0" style={{ top }}>
       {/* Light on the wall just above the shelf, from a strip along its back edge */}
       <div className="absolute inset-x-0 bottom-full h-[clamp(14px,3.4vw,40px)]">
         <Wash from="bottom" reach="100%" strength={0.95} />
       </div>
       {/* What stands on the shelf */}
-      {items && <div className="absolute inset-x-[1.5%] bottom-full z-20 flex items-end justify-between">{items}</div>}
+      {items && !bare && <div className="absolute inset-x-[1.5%] bottom-full z-20 flex items-end justify-between">{items}</div>}
       {/* The shelf: a thin white slab let into both side walls, with its shadow under it */}
-      <div aria-hidden className="relative z-10 -mx-[1%] h-[7px] bg-[linear-gradient(180deg,#ffffff_0%,#ffffff_60%,#ececea_100%)] shadow-[0_2px_3px_rgba(0,0,0,0.16)] md:h-[11px]" />
+      <div aria-hidden className={`relative z-10 -mx-[1%] h-[7px] bg-[linear-gradient(180deg,#ffffff_0%,#ffffff_60%,#ececea_100%)] shadow-[0_2px_3px_rgba(0,0,0,0.16)] md:h-[11px] ${bare ? "invisible" : ""}`} />
       {/* The light strip under the shelf */}
       <div className="relative h-0">
         <div aria-hidden className="absolute inset-x-0 top-0 z-[1] h-[2px] bg-white shadow-[0_0_8px_2px_rgba(255,255,255,0.95)]" />
@@ -238,7 +240,7 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
   return (
     <div>
       {/* No room is drawn round it: the white page is the wall, and this is a hole cut into the screen. */}
-      <div role="group" aria-label="The Easypick wardrobe: pieces from the shop, hung in a lit white hollow" className="relative -mx-4 aspect-[7/6] overflow-hidden bg-paper text-ink md:-mx-8 lg:mx-0">
+      <div role="group" aria-label="The Easypick wardrobe: pieces from the shop, hung in a lit white hollow" className={`relative -mx-4 ${ACCESSORIES ? "aspect-[7/6]" : "aspect-[5/4]"} overflow-hidden bg-paper text-ink md:-mx-8 lg:mx-0`}>
         <div className="absolute inset-0 shadow-[0_0_0_1px_rgba(0,0,0,0.09)]">
           {/* The four faces of the recess, in perspective: ceiling in soft shade, sides, and the lit floor ledge */}
           <div aria-hidden className="absolute inset-x-0 top-0 bg-[linear-gradient(180deg,#d8d8d5,#ecece9)]" style={{ height: D, clipPath: `polygon(0 0,100% 0,calc(100% - ${D}) 100%,${D} 100%)` }} />
@@ -259,7 +261,7 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
 
             {/* The short top compartment: accessories and display pieces. Under its shelf, the tops. */}
             {shelf(
-              "11%",
+              ACCESSORIES ? "11%" : "-1%",
               upper,
               <>
                 <Plant className="w-[9.5%]" />
@@ -280,12 +282,13 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
                   <BookStack className="w-full" />
                 </div>
               </>,
+              !ACCESSORIES,
             )}
             {/* Second shelf: under it, the bottoms and jackets */}
-            {shelf("44%", lower)}
+            {shelf(ACCESSORIES ? "44%" : "38.5%", lower)}
 
             {/* The bottom compartment: the picked piece's details on the left, its tag on the right */}
-            <div className="absolute inset-x-0 bottom-0" style={{ top: "77%" }}>
+            <div className="absolute inset-x-0 bottom-0" style={{ top: ACCESSORIES ? "77%" : "78%" }}>
               <div aria-hidden className="relative z-10 -mx-[1%] h-[7px] bg-[linear-gradient(180deg,#ffffff_0%,#ffffff_60%,#ececea_100%)] shadow-[0_2px_3px_rgba(0,0,0,0.16)] md:h-[11px]" />
               <div className="relative h-0">
                 <div aria-hidden className="absolute inset-x-0 top-0 z-[1] h-[2px] bg-white shadow-[0_0_8px_2px_rgba(255,255,255,0.95)]" />
