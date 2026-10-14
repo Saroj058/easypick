@@ -242,6 +242,30 @@ export function cleanState(raw: unknown): PickState {
 }
 
 /**
+ * A friendly answer to small talk (hi, how are you, who are you, thanks, a joke…), so Pick always
+ * replies, even without the AI. Never states facts about products, prices or policies.
+ */
+export function smallTalk(text: string): string | null {
+  const t = ` ${text.toLowerCase().replace(/[’']/g, "'").replace(/[!?.,]+/g, " ")} `;
+  const has = (re: RegExp) => re.test(t);
+  if (has(/\b(namaste|namaskar)\b/)) return "Namaste! 🙏 Lovely to meet you.";
+  if (has(/\b(how are you|how r u|how's it going|how are things|what's up|wassup|sup)\b/)) return "I'm great, thanks for asking. Always happy when there's a gift to find. And you?";
+  if (has(/\b(who are you|what are you|your name|are you (a )?(bot|robot|real|human|ai))\b/)) return "I'm Pick, Easypick's little gift robot. A small one, with a big heart for gifts.";
+  if (has(/\b(what can you do|how does this work|how do you work|help me|can you help)\b/)) return "Tell me who it's for and roughly what you'd like to spend, and I'll find pieces they'll actually wear.";
+  if (has(/\b(joke|make me laugh|something funny)\b/)) return "Why did the hoodie feel left out? Everyone kept zipping past it. 😄";
+  if (has(/\b(love you|you're cute|you are cute|you're sweet|cute robot)\b/)) return "Aw. I'm only a robot, but I'm blushing. 💛";
+  if (has(/\b(bye|goodbye|see you|see ya|good night|gn)\b/)) return "Bye for now! I'll be right here when you need a gift idea.";
+  if (has(/\b(thanks|thank you|thank u|thx|ty|dhanyabad|dhanyabaad)\b/)) return "Anytime! 💛";
+  if (has(/\b(good morning|good afternoon|good evening)\b/)) return "And a good one to you too!";
+  if (has(/\b(hi|hello|hey|hii+|heyy+|hola|yo|oi)\b/)) return "Hey! Nice to see you.";
+  if (has(/\b(lol|haha+|hehe+|lmao)\b/)) return "Ha! 😄";
+  if (has(/\b(ok|okay|cool|nice|great|awesome|sure|alright|fine)\b/)) return "Great.";
+  if (has(/\b(weather|rain|hot|cold)\b/)) return "I don't get out much, but it's always good weather for a gift.";
+  if (has(/\b(bored|sad|tired|stressed)\b/)) return "Sending you a little robot hug. 🤖 Maybe a gift for someone will cheer us both up.";
+  return null;
+}
+
+/**
  * Reads a typed message without any AI: budgets ("under 3000", "Rs 2,500", "3k"), who it's for,
  * the occasion, style words, sizes, and plain requests ("cheaper", "start again"). The AI, when
  * it is available, adds to this; when it isn't, this alone keeps Pick useful.
@@ -275,7 +299,7 @@ export function readMessage(text: string): { set: NonNullable<Quick["set"]>; act
   else if (has(/\b(anniversary)\b/)) set.occasion = "anniversary";
   else if (has(/\b(valentine)/)) set.occasion = "valentine";
   else if (has(/\b(dashain|tihar|bhai ?tika|festival|new year|christmas|eid|holi|teej)\b/)) set.occasion = "festival";
-  else if (has(/\b(thank you|thanks|thank-you)\b/)) set.occasion = "thanks";
+  else if (has(/\b(thank[- ]?you (gift|present)|thanks (gift|present)|to say thank|as a thank)/)) set.occasion = "thanks";
   else if (has(/\b(just because|no reason|no occasion)\b/)) set.occasion = "just-because";
 
   if (has(/\b(oversized|baggy|street ?wear|streetstyle|hype|loose)\b/)) set.style = "street";

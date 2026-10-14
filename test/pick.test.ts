@@ -167,6 +167,19 @@ describe("a whole chat", () => {
   });
 });
 
+describe("small talk", () => {
+  it("answers hi, how are you and thanks, then carries on", async () => {
+    let r = await turn(CATALOGUE, {}, { text: "hi" });
+    expect(r.messages[0].text).toMatch(/^Hey! Nice to see you\. Who are we shopping for today\?$/);
+    r = await turn(CATALOGUE, {}, { text: "how are you?" });
+    expect(r.messages[0].text).toMatch(/I'm great/);
+    r = await turn(CATALOGUE, { recipient: "friend" }, { text: "thanks!" });
+    expect(r.messages[0].text).toMatch(/^Anytime/);
+    expect(r.state.occasion).toBeUndefined(); // "thanks" alone isn't the occasion
+    expect(readMessage("a thank you gift for my teacher").set.occasion).toBe("thanks");
+  });
+});
+
 describe("asides", () => {
   it("an off-topic line gets a reply, not the same pieces again", async () => {
     const state = { recipient: "friend" as const, occasion: "birthday" as const, style: "casual" as const, budget: 0, sizing: "unknown" as const, shown: ["plain-tee"] };

@@ -210,7 +210,7 @@ export function PickChat() {
   };
 
   return (
-    <section aria-label="Pick, your gift helper" className="-mt-6 md:-mt-10">
+    <section aria-label="Pick, your gift helper" className="!mb-8 -mt-6 md:!mb-10 md:-mt-10">
       {/* Pick walks the whole width of the screen. Asked something, he walks over and answers in a
           panel on his left, turning to it; closed, he goes back to roaming. */}
       <div ref={band} className="relative mx-[calc(50%-50vw)] flex min-h-[150px] items-end md:min-h-[190px]">
@@ -317,14 +317,13 @@ export function PickChat() {
           autoComplete="off"
           enterKeyHint="send"
           inputMode={askBudget ? "numeric" : "text"}
-          placeholder={askBudget ? "Your budget, like 3000" : "Ask Pick for a gift idea…"}
-          className="h-11 min-w-0 flex-1 bg-transparent px-3 text-base outline-none placeholder:text-steel md:text-[15px]"
+          placeholder={askBudget ? "Your budget, like 3000" : "e.g. “gift for my brother, under 3000”"}
+          className="h-11 min-w-0 flex-1 bg-transparent px-3 text-base outline-none placeholder:text-[14px] placeholder:text-steel md:text-[15px] md:placeholder:text-[15px]"
         />
         <button type="submit" disabled={thinking || !text.trim()} aria-label="Send" className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-ink text-paper transition-[opacity,scale,background-color] active:scale-95 enabled:hover:bg-[#222] disabled:cursor-default disabled:opacity-25">
           <ArrowUp aria-hidden className="h-5 w-5" />
         </button>
       </form>
-      {!open && <p className="mt-2 text-center text-[12.5px] text-steel-dark">Like “birthday gift for my brother, under 3000”</p>}
 
       <SendSheet
         piece={sending}

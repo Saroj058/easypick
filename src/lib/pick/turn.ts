@@ -6,7 +6,7 @@
 import { formatPrice } from "../format";
 import { site } from "../site";
 import type { Product } from "../types";
-import { GREETING, acknowledge, applySet, cleanState, question, readMessage, stageOf, type PickAction, type PickState, type Quick } from "./journey";
+import { GREETING, smallTalk, acknowledge, applySet, cleanState, question, readMessage, stageOf, type PickAction, type PickState, type Quick } from "./journey";
 import { compare, giftable, recommend, type PickCard } from "./recommend";
 import type { Understanding } from "./ai";
 
@@ -81,8 +81,15 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
     action = ai?.action ?? plain.action;
     if (ai?.reply) lines.push(ai.reply);
     if (!Object.keys(set).length && !action && !ai?.reply) {
-      lines.push("I didn't quite catch that. Tap an answer below, or tell me who it's for and a budget.");
-      mood = "reassuring";
+      // Small talk gets a real answer; anything else, a gentle nudge.
+      const chat = smallTalk(text);
+      if (chat) {
+        lines.push(chat);
+        mood = "speaking";
+      } else {
+        lines.push("Hmm, I'm not sure I got that. Tell me who it's for, or a budget, and I'll find something.");
+        mood = "reassuring";
+      }
     }
   }
 
