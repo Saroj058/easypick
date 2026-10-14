@@ -132,7 +132,8 @@ export function card(p: Product, s: PickState, styleWhy?: string): PickCard {
   if (styleWhy) reasons.push(styleWhy);
   if (oneSize(p)) reasons.push("One size, so there's nothing to guess.");
   else if (s.sizing === "known" && s.size) reasons.push(`Size ${s.size} is in stock.`);
-  if (s.budget) reasons.push(`${formatPrice(price)}, inside your ${formatPrice(s.budget)}.`);
+  // The price is shown next to this anyway: the budget is only the reason when there is no other.
+  if (s.budget && !reasons.length) reasons.push(`Inside your ${formatPrice(s.budget)} budget.`);
   if (p.salePrice && p.salePrice < p.price) reasons.push(`Down from ${formatPrice(p.price)}.`);
   return {
     slug: p.slug,

@@ -1,10 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUp, RotateCcw, X } from "lucide-react";
+import { ArrowUp, RotateCcw, Sparkles, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { formatPrice } from "@/lib/format";
 import { GREETING, question, type PickState, type Quick } from "@/lib/pick/journey";
@@ -14,15 +14,15 @@ import { ProductImage } from "../product-image";
 import type { RobotMood } from "../ui/robot-hero";
 import { SendSheet } from "./gift-pieces";
 
-// Pick, the gift page's robot. No chat window: a small thought bubble over his head that walks with
-// him. Ask him something (a tap or a few words) and the bubble thinks, then answers, with a few
-// quick answers and, when he has them, up to three real pieces. Only the latest exchange shows.
+// Pick, the gift page's robot. At first just Pick, roaming, and an "Ask Pick" line. Ask him something
+// and he walks over and answers in a panel on his left: thinking first, then his reply, a few quick
+// answers and, when he has them, up to three real pieces. Only the latest exchange shows.
 // All of the thinking is on the server (/api/pick, lib/pick/turn.ts); this only draws it.
 // What he knows (gift preferences only) is kept for this tab in sessionStorage.
 
 const Robot = dynamic(() => import("../ui/robot-hero").then((m) => m.RobotCharacter), { ssr: false, loading: () => null });
 
-const KEY = "ep-pick-v2";
+const KEY = "ep-pick-v3";
 
 interface Bubble {
   text: string;
@@ -40,6 +40,8 @@ interface Saved {
 const FIRST: Saved = {
   state: {},
   bubble: { text: `${GREETING} ${question("recipient", {}, []).text}`, quick: question("recipient", {}, []).quick },
+  // Nothing over him at first: just Pick and the "Ask Pick" line.
+  hidden: true,
 };
 
 export function PickChat() {
@@ -147,7 +149,7 @@ export function PickChat() {
 
   const choose = (q: Quick) => {
     if (q.action === "restart") {
-      setNow({ state: {}, bubble: { text: `Fresh start. ${question("recipient", {}, []).text}`, quick: question("recipient", {}, []).quick } });
+      setNow({ state: {}, bubble: { text: `Fresh start. ${question("recipient", {}, []).text}`, quick: question("recipient", {}, []).quick }, hidden: false });
       setMood("greeting");
       setAskBudget(false);
       return;
@@ -182,96 +184,125 @@ export function PickChat() {
   const settled = typed === null && !thinking;
   const open = !now.hidden;
 
+  // Where Pick stands while he answers: just right of his panel. Measured, so it holds on any screen.
+  const spot = useRef<number | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const b = band.current?.getBoundingClientRect();
+      const p = panel.current?.getBoundingClientRect();
+      spot.current = open && b && p && b.width ? Math.min(0.94, (p.right - b.left + (b.width < 640 ? 50 : 72)) / b.width) : null;
+    };
+    measure();
+    if (!open || !panel.current) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(panel.current);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [open]);
+
+  const close = () => {
+    setNow((c) => ({ ...c, hidden: true }));
+    setMood("idle");
+  };
+
   return (
     <section aria-label="Pick, your gift helper">
-      {/* Pick walks the whole width of the screen; his bubble walks with him (--pick-x is set by the robot). */}
-      <div ref={band} className="relative mx-[calc(50%-50vw)] [--pick-x:0.5]">
-        {/* Room for the bubble, which grows upward from just over his head */}
-        <div className="relative flex min-h-[170px] items-end pb-6">
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              key="bubble"
-              initial={still ? false : { opacity: 0, scale: 0.85, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={still ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 8 }}
-              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              // Above his head, following him, never off the edge of the screen.
-              className="relative z-10 w-[min(340px,calc(100vw-24px))] origin-bottom -translate-x-1/2"
-              style={{ left: "clamp(calc(min(340px, 100vw - 24px) / 2 + 12px), calc(var(--pick-x) * 100%), calc(100% - min(340px, 100vw - 24px) / 2 - 12px))" }}
-            >
-              {now.said && (
-                <p className="mb-1.5 ml-auto w-fit max-w-[80%] truncate rounded-full bg-ink px-3 py-1 text-[12px] text-paper" aria-label="You said">
-                  {now.said}
-                </p>
-              )}
-              <div className="relative rounded-[22px] border border-ink bg-paper px-4 py-3 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)]">
-                <span className="absolute right-1.5 top-1.5 flex">
-                  <button type="button" onClick={() => choose({ label: "Start again", action: "restart" })} aria-label="Start again" className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-steel-dark hover:bg-mist hover:text-ink">
-                    <RotateCcw aria-hidden className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNow((c) => ({ ...c, hidden: true }));
-                      setMood("idle");
-                    }}
-                    aria-label="Hide Pick's bubble"
-                    className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-steel-dark hover:bg-mist hover:text-ink"
-                  >
-                    <X aria-hidden className="h-4 w-4" />
-                  </button>
-                </span>
-
-                <div aria-live="polite" className="pr-14">
-                  {thinking ? (
-                    <p className="flex h-6 items-center gap-1.5" role="status" aria-label="Pick is thinking">
-                      {[0, 1, 2].map((d) => (
-                        <span key={d} className="h-2 w-2 rounded-full bg-ink/45 motion-safe:animate-bounce" style={{ animationDelay: `${d * 130}ms` }} />
-                      ))}
-                    </p>
-                  ) : (
-                    <p className="whitespace-pre-line text-[14.5px] leading-snug">{shown}</p>
-                  )}
-                </div>
-
-                {settled && now.bubble.cards && now.bubble.cards.length > 0 && (
-                  <ul className="mt-2.5 space-y-1.5" aria-label="Pick's suggestions">
-                    {now.bubble.cards.map((c) => (
-                      <MiniCard key={c.slug} card={c} onSend={() => pick(c)} />
-                    ))}
-                  </ul>
-                )}
-
-                {settled && now.bubble.quick.length > 0 && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Quick answers">
-                    {now.bubble.quick.map((q) => (
-                      <button
-                        key={q.label}
-                        type="button"
-                        onClick={() => choose(q)}
-                        className="inline-flex h-8 cursor-pointer items-center rounded-full border border-ink/20 px-3 text-[12.5px] font-semibold transition-[border-color,background-color,color,scale] duration-150 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.97]"
-                      >
-                        {q.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* The thought trail down to his head */}
-              <span aria-hidden className="absolute -bottom-3 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-ink bg-paper" />
-              <span aria-hidden className="absolute -bottom-[22px] left-[calc(50%+6px)] h-1.5 w-1.5 rounded-full border border-ink bg-paper" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* Pick walks the whole width of the screen. Asked something, he walks over and answers in a
+          panel on his left, turning to it; closed, he goes back to roaming. */}
+      <div ref={band} className="relative mx-[calc(50%-50vw)] flex min-h-[150px] items-end md:min-h-[190px]">
+        <div className="absolute inset-x-0 bottom-0 h-[150px] md:h-[190px]">
+          <Robot mood={open ? mood : "idle"} loved={mood === "happy"} spotRef={spot} className="absolute inset-0" />
         </div>
-        <div className="relative h-[150px] md:h-[180px]">
-          <Robot mood={open ? mood : "inactive"} loved={mood === "happy"} followRef={band} className="absolute inset-0" />
+
+        <div className="relative z-10 mx-auto w-full max-w-[820px] px-3 pb-4 md:px-4 md:pb-6">
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                ref={panel}
+                key="panel"
+                initial={still ? false : { opacity: 0, x: -14, scale: 0.97 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={still ? { opacity: 0 } : { opacity: 0, x: -10, scale: 0.98 }}
+                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                className="relative w-[calc(100%-96px)] max-w-[540px] origin-right md:w-[calc(100%-220px)]"
+              >
+                <div className="relative overflow-hidden rounded-[26px] bg-paper shadow-[0_24px_60px_-28px_rgba(10,10,10,0.45),0_0_0_1px_rgba(10,10,10,0.08)]">
+                  {/* A thin lime line along the top while he thinks */}
+                  <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] origin-left bg-volt transition-transform duration-500 ${thinking ? "scale-x-100 motion-safe:animate-pulse" : "scale-x-0"}`} />
+                  <header className="flex items-center gap-2 px-4 pt-3.5 md:px-5">
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-ink text-volt">
+                      <Sparkles aria-hidden className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="text-[13px] font-semibold">Pick</span>
+                    <span className="text-[12px] text-steel-dark">{thinking ? "thinking…" : "your gift helper"}</span>
+                    <span className="ml-auto -mr-2 flex">
+                      <button type="button" onClick={() => choose({ label: "Start again", action: "restart" })} aria-label="Start again" className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-steel-dark hover:bg-mist hover:text-ink">
+                        <RotateCcw aria-hidden className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" onClick={close} aria-label="Close Pick's answer" className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-steel-dark hover:bg-mist hover:text-ink">
+                        <X aria-hidden className="h-4 w-4" />
+                      </button>
+                    </span>
+                  </header>
+
+                  <div className="px-4 pb-4 pt-2 md:px-5 md:pb-5">
+                    {now.said && (
+                      <p className="mb-2 truncate text-[12.5px] text-steel-dark" aria-label="You said">
+                        <span className="mr-1.5 font-mono text-[10.5px] uppercase tracking-[0.14em]">You</span>
+                        {now.said}
+                      </p>
+                    )}
+                    <div aria-live="polite">
+                      {thinking ? (
+                        <p className="flex h-7 items-center gap-1.5" role="status" aria-label="Pick is thinking">
+                          {[0, 1, 2].map((d) => (
+                            <span key={d} className="h-2 w-2 rounded-full bg-ink/40 motion-safe:animate-bounce" style={{ animationDelay: `${d * 130}ms` }} />
+                          ))}
+                        </p>
+                      ) : (
+                        <p className="whitespace-pre-line text-[15.5px] leading-snug tracking-[-0.005em] md:text-[17px]">{shown}</p>
+                      )}
+                    </div>
+
+                    {settled && now.bubble.cards && now.bubble.cards.length > 0 && (
+                      <ul className="mt-3 divide-y divide-ink/[0.07] overflow-hidden rounded-2xl ring-1 ring-ink/[0.08]" aria-label="Pick's suggestions">
+                        {now.bubble.cards.map((c, i) => (
+                          <MiniCard key={c.slug} card={c} index={i} onSend={() => pick(c)} />
+                        ))}
+                      </ul>
+                    )}
+
+                    {settled && now.bubble.quick.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Quick answers">
+                        {now.bubble.quick.map((q) => (
+                          <button
+                            key={q.label}
+                            type="button"
+                            onClick={() => choose(q)}
+                            className="inline-flex h-8 cursor-pointer items-center rounded-full bg-mist/70 px-3 text-[12.5px] font-semibold transition-[background-color,color,scale] duration-150 hover:bg-ink hover:text-paper active:scale-[0.97]"
+                          >
+                            {q.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* The point of the panel, toward Pick on its right */}
+                <span aria-hidden className="absolute -right-[7px] bottom-8 h-3.5 w-3.5 rotate-45 rounded-[3px] bg-paper shadow-[1px_-1px_0_0_rgba(10,10,10,0.08)]" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* One short line to talk to him */}
-      <form onSubmit={submit} className="mx-auto mt-2 flex max-w-[460px] items-center gap-2">
+      {/* Ask Pick: the one way in */}
+      <form onSubmit={submit} className="relative mx-auto mt-3 flex max-w-[520px] items-center rounded-full bg-paper p-1.5 shadow-[0_14px_36px_-22px_rgba(10,10,10,0.5),0_0_0_1px_rgba(10,10,10,0.12)] transition-shadow focus-within:shadow-[0_14px_36px_-22px_rgba(10,10,10,0.5),0_0_0_2px_var(--color-ink)]">
+        <Sparkles aria-hidden className="ml-3 h-4 w-4 shrink-0 text-steel-dark" />
         <label htmlFor="pick-say" className="sr-only">
           Ask Pick
         </label>
@@ -280,22 +311,20 @@ export function PickChat() {
           id="pick-say"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onFocus={() => {
-            if (now.hidden) setNow((c) => ({ ...c, hidden: false }));
-            if (!thinking) setMood("listening");
-          }}
-          onBlur={() => !thinking && setMood((m) => (m === "listening" ? "curious" : m))}
+          onFocus={() => !thinking && setMood("listening")}
+          onBlur={() => !thinking && setMood((m) => (m === "listening" ? (open ? "curious" : "idle") : m))}
           maxLength={200}
           autoComplete="off"
           enterKeyHint="send"
           inputMode={askBudget ? "numeric" : "text"}
-          placeholder={askBudget ? "Your budget, like 3000" : "Ask Pick… birthday, brother, under 3000"}
-          className="h-11 min-w-0 flex-1 rounded-full border border-ink/20 bg-paper px-4 text-base outline-none transition-[border-color,box-shadow] placeholder:text-steel focus:border-ink focus:shadow-[0_0_0_3px_rgba(10,10,10,0.08)] md:text-[14px]"
+          placeholder={askBudget ? "Your budget, like 3000" : "Ask Pick for a gift idea…"}
+          className="h-11 min-w-0 flex-1 bg-transparent px-3 text-base outline-none placeholder:text-steel md:text-[15px]"
         />
-        <button type="submit" disabled={thinking || !text.trim()} aria-label="Send" className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-ink text-paper transition-[opacity,scale] active:scale-95 disabled:cursor-default disabled:opacity-30">
+        <button type="submit" disabled={thinking || !text.trim()} aria-label="Send" className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-ink text-paper transition-[opacity,scale,background-color] active:scale-95 enabled:hover:bg-[#222] disabled:cursor-default disabled:opacity-25">
           <ArrowUp aria-hidden className="h-5 w-5" />
         </button>
       </form>
+      {!open && <p className="mt-2 text-center text-[12.5px] text-steel-dark">Like “birthday gift for my brother, under 3000”</p>}
 
       <SendSheet
         piece={sending}
@@ -306,25 +335,33 @@ export function PickChat() {
   );
 }
 
-/** A suggested piece, small: photo, name, price, why; and Send this. */
-function MiniCard({ card, onSend }: { card: PickCard; onSend: () => void }) {
+/** A suggested piece: photo, name, price and why; Send this. */
+function MiniCard({ card, index, onSend }: { card: PickCard; index: number; onSend: () => void }) {
+  const still = useReducedMotion();
   return (
-    <li className="flex items-center gap-2.5 rounded-xl bg-mist/60 p-1.5 pr-2">
-      <span className="relative block h-12 w-11 shrink-0 overflow-hidden rounded-lg bg-[#efefef]">
+    <motion.li
+      initial={still ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: still ? 0 : index * 0.06 }}
+      className="flex items-center gap-2.5 bg-paper p-2 md:gap-3 md:pr-2.5"
+    >
+      <span className="relative block h-14 w-11 shrink-0 overflow-hidden rounded-xl bg-[#efefef] md:w-12">
         <span className="absolute inset-x-0 -top-[6%] block">
           <ProductImage image={card.image ?? { src: null, alt: card.name, kind: "front" }} category={card.category} colourHex={card.colourHex} decorative sizes="48px" />
         </span>
       </span>
-      <Link href={`/product/${card.slug}?from=gift`} className="min-w-0 flex-1" title={card.why}>
-        <span className="block truncate text-[13px] font-semibold leading-tight hover:underline">{card.name}</span>
-        <span className="block truncate text-[11.5px] text-steel-dark">
-          <span className="font-mono text-ink">{formatPrice(card.price)}</span> · {card.why}
+      <Link href={`/product/${card.slug}?from=gift`} className="group min-w-0 flex-1">
+        <span className="block truncate text-[13.5px] font-semibold leading-tight group-hover:underline">{card.name}</span>
+        <span className="mt-0.5 block font-mono text-[12px] tabular-nums">
+          {formatPrice(card.price)}
+          {card.was && <span className="ml-1.5 text-steel-dark line-through">{formatPrice(card.was)}</span>}
         </span>
+        <span className="block truncate text-[11.5px] text-steel-dark">{card.why}</span>
       </Link>
-      <button type="button" onClick={onSend} className="inline-flex h-8 shrink-0 cursor-pointer items-center rounded-full bg-volt px-3 text-[12px] font-semibold transition-[background-color,scale] hover:bg-[#b5f020] active:scale-[0.97]">
-        Send this
+      <button type="button" onClick={onSend} aria-label="Send this" className="inline-flex h-9 shrink-0 cursor-pointer items-center rounded-full bg-volt px-3 text-[12.5px] font-semibold transition-[background-color,scale] hover:bg-[#b5f020] active:scale-[0.97] md:px-3.5">
+        Send<span className="max-md:hidden">&nbsp;this</span>
       </button>
-    </li>
+    </motion.li>
   );
 }
 

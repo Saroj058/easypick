@@ -443,6 +443,7 @@ export function RobotPrototype({
   moodRef,
   still = false,
   followRef,
+  spotRef,
 }: {
   neckParams?: Record<string, number>;
   bodyParams?: Record<string, number>;
@@ -464,6 +465,8 @@ export function RobotPrototype({
   still?: boolean;
   /** An element that gets --pick-x (0 to 1 across the frame) every frame. */
   followRef?: RefObject<HTMLElement | null>;
+  /** Where to stand (0 to 1 across the frame), facing left; null: roam. Read every frame. */
+  spotRef?: RefObject<number | null>;
 }) {
   const glow = useRef(1);
   const shadowRef = useRef<THREE.Mesh>(null);
@@ -618,6 +621,14 @@ export function RobotPrototype({
           }
       }
     }
+    const spot = spotRef?.current;
+    let faceLeft = false;
+    if (contain && spot != null) {
+      at = Math.max(-1, Math.min(1, ((spot - 0.5) * state.viewport.width) / half));
+      pace = 0.9;
+      // Arrived: he turns to his answer on his left (unless he's busy thinking).
+      faceLeft = mood !== "thinking" && Math.abs(at * half - bodyRef.current.position.x) < 0.15;
+    }
     glow.current += (pulse - glow.current) * Math.min(1, dt * 8);
     bodyRef.current.position.y = THREE.MathUtils.lerp(bodyRef.current.position.y, -0.3 + hop, Math.min(1, dt * 18));
     headRef.current.rotation.z = THREE.MathUtils.lerp(headRef.current.rotation.z, tilt, Math.min(1, dt * 6));
@@ -638,7 +649,7 @@ export function RobotPrototype({
     if (followRef?.current) followRef.current.style.setProperty("--pick-x", (0.5 + bodyRef.current.position.x / state.viewport.width).toFixed(4));
 
     // Contained, it looks where it is going (or, standing still, where the mood points it).
-    const relativeX = contain ? Math.max(-1.2, Math.min(1.2, tx - bodyRef.current.position.x / Math.max(0.5, maxMoveX))) : tx - bodyRef.current.position.x / 2.5;
+    const relativeX = faceLeft ? -0.45 : contain ? Math.max(-1.2, Math.min(1.2, tx - bodyRef.current.position.x / Math.max(0.5, maxMoveX))) : tx - bodyRef.current.position.x / 2.5;
 
     const bodyTargetRotY = -relativeX * config.bodyTiltY;
 
@@ -1136,9 +1147,12 @@ export function RobotCharacter({
   pantallaColor = "#c6ff3d",
   className,
   followRef,
+  spotRef,
 }: {
   loved?: boolean;
   mood?: RobotMood;
+  /** Where to stand (0 to 1 across the frame), facing left; null: roam. */
+  spotRef?: RefObject<number | null>;
   /** Gets --pick-x every frame, so something (a thought bubble) can follow him. */
   followRef?: RefObject<HTMLElement | null>;
   /** The glow of its helmet. The site's lime by default. */
@@ -1203,7 +1217,7 @@ export function RobotCharacter({
         <ambientLight intensity={0.85} />
         <directionalLight position={[2, 4, 3]} intensity={0.6} />
         <StudioLight />
-        <RobotPrototype pantallaColor={pantallaColor} loved={loved} pointerRef={pointer} contain moodRef={moodRef} still={still} followRef={followRef} />
+        <RobotPrototype pantallaColor={pantallaColor} loved={loved} pointerRef={pointer} contain moodRef={moodRef} still={still} followRef={followRef} spotRef={spotRef} />
       </Canvas>
     </div>
   );

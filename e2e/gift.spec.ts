@@ -37,11 +37,14 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(cards.getByRole("button", { name: /Your amount/ })).toBeVisible();
   await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toHaveCount(0);
-  // Pick, the robot, asks one thing at a time; buttons alone reach real pieces.
+  // Pick, the robot: nothing over him until he's asked. Then one question at a time, by buttons.
   const pick = page.getByRole("region", { name: "Pick, your gift helper" });
-  await expect(pick).toContainText("I'm Pick");
+  await expect(pick.getByRole("group", { name: "Quick answers" })).toHaveCount(0);
+  await pick.getByRole("textbox", { name: "Ask Pick" }).fill("a gift for a friend");
+  await pick.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(pick).toContainText("What's the occasion?");
   const quick = pick.getByRole("group", { name: "Quick answers" });
-  for (const answer of ["A friend", "Birthday", /^Streetwear/, "No limit", "I don't know it"]) {
+  for (const answer of ["Birthday", /^Streetwear/, "No limit", "I don't know it"]) {
     await quick.getByRole("button", { name: answer }).click();
   }
   await expect(pick.getByRole("list", { name: "Pick's suggestions" }).getByRole("listitem").first()).toBeVisible();
@@ -78,7 +81,7 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(page.getByRole("link", { name: /for her/i })).toHaveCount(0);
 });
 
-test("Pick: a few words, a thought bubble, real suggestions; Send this opens the gift form; hide, reopen, resume @phone", async ({ page }) => {
+test("Pick: a few words, an answer beside him, real suggestions; Send this opens the gift form; resume, restart, close @phone", async ({ page }) => {
   test.slow();
   await page.goto("/gift");
   const pick = page.getByRole("region", { name: "Pick, your gift helper" });
@@ -101,16 +104,14 @@ test("Pick: a few words, a thought bubble, real suggestions; Send this opens the
   await sheet.getByRole("button", { name: "Close" }).click();
   await expect(sheet).toHaveCount(0);
   await expect(pick).toContainText("Great pick");
-  // Hide the bubble; typing to him brings it back. Still there after a reload in this tab.
-  await pick.getByRole("button", { name: "Hide Pick's bubble" }).click();
-  await expect(pick.getByText("Great pick")).toHaveCount(0);
-  await pick.getByRole("textbox", { name: "Ask Pick" }).focus();
-  await expect(pick).toContainText("Great pick");
+  // Still there after a reload in this tab.
   await page.reload();
   await expect(page.getByRole("region", { name: "Pick, your gift helper" })).toContainText("Great pick");
-  // Start again clears it.
+  // Start again; then close the answer and Pick goes back to roaming.
   await page.getByRole("button", { name: "Start again" }).click();
   await expect(page.getByRole("region", { name: "Pick, your gift helper" })).toContainText("Fresh start");
+  await page.getByRole("button", { name: "Close Pick's answer" }).click();
+  await expect(page.getByRole("region", { name: "Pick, your gift helper" }).getByText("Fresh start")).toHaveCount(0);
 });
 
 test("a piece opened from the Gift page only sends: no Buy now, no bag @phone", async ({ page }) => {
