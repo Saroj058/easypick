@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, ContactShadows, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
@@ -435,6 +435,8 @@ export function RobotPrototype({
   blinkCycle = 3.0,
   metalness = 0.0,
   loved = false,
+  pointerRef,
+  contain = false,
 }: {
   neckParams?: Record<string, number>;
   bodyParams?: Record<string, number>;
@@ -445,6 +447,11 @@ export function RobotPrototype({
   metalness?: number;
   /** Heart eyes, held for as long as this is true (a tap still gives two seconds of them). */
   loved?: boolean;
+  /** Where the pointer is, -1 to 1 across the frame, and when it was last over it. Pointed at,
+   *  the robot follows it; otherwise it wanders about and looks around on its own. */
+  pointerRef?: RefObject<Pointer>;
+  /** Keep the whole robot inside the frame as it moves. */
+  contain?: boolean;
 }) {
   const isLovedRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -488,15 +495,29 @@ export function RobotPrototype({
 
     const dt = Math.min(delta, 0.1);
 
-    const tx = state.pointer.x;
-    const ty = state.pointer.y;
+    let tx = state.pointer.x;
+    let ty = state.pointer.y;
+    const ptr = pointerRef?.current;
+    if (ptr) {
+      if (performance.now() - ptr.t > 400) {
+        // Not pointed at: it potters about on its own, looking this way and that. Waves of
+        // different speeds added together, so the path never quite repeats.
+        const t = state.clock.getElapsedTime();
+        tx = Math.max(-1, Math.min(1, Math.sin(t * 0.37) * 0.65 + Math.sin(t * 1.13 + 1.7) * 0.4));
+        ty = Math.sin(t * 0.71 + 0.4) * 0.3 + Math.sin(t * 1.9) * 0.15;
+      } else {
+        tx = ptr.x;
+        ty = ptr.y;
+      }
+    }
 
-    const maxMoveX = state.viewport.width / 3.5;
+    // Contained: the body (0.43 wide each side) never crosses the frame's edge.
+    const maxMoveX = contain ? Math.max(0, state.viewport.width / 2 - 0.5) : state.viewport.width / 3.5;
     const targetPosX = tx * maxMoveX;
     bodyRef.current.position.x = THREE.MathUtils.lerp(
       bodyRef.current.position.x,
       targetPosX,
-      config.moveSpeed * dt,
+      (contain ? 1.6 : config.moveSpeed) * dt,
     );
 
     const relativeX = tx - bodyRef.current.position.x / 2.5;
@@ -722,6 +743,8 @@ export function RobotPrototype({
     </group>
   );
 }
+
+export type Pointer = { x: number; y: number; t: number };
 
 /** A soft studio light made here, in place of drei's downloaded "studio" preset. */
 function StudioLight() {
@@ -987,8 +1010,25 @@ export function RobotCharacter({
   pantallaColor?: string;
   className?: string;
 }) {
+  const box = useRef<HTMLDivElement>(null);
+  const pointer = useRef<Pointer>({ x: 0, y: 0, t: 0 });
+  // Follows the pointer while it is over this frame (or just around it); otherwise it roams.
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const r = box.current?.getBoundingClientRect();
+      if (!r || !r.width) return;
+      const x = ((e.clientX - r.left) / r.width) * 2 - 1;
+      const y = -(((e.clientY - r.top) / r.height) * 2 - 1);
+      if (Math.abs(x) > 1.4 || Math.abs(y) > 1.4) return;
+      const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+      pointer.current = { x: clamp(x), y: clamp(y), t: performance.now() };
+    };
+    window.addEventListener("pointermove", move, { passive: true });
+    return () => window.removeEventListener("pointermove", move);
+  }, []);
+
   return (
-    <div className={className}>
+    <div ref={box} className={className}>
       <Canvas
         dpr={[1, 2]}
         gl={{ alpha: true, antialias: true }}
@@ -1001,13 +1041,13 @@ export function RobotCharacter({
         <ContactShadows
           position={[0, -0.74, 0]}
           opacity={0.45}
-          scale={3}
+          scale={6}
           resolution={256}
           blur={2}
           far={1.5}
           color="#000000"
         />
-        <RobotPrototype pantallaColor={pantallaColor} loved={loved} />
+        <RobotPrototype pantallaColor={pantallaColor} loved={loved} pointerRef={pointer} contain />
       </Canvas>
     </div>
   );

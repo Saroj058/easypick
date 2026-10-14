@@ -86,8 +86,8 @@ export default async function GiftPage() {
                 </span>
               </a>
             </nav>
-            {/* Already holding a gift card: checked right here in the opening (owner, 14 Oct 2026), on frosted glass over the picture. */}
-            <section id="balance" aria-labelledby="balance-h" className="mt-3 scroll-mt-24 rounded-2xl border border-ink/15 bg-paper/85 px-4 py-3 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.35)] backdrop-blur-sm md:max-w-[440px]">
+            {/* Already holding a gift card: checked right here in the opening (owner, 14 Oct 2026), straight on the picture, no panel. */}
+            <section id="balance" aria-labelledby="balance-h" className="mt-5 scroll-mt-24 md:max-w-[440px]">
               <div className="flex items-center gap-3">
                 <span className="block w-11 shrink-0 -rotate-3" aria-hidden>
                   <GiftCardPicture amount={null} side="back" className="shadow-[0_6px_14px_-8px_rgba(0,0,0,0.5)]" />

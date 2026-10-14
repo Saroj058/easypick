@@ -2,16 +2,14 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 
 // A small character on the gift page: the robot (ui/robot-hero.tsx) and a speech bubble. It asks
 // whether this is their first time sending a gift here. No: a short, warm line and on to the
 // pieces. Yes: it walks them through it, one bubble at a time (pick the piece; know the size,
 // we deliver; don't know it, they pick it from a link or try it on in the store), and ends on a
-// warm line. The answer is remembered on this browser, so a returning sender gets a hello instead.
+// warm line. It always says hi first (owner, 14 Oct 2026), and roams free in its space, no box.
 // (Owner, 14 Oct 2026: in place of the four illustrated steps.)
-
-const KEY = "ep-gift-how";
 
 /** The 3D robot loads after the page, in the browser only. */
 const Robot = dynamic(() => import("../ui/robot-hero").then((m) => m.RobotCharacter), {
@@ -19,7 +17,7 @@ const Robot = dynamic(() => import("../ui/robot-hero").then((m) => m.RobotCharac
   loading: () => null,
 });
 
-type Mode = "ask" | "no" | "back" | 0 | 1 | 2 | 3;
+type Mode = "ask" | "no" | 0 | 1 | 2 | 3;
 
 const STEPS: { title: string; line: string }[] = [
   {
@@ -40,35 +38,16 @@ const STEPS: { title: string; line: string }[] = [
   },
 ];
 
-const noSubscribe = () => () => {};
-const readSeen = () => {
-  try {
-    return localStorage.getItem(KEY) !== null;
-  } catch {
-    return false;
-  }
-};
 
 export function GiftHelper() {
   const still = useReducedMotion();
-  const seen = useSyncExternalStore(noSubscribe, readSeen, () => false);
-  const [chosen, setChosen] = useState<Mode | null>(null);
-  const mode: Mode = chosen ?? (seen ? "back" : "ask");
-
-  const go = (m: Mode) => {
-    setChosen(m);
-    try {
-      localStorage.setItem(KEY, "seen");
-    } catch {
-      // Not remembered; they get asked again next time.
-    }
-  };
+  const [mode, go] = useState<Mode>("ask");
   const toPieces = () =>
     document.getElementById("pieces")?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
 
   const step = typeof mode === "number" ? mode : null;
   // Heart eyes for the warm lines.
-  const loved = mode === "no" || mode === "back" || step === 3;
+  const loved = mode === "no" || step === 3;
 
   const primary =
     "inline-flex h-10 cursor-pointer items-center rounded-full bg-ink px-5 text-[13px] font-semibold text-paper transition-[scale] duration-150 active:scale-[0.97]";
@@ -78,8 +57,8 @@ export function GiftHelper() {
 
   return (
     <section aria-labelledby="helper-h" className="flex items-end gap-3 md:gap-5">
-      {/* The robot, standing on its own little floor */}
-      <div className="relative h-[150px] w-[118px] shrink-0 overflow-hidden rounded-2xl bg-[linear-gradient(180deg,#f3f3f3_0%,#f3f3f3_58%,#dedede_100%)] md:h-[190px] md:w-[160px]">
+      {/* The robot, free on the page: it wanders its own space and turns to the pointer */}
+      <div className="relative h-[150px] w-[124px] shrink-0 md:h-[200px] md:w-[260px]">
         <Robot loved={loved} className="absolute inset-0" />
       </div>
 
@@ -98,8 +77,9 @@ export function GiftHelper() {
             {mode === "ask" && (
               <>
                 <h2 id="helper-h" className="text-[17px] font-semibold leading-snug md:text-[19px]">
-                  Hi, I&apos;m Pick. First time sending a gift here?
+                  Hi! Is this your first time here?
                 </h2>
+                <p className="mt-1 text-[14px] leading-relaxed text-steel-dark">I&apos;m Pick. I help people send gifts they&apos;ll actually wear.</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" onClick={() => go(0)} className={primary}>
                     Yes, first time
@@ -111,15 +91,13 @@ export function GiftHelper() {
               </>
             )}
 
-            {(mode === "no" || mode === "back") && (
+            {mode === "no" && (
               <>
                 <h2 id="helper-h" className="text-[17px] font-semibold leading-snug md:text-[19px]">
-                  {mode === "no" ? "Look at you, back to make someone's day again." : "You're back. Someone's about to have a good day."}
+                  You&apos;re back. Someone&apos;s about to have a good day.
                 </h2>
                 <p className="mt-1 text-[14px] leading-relaxed text-steel-dark">
-                  {mode === "no"
-                    ? "Whoever they are, they're lucky to have you."
-                    : "I'd say they're lucky, but you already know that."}
+                  I&apos;d say they&apos;re lucky, but you already know that.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" onClick={toPieces} className={primary}>

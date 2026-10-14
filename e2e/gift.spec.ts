@@ -36,7 +36,7 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toHaveCount(0);
   // The helper asks; Yes walks through it, one bubble at a time.
-  await expect(page.getByRole("heading", { name: "Hi, I'm Pick. First time sending a gift here?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hi! Is this your first time here?" })).toBeVisible();
   await page.getByRole("button", { name: "Yes, first time" }).click();
   await expect(page.getByRole("heading", { name: "First, choose the piece." })).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
