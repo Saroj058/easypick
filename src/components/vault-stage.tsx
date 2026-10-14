@@ -10,7 +10,7 @@ import { ProductImage, standInSrc } from "./product-image";
 
 // The first screen of a Vault piece's page (owner's reference, 14 Oct 2026): the piece's name set
 // huge on the left with its price, a line about it and the buying panel; the piece itself floating
-// large in the middle, tilted, over the Easypick mark; and down the right the brand's
+// large in the middle, standing straight, over the Easypick mark; and down the right the brand's
 // other pieces, with Prev and Next and a count. It moves: the piece glides in and settles at a
 // tilt, then drifts gently up and down, and leans a little toward the pointer. Nothing moves for
 // people who ask for less motion.
@@ -106,8 +106,8 @@ export function VaultStage({
   const py = useMotionValue(0);
   const sx = useSpring(px, { stiffness: 60, damping: 16 });
   const sy = useSpring(py, { stiffness: 60, damping: 16 });
-  const rotY = useTransform(sx, [-1, 1], [-9, 9]);
-  const rotX = useTransform(sy, [-1, 1], [7, -7]);
+  const rotY = useTransform(sx, [-1, 1], [-6, 6]);
+  const rotX = useTransform(sy, [-1, 1], [4, -4]);
   const shiftX = useTransform(sx, [-1, 1], [-14, 14]);
   const wordX = useTransform(sx, [-1, 1], [18, -18]);
 
@@ -157,8 +157,8 @@ export function VaultStage({
           <motion.div style={still ? undefined : { rotateY: rotY, rotateX: rotX, x: shiftX }} className="relative w-[64%] [transform-style:preserve-3d] lg:w-[66%]">
             <motion.div
               key={`piece-${slug}`}
-              initial={still ? false : { opacity: 0, x: 140, rotate: 8, scale: 0.88 }}
-              animate={{ opacity: 1, x: 0, rotate: -9, scale: 1 }}
+              initial={still ? false : { opacity: 0, x: 140, rotate: 3, scale: 0.88 }}
+              animate={{ opacity: 1, x: 0, rotate: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 70, damping: 15, mass: 0.9 }}
             >
               <motion.div animate={still ? undefined : { y: [0, -16, 0] }} transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}>
