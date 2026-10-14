@@ -210,7 +210,7 @@ export function PickChat() {
   };
 
   return (
-    <section aria-label="Pick, your gift helper">
+    <section aria-label="Pick, your gift helper" className="-mt-6 md:-mt-10">
       {/* Pick walks the whole width of the screen. Asked something, he walks over and answers in a
           panel on his left, turning to it; closed, he goes back to roaming. */}
       <div ref={band} className="relative mx-[calc(50%-50vw)] flex min-h-[150px] items-end md:min-h-[190px]">

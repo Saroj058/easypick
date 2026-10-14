@@ -1211,7 +1211,7 @@ export function RobotCharacter({
         frameloop={shown && !covered ? "always" : "never"}
         gl={{ alpha: true, antialias: true }}
         // Far back with a narrow lens: the same size, but no stretching at the sides of a wide band.
-        camera={{ position: [0, 0.35, 9], fov: 12 }}
+        camera={{ position: [0, 0.18, 9], fov: 12 }}
         aria-hidden
       >
         <ambientLight intensity={0.85} />
