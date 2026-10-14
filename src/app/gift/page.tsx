@@ -5,7 +5,7 @@ import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicker } from "@/components/gift/gift-card-picker";
-import { GiftHelper } from "@/components/gift/gift-helper";
+import { PickChat } from "@/components/gift/pick-chat";
 import { GiftPieces } from "@/components/gift/gift-pieces";
 import { toRailPiece } from "@/components/home/rail";
 import { GiftCardPicture } from "@/components/gift-card-art";
@@ -107,8 +107,8 @@ export default async function GiftPage() {
 
       <div className="container-ep space-y-14 pt-10 md:space-y-20 md:pt-14">
         {/* The pieces, with budget and kind as plain links */}
-        {/* First time? The little helper asks, and walks them through it */}
-        <GiftHelper />
+        {/* Pick, the robot: a gift helper that asks, listens and suggests real pieces */}
+        <PickChat />
 
         <section id="pieces" aria-labelledby="pieces-h" className="scroll-mt-20">
           <GiftPieces pieces={live.sort((a, b) => priceOf(a) - priceOf(b)).map(toRailPiece)} trending={trending.items.map((i) => i.product.slug)} />

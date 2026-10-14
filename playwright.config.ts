@@ -41,6 +41,8 @@ export default defineConfig({
       ADMIN_PASSWORD: "e2e-owner-password",
       SESSION_SECRET: "e2e-session-secret-e2e-session-secret",
       PAYMENTS_MODE: "test",
+      // Pick (the gift robot) reads typed messages with simple rules in tests, never the AI.
+      PICK_AI: process.env.PICK_AI ?? "off",
     },
   },
 });

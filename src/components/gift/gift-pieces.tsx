@@ -341,12 +341,15 @@ function SendControls({
   );
 }
 
-/** The send-as-gift form, over the page: the piece is fetched in full when the pop-up opens. */
-function SendSheet({
+/** The send-as-gift form, over the page: the piece is fetched in full when the pop-up opens.
+ *  Also opened by Pick (pick-chat.tsx), with the size when the customer knows it. */
+export function SendSheet({
   piece,
+  initial,
   onClose,
 }: {
-  piece: RailPiece | null;
+  piece: Pick<RailPiece, "slug" | "name" | "price"> | null;
+  initial?: { colour?: string; size?: string };
   onClose: () => void;
 }) {
   const [loaded, setLoaded] = useState<{
@@ -385,7 +388,7 @@ function SendSheet({
             <p className="text-[14px] text-steel-dark">Getting the piece ready…</p>
           </div>
         ) : product ? (
-          <GiftForm product={product} sheet />
+          <GiftForm product={product} initial={initial} sheet />
         ) : (
           <p className="p-6 pt-16 text-[14px]">
             This piece can&apos;t be sent right now.{" "}

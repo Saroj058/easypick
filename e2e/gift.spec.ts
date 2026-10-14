@@ -37,13 +37,15 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(cards.getByRole("button", { name: /Your amount/ })).toBeVisible();
   await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toHaveCount(0);
-  // The helper asks; Yes walks through it, one bubble at a time.
-  await expect(page.getByRole("heading", { name: "Hi! Is this your first time here?" })).toBeVisible();
-  await page.getByRole("button", { name: "Yes, first time" }).click();
-  await expect(page.getByRole("heading", { name: "First, choose the piece." })).toBeVisible();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(page.getByText(/They get a link and pick their own size/)).toBeVisible();
+  // Pick, the robot, asks one thing at a time; buttons alone reach real pieces.
+  const pick = page.getByRole("region", { name: "Pick, your gift helper" });
+  await expect(pick.getByRole("log")).toContainText("I'm Pick");
+  const quick = pick.getByRole("group", { name: "Quick answers" });
+  for (const answer of ["A friend", "Birthday", /^Streetwear/, "No limit", "I don't know it"]) {
+    await quick.getByRole("button", { name: answer }).click();
+  }
+  await expect(pick.getByRole("list", { name: "Pick's suggestions" }).getByRole("listitem").first()).toBeVisible();
+  await expect(pick.getByRole("log")).toContainText("Here's what I'd send");
   await page.screenshot(shot(`gift-${info.project.name}`));
 
   // The pieces: one strip, narrowed in the page by budget, kind and search.
@@ -74,6 +76,37 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(page).toHaveURL(/\/gift(#.*)?$/);
   // No "for her" on a menswear store.
   await expect(page.getByRole("link", { name: /for her/i })).toHaveCount(0);
+});
+
+test("Pick: a typed sentence, real suggestions, Send this opens the gift form; minimise, reopen and resume @phone", async ({ page }) => {
+  test.slow();
+  await page.goto("/gift");
+  const pick = page.getByRole("region", { name: "Pick, your gift helper" });
+  await pick.getByRole("textbox", { name: "Message Pick" }).fill("birthday gift for my brother under 3000, he likes oversized, don't know his size");
+  await pick.getByRole("button", { name: "Send", exact: true }).click();
+  const cards = pick.getByRole("list", { name: "Pick's suggestions" }).getByRole("listitem");
+  await expect(cards.first()).toBeVisible({ timeout: 30_000 });
+  // Only pieces inside the budget.
+  for (const price of await cards.locator("p.font-mono").allTextContents()) {
+    expect(Number(price.replace(/Rs|,/g, "").trim().split(/\s/)[0])).toBeLessThanOrEqual(3000);
+  }
+  // Send this: the same send-as-gift form, in a pop-up.
+  await cards.first().getByRole("button", { name: "Send this" }).click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("button", { name: "Continue" })).toBeVisible({ timeout: 60_000 });
+  await sheet.getByRole("button", { name: "Close" }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(pick.getByRole("log")).toContainText("Great pick");
+  // Minimise and reopen; the conversation is still there after a reload in this tab.
+  await pick.getByRole("button", { name: "Minimise Pick" }).click();
+  await expect(pick.getByRole("log")).toHaveCount(0);
+  await pick.getByRole("button", { name: "Ask Pick for a gift idea" }).click();
+  await expect(pick.getByRole("log")).toContainText("Great pick");
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Pick, your gift helper" }).getByRole("log")).toContainText("Great pick");
+  // Start again clears it.
+  await page.getByRole("button", { name: "Start again" }).click();
+  await expect(page.getByRole("region", { name: "Pick, your gift helper" }).getByRole("log")).toContainText("Fresh start");
 });
 
 test("a piece opened from the Gift page only sends: no Buy now, no bag @phone", async ({ page }) => {

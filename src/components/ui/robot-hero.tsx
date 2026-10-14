@@ -50,10 +50,13 @@ function GlassCapsule({
   color,
   power,
   intensity,
+  pulseRef,
 }: {
   color: string;
   power: number;
   intensity: number;
+  /** A multiplier on the glow, read every frame (Pick thinking). */
+  pulseRef?: RefObject<number>;
 }) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
@@ -70,7 +73,7 @@ function GlassCapsule({
     if (materialRef.current) {
       materialRef.current.uniforms.color.value.set(color);
       materialRef.current.uniforms.power.value = power;
-      materialRef.current.uniforms.intensity.value = intensity;
+      materialRef.current.uniforms.intensity.value = intensity * (pulseRef?.current ?? 1);
     }
   });
 
@@ -437,6 +440,8 @@ export function RobotPrototype({
   loved = false,
   pointerRef,
   contain = false,
+  moodRef,
+  still = false,
 }: {
   neckParams?: Record<string, number>;
   bodyParams?: Record<string, number>;
@@ -452,7 +457,28 @@ export function RobotPrototype({
   pointerRef?: RefObject<Pointer>;
   /** Keep the whole robot inside the frame as it moves. */
   contain?: boolean;
+  /** How Pick should behave right now, read every frame (no re-render when it changes). */
+  moodRef?: RefObject<RobotMood>;
+  /** The visitor asked for less motion: no wandering, hopping or scanning. */
+  still?: boolean;
 }) {
+  const glow = useRef(1);
+  const shadowRef = useRef<THREE.Mesh>(null);
+  const shadowTex = useMemo(() => {
+    if (!contain || typeof document === "undefined") return null;
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const g = c.getContext("2d");
+    if (g) {
+      const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      r.addColorStop(0, "rgba(0,0,0,0.42)");
+      r.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = r;
+      g.fillRect(0, 0, 64, 64);
+    }
+    return new THREE.CanvasTexture(c);
+  }, [contain]);
+  const moodSince = useRef({ mood: "idle" as RobotMood, at: 0 });
   const isLovedRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyRef = useRef<THREE.Group>(null);
@@ -503,7 +529,9 @@ export function RobotPrototype({
         // Not pointed at: it potters about on its own, looking this way and that. Waves of
         // different speeds added together, so the path never quite repeats.
         const t = state.clock.getElapsedTime();
-        tx = Math.max(-1, Math.min(1, Math.sin(t * 0.37) * 0.65 + Math.sin(t * 1.13 + 1.7) * 0.4));
+        // A wide frame (the gift page's band) slows the walk, so crossing it takes a while.
+        const k = contain ? Math.min(1, 1.6 / Math.max(0.5, state.viewport.width / 2 - 0.5)) : 1;
+        tx = Math.max(-1, Math.min(1, Math.sin(t * 0.37 * k) * 0.75 + Math.sin(t * 1.13 * k + 1.7) * 0.3));
         ty = Math.sin(t * 0.71 + 0.4) * 0.3 + Math.sin(t * 1.9) * 0.15;
       } else {
         tx = ptr.x;
@@ -511,16 +539,99 @@ export function RobotPrototype({
       }
     }
 
+    // The mood shapes where it looks and how it moves. The pointer, when it is over Pick, still wins
+    // (except while thinking). Times are from when the mood began.
+    const mood = moodRef?.current ?? "idle";
+    const now = state.clock.getElapsedTime();
+    if (moodSince.current.mood !== mood) moodSince.current = { mood, at: now };
+    const since = now - moodSince.current.at;
+    const pointed = ptr ? performance.now() - ptr.t <= 400 : false;
+    let pace = 1;
+    let tilt = 0;
+    let hop = 0;
+    let pulse = 1;
+    /** Where the body goes, -1 to 1 across the frame; null: wherever it is looking. */
+    let at: number | null = null;
+    // A new mood brings Pick to the middle for a moment (over the chat); thinking and listening
+    // keep him there. Otherwise he strolls the whole width.
+    const holding = mood === "thinking" || mood === "listening" || (mood !== "idle" && mood !== "inactive" && since < 3.5);
+    if (ptr && (!pointed || mood === "thinking") && (holding || mood === "inactive")) {
+      if (holding) at = 0;
+      switch (mood) {
+        case "thinking":
+          // Looks this way and that, quickly; the helmet glows brighter and dimmer.
+          tx = still ? 0.2 : Math.sin(now * 3.2) * 0.4;
+          ty = 0.2;
+          pulse = still ? 1.3 : 1.15 + Math.sin(now * 6) * 0.35;
+          pace = 0.4;
+          break;
+        case "listening":
+          // Turned toward the chat, attentive.
+          tx = 0.55;
+          ty = -0.2;
+          pace = 0.5;
+          break;
+        case "speaking":
+          tx = 0.45;
+          ty = still ? 0 : Math.sin(now * 7) * 0.1;
+          pace = 0.5;
+          break;
+        case "curious":
+          tx = 0.45;
+          ty = 0.1;
+          tilt = 0.28;
+          pace = 0.5;
+          break;
+        case "reassuring":
+          // Slow, with a gentle nod.
+          tx = 0.3;
+          ty = still ? 0 : Math.sin(now * 1.6) * 0.18;
+          pace = 0.35;
+          break;
+        case "happy":
+          if (since < 1.4 && !still) hop = Math.abs(Math.sin(since * 9)) * 0.09 * (1 - since / 1.4);
+          tx = 0.4;
+          ty = 0.15;
+          break;
+        case "greeting":
+          if (since < 1.6 && !still) {
+            hop = Math.abs(Math.sin(since * 7)) * 0.07 * (1 - since / 1.6);
+            tilt = Math.sin(since * 5) * 0.22;
+          }
+          tx = 0.35;
+          ty = 0.1;
+          break;
+        case "inactive":
+          tx = 0;
+          ty = -0.15;
+          pace = 0.25;
+          break;
+        default:
+          if (still) {
+            tx = 0;
+            ty = 0;
+          }
+      }
+    }
+    glow.current += (pulse - glow.current) * Math.min(1, dt * 8);
+    bodyRef.current.position.y = THREE.MathUtils.lerp(bodyRef.current.position.y, -0.3 + hop, Math.min(1, dt * 18));
+    headRef.current.rotation.z = THREE.MathUtils.lerp(headRef.current.rotation.z, tilt, Math.min(1, dt * 6));
+
     // Contained: the body (0.43 wide each side) never crosses the frame's edge.
     const maxMoveX = contain ? Math.max(0, state.viewport.width / 2 - 0.5) : state.viewport.width / 3.5;
-    const targetPosX = tx * maxMoveX;
-    bodyRef.current.position.x = THREE.MathUtils.lerp(
-      bodyRef.current.position.x,
-      targetPosX,
-      (contain ? 1.6 : config.moveSpeed) * dt,
-    );
+    const targetPosX = (at ?? tx) * maxMoveX;
+    if (contain) {
+      // Eases toward the spot, but never faster than a calm walk, however wide the frame.
+      const gap = targetPosX - bodyRef.current.position.x;
+      const walk = 2.2 * pace * dt;
+      bodyRef.current.position.x += Math.max(-walk, Math.min(walk, gap * Math.min(1, 1.6 * pace * dt)));
+    } else {
+      bodyRef.current.position.x = THREE.MathUtils.lerp(bodyRef.current.position.x, targetPosX, config.moveSpeed * dt);
+    }
+    if (shadowRef.current) shadowRef.current.position.x = bodyRef.current.position.x;
 
-    const relativeX = tx - bodyRef.current.position.x / 2.5;
+    // Contained, it looks where it is going (or, standing still, where the mood points it).
+    const relativeX = contain ? Math.max(-1.2, Math.min(1.2, tx - bodyRef.current.position.x / Math.max(0.5, maxMoveX))) : tx - bodyRef.current.position.x / 2.5;
 
     const bodyTargetRotY = -relativeX * config.bodyTiltY;
 
@@ -642,6 +753,13 @@ export function RobotPrototype({
   if (!textures.colorMap) return null;
 
   return (
+    <>
+    {shadowTex && (
+      <mesh ref={shadowRef} position={[0, -0.74, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1.1, 0.55]} />
+        <meshBasicMaterial map={shadowTex} transparent depthWrite={false} />
+      </mesh>
+    )}
     <group
       ref={bodyRef}
       position={[0, -0.3, 0]}
@@ -708,6 +826,7 @@ export function RobotPrototype({
           color={design.pantallaColor}
           power={design.pantallaGrosor}
           intensity={design.pantallaBrillo}
+          pulseRef={glow}
         />
 
         <group position={[0, -0.02, 0.29]}>
@@ -741,10 +860,14 @@ export function RobotPrototype({
         />
       </group>
     </group>
+    </>
   );
 }
 
 export type Pointer = { x: number; y: number; t: number };
+
+/** Pick's moods, set by the gift chat (components/gift/pick-chat.tsx). */
+export type RobotMood = "idle" | "greeting" | "listening" | "thinking" | "speaking" | "happy" | "curious" | "reassuring" | "inactive";
 
 /** A soft studio light made here, in place of drei's downloaded "studio" preset. */
 function StudioLight() {
@@ -1002,16 +1125,46 @@ export function RobotHero({
 /** The robot alone on a clear background, sized by its container: for a small helper. */
 export function RobotCharacter({
   loved = false,
+  mood = "idle",
   pantallaColor = "#c6ff3d",
   className,
 }: {
   loved?: boolean;
+  mood?: RobotMood;
   /** The glow of its helmet. The site's lime by default. */
   pantallaColor?: string;
   className?: string;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const pointer = useRef<Pointer>({ x: 0, y: 0, t: 0 });
+  const moodRef = useRef<RobotMood>(mood);
+  useEffect(() => {
+    moodRef.current = mood;
+  }, [mood]);
+  const [still, setStill] = useState(false);
+  // Drawing stops while Pick is off screen, the tab is hidden, or a pop-up covers the page.
+  const [shown, setShown] = useState(true);
+  const [covered, setCovered] = useState(false);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setShown(e.isIntersecting));
+    io.observe(el);
+    const check = () => setCovered(Boolean(document.querySelector('[role="dialog"][data-state="open"]')));
+    const mo = new MutationObserver(check);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-state"] });
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
+  }, []);
+  useEffect(() => {
+    const m = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const set = () => setStill(m.matches);
+    set();
+    m.addEventListener("change", set);
+    return () => m.removeEventListener("change", set);
+  }, []);
   // Follows the pointer while it is over this frame (or just around it); otherwise it roams.
   useEffect(() => {
     const move = (e: PointerEvent) => {
@@ -1031,23 +1184,16 @@ export function RobotCharacter({
     <div ref={box} className={className}>
       <Canvas
         dpr={[1, 2]}
+        frameloop={shown && !covered ? "always" : "never"}
         gl={{ alpha: true, antialias: true }}
-        camera={{ position: [0, 0.35, 3.1], fov: 34 }}
+        // Far back with a narrow lens: the same size, but no stretching at the sides of a wide band.
+        camera={{ position: [0, 0.35, 9], fov: 12 }}
         aria-hidden
       >
         <ambientLight intensity={0.85} />
         <directionalLight position={[2, 4, 3]} intensity={0.6} />
         <StudioLight />
-        <ContactShadows
-          position={[0, -0.74, 0]}
-          opacity={0.45}
-          scale={6}
-          resolution={256}
-          blur={2}
-          far={1.5}
-          color="#000000"
-        />
-        <RobotPrototype pantallaColor={pantallaColor} loved={loved} pointerRef={pointer} contain />
+        <RobotPrototype pantallaColor={pantallaColor} loved={loved} pointerRef={pointer} contain moodRef={moodRef} still={still} />
       </Canvas>
     </div>
   );
