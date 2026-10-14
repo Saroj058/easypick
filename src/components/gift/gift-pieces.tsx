@@ -46,7 +46,6 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
   const [kind, setKind] = useState<Kind | null>(null);
   const [query, setQuery] = useState("");
   const [own, setOwn] = useState("");
-  const [typing, setTyping] = useState(false);
   /** The piece being sent, in the pop-up. */
   const [sending, setSending] = useState<RailPiece | null>(null);
 
@@ -55,7 +54,7 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
   const inBudget = (p: RailPiece, m: number | null) =>
     m ? p.price <= m : true;
   const budgets = BUDGETS;
-  /** Their own budget, typed in (the pill turns into a small field). */
+  /** Their own budget, typed in. */
   const custom = max !== null && !BUDGETS.includes(max);
   const kinds = ([...Object.keys(categoryLabels), "one"] as Kind[])
     .map((k) => ({
@@ -98,7 +97,6 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
               onClick={() => {
                 setMax(null);
                 setOwn("");
-                setTyping(false);
               }}
               className={pill(!max)}
             >
@@ -112,7 +110,6 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
                 onClick={() => {
                   setMax(max === b ? null : b);
                   setOwn("");
-                  setTyping(false);
                 }}
                 className={pill(max === b)}
               >
@@ -120,30 +117,23 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
               </button>
             ))}
             {/* Their own budget */}
-            {typing || custom ? (
-              <label className={`inline-flex h-10 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-semibold ${custom ? "bg-ink text-paper" : "bg-paper text-ink ring-1 ring-ink"}`}>
-                <span>Under Rs</span>
-                <span className="sr-only">Your budget, in rupees</span>
-                <input
-                  autoFocus={typing}
-                  type="text"
-                  inputMode="numeric"
-                  value={own}
-                  placeholder="4,000"
-                  onChange={(e) => {
-                    const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
-                    setOwn(digits ? Number(digits).toLocaleString("en-IN") : "");
-                    setMax(digits && Number(digits) > 0 ? Number(digits) : null);
-                  }}
-                  onBlur={() => !own && setTyping(false)}
-                  className="w-[64px] bg-transparent font-mono tabular-nums outline-none placeholder:opacity-50"
-                />
-              </label>
-            ) : (
-              <button type="button" onClick={() => setTyping(true)} className={pill(false)}>
-                Your budget
-              </button>
-            )}
+            {/* Their own budget: always open, filling the rest of the row */}
+            <label className={`inline-flex h-10 min-w-[150px] flex-1 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-colors duration-150 ${custom ? "bg-ink text-paper" : "bg-paper text-ink ring-1 ring-ink"}`}>
+              <span className="shrink-0">Under Rs</span>
+              <span className="sr-only">Your budget, in rupees</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={own}
+                placeholder="4,000"
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                  setOwn(digits ? Number(digits).toLocaleString("en-IN") : "");
+                  setMax(digits && Number(digits) > 0 ? Number(digits) : null);
+                }}
+                className="w-full min-w-0 flex-1 bg-transparent font-mono tabular-nums outline-none placeholder:opacity-40"
+              />
+            </label>
           </div>
           {/* Search every piece: always open, not a button */}
           <label className="flex h-11 w-full shrink-0 items-center gap-2 rounded-full border border-ink/30 bg-paper px-4 transition-[border-color] duration-200 focus-within:border-ink md:w-[min(300px,30vw)]">
@@ -217,7 +207,6 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
               onClick={() => {
                 setMax(null);
                 setOwn("");
-                setTyping(false);
                 setKind(null);
                 setQuery("");
               }}
@@ -281,6 +270,8 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
             key={`${max}-${kind}-${q}`}
             pieces={shown}
             label="Gifts"
+            tags
+            big
             controls={(p) => (
               <SendControls piece={p} onSend={() => setSending(p)} />
             )}
@@ -294,7 +285,6 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
             onClick={() => {
               setMax(null);
               setOwn("");
-              setTyping(false);
               setKind(null);
               setQuery("");
             }}

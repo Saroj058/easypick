@@ -30,7 +30,10 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(cards.getByRole("button", { name: /Your amount/ })).toBeVisible();
   await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "How it works." })).toBeVisible();
+  // First time? Yes opens the four steps.
+  await expect(page.getByRole("heading", { name: "First time sending a gift here?" })).toBeVisible();
+  await page.getByRole("button", { name: "Yes, show me" }).click();
+  await expect(page.getByText("They get a link.")).toBeVisible();
   await page.screenshot(shot(`gift-${info.project.name}`));
 
   // The pieces: one strip, narrowed in the page by budget, kind and search.

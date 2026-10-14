@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/format";
 import { useMySize } from "@/lib/my-size";
 import type { BagLine } from "@/lib/types";
 import { PieceControls, type RailPiece } from "./home/rail-wall";
+import { PriceTag } from "./hang-tag";
 import { ArrowIcon } from "./icons";
 import { ProductImage } from "./product-image";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./ui/sheet";
@@ -62,7 +63,7 @@ function look(d: number, still: boolean, ghost: boolean) {
   };
 }
 
-export function DropStrip({ pieces, label, soon = false, controls }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode }) {
+export function DropStrip({ pieces, label, soon = false, controls, tags = false, big = false }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode; /** A price tag hangs on every card. */ tags?: boolean; /** Larger cards. */ big?: boolean }) {
   const router = useRouter();
   const mySize = useMySize();
   /** The piece being bought in the pop-up (the rail's Buy now, without leaving the page). */
@@ -224,7 +225,7 @@ export function DropStrip({ pieces, label, soon = false, controls }: { pieces: D
           drag.current = null;
           if (g?.locked) go(pos.current);
         }}
-        className="relative mx-[calc(50%-50vw)] h-[calc(var(--w)*1.32)] cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none [--w:clamp(176px,20vw,248px)] [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] focus-visible:shadow-[inset_0_0_0_2px_var(--color-ink)] active:cursor-grabbing"
+        className={`relative mx-[calc(50%-50vw)] h-[calc(var(--w)*1.32)] cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] focus-visible:shadow-[inset_0_0_0_2px_var(--color-ink)] active:cursor-grabbing`}
       >
         {/* The band of light the cards sit on */}
         <div aria-hidden className="absolute inset-x-0 top-1/2 h-[46%] -translate-y-1/2 bg-[linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,0.045)_50%,rgba(0,0,0,0))]" />
@@ -270,6 +271,7 @@ export function DropStrip({ pieces, label, soon = false, controls }: { pieces: D
               <span className="pointer-events-none absolute inset-x-0 -top-[4%] block">
                 <ProductImage image={p.image} category={p.category} colourHex={p.colours[0]?.hex ?? "#888888"} decorative priority={Math.abs(i - start) < 2} sizes="(min-width: 1240px) 248px, (min-width: 880px) 20vw, 176px" className={!soon && gone(p) ? "opacity-60 grayscale" : ""} />
               </span>
+              {tags && <PriceTag price={formatPrice(p.price)} sku={p.colours[0]?.sizes[0]?.sku ?? p.id} className="absolute right-3 top-0 z-[2]" />}
             </button>
           );
         })}

@@ -5,11 +5,10 @@ import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicker } from "@/components/gift/gift-card-picker";
+import { GiftHow } from "@/components/gift/gift-how";
 import { GiftPieces } from "@/components/gift/gift-pieces";
 import { toRailPiece } from "@/components/home/rail";
 import { GiftCardPicture } from "@/components/gift-card-art";
-import { Gift, Mail, PackageCheck } from "lucide-react";
-
 import { ArrowIcon } from "@/components/icons";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
@@ -107,6 +106,9 @@ export default async function GiftPage() {
         </section>
 
         {/* The pieces, with budget and kind as plain links */}
+        {/* First time? The four steps, on asking */}
+        <GiftHow />
+
         <section id="pieces" aria-labelledby="pieces-h" className="scroll-mt-20">
           <GiftPieces pieces={live.sort((a, b) => priceOf(a) - priceOf(b)).map(toRailPiece)} />
         </section>
@@ -114,36 +116,6 @@ export default async function GiftPage() {
         {/* Gift cards: this section is where they are chosen and bought (the form opens over the page) */}
         <section id="buy" aria-labelledby="cards-h" className="scroll-mt-24 rounded-2xl border border-ink p-4 md:p-8">
           <GiftCardPicker />
-        </section>
-
-        {/* How it works: three steps on one line, joined like a route */}
-        <section aria-labelledby="how-h" className="rounded-2xl border border-ink p-5 md:p-10">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 id="how-h" className="display display-h2">
-              How it works.
-            </h2>
-            <p className="index text-steel-dark">Three steps · about a minute</p>
-          </div>
-          <ol className="relative mt-8 grid gap-8 md:mt-10 md:grid-cols-3 md:gap-6">
-            {/* The line joining the steps: down the left on phones, across on larger screens */}
-            <span aria-hidden className="absolute bottom-6 left-[22px] top-6 w-px bg-ink/20 md:bottom-auto md:left-[22px] md:right-[calc(33%-22px)] md:top-[22px] md:h-px md:w-auto" />
-            {[
-              { n: "01", icon: Gift, t: "You choose.", d: "A piece, a note, the wrap. Pay with eSewa." },
-              { n: "02", icon: Mail, t: "They pick the size.", d: `A private link by email. They choose online or try it on in our store, and get ${formatPrice(site.gifting.welcomeCredit)} off their own first order.` },
-              { n: "03", icon: PackageCheck, t: "It arrives, wrapped.", d: "With your note. Wrong size? They swap it within 14 days." },
-            ].map(({ n, icon: Icon, t, d }) => (
-              <li key={n} className="relative flex gap-4 md:block">
-                <span className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink bg-paper">
-                  <Icon aria-hidden className="h-5 w-5" strokeWidth={1.6} />
-                </span>
-                <div className="min-w-0 md:mt-5">
-                  <p className="font-mono text-[12px] tracking-[0.12em] text-steel-dark">{n}</p>
-                  <p className="display mt-1 text-[28px] leading-none md:text-[32px]">{t}</p>
-                  <p className="mt-2 max-w-[34ch] text-[15px] leading-relaxed text-steel-dark">{d}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
         </section>
 
         {/* Questions: the title and the way to ask on the left; the answers, one card each, on the right */}
