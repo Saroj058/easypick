@@ -22,7 +22,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../ui/sheet";
 // rail's search. All of it narrows the strip at once, without reloading the page.
 
 /** Budgets offered, when they narrow what is on sale (at least one piece under, and not all). */
-const BUDGETS = [1000, 1500, 2000, 2500, 3500, 5000];
+const BUDGETS = [1000, 2000, 3500, 5000];
 /** The strip holds this many at most (the budget, kind and search narrow it). */
 const MOST = 30;
 
@@ -45,6 +45,8 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
   const [max, setMax] = useState<number | null>(null);
   const [kind, setKind] = useState<Kind | null>(null);
   const [query, setQuery] = useState("");
+  const [own, setOwn] = useState("");
+  const [typing, setTyping] = useState(false);
   /** The piece being sent, in the pop-up. */
   const [sending, setSending] = useState<RailPiece | null>(null);
 
@@ -52,11 +54,9 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
     k === "one" ? oneSize(p) : k ? p.category === k : true;
   const inBudget = (p: RailPiece, m: number | null) =>
     m ? p.price <= m : true;
-  const prices = pieces.map((p) => p.price);
-  const budgets = BUDGETS.filter((b) => {
-    const under = prices.filter((x) => x <= b).length;
-    return under > 0 && under < prices.length;
-  });
+  const budgets = BUDGETS;
+  /** Their own budget, typed in (the pill turns into a small field). */
+  const custom = max !== null && !BUDGETS.includes(max);
   const kinds = ([...Object.keys(categoryLabels), "one"] as Kind[])
     .map((k) => ({
       k,
@@ -87,9 +87,6 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
       <div className="rounded-2xl border border-ink">
         {/* Budget, and the rail's search at the end */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 md:flex-nowrap md:px-4">
-          <span className="index w-14 shrink-0 text-steel-dark max-md:hidden">
-            Budget
-          </span>
           <div
             role="group"
             aria-label="Budget"
@@ -98,7 +95,11 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
             <button
               type="button"
               aria-pressed={!max}
-              onClick={() => setMax(null)}
+              onClick={() => {
+                setMax(null);
+                setOwn("");
+                setTyping(false);
+              }}
               className={pill(!max)}
             >
               Any price
@@ -108,12 +109,41 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
                 key={b}
                 type="button"
                 aria-pressed={max === b}
-                onClick={() => setMax(max === b ? null : b)}
+                onClick={() => {
+                  setMax(max === b ? null : b);
+                  setOwn("");
+                  setTyping(false);
+                }}
                 className={pill(max === b)}
               >
                 Under {formatPrice(b)}
               </button>
             ))}
+            {/* Their own budget */}
+            {typing || custom ? (
+              <label className={`inline-flex h-10 shrink-0 items-center gap-1 rounded-full px-3 text-[13px] font-semibold ${custom ? "bg-ink text-paper" : "bg-paper text-ink ring-1 ring-ink"}`}>
+                <span>Under Rs</span>
+                <span className="sr-only">Your budget, in rupees</span>
+                <input
+                  autoFocus={typing}
+                  type="text"
+                  inputMode="numeric"
+                  value={own}
+                  placeholder="4,000"
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                    setOwn(digits ? Number(digits).toLocaleString("en-IN") : "");
+                    setMax(digits && Number(digits) > 0 ? Number(digits) : null);
+                  }}
+                  onBlur={() => !own && setTyping(false)}
+                  className="w-[64px] bg-transparent font-mono tabular-nums outline-none placeholder:opacity-50"
+                />
+              </label>
+            ) : (
+              <button type="button" onClick={() => setTyping(true)} className={pill(false)}>
+                Your budget
+              </button>
+            )}
           </div>
           {/* Search every piece: always open, not a button */}
           <label className="flex h-11 w-full shrink-0 items-center gap-2 rounded-full border border-ink/30 bg-paper px-4 transition-[border-color] duration-200 focus-within:border-ink md:w-[min(300px,30vw)]">
@@ -144,9 +174,6 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
 
         {/* Kind: each with a little picture of the garment and how many there are */}
         <div className="flex items-center gap-3 border-t border-ink/15 px-3 py-2.5 md:px-4">
-          <span className="index w-14 shrink-0 text-steel-dark max-md:hidden">
-            Kind
-          </span>
           <div
             role="group"
             aria-label="Kind of piece"
@@ -189,6 +216,8 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
               type="button"
               onClick={() => {
                 setMax(null);
+                setOwn("");
+                setTyping(false);
                 setKind(null);
                 setQuery("");
               }}
@@ -264,6 +293,8 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
             type="button"
             onClick={() => {
               setMax(null);
+              setOwn("");
+              setTyping(false);
               setKind(null);
               setQuery("");
             }}
