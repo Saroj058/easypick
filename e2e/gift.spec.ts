@@ -29,23 +29,33 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(cards).toContainText("Valid for 12 months");
   await expect(cards.getByRole("button", { name: /Your amount/ })).toBeVisible();
   await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: /No size to guess/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /No size to guess/i })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "How it works." })).toBeVisible();
   await page.screenshot(shot(`gift-${info.project.name}`));
 
   // The pieces: one strip, narrowed in the page by budget, kind and search.
   const budget = page.getByRole("group", { name: "Budget", exact: true });
   await budget.getByRole("button", { name: "Under Rs 2,000" }).click();
   await expect(budget.getByRole("button", { name: "Under Rs 2,000" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("heading", { name: "Under Rs 2,000." })).toBeVisible();
+  await expect(page.locator("#pieces p.index").getByText(/^Under Rs 2,000/)).toBeVisible();
   const kind = page.getByRole("group", { name: "Kind of piece" });
   await kind.getByRole("button", { name: /^One size/ }).click();
   await expect(kind.getByRole("button", { name: /^One size/ })).toHaveAttribute("aria-pressed", "true");
+  // The chosen kind's name, large, over the strip, with its own search.
+  await expect(page.getByRole("heading", { name: /^One size/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Search one-size pieces" })).toBeVisible();
   const strip = page.getByRole("region", { name: /^Gifts:/ });
   await expect(strip).toBeVisible();
-  // The centre piece can be sent as a gift, or bought with the rail's pop-up without leaving.
-  await expect(page.getByRole("link", { name: /Send it as a gift/ })).toHaveAttribute("href", /^\/gift\/[a-z0-9-]+$/);
+  // The centre piece is sent as a gift from a pop-up on this page; there is no Buy now here.
+  await expect(page.locator("#pieces").getByRole("button", { name: "Buy now" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Send it as a gift" }).click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("heading", { name: "Send as gift" })).toBeVisible();
+  await expect(sheet.getByText(/Getting the piece ready/)).toHaveCount(0, { timeout: 10_000 });
+  await expect(sheet.getByRole("button", { name: "Continue" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
   await page.getByRole("button", { name: "Clear" }).click();
-  await page.getByRole("button", { name: "Search the gifts" }).click();
   await page.getByRole("textbox", { name: "Search the gifts" }).fill("hoodie");
   await expect(page.getByRole("region", { name: /^Gifts:/ }).getByRole("button", { name: /Hoodie/ }).first()).toBeAttached();
   await expect(page).toHaveURL(/\/gift(#.*)?$/);

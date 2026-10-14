@@ -23,13 +23,13 @@ export interface HeroPieceItem {
 }
 
 /** How long a piece is shown before the next takes its place. */
-const CHANGE_MS = 7000;
+const CHANGE_MS = 4000;
 
 export function HeroPiece({ pieces }: { pieces: HeroPieceItem[] }) {
   const [slug, setSlug] = useState(pieces[0]?.product.slug ?? null);
   const still = useReducedMotion();
   const sel = pieces.find((p) => p.product.slug === slug) ?? pieces[0];
-  // Left alone, it moves to the next piece every seven seconds. It waits while someone is pointing
+  // Left alone, it moves to the next piece every four seconds. It waits while someone is pointing
   // at it or tabbing through it, while the page is in the background, and for people who have asked
   // for less motion.
   const [held, setHeld] = useState(false);

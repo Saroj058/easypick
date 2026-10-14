@@ -62,7 +62,7 @@ function look(d: number, still: boolean, ghost: boolean) {
   };
 }
 
-export function DropStrip({ pieces, label, soon = false, after }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** Anything more under the centre piece's controls. */ after?: (piece: DropPiece) => React.ReactNode }) {
+export function DropStrip({ pieces, label, soon = false, controls }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode }) {
   const router = useRouter();
   const mySize = useMySize();
   /** The piece being bought in the pop-up (the rail's Buy now, without leaving the page). */
@@ -303,8 +303,7 @@ export function DropStrip({ pieces, label, soon = false, after }: { pieces: Drop
       ) : (
         // The home rail's controls, as they are there: name and price, colour, size, Buy now and the bag.
         <div className="mt-4" aria-live="polite">
-          <PieceControls key={piece.id} piece={piece} mySize={mySize} onAdded={() => {}} onBuy={setBuying} />
-          {after?.(piece)}
+          {controls ? controls(piece) : <PieceControls key={piece.id} piece={piece} mySize={mySize} onAdded={() => {}} onBuy={setBuying} />}
         </div>
       )}
 

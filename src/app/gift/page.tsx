@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 
 import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
@@ -9,13 +8,13 @@ import { GiftCardPicker } from "@/components/gift/gift-card-picker";
 import { GiftPieces } from "@/components/gift/gift-pieces";
 import { toRailPiece } from "@/components/home/rail";
 import { GiftCardPicture } from "@/components/gift-card-art";
+import { Gift, Mail, PackageCheck } from "lucide-react";
+
 import { ArrowIcon } from "@/components/icons";
-import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
 import { site } from "@/lib/site";
 import { getProducts } from "@/lib/store";
-import { getTrending } from "@/lib/trending";
 import type { Product } from "@/lib/types";
 
 // Find a gift ("I am buying for someone"). The page opens on the two things to do (send a piece,
@@ -31,53 +30,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/gift" },
 };
 
-const RAIL = 8;
-
 const priceOf = (p: Product) => p.salePrice ?? p.price;
 const inStock = (p: Product) => p.variants.some((v) => sellable(v) > 0);
-const oneSize = (p: Product) => p.variants.every((v) => v.size === "ONE");
-
-/** A piece to send: picture, name, price. Opens the send-as-gift form. */
-function GiftTile({ p, sizes, priority }: { p: Product; sizes: string; priority?: boolean }) {
-  return (
-    <Link href={`/gift/${p.slug}`} className="group block transition-opacity duration-150 active:opacity-80">
-      <ProductImage image={p.images[0]} category={p.category} colourHex={p.colours[0].hex} decorative sizes={sizes} priority={priority} />
-      <p className="mt-3 flex items-baseline justify-between gap-3">
-        <span className="text-[15px] font-semibold group-hover:underline">{p.name}</span>
-        <span className="shrink-0 font-mono text-[14px]">{formatPrice(priceOf(p))}</span>
-      </p>
-      {oneSize(p) && <p className="text-[13px] text-steel-dark">One size</p>}
-    </Link>
-  );
-}
-
-/** A short curated row: swipe on phones, a grid of four on larger screens. */
-function Rail({ id, title, note, products }: { id: string; title: string; note?: string; products: Product[] }) {
-  if (products.length === 0) return null;
-  return (
-    <section aria-labelledby={id}>
-      <h2 id={id} className="display display-h2">
-        {title}
-      </h2>
-      {note && <p className="mt-2 text-steel-dark">{note}</p>}
-      <ul className="-mx-4 mt-6 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0">
-        {products.slice(0, RAIL).map((p) => (
-          <li key={p.id} className="w-[44%] shrink-0 snap-start md:w-auto">
-            <GiftTile p={p} sizes="(min-width: 768px) 25vw, 44vw" />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 export default async function GiftPage() {
-  const [all, trending] = await Promise.all([getProducts(), getTrending()]);
-  const live = all.filter((p) => p.status === "live" && inStock(p));
-  const noSize = live.filter(oneSize);
-  const liveSlugs = new Set(live.map((p) => p.slug));
-  const popular = trending.items.map((i) => i.product).filter((p) => liveSlugs.has(p.slug));
-  const popularTitle = trending.mode === "trending" ? "What people are buying." : trending.label === "Staff picks" ? "Staff picks." : "From the latest drop.";
+  const live = (await getProducts()).filter((p) => p.status === "live" && inStock(p));
 
   return (
     <div className="overflow-x-clip pb-24">
@@ -159,36 +116,46 @@ export default async function GiftPage() {
           <GiftCardPicker />
         </section>
 
-        {/* Two short rows */}
-        {<Rail id="nosize-h" title="No size to guess." note="One size. Nothing to swap." products={noSize} />}
-        {<Rail id="popular-h" title={popularTitle} note={trending.mode === "picks" ? trending.why : undefined} products={popular} />}
-
-        {/* How it works, as three receipt lines */}
-        <section aria-labelledby="how-h" className="border-t border-mist pt-14">
-          <h2 id="how-h" className="display display-h2">
-            How it works.
-          </h2>
-          <ol className="mt-8 grid gap-8 md:grid-cols-3">
+        {/* How it works: three steps on one line, joined like a route */}
+        <section aria-labelledby="how-h" className="rounded-2xl border border-ink p-5 md:p-10">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 id="how-h" className="display display-h2">
+              How it works.
+            </h2>
+            <p className="index text-steel-dark">Three steps · about a minute</p>
+          </div>
+          <ol className="relative mt-8 grid gap-8 md:mt-10 md:grid-cols-3 md:gap-6">
+            {/* The line joining the steps: down the left on phones, across on larger screens */}
+            <span aria-hidden className="absolute bottom-6 left-[22px] top-6 w-px bg-ink/20 md:bottom-auto md:left-[22px] md:right-[calc(33%-22px)] md:top-[22px] md:h-px md:w-auto" />
             {[
-              ["01", "You choose.", "A piece, a note, the wrap. Pay with eSewa."],
-              ["02", "They pick the size.", `We email them a private link. They choose online or try it on in our store, and get ${formatPrice(site.gifting.welcomeCredit)} off their own first order.`],
-              ["03", "It arrives, wrapped.", "With your note. Wrong size? They swap it within 14 days."],
-            ].map(([n, t, d]) => (
-              <li key={n}>
-                <p className="font-mono text-[13px] text-steel-dark">{n}</p>
-                <p className="display mt-2 text-[28px] leading-none">{t}</p>
-                <p className="mt-3 text-steel-dark">{d}</p>
+              { n: "01", icon: Gift, t: "You choose.", d: "A piece, a note, the wrap. Pay with eSewa." },
+              { n: "02", icon: Mail, t: "They pick the size.", d: `A private link by email. They choose online or try it on in our store, and get ${formatPrice(site.gifting.welcomeCredit)} off their own first order.` },
+              { n: "03", icon: PackageCheck, t: "It arrives, wrapped.", d: "With your note. Wrong size? They swap it within 14 days." },
+            ].map(({ n, icon: Icon, t, d }) => (
+              <li key={n} className="relative flex gap-4 md:block">
+                <span className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink bg-paper">
+                  <Icon aria-hidden className="h-5 w-5" strokeWidth={1.6} />
+                </span>
+                <div className="min-w-0 md:mt-5">
+                  <p className="font-mono text-[12px] tracking-[0.12em] text-steel-dark">{n}</p>
+                  <p className="display mt-1 text-[28px] leading-none md:text-[32px]">{t}</p>
+                  <p className="mt-2 max-w-[34ch] text-[15px] leading-relaxed text-steel-dark">{d}</p>
+                </div>
               </li>
             ))}
           </ol>
         </section>
 
-        {/* Questions */}
-        <section aria-labelledby="faq-h" className="max-w-3xl">
-          <h2 id="faq-h" className="display display-h2">
-            Questions.
-          </h2>
-          <div className="mt-6 divide-y divide-mist border-y border-mist">
+        {/* Questions: the title and the way to ask on the left; the answers, one card each, on the right */}
+        <section aria-labelledby="faq-h" className="grid gap-8 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] md:gap-12">
+          <div className="md:sticky md:top-28 md:self-start">
+            <h2 id="faq-h" className="display display-h2">
+              Questions.
+            </h2>
+            <p className="mt-3 max-w-[30ch] text-steel-dark">The ones people ask before they send. Anything else, we answer on WhatsApp.</p>
+            <AskWhatsApp text="Hi Easypick, I need help sending a gift." label="Ask us on WhatsApp" className="mt-4" />
+          </div>
+          <div className="space-y-3">
             {[
               ["What if it doesn't fit?", "They swap the size within 14 days, in store or by delivery. If their size sells out, they can turn the gift into a gift card for the full amount."],
               ["When do they choose the size?", "As soon as they open the link. We hold one piece for them in the meantime, so it can't sell out under them."],
@@ -196,20 +163,19 @@ export default async function GiftPage() {
               ["Do they see the price?", "Yes, unless you tick “Hide the price”. You can also send it without your name."],
               ["How is it wrapped?", `In our bag with tissue and a printed note, free. Or a premium black box for ${formatPrice(site.gifting.premiumWrapFee)}.`],
               ["Do they need an account?", "No. The link opens on any phone or laptop. No app, no sign-up."],
-            ].map(([qq, a]) => (
-              <details key={qq} className="group py-4">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 font-semibold">
-                  {qq}
-                  <span className="text-xl leading-none transition-transform group-open:rotate-45" aria-hidden>
+            ].map(([qq, a], i) => (
+              <details key={qq} className="group rounded-xl border border-ink/15 bg-paper px-4 transition-[border-color,background-color] duration-200 open:border-ink open:bg-mist/40 hover:border-ink md:px-5">
+                <summary className="flex min-h-14 cursor-pointer list-none items-center gap-4 py-3 font-semibold">
+                  <span className="font-mono text-[12px] font-normal tabular-nums text-steel-dark">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="min-w-0 flex-1">{qq}</span>
+                  <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink/20 text-lg leading-none transition-transform duration-300 group-open:rotate-45 group-open:border-ink group-open:bg-ink group-open:text-paper">
                     +
                   </span>
                 </summary>
-                <p className="mt-2 text-steel-dark">{a}</p>
+                <p className="pb-4 pl-9 text-[15px] leading-relaxed text-steel-dark">{a}</p>
               </details>
             ))}
           </div>
-          <div className="mt-4" />
-          <AskWhatsApp text="Hi Easypick, I need help sending a gift." label="Stuck? Ask us on WhatsApp" />
         </section>
       </div>
     </div>

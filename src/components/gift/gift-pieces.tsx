@@ -1,48 +1,67 @@
 "use client";
 
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, Search, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { formatPrice } from "@/lib/format";
 import { searchProducts } from "@/lib/search";
 import { categoryLabels } from "@/lib/site";
-import type { Category } from "@/lib/types";
+import type { Category, Product } from "@/lib/types";
 import { DropStrip } from "../drop-strip";
+import { GiftForm } from "../gift-form";
 import type { RailPiece } from "../home/rail-wall";
 import { GiftIcon } from "../icons";
 import { ExpandingSearchDock } from "../ui/expanding-search-dock";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../ui/sheet";
 
-// The gift page's pieces, as the drops page shows a drop: one strip of cards, the centre piece's
-// name, sizes, Buy now (the rail's pop-up, without leaving) and the bag, plus "Send it as a gift".
+// The gift page's pieces, as the drops page shows a drop: one strip of cards, and under the centre
+// piece its name, price and one button, "Send it as a gift", which opens the gift form in a pop-up.
+// No Buy now or bag here (owner, 14 Oct 2026): this page sends, it doesn't sell.
 // Above it: a budget, the kind of piece (each with a little picture of the garment), and the
 // rail's search. All of it narrows the strip at once, without reloading the page.
 
 /** Budgets offered, when they narrow what is on sale (at least one piece under, and not all). */
 const BUDGETS = [1000, 1500, 2000, 2500, 3500, 5000];
-/** The strip holds this many at most; past that, the shop has the rest. */
+/** The strip holds this many at most (the budget, kind and search narrow it). */
 const MOST = 30;
 
 type Kind = Category | "one";
 /** A little garment picture for each kind (the neutral stand-ins in public/stand-ins). */
-const KIND_ICON: Record<Kind, string> = { tees: "tee", hoodies: "hoodie", jackets: "jacket", bottoms: "cargo", "co-ords": "set", accessories: "cap", one: "cap" };
+const KIND_ICON: Record<Kind, string> = {
+  tees: "tee",
+  hoodies: "hoodie",
+  jackets: "jacket",
+  bottoms: "cargo",
+  "co-ords": "set",
+  accessories: "cap",
+  one: "cap",
+};
 
-const oneSize = (p: RailPiece) => p.colours.every((c) => c.sizes.every((s) => s.size === "ONE"));
+const oneSize = (p: RailPiece) =>
+  p.colours.every((c) => c.sizes.every((s) => s.size === "ONE"));
 
 export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
   const [max, setMax] = useState<number | null>(null);
   const [kind, setKind] = useState<Kind | null>(null);
   const [query, setQuery] = useState("");
+  /** The piece being sent, in the pop-up. */
+  const [sending, setSending] = useState<RailPiece | null>(null);
 
-  const inKind = (p: RailPiece, k: Kind | null) => (k === "one" ? oneSize(p) : k ? p.category === k : true);
-  const inBudget = (p: RailPiece, m: number | null) => (m ? p.price <= m : true);
+  const inKind = (p: RailPiece, k: Kind | null) =>
+    k === "one" ? oneSize(p) : k ? p.category === k : true;
+  const inBudget = (p: RailPiece, m: number | null) =>
+    m ? p.price <= m : true;
   const prices = pieces.map((p) => p.price);
   const budgets = BUDGETS.filter((b) => {
     const under = prices.filter((x) => x <= b).length;
     return under > 0 && under < prices.length;
   });
   const kinds = ([...Object.keys(categoryLabels), "one"] as Kind[])
-    .map((k) => ({ k, count: pieces.filter((p) => inBudget(p, max) && inKind(p, k)).length }))
+    .map((k) => ({
+      k,
+      count: pieces.filter((p) => inBudget(p, max) && inKind(p, k)).length,
+    }))
     .filter((x) => x.count > 0);
 
   const q = query.trim();
@@ -51,7 +70,11 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
     pieces.filter((p) => inBudget(p, max) && inKind(p, kind)),
     q,
   );
-  const ordered = q ? matched : [...matched].sort((a, b) => (max ? b.price - a.price : a.price - b.price));
+  const ordered = q
+    ? matched
+    : [...matched].sort((a, b) =>
+        max ? b.price - a.price : a.price - b.price,
+      );
   const shown = ordered.slice(0, MOST);
   const filtered = Boolean(max || kind || q);
 
@@ -60,48 +83,104 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
 
   return (
     <div>
-      <div className="flex items-end justify-between gap-4">
-        <h2 id="pieces-h" className="display display-h2">
-          {max ? `Under ${formatPrice(max)}.` : "Every piece."}
-        </h2>
-        <p className="index shrink-0 pb-1 text-right text-steel-dark" aria-live="polite">
-          {ordered.length} {ordered.length === 1 ? "piece" : "pieces"}
-          <span className="max-sm:hidden">{q ? "" : max ? " · best first" : " · cheapest first"}</span>
-        </p>
-      </div>
-
       {/* The finder: one thin outlined card */}
-      <div className="mt-5 rounded-2xl border border-ink">
+      <div className="rounded-2xl border border-ink">
         {/* Budget, and the rail's search at the end */}
-        <div className="flex items-center gap-3 px-3 py-2 md:px-4">
-          <span className="index w-14 shrink-0 text-steel-dark max-md:hidden">Budget</span>
-          <div role="group" aria-label="Budget" className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-mist p-1 [scrollbar-width:none]">
-            <button type="button" aria-pressed={!max} onClick={() => setMax(null)} className={pill(!max)}>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 md:flex-nowrap md:px-4">
+          <span className="index w-14 shrink-0 text-steel-dark max-md:hidden">
+            Budget
+          </span>
+          <div
+            role="group"
+            aria-label="Budget"
+            className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full bg-mist p-1 [scrollbar-width:none]"
+          >
+            <button
+              type="button"
+              aria-pressed={!max}
+              onClick={() => setMax(null)}
+              className={pill(!max)}
+            >
               Any price
             </button>
             {budgets.map((b) => (
-              <button key={b} type="button" aria-pressed={max === b} onClick={() => setMax(max === b ? null : b)} className={pill(max === b)}>
+              <button
+                key={b}
+                type="button"
+                aria-pressed={max === b}
+                onClick={() => setMax(max === b ? null : b)}
+                className={pill(max === b)}
+              >
                 Under {formatPrice(b)}
               </button>
             ))}
           </div>
-          <ExpandingSearchDock value={query} onChange={setQuery} label="Search the gifts" placeholder="Search the gifts" className="w-11 shrink-0 has-[form]:w-[min(320px,45vw)]" />
+          {/* Search every piece: always open, not a button */}
+          <label className="flex h-11 w-full shrink-0 items-center gap-2 rounded-full border border-ink/30 bg-paper px-4 transition-[border-color] duration-200 focus-within:border-ink md:w-[min(300px,30vw)]">
+            <Search aria-hidden className="h-4 w-4 shrink-0 text-steel-dark" />
+            <span className="sr-only">Search the gifts</span>
+            <input
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              autoComplete="off"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search every piece"
+              className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-steel-dark md:text-[14px]"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear the search"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-mist"
+              >
+                <X aria-hidden className="h-4 w-4" />
+              </button>
+            )}
+          </label>
         </div>
 
         {/* Kind: each with a little picture of the garment and how many there are */}
         <div className="flex items-center gap-3 border-t border-ink/15 px-3 py-2.5 md:px-4">
-          <span className="index w-14 shrink-0 text-steel-dark max-md:hidden">Kind</span>
-          <div role="group" aria-label="Kind of piece" className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none]">
-            <button type="button" aria-pressed={!kind} onClick={() => setKind(null)} className={`${kindChip(!kind)}`}>
+          <span className="index w-14 shrink-0 text-steel-dark max-md:hidden">
+            Kind
+          </span>
+          <div
+            role="group"
+            aria-label="Kind of piece"
+            className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none]"
+          >
+            <button
+              type="button"
+              aria-pressed={!kind}
+              onClick={() => setKind(null)}
+              className={`${kindChip(!kind)}`}
+            >
               <LayoutGrid aria-hidden className="h-4 w-4" strokeWidth={1.8} />
               Anything
             </button>
             {kinds.map(({ k, count }) => (
-              <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(kind === k ? null : k)} className={kindChip(kind === k)}>
+              <button
+                key={k}
+                type="button"
+                aria-pressed={kind === k}
+                onClick={() => setKind(kind === k ? null : k)}
+                className={kindChip(kind === k)}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element -- a tiny garment picture, already compressed */}
-                <img src={`/stand-ins/${KIND_ICON[k]}.webp`} alt="" className={`h-6 w-6 object-contain ${kind === k ? "brightness-[3]" : "opacity-80"}`} />
+                <img
+                  src={`/stand-ins/${KIND_ICON[k]}.webp`}
+                  alt=""
+                  className={`h-6 w-6 object-contain ${kind === k ? "brightness-[3]" : "opacity-80"}`}
+                />
                 {k === "one" ? "One size" : categoryLabels[k]}
-                <sup className={`font-mono text-[10px] ${kind === k ? "text-paper/70" : "text-steel-dark"}`}>{count}</sup>
+                <sup
+                  className={`font-mono text-[10px] ${kind === k ? "text-paper/70" : "text-steel-dark"}`}
+                >
+                  {count}
+                </sup>
               </button>
             ))}
           </div>
@@ -121,31 +200,62 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
         </div>
       </div>
 
+      <div className="mt-8 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 md:mt-10">
+        <div className="min-w-0">
+          <h2
+            id="pieces-h"
+            className="display text-[clamp(2.4rem,1.8rem+3vw,4rem)] leading-[0.88]"
+          >
+            {kind === "one"
+              ? "One size"
+              : kind
+                ? categoryLabels[kind]
+                : "Every piece"}
+            <span
+              className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark"
+              aria-label={`${ordered.length} pieces`}
+            >
+              {ordered.length}
+            </span>
+          </h2>
+          <p className="index mt-2 text-steel-dark" aria-live="polite">
+            {max ? `Under ${formatPrice(max)}` : "Any price"}
+            {q ? ` · "${q}"` : max ? " · best first" : " · cheapest first"}
+          </p>
+        </div>
+        {kind && (
+          <ExpandingSearchDock
+            value={query}
+            onChange={setQuery}
+            label={
+              kind === "one"
+                ? "Search one-size pieces"
+                : kind
+                  ? `Search ${categoryLabels[kind].toLowerCase()}`
+                  : "Search the gifts"
+            }
+            placeholder={
+              kind === "one"
+                ? "Search one-size pieces"
+                : kind
+                  ? `Search ${categoryLabels[kind].toLowerCase()}`
+                  : "Search the gifts"
+            }
+            className="min-w-0 max-w-[320px] flex-1 max-sm:basis-full sm:justify-end"
+          />
+        )}
+      </div>
+
       {shown.length > 0 ? (
         <>
           <DropStrip
             key={`${max}-${kind}-${q}`}
             pieces={shown}
             label="Gifts"
-            after={(p) => (
-              <Link href={`/gift/${p.slug}`} className="group mx-auto mt-3 flex min-h-11 w-fit items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
-                <GiftIcon className="h-4 w-4" />
-                Send it as a gift
-                <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">
-                  →
-                </span>
-              </Link>
+            controls={(p) => (
+              <SendControls piece={p} onSend={() => setSending(p)} />
             )}
           />
-          {ordered.length > MOST && (
-            <p className="mt-6 text-center text-[14px] text-steel-dark">
-              Showing {MOST} of {ordered.length}. Narrow it with a budget, a kind or a search, or{" "}
-              <Link href="/shop" className="font-semibold text-ink underline underline-offset-2">
-                see them all in the shop
-              </Link>
-              .
-            </p>
-          )}
         </>
       ) : (
         <p className="mt-8 text-center">
@@ -162,17 +272,123 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
             Show every piece
           </button>{" "}
           or{" "}
-          <Link href="#buy" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
+          <Link
+            href="#buy"
+            className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2"
+          >
             send a gift card
           </Link>
         </p>
       )}
+
+      <SendSheet piece={sending} onClose={() => setSending(null)} />
     </div>
+  );
+}
+
+/** Under the centre piece: its name, price, how sizing works for a gift, and the one thing to do. */
+function SendControls({
+  piece,
+  onSend,
+}: {
+  piece: RailPiece;
+  onSend: () => void;
+}) {
+  const oneSize = piece.colours.every((c) =>
+    c.sizes.every((s) => s.size === "ONE"),
+  );
+  return (
+    <div className="flex flex-col items-center text-center">
+      <h4 className="text-lg font-semibold">{piece.name}</h4>
+      <p className="mt-1 font-mono text-[14px] tabular-nums">
+        {formatPrice(piece.price)}
+      </p>
+      <p className="mt-1 text-[13px] text-steel-dark">
+        {oneSize
+          ? "One size. Nothing to guess."
+          : "They pick their own size, or swap it in the store."}
+      </p>
+      <button
+        type="button"
+        onClick={onSend}
+        className="group mt-4 flex h-14 w-full max-w-[360px] cursor-pointer items-center justify-center gap-2.5 rounded-[4px] bg-volt px-6 text-[14px] font-semibold uppercase tracking-[0.08em] text-ink transition-[background-color,scale] duration-200 hover:bg-[#b5f020] active:scale-[0.98]"
+      >
+        <GiftIcon className="h-5 w-5" />
+        Send it as a gift
+      </button>
+    </div>
+  );
+}
+
+/** The send-as-gift form, over the page: the piece is fetched in full when the pop-up opens. */
+function SendSheet({
+  piece,
+  onClose,
+}: {
+  piece: RailPiece | null;
+  onClose: () => void;
+}) {
+  const [loaded, setLoaded] = useState<{
+    slug: string;
+    product: Product | null;
+  } | null>(null);
+  const slug = piece?.slug ?? null;
+  useEffect(() => {
+    if (!slug) return;
+    let live = true;
+    fetch(`/api/products/${slug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((product: Product | null) => live && setLoaded({ slug, product }))
+      .catch(() => live && setLoaded({ slug, product: null }));
+    return () => {
+      live = false;
+    };
+  }, [slug]);
+  const product = loaded && loaded.slug === slug ? loaded.product : undefined;
+
+  return (
+    <Sheet open={piece !== null} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent
+        side="right"
+        className="w-full overflow-y-auto border-mist bg-paper p-5 pt-6 sm:max-w-lg"
+      >
+        <SheetTitle className="display text-[34px] leading-none">
+          Send as gift
+        </SheetTitle>
+        {piece && (
+          <SheetDescription className="mt-2 text-[14px] text-steel-dark">
+            {piece.name} · {formatPrice(piece.price)}
+          </SheetDescription>
+        )}
+        <div className="mt-6">
+          {product === undefined ? (
+            <p className="text-[14px] text-steel-dark" role="status">
+              Getting the piece ready…
+            </p>
+          ) : product ? (
+            <GiftForm product={product} />
+          ) : (
+            <p className="text-[14px]">
+              This piece can&apos;t be sent right now.{" "}
+              <Link
+                href="#buy"
+                onClick={onClose}
+                className="font-semibold underline underline-offset-2"
+              >
+                Send a gift card instead
+              </Link>
+            </p>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
 function kindChip(on: boolean) {
   return `inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl border px-3 text-[13px] font-semibold transition-[background-color,border-color,color,scale] duration-150 active:scale-[0.97] ${
-    on ? "border-ink bg-ink text-paper" : "border-ink/15 bg-paper hover:border-ink"
+    on
+      ? "border-ink bg-ink text-paper"
+      : "border-ink/15 bg-paper hover:border-ink"
   }`;
 }
