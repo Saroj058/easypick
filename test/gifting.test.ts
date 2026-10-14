@@ -313,6 +313,67 @@ describe("limits", () => {
   });
 });
 
+describe("paying for a gift with a gift card", () => {
+  const send = async (card: string, buyer: string) => {
+    const f = new FormData();
+    f.set("slug", "six-panel-cap");
+    f.set("mode", "pick");
+    f.set("receiverName", "Sita");
+    f.set("receiverEmail", "sita.card@test.dev");
+    f.set("buyerPhone", buyer);
+    f.set("provider", "esewa");
+    f.set("giftCard", card);
+    try {
+      const r = await placeGiftOrder({ status: "idle" }, f);
+      return { error: r.status === "error" ? r.message : null, id: null as string | null };
+    } catch (e) {
+      const digest = (e as { digest?: string }).digest ?? "";
+      if (!digest.startsWith("NEXT_REDIRECT")) throw e;
+      return { error: null, id: digest.match(/\/pay\/([0-9a-f-]{36})/)?.[1] ?? null };
+    }
+  };
+  const activeCard = async (value: number) => {
+    const card = await issueGiftCard(
+      { value, status: "pending_payment", purchaserPhone: "9811000900", recipientName: "Me", recipientPhone: null, recipientEmail: null, message: "", senderName: null, sendOn: null, orderId: null },
+      1,
+    );
+    await activateGiftCard(card.code);
+    return card.code;
+  };
+
+  it("covers the whole gift: confirmed at once, the receiver gets the link, the card is spent", async () => {
+    h.ip = "198.51.100.21";
+    const code = await activeCard(5000);
+    const r = await send(code, "9811000901");
+    expect(r.error).toBeNull();
+    const order = await findOrder(r.id!);
+    expect(order!.status).toBe("paid");
+    expect(order!.total).toBe(0);
+    expect(order!.giftCard!.applied).toBe(order!.subtotal + order!.deliveryFee + (order!.wrapFee ?? 0));
+    expect((await findGiftCard(code))!.balance).toBe(5000 - order!.giftCard!.applied);
+    await flush();
+    expect(h.emails.some((m) => m.to === "sita.card@test.dev")).toBe(true);
+  });
+
+  it("pays part of it: only the rest is left to pay", async () => {
+    h.ip = "198.51.100.22";
+    const code = await activeCard(500);
+    const r = await send(code, "9811000902");
+    const order = await findOrder(r.id!);
+    expect(order!.status).toBe("awaiting_payment");
+    expect(order!.giftCard!.applied).toBe(500);
+    expect(order!.total).toBe(order!.subtotal + order!.deliveryFee + (order!.wrapFee ?? 0) - 500);
+    expect((await findGiftCard(code))!.balance).toBe(0);
+  });
+
+  it("a wrong code stops the gift before anything is held", async () => {
+    h.ip = "198.51.100.23";
+    const r = await send("EP-0000-0000", "9811000903");
+    expect(r.error).toBeTruthy();
+    expect(r.id).toBeNull();
+  });
+});
+
 describe("piece gift sending", () => {
   const inDays = (n: number) => {
     const d = new Date(`${kathmanduToday()}T12:00:00Z`);

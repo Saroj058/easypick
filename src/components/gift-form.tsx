@@ -3,7 +3,8 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
-import { placeGiftOrder, type GiftState } from "@/app/gift-actions";
+import { placeGiftOrder, previewGiftCard, type GiftState } from "@/app/gift-actions";
+import { myUsableCards } from "@/app/wallet-actions";
 import { formatPrice, normaliseNepaliMobile } from "@/lib/format";
 import { kathmanduToday } from "@/lib/kathmandu-date";
 import { formatBS } from "@/lib/nepali-date";
@@ -207,6 +208,47 @@ export function GiftForm({
   const deliveryFee = (mode === "set" && method === "pickup") || price >= site.delivery.freeAbove ? 0 : site.delivery.flatFee;
   const wrapFee = wrap === "premium" ? site.gifting.premiumWrapFee : 0;
   const total = price + deliveryFee + wrapFee;
+  // A gift card pays some or all of it (checked again on the server).
+  const [card, setCard] = useState<{ code: string; balance: number; saved?: boolean } | null>(null);
+  const [cardOpen, setCardOpen] = useState(false);
+  const [cardCode, setCardCode] = useState("");
+  const [cardMsg, setCardMsg] = useState("");
+  const [applying, setApplying] = useState(false);
+  const [walletTried, setWalletTried] = useState(false);
+  const cardApplied = card ? Math.min(card.balance, total) : 0;
+  const toPay = total - cardApplied;
+  async function applyCard() {
+    if (applying || !cardCode.trim()) return;
+    setCardMsg("");
+    setApplying(true);
+    try {
+      const res = await previewGiftCard(cardCode);
+      if (res.ok) setCard({ code: res.code, balance: res.balance });
+      else {
+        setCard(null);
+        setCardMsg(res.message);
+      }
+    } catch {
+      setCardMsg("Couldn't check the card. Try again.");
+    } finally {
+      setApplying(false);
+    }
+  }
+  // Signed in with a gift card saved to their account: it's used without typing the code.
+  useEffect(() => {
+    if (!me || walletTried) return;
+    let live = true;
+    myUsableCards()
+      .then((cards) => {
+        if (!live) return;
+        setWalletTried(true);
+        if (cards[0]) setCard((c) => c ?? { code: cards[0].code, balance: cards[0].balance, saved: true });
+      })
+      .catch(() => live && setWalletTried(true));
+    return () => {
+      live = false;
+    };
+  }, [me, walletTried]);
   const today = kathmanduToday(); // the shop's calendar day, wherever the buyer is
   const typo = emailTypo(receiverEmail);
   const near = site.gifting.messageMax - message.length <= 20;
@@ -266,6 +308,7 @@ export function GiftForm({
       <input type="hidden" name="colour" value={colour} />
       <input type="hidden" name="size" value={size ?? ""} />
       <input type="hidden" name="showPrice" value={showPrice ? "on" : ""} />
+      <input type="hidden" name="giftCard" value={card?.code ?? ""} />
 
       {/* The piece and where they are in it. In the pop-up it stays at the top while the step scrolls. */}
       <div className={sheet ? "sticky top-0 z-20 border-b border-ink/10 bg-paper px-5 pb-3 pt-5" : "mb-6"}>
@@ -616,6 +659,51 @@ export function GiftForm({
               <p className={label}>Pay with</p>
               <PayWith className="mt-2" />
             </div>
+            {/* A gift card pays some or all of it */}
+            <div>
+              {card ? (
+                <p className="text-[14px]">
+                  {card.saved ? `Your saved gift card ${card.code.replace(/^EP-[A-Z0-9]{4}-/, "EP-••••-")} is applied.` : "Gift card applied."} {formatPrice(card.balance - cardApplied)} stays on the card.{" "}
+                  <button type="button" onClick={() => setCard(null)} className="min-h-11 cursor-pointer font-semibold underline underline-offset-4">
+                    Remove
+                  </button>
+                </p>
+              ) : !cardOpen ? (
+                <button type="button" onClick={() => setCardOpen(true)} className="min-h-11 cursor-pointer text-[14px] font-semibold underline underline-offset-4">
+                  Have a gift card?
+                </button>
+              ) : (
+                <div>
+                  <label htmlFor="g-card" className={label}>
+                    Gift card code
+                  </label>
+                  <div className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-ink/20 bg-paper p-1 pl-4 focus-within:border-ink">
+                    <input
+                      id="g-card"
+                      value={cardCode}
+                      onChange={(e) => setCardCode(e.target.value)}
+                      onKeyDown={(e) => {
+                        // Enter applies the card; it must never send the gift without it.
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void applyCard();
+                        }
+                      }}
+                      enterKeyHint="go"
+                      placeholder="EP-XXXX-XXXX"
+                      autoCapitalize="characters"
+                      className="h-full min-w-0 flex-1 bg-transparent font-mono uppercase outline-none"
+                    />
+                    <button type="button" onClick={() => void applyCard()} disabled={applying} aria-busy={applying} className="inline-flex h-full shrink-0 cursor-pointer items-center rounded-lg bg-ink px-4 text-[13px] font-semibold text-paper disabled:opacity-60">
+                      {applying ? "Checking…" : "Apply"}
+                    </button>
+                  </div>
+                  <p role="alert" className="mt-1 min-h-5 text-[13px] text-error-light">
+                    {cardMsg}
+                  </p>
+                </div>
+              )}
+            </div>
           </Group>
 
           {/* What they're paying for, before they pay */}
@@ -642,9 +730,15 @@ export function GiftForm({
                   <dd className="font-mono">{formatPrice(wrapFee)}</dd>
                 </div>
               )}
+              {cardApplied > 0 && (
+                <div className="flex justify-between">
+                  <dt>Gift card</dt>
+                  <dd className="font-mono">−{formatPrice(cardApplied)}</dd>
+                </div>
+              )}
               <div className="flex justify-between pt-1.5 text-lg font-semibold">
-                <dt>Total</dt>
-                <dd className="font-mono">{formatPrice(total)}</dd>
+                <dt>{cardApplied > 0 ? "To pay" : "Total"}</dt>
+                <dd className="font-mono">{formatPrice(toPay)}</dd>
               </div>
             </dl>
             {mode === "pick" && deliveryFee > 0 && <p className="mt-2 text-[13px] text-steel-dark">If they choose store pickup, we refund the delivery fee.</p>}
@@ -665,10 +759,12 @@ export function GiftForm({
         </p>
         <div className="flex items-center gap-3">
           <p className="mr-auto leading-tight">
-            <span className="block text-[12px] text-steel-dark">Total</span>
-            <span className="font-mono text-[17px] font-semibold tabular-nums">{formatPrice(total)}</span>
+            <span className="block text-[12px] text-steel-dark">{cardApplied > 0 ? "To pay" : "Total"}</span>
+            <span className="font-mono text-[17px] font-semibold tabular-nums">{formatPrice(toPay)}</span>
             {/* Why the total is more than the piece, so payment holds no surprise */}
-            {total > price && (
+            {cardApplied > 0 ? (
+              <span className="block text-[11.5px] text-steel-dark">after {formatPrice(cardApplied)} gift card</span>
+            ) : total > price && (
               <span className="block text-[11.5px] text-steel-dark">
                 incl. {[deliveryFee ? `${formatPrice(deliveryFee)} delivery` : "", wrapFee ? `${formatPrice(wrapFee)} box` : ""].filter(Boolean).join(" + ")}
               </span>
@@ -689,7 +785,7 @@ export function GiftForm({
           ) : (
             <button key="pay" type="submit" className="relative inline-flex h-12 cursor-pointer items-center gap-2 overflow-hidden rounded-full bg-volt px-6 text-[14px] font-semibold text-ink transition-[background-color,scale] duration-150 hover:bg-[#b5f020] active:scale-[0.97] disabled:cursor-wait" disabled={pending} aria-busy={pending}>
               {pending && <span className="visit-load absolute inset-x-0 bottom-0 h-0.5 bg-ink" aria-hidden />}
-              {pending ? "One moment…" : `Pay ${formatPrice(total)}`}
+              {pending ? "One moment…" : toPay > 0 ? `Pay ${formatPrice(toPay)}` : "Send the gift"}
             </button>
           )}
         </div>

@@ -116,16 +116,19 @@ test("Pick: a few words, an answer beside him, real suggestions; Send this opens
 
 test("a piece opened from the Gift page only sends: no Buy now, no bag @phone", async ({ page }) => {
   await page.goto("/product/everyday-hoodie?from=gift");
-  const send = page.getByRole("link", { name: "Send it as a gift" });
+  const send = page.getByRole("button", { name: "Send it as a gift" });
   await expect(send).toBeVisible();
-  await expect(send).toHaveAttribute("href", /^\/gift\/everyday-hoodie\?colour=/);
   await expect(page.getByRole("link", { name: /Buy now/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Pick a size|Add to bag/ })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Try in store/ })).toHaveCount(0);
   // Opened any other way, it sells as usual.
   await page.goto("/product/everyday-hoodie");
   await expect(page.getByRole("button", { name: "Pick a size" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Send it as a gift" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Send it as a gift" })).toHaveCount(0);
+  // Send as gift opens the form over the page, not a new page.
+  await page.getByRole("button", { name: "Send as gift" }).click();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Continue" })).toBeVisible({ timeout: 60_000 });
+  expect(page.url()).toMatch(/\/product\/everyday-hoodie$/);
 });
 
 test("send a piece: three steps, their name before the note, checks before payment @phone", async ({ page }, info) => {

@@ -31,6 +31,7 @@ import { site } from "@/lib/site";
 import { giftEmailHtml, normaliseEmail } from "@/lib/email";
 import { isGiftCardDesign } from "@/lib/gift-card-designs";
 import { notifyEmail, notifySms as notify } from "@/lib/notify";
+import { confirmPayment } from "@/lib/payments";
 import { getProducts } from "@/lib/store";
 import type { PaymentProvider, Size } from "@/lib/types";
 
@@ -109,6 +110,16 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
   const provider = str(form, "provider") as PaymentProvider;
   if (!PROVIDERS.includes(provider)) return { status: "error", message: "Choose how you'll pay." };
 
+  // Optional Easypick gift card (owner, 15 Oct 2026), exactly as at checkout: re-checked here, spent
+  // inside the order's own step (all or nothing), and only the rest is paid.
+  const cardInput = str(form, "giftCard", 40);
+  let giftCardCode: string | null = null;
+  if (cardInput) {
+    const check = await checkGiftCard(cardInput, await clientIp());
+    if (!check.ok) return { status: "error", message: check.message };
+    giftCardCode = check.code;
+  }
+
   const anonymous = form.get("anonymous") === "on";
   const senderName = anonymous ? null : cleanSenderName(str(form, "senderName", 120));
   const message = cleanGiftMessage(str(form, "message", 400), site.gifting.messageMax);
@@ -166,10 +177,12 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
       gift,
       kind: "goods",
     },
-    { userId: (await getCurrentUser())?.id },
+    { userId: (await getCurrentUser())?.id, giftCardCode },
   );
   if (!created.ok) return { status: "error", message: created.message };
   const order = created.order;
+  // Fully covered by the gift card: nothing to pay, so it's confirmed now (the link goes out too).
+  if (order.total <= 0) await confirmPayment(order.id);
 
   // The receiver is emailed the link once payment is confirmed (lib/payments.ts).
   redirect(`/pay/${order.id}`);

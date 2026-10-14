@@ -9,6 +9,7 @@ import { stockFromVariants } from "@/lib/live-stock";
 import type { Colour, LiveStock, Product, Size } from "@/lib/types";
 import { AskWhatsApp } from "./ask-whatsapp";
 import { useAddToBag } from "./bag-gate";
+import { SendSheet } from "./gift/gift-pieces";
 import { RestockForm } from "./restock-form";
 import { useMe } from "./session";
 import { ArrowIcon, GiftIcon } from "./icons";
@@ -52,6 +53,8 @@ export function BuyPanel(props: Props) {
   const [error, setError] = useState(false);
   const [added, setAdded] = useState(false);
   const [fitOpen, setFitOpen] = useState(false);
+  /** The send-as-gift form, over this page (owner, 15 Oct 2026: no separate page). */
+  const [gifting, setGifting] = useState(false);
   const profile = useFitProfile();
   const match = matchSize(props.category, props.measurements, profile);
 
@@ -226,10 +229,10 @@ export function BuyPanel(props: Props) {
 
       {giftOnly && status === "live" ? (
         <div className={colours.length > 1 ? "mt-6" : "mt-4"}>
-          <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}`} className="group flex h-14 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] bg-volt px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] text-ink transition-[background-color,scale] duration-200 hover:bg-[#b5f020] active:scale-[0.98]">
+          <button type="button" onClick={() => setGifting(true)} className="group flex h-14 w-full cursor-pointer items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] bg-volt px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] text-ink transition-[background-color,scale] duration-200 hover:bg-[#b5f020] active:scale-[0.98]">
             <GiftIcon className="h-5 w-5 transition-transform duration-200 group-hover:-translate-y-0.5" />
             Send it as a gift
-          </Link>
+          </button>
           <p className="mt-2 text-[13px] text-steel-dark">
             {oneSize ? "One size. Nothing to guess." : "Know their size? Choose it on the next step. If not, they pick it, or try it on in our store."}
           </p>
@@ -274,10 +277,10 @@ export function BuyPanel(props: Props) {
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
           <div className="mt-3 flex gap-2.5">
-            <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}${picked && picked !== "ONE" ? `&size=${picked}` : ""}`} className="group flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
+            <button type="button" onClick={() => setGifting(true)} className="group flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
               <GiftIcon className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5" />
               Send as gift
-            </Link>
+            </button>
             <Link href={`/visit?try=${slug}`} className="group flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
               <MapPin aria-hidden className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5" strokeWidth={1.8} />
               Try in store
@@ -294,6 +297,11 @@ export function BuyPanel(props: Props) {
           View bag
         </Link>
       )}
+      <SendSheet
+        piece={gifting ? { slug, name, price } : null}
+        initial={{ colour: colour.name, size: picked && picked !== "ONE" ? picked : undefined }}
+        onClose={() => setGifting(false)}
+      />
     </div>
   );
 }
