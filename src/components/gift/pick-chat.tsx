@@ -84,17 +84,18 @@ export function PickChat() {
   const line = now.bubble.text;
   useEffect(() => {
     if (!ready || still || !line) return;
-    let n = 0;
-    const step = Math.max(2, Math.ceil(line.length / 30));
+    // By the clock, not by ticks: the answer is out in about half a second even on a slow phone.
+    const start = performance.now();
+    const total = Math.min(700, 250 + line.length * 4);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- starts typing out a new answer
     setTyped(0);
     const id = setInterval(() => {
-      n += step;
+      const n = Math.floor(((performance.now() - start) / total) * line.length);
       if (n >= line.length) {
         clearInterval(id);
         setTyped(null);
       } else setTyped(n);
-    }, 18);
+    }, 30);
     return () => clearInterval(id);
   }, [line, still, ready]);
 
