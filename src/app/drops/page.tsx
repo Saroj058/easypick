@@ -44,33 +44,31 @@ export default async function DropsPage() {
   return (
     <div className="overflow-x-clip">
       {/* The opening: one full screen of the store at dusk (the owner's picture and concept, 10 Oct 2026).
-          The page's name and what the alert is for on the left; when drops happen and the sign-up, on a
-          sheet of dark glass, on the right. The picture is decoration: every word is real text over it. */}
+          The page's name, the owner's lines and the alert sign-up (on a sheet of dark glass) all sit on the
+          left. The picture is decoration: every word is real text over it. */}
       <section aria-labelledby="drops-title" className="on-dark relative isolate overflow-hidden bg-[#0c0c0c] text-paper">
-        <Image src="/drops/hero.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover object-[62%_center] max-md:hidden" />
-        <Image src="/drops/hero-phone.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover md:hidden" />
+        <Image src="/drops/hero-2.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover object-right max-md:hidden" />
+        <Image src="/drops/hero-2-phone.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover md:hidden" />
         {/* Shade for the words: darker on the left and at the foot, lighter where the rail and the sign are */}
-        <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(0,0,0,0.72)_0%,rgba(0,0,0,0.38)_42%,rgba(0,0,0,0.3)_100%)] max-md:bg-[linear-gradient(180deg,rgba(0,0,0,0.35)_0%,rgba(0,0,0,0.55)_45%,rgba(0,0,0,0.85)_100%)]" />
+        <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(0,0,0,0.78)_0%,rgba(0,0,0,0.5)_34%,rgba(0,0,0,0.08)_62%,rgba(0,0,0,0)_100%)] max-md:bg-[linear-gradient(180deg,rgba(0,0,0,0.35)_0%,rgba(0,0,0,0.55)_45%,rgba(0,0,0,0.85)_100%)]" />
 
-        <div className="container-ep grid min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] content-end gap-8 py-8 md:min-h-[calc(100svh-88px)] md:grid-cols-[minmax(0,1fr)_minmax(0,430px)] md:content-center md:items-center md:gap-12 md:py-14">
-          <div className="min-w-0">
-            <h1 id="drops-title" className="display text-[clamp(4.5rem,2.6rem+10vw,11.5rem)] leading-[0.8]">
+        {/* Everything sits on the picture's empty wall, on the left: the lit sign and the counter on the right stay clear */}
+        <div className="container-ep flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] flex-col justify-end py-8 md:min-h-[calc(100svh-88px)] md:justify-center md:py-10">
+          <div className="w-full md:max-w-[470px]">
+            <p className="index text-paper/80">Every other Friday · 6 PM</p>
+            <h1 id="drops-title" className="display mt-3 text-[clamp(3.6rem,2.4rem+5vw,6.5rem)] leading-[0.82]">
               Drops
             </h1>
-            <span aria-hidden className="mt-5 block h-1 w-14 bg-volt md:mt-7" />
-            <h2 id="drops-alert" className="mt-5 font-mono text-[clamp(0.95rem,0.8rem+0.7vw,1.45rem)] uppercase leading-snug tracking-[0.14em] md:mt-6">
-              {next ? `Be told when ${next.name} lands.` : "Be told about the next one."}
+            <span aria-hidden className="mt-4 block h-1 w-14 bg-volt" />
+            <h2 id="drops-alert" className="mt-4 font-mono text-[clamp(1rem,0.85rem+0.6vw,1.35rem)] uppercase leading-snug tracking-[0.14em]">
+              Dress like you mean it.
             </h2>
-            <p className="mt-3 max-w-[34ch] text-[15px] leading-relaxed text-paper/75 md:text-[17px]">Small batches. Fixed prices. Be the first to know, straight to your WhatsApp or email.</p>
-          </div>
+            <p className="mt-2.5 text-[15px] leading-relaxed text-paper/80 md:text-[16px]">Your next everyday favourite is closer than you think. Discover the next Easypick lineup before it lands.</p>
+            <p className="mt-2.5 text-[15px] font-semibold md:text-[16px]">{next ? `${next.name}. Stay ready.` : "The next drop. Stay ready."}</p>
+            <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.14em] text-volt">First to know. First to pick.</p>
 
-          <div className="min-w-0">
-            <p className="index text-paper/85 md:text-right">
-              Every other Friday · 6 PM
-              <span aria-hidden className="mt-2 block h-0.5 w-10 bg-volt md:ml-auto" />
-            </p>
-            {/* The sign-up, on dark glass */}
-            <div className="mt-5 rounded-2xl border border-paper/15 bg-black/45 p-4 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-md md:mt-7 md:p-6">
+            {/* The sign-up, on dark glass, under the words */}
+            <div className="mt-5 rounded-2xl border border-paper/15 bg-black/45 p-4 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-md md:p-5">
               <AlertSignup dark source={next ? `drops-${next.slug}` : "drops"} />
             </div>
           </div>
@@ -133,7 +131,7 @@ export default async function DropsPage() {
                     <p className="mt-2 font-mono text-[13px]">Arrives {formatDropTime(d.releaseAt, { bs: true })}</p>
                   </div>
                   <div className="shrink-0">
-                    <Countdown to={d.releaseAt} label={d.name} size="sm" />
+                    <Countdown to={d.releaseAt} label={d.name} size="sm" seconds />
                   </div>
                 </div>
                 <DropStrip pieces={of(d).map(toRailPiece)} label={d.name} soon />
