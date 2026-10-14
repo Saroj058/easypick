@@ -97,8 +97,22 @@ export function ProductStage({
 
       {/* The piece */}
       <div className="relative order-1 flex min-h-[62svh] items-center justify-center px-6 pb-4 pt-12 lg:order-2 lg:min-h-0 lg:px-10 lg:py-10">
-        {/* The Easypick mark, large and faint, behind the piece */}
-        <span aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 block aspect-[1024/1038] w-[92%] max-w-[640px] -translate-x-[44%] -translate-y-1/2 -rotate-6 bg-ink/[0.06]" style={{ maskImage: "url(/brand/mark-large.png)", WebkitMaskImage: "url(/brand/mark-large.png)", maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }} />
+        {/* A small stamp in the corner, like the woven label inside the piece: the Easypick mark in a ring
+            of the store's three words, turning slowly (still for people who ask for less motion). */}
+        <span aria-hidden className="pointer-events-none absolute bottom-4 left-5 block h-[84px] w-[84px] text-ink/45 lg:bottom-8 lg:left-8 lg:h-[96px] lg:w-[96px]">
+          <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full motion-safe:animate-[spin_26s_linear_infinite]">
+            <defs>
+              <path id="stamp-ring" d="M50 50 m-38 0 a38 38 0 1 1 76 0 a38 38 0 1 1 -76 0" />
+            </defs>
+            <text className="fill-current font-mono text-[9px] uppercase">
+              <textPath href="#stamp-ring" textLength="236" lengthAdjust="spacing">Pick it · Pay it · Wear it · Easypick ·</textPath>
+            </text>
+          </svg>
+          <span
+            className="absolute left-1/2 top-1/2 block aspect-[1024/1038] w-[30%] -translate-x-1/2 -translate-y-1/2 bg-current"
+            style={{ maskImage: "url(/brand/mark-large.png)", WebkitMaskImage: "url(/brand/mark-large.png)", maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }}
+          />
+        </span>
         {/* Its tag, small, on a string at the top corner: the fixed price and the measurements */}
         {tag && (
           <div aria-hidden className="pointer-events-none absolute right-3 top-10 z-10 h-[124px] w-[76px] lg:right-8 lg:top-0 lg:h-[168px] lg:w-[96px]">
