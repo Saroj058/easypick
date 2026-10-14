@@ -34,11 +34,11 @@ export type PickInput = { start: true } | { quick: Quick } | { text: string };
 const ACTIONS: PickAction[] = ["help-decide", "more", "cheaper", "restart", "change-budget", "change-style", "own-budget", "fit", "delivery", "compare", "skip"];
 
 const WORDS: Record<string, string> = {
-  partner: "someone special",
-  friend: "a friend",
-  family: "family",
-  self: "you",
-  someone: "someone",
+  partner: "for someone special",
+  friend: "for a friend",
+  family: "for family",
+  self: "for you",
+  someone: "for someone",
   birthday: "a birthday",
   anniversary: "an anniversary",
   valentine: "Valentine's",
@@ -167,7 +167,7 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
     return { messages: [{ text: lines.join(" ") }], state: s, quick: question("results", s, prices).quick, mood, ai: usedAi };
   }
 
-  const { cards, total } = recommend(products, s);
+  const { cards } = recommend(products, s);
   if (!cards.length) {
     const none = s.shown?.length ? "That's everything that matches. Want to widen it a little?" : "Nothing matches all of that right now. Let's loosen one thing.";
     return {
@@ -184,7 +184,8 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
     };
   }
   s = { ...s, shown: [...(s.shown ?? []), ...cards.map((c) => c.slug)] };
-  const intro = action === "more" ? "A few more:" : total > cards.length ? `Here's what I'd send, from ${total} that fit:` : "Here's what I'd send:";
+  // Style ranks pieces rather than filtering them, so no "from N that fit" count here.
+  const intro = action === "more" ? "A few more:" : "Here's what I'd send:";
   return {
     messages: [{ text: [...lines, intro].join(" ") }, { text: "", cards }],
     state: s,
