@@ -24,6 +24,7 @@ export function ProductStage({
   details,
   table,
   tag,
+  poses = [],
 }: {
   images: Img[];
   /** The piece cut out of its front photo (public/rack/<slug>.webp), when there is one. */
@@ -38,25 +39,29 @@ export function ProductStage({
   table: { head: string[]; rows: (string | number)[][] } | null;
   /** The hang tag of the piece (price and measurements), hung small at the top corner. */
   tag?: React.ReactNode;
+  /** The piece on the mannequin, in a few poses: views after its own photos. */
+  poses?: string[];
 }) {
   const [view, setView] = useState(0);
   const [measuring, setMeasuring] = useState(false);
+  const pose = view >= images.length ? poses[view - images.length] : null;
   const shown = images[Math.min(view, images.length - 1)];
   const floating = view === 0 && cutout;
+  const views = images.length + poses.length;
 
   return (
     <div className="relative grid h-full grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
       {/* The column: which view, and what the piece is. Its name is the page's heading on desktop. */}
       <div className="order-2 flex min-w-0 flex-col px-4 pb-8 pt-2 md:px-8 lg:order-1 lg:py-12 lg:pl-10 lg:pr-0">
         <div className="flex flex-1 gap-10 lg:items-center">
-          {images.length > 1 && (
+          {views > 1 && (
             <ol aria-label="Views of this piece" className="flex shrink-0 flex-row gap-1 max-lg:absolute max-lg:left-4 max-lg:top-3 lg:flex-col">
-              {images.map((img, i) => (
+              {Array.from({ length: views }, (_, i) => (
                 <li key={i}>
                   <button
                     type="button"
                     aria-pressed={i === view}
-                    aria-label={`View ${i + 1}: ${img.kind}`}
+                    aria-label={i < images.length ? `View ${i + 1}: ${images[i].kind}` : `View ${i + 1}: on the mannequin`}
                     onClick={() => setView(i)}
                     onMouseEnter={() => setView(i)}
                     className={`flex h-9 w-9 cursor-pointer items-end pb-1.5 font-mono text-[12px] tabular-nums tracking-[0.1em] transition-colors duration-200 after:absolute after:bottom-0 after:left-0 after:h-px after:w-5 after:origin-left after:bg-ink after:transition-transform after:duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink relative ${i === view ? "text-ink after:scale-x-100" : "text-steel-dark after:scale-x-0 hover:text-ink"}`}
@@ -120,7 +125,13 @@ export function ProductStage({
             <div className="absolute left-1/2 top-4 w-[200px] origin-top -translate-x-1/2 scale-[0.38] [filter:drop-shadow(0_8px_12px_rgba(0,0,0,0.16))] lg:top-8 lg:scale-[0.48]">{tag}</div>
           </div>
         )}
-        {floating ? (
+        {pose ? (
+          // The piece on the mannequin: a white photograph on the white page, so it has no box
+          <div key={view} className="relative flex h-full max-h-[70svh] w-full animate-fade-up items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a compressed photograph from public/poses */}
+            <img src={pose} alt={`${name} on a mannequin`} draggable={false} className="max-h-[68svh] w-auto max-w-full object-contain mix-blend-multiply [filter:brightness(1.07)_contrast(1.04)] [mask-image:radial-gradient(ellipse_62%_64%_at_50%_50%,#000_80%,transparent_100%)]" />
+          </div>
+        ) : floating ? (
           <div className="relative flex h-full max-h-[70svh] w-full items-center justify-center">
             <span aria-hidden className="absolute inset-x-[22%] bottom-[2%] h-[5%] rounded-[50%] bg-ink/25 blur-2xl" />
             {/* eslint-disable-next-line @next/next/no-img-element -- the piece's own photo, cut out; already compressed */}

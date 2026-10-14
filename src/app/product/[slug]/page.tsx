@@ -14,6 +14,7 @@ import { ProductStage } from "@/components/product-stage";
 import { VaultStage } from "@/components/vault-stage";
 import { vaultPieces } from "@/components/home/vault";
 import { formatDropTime, formatPrice } from "@/lib/format";
+import { posesFor } from "@/lib/poses";
 import { RACK_CUTOUTS } from "@/lib/rack-cutouts";
 import { categoryLabels, site } from "@/lib/site";
 import { jsonLd as toJsonLd } from "@/lib/json-ld";
@@ -175,7 +176,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                   ? { head: ["Size", ...cols.map((c) => measureLabels[c])], rows: sizes.map((s) => [s, ...cols.map((c) => product.measurements[s]?.[c] ?? "–")]) }
                   : null
               }
-              tag={<HangTag product={product} size={sizes.includes("M") ? "M" : sizes[0]} className="[--hole:var(--color-paper)]" />}
+              poses={posesFor(product.slug)}
+            tag={<HangTag product={product} size={sizes.includes("M") ? "M" : sizes[0]} className="[--hole:var(--color-paper)]" />}
               details={[`${product.fit[0].toUpperCase()}${product.fit.slice(1)} fit · ${product.gender}`, ...product.details]}
             />
           </div>
