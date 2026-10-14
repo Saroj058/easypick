@@ -97,6 +97,8 @@ export function ProductStage({
 
       {/* The piece */}
       <div className="relative order-1 flex min-h-[62svh] items-center justify-center px-6 pb-4 pt-12 lg:order-2 lg:min-h-0 lg:px-10 lg:py-10">
+        {/* The Easypick mark, large and faint, behind the piece */}
+        <span aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 block aspect-[1024/1038] w-[92%] max-w-[640px] -translate-x-[44%] -translate-y-1/2 -rotate-6 bg-ink/[0.06]" style={{ maskImage: "url(/brand/mark-large.png)", WebkitMaskImage: "url(/brand/mark-large.png)", maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }} />
         {/* Its tag, small, on a string at the top corner: the fixed price and the measurements */}
         {tag && (
           <div aria-hidden className="pointer-events-none absolute right-3 top-10 z-10 h-[124px] w-[76px] lg:right-8 lg:top-0 lg:h-[168px] lg:w-[96px]">

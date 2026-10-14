@@ -169,6 +169,11 @@ const KINDS: [RegExp, string][] = [
   [/cargo|carpenter|pant|trouser/, "cargo"],
 ];
 const BY_CATEGORY: Record<Category, string> = { tees: "tee", hoodies: "hoodie", jackets: "jacket", bottoms: "cargo", "co-ords": "set", accessories: "cap" };
+/** The stand-in picture for a product with no photo (`/stand-ins/<kind>.webp`), or null when there is none for its kind. */
+export function standInSrc(name: string, category: Category): string | null {
+  const kind = standIn(name, category);
+  return kind ? `/stand-ins/${kind}.webp` : null;
+}
 function standIn(name: string, category: Category): string | null {
   const n = name.toLowerCase();
   const kind = KINDS.find(([re]) => re.test(n))?.[1];

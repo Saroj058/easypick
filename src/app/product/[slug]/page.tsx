@@ -11,6 +11,8 @@ import { TrackView } from "@/components/track-view";
 import { ProductGrid } from "@/components/product-card";
 import { RecordView } from "@/components/saved";
 import { ProductStage } from "@/components/product-stage";
+import { VaultStage } from "@/components/vault-stage";
+import { vaultPieces } from "@/components/home/vault";
 import { formatDropTime, formatPrice } from "@/lib/format";
 import { RACK_CUTOUTS } from "@/lib/rack-cutouts";
 import { categoryLabels, site } from "@/lib/site";
@@ -51,6 +53,10 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
   const [drop, all] = await Promise.all([product.dropSlug ? getDrop(product.dropSlug) : null, getProducts()]);
   const related = all.filter((p) => p.slug !== product.slug && p.category === product.category).slice(0, 4);
   const more = related.length ? related : all.filter((p) => p.slug !== product.slug).slice(0, 4);
+  // A Vault piece: the brand's other pieces in the Vault (or the whole Vault, if the brand has no others).
+  const inVault = product.vault ? vaultPieces(all) : [];
+  const sameBrand = inVault.filter((p) => p.brand && p.brand === product.brand);
+  const siblings = sameBrand.length > 1 ? sameBrand : inVault;
 
   const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
   const sizes = (Object.keys(product.measurements) as Size[]).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
@@ -97,110 +103,153 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
 
       {/* The first screen: the piece alone in the middle with a quiet column beside it, and the buying
           panel down the right on a faint tint. One column on phones. */}
-      <section className="border-b border-ink/10 lg:grid lg:min-h-[calc(100svh-88px)] lg:grid-cols-[minmax(0,1fr)_minmax(380px,31%)]">
-        {/* The stage stays in view while a long buying panel scrolls beside it */}
-        <div className="relative lg:sticky lg:top-[88px] lg:h-[calc(100svh-88px)] lg:self-start">
-          <nav aria-label="Breadcrumb" className="absolute right-4 top-4 z-10 font-mono text-[12px] uppercase tracking-[0.14em] text-steel-dark lg:left-10 lg:right-auto lg:top-6">
-            <ol className="flex gap-2">
-              <li>
-                <Link href="/shop" className="hover:text-ink hover:underline">
-                  Shop
-                </Link>
-              </li>
-              <li aria-hidden>/</li>
-              <li>
-                <Link href={`/shop?category=${product.category}`} className="hover:text-ink hover:underline">
-                  {categoryLabels[product.category]}
-                </Link>
-              </li>
-            </ol>
-          </nav>
-          <ProductStage
-            images={product.images}
-            cutout={RACK_CUTOUTS.has(product.slug) ? `/rack/${product.slug}.webp` : null}
-            category={product.category}
-            colour={product.colours[0]}
-            name={product.name}
-            description={product.shortDescription}
-            table={
-              cols.length > 0
-                ? { head: ["Size", ...cols.map((c) => measureLabels[c])], rows: sizes.map((s) => [s, ...cols.map((c) => product.measurements[s]?.[c] ?? "–")]) }
-                : null
-            }
-            tag={<HangTag product={product} size={sizes.includes("M") ? "M" : sizes[0]} className="[--hole:var(--color-paper)]" />}
-            details={[`${product.fit[0].toUpperCase()}${product.fit.slice(1)} fit · ${product.gender}`, ...product.details]}
-          />
-        </div>
-
-        <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-6">
-          <div className="lg:sticky lg:top-28">
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
-              {product.brand ? <span>{product.brand}</span> : drop ? <span>{drop.name}</span> : <span>{categoryLabels[product.category]}</span>}
+      {product.vault ? (
+        // A Vault piece: its own first screen (the piece floating over its brand's name, the brand's other pieces down the right).
+        <VaultStage
+          slug={product.slug}
+          name={product.name}
+          brand={product.brand ?? "The Vault"}
+          label={
+            <>
+              <span>{product.brand ?? "The Vault"}</span>
               {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
               {product.edition && (
                 <span className="text-ink">
                   {String(product.edition.no).padStart(2, "0")} / {String(product.edition.of).padStart(2, "0")}
                 </span>
               )}
-              {product.status === "scheduled" && drop && <span className="text-ink">Arrives {formatDropTime(drop.releaseAt, { bs: true })}</span>}
-              {/* The price itself is on the hang tag; this says what kind of price it is */}
-              <span className="ml-auto">Fixed price · VAT incl.</span>
-            </p>
-            {/* Phones only: the name, colour and price (on desktop the left column carries the name, and the
-                price is on the hang tag beside the piece, so the panel does not repeat them) */}
-            <div className="mt-5 flex items-start justify-between gap-6 lg:hidden">
-              <div className="min-w-0">
-                <h1 className="text-[22px] font-medium uppercase leading-snug tracking-[0.16em] md:text-[24px]">{product.name}</h1>
-                <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
-                  {product.colours[0].name} · {product.fit} fit
+            </>
+          }
+          price={product.salePrice ?? product.price}
+          was={product.salePrice ? product.price : undefined}
+          description={product.shortDescription}
+          image={product.images[0] ?? { src: null, alt: product.name, kind: "front" }}
+          category={product.category}
+          hex={product.colours[0].hex}
+          siblings={siblings.map((p) => ({ slug: p.slug, name: p.name, image: p.images[0] ?? { src: null, alt: p.name, kind: "front" }, category: p.category, hex: p.colours[0].hex }))}
+        >
+        <BuyPanel
+          slug={product.slug}
+          name={product.name}
+          price={product.price}
+          salePrice={product.salePrice}
+          colours={product.colours}
+          variants={product.variants}
+          status={product.status}
+          fit={product.fit}
+          // No on-model photos, so the "Model is … and wears …" note is left out.
+          category={product.category}
+          measurements={product.measurements}
+          vault={product.vault}
+          dropLabel={drop ? `Drops ${formatDropTime(drop.releaseAt)}` : undefined}
+        />
+        </VaultStage>
+      ) : (
+        <section className="border-b border-ink/10 lg:grid lg:min-h-[calc(100svh-88px)] lg:grid-cols-[minmax(0,1fr)_minmax(380px,31%)]">
+          {/* The stage stays in view while a long buying panel scrolls beside it */}
+          <div className="relative lg:sticky lg:top-[88px] lg:h-[calc(100svh-88px)] lg:self-start">
+            <nav aria-label="Breadcrumb" className="absolute right-4 top-4 z-10 font-mono text-[12px] uppercase tracking-[0.14em] text-steel-dark lg:left-10 lg:right-auto lg:top-6">
+              <ol className="flex gap-2">
+                <li>
+                  <Link href="/shop" className="hover:text-ink hover:underline">
+                    Shop
+                  </Link>
+                </li>
+                <li aria-hidden>/</li>
+                <li>
+                  <Link href={`/shop?category=${product.category}`} className="hover:text-ink hover:underline">
+                    {categoryLabels[product.category]}
+                  </Link>
+                </li>
+              </ol>
+            </nav>
+            <ProductStage
+              images={product.images}
+              cutout={RACK_CUTOUTS.has(product.slug) ? `/rack/${product.slug}.webp` : null}
+              category={product.category}
+              colour={product.colours[0]}
+              name={product.name}
+              description={product.shortDescription}
+              table={
+                cols.length > 0
+                  ? { head: ["Size", ...cols.map((c) => measureLabels[c])], rows: sizes.map((s) => [s, ...cols.map((c) => product.measurements[s]?.[c] ?? "–")]) }
+                  : null
+              }
+              tag={<HangTag product={product} size={sizes.includes("M") ? "M" : sizes[0]} className="[--hole:var(--color-paper)]" />}
+              details={[`${product.fit[0].toUpperCase()}${product.fit.slice(1)} fit · ${product.gender}`, ...product.details]}
+            />
+          </div>
+  
+          <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-6">
+            <div className="lg:sticky lg:top-28">
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
+                {product.brand ? <span>{product.brand}</span> : drop ? <span>{drop.name}</span> : <span>{categoryLabels[product.category]}</span>}
+                {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
+                {product.edition && (
+                  <span className="text-ink">
+                    {String(product.edition.no).padStart(2, "0")} / {String(product.edition.of).padStart(2, "0")}
+                  </span>
+                )}
+                {product.status === "scheduled" && drop && <span className="text-ink">Arrives {formatDropTime(drop.releaseAt, { bs: true })}</span>}
+                {/* The price itself is on the hang tag; this says what kind of price it is */}
+                <span className="ml-auto">Fixed price · VAT incl.</span>
+              </p>
+              {/* Phones only: the name, colour and price (on desktop the left column carries the name, and the
+                  price is on the hang tag beside the piece, so the panel does not repeat them) */}
+              <div className="mt-5 flex items-start justify-between gap-6 lg:hidden">
+                <div className="min-w-0">
+                  <h1 className="text-[22px] font-medium uppercase leading-snug tracking-[0.16em] md:text-[24px]">{product.name}</h1>
+                  <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
+                    {product.colours[0].name} · {product.fit} fit
+                  </p>
+                </div>
+                {/* The tag is small on a phone, so the price is said here too */}
+                <p className="shrink-0 text-right font-mono text-[21px] tabular-nums leading-snug">
+                  {formatPrice(product.salePrice ?? product.price)}
+                  {product.salePrice && <s className="block text-[13px] text-steel-dark">{formatPrice(product.price)}</s>}
                 </p>
               </div>
-              {/* The tag is small on a phone, so the price is said here too */}
-              <p className="shrink-0 text-right font-mono text-[21px] tabular-nums leading-snug">
-                {formatPrice(product.salePrice ?? product.price)}
-                {product.salePrice && <s className="block text-[13px] text-steel-dark">{formatPrice(product.price)}</s>}
-              </p>
+              <p className="mt-4 text-[15px] text-steel-dark lg:hidden">{product.shortDescription}</p>
+  
+              <div className="mt-6 border-t border-ink/15 pt-6 lg:mt-5">
+                <BuyPanel
+                  slug={product.slug}
+                  name={product.name}
+                  price={product.price}
+                  salePrice={product.salePrice}
+                  colours={product.colours}
+                  variants={product.variants}
+                  status={product.status}
+                  fit={product.fit}
+                  // No on-model photos, so the "Model is … and wears …" note is left out.
+                  category={product.category}
+                  measurements={product.measurements}
+                  vault={product.vault}
+                  dropLabel={drop ? `Drops ${formatDropTime(drop.releaseAt)}` : undefined}
+                />
+              </div>
+  
+              {/* Four plain promises, small */}
+              <ul className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-ink/15 pt-5 font-mono text-[12px] uppercase leading-snug tracking-[0.12em] text-ink/80">
+                {[
+                  { icon: Tag, a: "Fixed price", b: "Same in store" },
+                  { icon: Store, a: "Free pickup", b: "Kathmandu store" },
+                  { icon: RefreshCw, a: "Exchange", b: "Within 7 days" },
+                  { icon: Truck, a: "Delivery", b: "In the Valley" },
+                ].map(({ icon: Icon, a, b }) => (
+                  <li key={a} className="flex items-start gap-2">
+                    <Icon aria-hidden className="mt-px h-4 w-4 shrink-0" strokeWidth={1.5} />
+                    <span>
+                      {a}
+                      <span className="block text-steel-dark">{b}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p className="mt-4 text-[15px] text-steel-dark lg:hidden">{product.shortDescription}</p>
-
-            <div className="mt-6 border-t border-ink/15 pt-6 lg:mt-5">
-              <BuyPanel
-                slug={product.slug}
-                name={product.name}
-                price={product.price}
-                salePrice={product.salePrice}
-                colours={product.colours}
-                variants={product.variants}
-                status={product.status}
-                fit={product.fit}
-                // No on-model photos, so the "Model is … and wears …" note is left out.
-                category={product.category}
-                measurements={product.measurements}
-                vault={product.vault}
-                dropLabel={drop ? `Drops ${formatDropTime(drop.releaseAt)}` : undefined}
-              />
-            </div>
-
-            {/* Four plain promises, small */}
-            <ul className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-ink/15 pt-5 font-mono text-[12px] uppercase leading-snug tracking-[0.12em] text-ink/80">
-              {[
-                { icon: Tag, a: "Fixed price", b: "Same in store" },
-                { icon: Store, a: "Free pickup", b: "Kathmandu store" },
-                { icon: RefreshCw, a: "Exchange", b: "Within 7 days" },
-                { icon: Truck, a: "Delivery", b: "In the Valley" },
-              ].map(({ icon: Icon, a, b }) => (
-                <li key={a} className="flex items-start gap-2">
-                  <Icon aria-hidden className="mt-px h-4 w-4 shrink-0" strokeWidth={1.5} />
-                  <span>
-                    {a}
-                    <span className="block text-steel-dark">{b}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <div className="container-ep pb-24">
         {product.story && (
