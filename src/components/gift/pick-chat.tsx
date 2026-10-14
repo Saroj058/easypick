@@ -315,7 +315,7 @@ export function PickChat() {
         inputMode={askBudget ? "numeric" : "text"}
         staticPlaceholder={askBudget ? "Your budget, like 3000" : undefined}
         placeholders={["gift for my brother, under 3000", "birthday gift for my girlfriend", "something minimal for a friend", "hi Pick, how are you?"]}
-        className="mx-auto mt-3 max-w-[560px]"
+        className="mx-auto mt-3 max-w-[460px]"
       />
 
       <SendSheet

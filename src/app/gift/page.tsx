@@ -7,7 +7,6 @@ import { GiftCardPicker } from "@/components/gift/gift-card-picker";
 import { PickChat } from "@/components/gift/pick-chat";
 import { GiftPieces } from "@/components/gift/gift-pieces";
 import { toRailPiece } from "@/components/home/rail";
-import { GiftCardPicture } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
@@ -55,7 +54,7 @@ export default async function GiftPage() {
             <p className="mt-3 max-w-[40ch] text-base text-ink/75 md:mt-4 md:text-lg">Whether you know their style, their size, or neither, send them something they&apos;ll love.</p>
             {/* The two things to do, each with its own object: the box opens, the cards fan out. */}
             {/* The two things to do, as two plain buttons (owner, 15 Oct 2026: the box and fanned cards were too much). */}
-            <nav aria-label="Start a gift" className="mt-6 flex gap-2.5 md:mt-8 md:max-w-[440px]">
+            <nav aria-label="Start a gift" className="mt-7 flex gap-2.5 md:mt-9 md:max-w-[440px]">
               <a href="#pieces" className="group inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink px-5 text-[14px] font-semibold text-paper transition-[background-color,scale] duration-150 hover:bg-[#222] active:scale-[0.98]">
                 Send a piece
                 <ArrowIcon className="h-3.5 w-3.5 rotate-90 transition-transform duration-200 group-hover:translate-y-0.5" />
@@ -66,15 +65,12 @@ export default async function GiftPage() {
               </a>
             </nav>
             {/* Already holding a gift card: checked right here in the opening (owner, 14 Oct 2026), straight on the picture, no panel. */}
-            <section id="balance" aria-labelledby="balance-h" className="mt-5 scroll-mt-24 md:max-w-[440px]">
-              <div className="flex items-center gap-3">
-                <span className="block w-11 shrink-0 -rotate-3" aria-hidden>
-                  <GiftCardPicture amount={null} side="back" className="shadow-[0_6px_14px_-8px_rgba(0,0,0,0.5)]" />
-                </span>
-                <h2 id="balance-h" className="display text-[20px] leading-none">
+            <section id="balance" aria-labelledby="balance-h" className="mt-7 scroll-mt-24 border-t border-ink/10 pt-5 md:mt-8 md:max-w-[440px]">
+              <div className="flex items-baseline gap-2 text-[14px]">
+                <h2 id="balance-h" className="font-semibold">
                   Got a gift card?
                 </h2>
-                <p className="text-[13px] text-steel-dark">See what&apos;s left on it.</p>
+                <span className="text-steel-dark">See what&apos;s left on it.</span>
               </div>
               <div className="mt-2.5">
                 <BalanceCheck />

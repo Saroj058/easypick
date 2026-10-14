@@ -6,7 +6,6 @@ import { useActionState, useState } from "react";
 import { checkBalance, type BalanceState } from "@/app/wallet-actions";
 import { formatPrice } from "@/lib/format";
 import { GiftCardPicture } from "./gift-card-art";
-import { FlowButton } from "./ui/flow-button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./ui/sheet";
 
 const day = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kathmandu", day: "numeric", month: "long", year: "numeric" });
@@ -24,8 +23,9 @@ export function BalanceCheck() {
   const found = state.status === "ok" ? state : null;
 
   return (
-    <form action={action} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 md:gap-x-6">
-      <div className="mx-auto w-full max-w-[380px]">
+    <form action={action}>
+      {/* The code and Check in one slim pill */}
+      <div className="flex h-12 items-center gap-2 rounded-full border border-ink/20 bg-paper/90 p-1.5 pl-5 transition-[border-color,box-shadow] focus-within:border-ink focus-within:shadow-[0_0_0_3px_rgba(10,10,10,0.06)]">
         <label htmlFor="bal-code" className="sr-only">
           Gift card code
         </label>
@@ -38,11 +38,13 @@ export function BalanceCheck() {
           autoComplete="off"
           spellCheck={false}
           aria-describedby="bal-result"
-          className="h-12 w-full rounded-full border border-steel-dark bg-paper px-5 text-center font-mono text-base uppercase outline-none transition-colors placeholder:text-steel-dark focus:border-ink focus:ring-1 focus:ring-ink"
+          className="h-full min-w-0 flex-1 bg-transparent font-mono text-base uppercase tracking-[0.04em] outline-none placeholder:text-steel md:text-[15px]"
         />
+        <button type="submit" disabled={pending} className="inline-flex h-full shrink-0 cursor-pointer items-center rounded-full bg-ink px-5 text-[13px] font-semibold text-paper transition-[background-color,scale] hover:bg-[#222] active:scale-[0.97] disabled:cursor-wait disabled:opacity-60">
+          {pending ? "Checking" : "Check"}
+        </button>
       </div>
-      <FlowButton type="submit" text={pending ? "Checking" : "Check"} disabled={pending} solid />
-      <div id="bal-result" role={state.status === "error" ? "alert" : "status"} className="col-span-2 text-center">
+      <div id="bal-result" role={state.status === "error" ? "alert" : "status"} className="mt-2 empty:mt-0">
         {found && (
           <p className="text-[14px]">
             <span className="font-mono text-lg font-semibold">{formatPrice(found.balance)}</span> left · valid until {day.format(new Date(found.expiresAt))}
