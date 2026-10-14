@@ -3,7 +3,6 @@ import Image from "next/image";
 
 import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
-import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicker } from "@/components/gift/gift-card-picker";
 import { PickChat } from "@/components/gift/pick-chat";
 import { GiftPieces } from "@/components/gift/gift-pieces";
@@ -55,35 +54,15 @@ export default async function GiftPage() {
             </h1>
             <p className="mt-3 max-w-[40ch] text-base text-ink/75 md:mt-4 md:text-lg">Whether you know their style, their size, or neither, send them something they&apos;ll love.</p>
             {/* The two things to do, each with its own object: the box opens, the cards fan out. */}
-            <nav aria-label="Start a gift" className="mt-6 grid gap-3 sm:grid-cols-2 md:mt-8 md:max-w-[440px] md:grid-cols-1">
-              <a href="#pieces" className="gift-tile on-dark group relative flex h-[88px] items-center overflow-hidden rounded-2xl bg-ink pl-5 text-paper shadow-[0_14px_30px_-18px_rgba(0,0,0,0.6)] transition-transform duration-150 active:scale-[0.99] md:h-[104px]">
-                <span className="relative z-10">
-                  <span className="display block text-[26px] leading-none">Send a piece</span>
-                  <span className="mt-1.5 flex items-center gap-1.5 text-[13px] text-paper/70">
-                    Wrapped in the box <ArrowIcon className="h-3.5 w-3.5 rotate-90 transition-transform duration-200 group-hover:translate-y-0.5" />
-                  </span>
-                </span>
-                <GiftBox className="absolute -right-2 bottom-[-18px] w-[118px]" />
+            {/* The two things to do, as two plain buttons (owner, 15 Oct 2026: the box and fanned cards were too much). */}
+            <nav aria-label="Start a gift" className="mt-6 flex gap-2.5 md:mt-8 md:max-w-[440px]">
+              <a href="#pieces" className="group inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink px-5 text-[14px] font-semibold text-paper transition-[background-color,scale] duration-150 hover:bg-[#222] active:scale-[0.98]">
+                Send a piece
+                <ArrowIcon className="h-3.5 w-3.5 rotate-90 transition-transform duration-200 group-hover:translate-y-0.5" />
               </a>
-              <a href="#buy" className="group relative flex h-[88px] items-center overflow-hidden rounded-2xl border border-ink/15 bg-paper/85 pl-5 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-transform duration-150 active:scale-[0.99] md:h-[104px]">
-                <span className="relative z-10">
-                  <span className="display block text-[26px] leading-none">Send a gift card</span>
-                  <span className="mt-1.5 flex items-center gap-1.5 text-[13px] text-steel-dark">
-                    They choose anything <ArrowIcon className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-                  </span>
-                </span>
-                {/* Three of the cards, held like a hand: they spread when the tile is pointed at */}
-                <span className="absolute -right-3 top-1/2 block h-[84px] w-[120px] -translate-y-1/2" aria-hidden>
-                  <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[-14deg] transition-transform duration-300 group-hover:rotate-[-24deg]">
-                    <GiftCardPicture amount={20000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]" />
-                  </span>
-                  <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[-4deg] transition-transform duration-300 group-hover:rotate-[-8deg]">
-                    <GiftCardPicture amount={5000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]" />
-                  </span>
-                  <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[6deg] transition-transform duration-300 group-hover:rotate-[10deg]">
-                    <GiftCardPicture amount={2000} className="shadow-[0_8px_18px_-8px_rgba(0,0,0,0.6)]" />
-                  </span>
-                </span>
+              <a href="#buy" className="group inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-ink/25 bg-paper/80 px-5 text-[14px] font-semibold transition-[border-color,scale] duration-150 hover:border-ink active:scale-[0.98]">
+                Send a gift card
+                <ArrowIcon className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </a>
             </nav>
             {/* Already holding a gift card: checked right here in the opening (owner, 14 Oct 2026), straight on the picture, no panel. */}
