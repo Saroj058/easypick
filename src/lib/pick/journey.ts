@@ -152,11 +152,10 @@ export function question(stage: Stage, s: PickState, prices: number[]): { text: 
       return {
         text: "",
         quick: [
+          // Three, to keep his bubble small; comparing and starting again work by typing (or the ↺ icon).
           { label: "Show me more", action: "more" },
           { label: "Something cheaper", action: "cheaper" },
-          { label: "A different style", action: "change-style" },
-          { label: "Compare the first two", action: "compare" },
-          { label: "Start again", action: "restart" },
+          { label: "Another style", action: "change-style" },
         ],
       };
   }

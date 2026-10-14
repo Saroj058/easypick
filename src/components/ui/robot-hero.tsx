@@ -442,6 +442,7 @@ export function RobotPrototype({
   contain = false,
   moodRef,
   still = false,
+  followRef,
 }: {
   neckParams?: Record<string, number>;
   bodyParams?: Record<string, number>;
@@ -461,6 +462,8 @@ export function RobotPrototype({
   moodRef?: RefObject<RobotMood>;
   /** The visitor asked for less motion: no wandering, hopping or scanning. */
   still?: boolean;
+  /** An element that gets --pick-x (0 to 1 across the frame) every frame. */
+  followRef?: RefObject<HTMLElement | null>;
 }) {
   const glow = useRef(1);
   const shadowRef = useRef<THREE.Mesh>(null);
@@ -552,11 +555,13 @@ export function RobotPrototype({
     let pulse = 1;
     /** Where the body goes, -1 to 1 across the frame; null: wherever it is looking. */
     let at: number | null = null;
-    // A new mood brings Pick to the middle for a moment (over the chat); thinking and listening
-    // keep him there. Otherwise he strolls the whole width.
+    // Thinking, listening and the first moments of a reply: he stops where he is, so his thought
+    // bubble (which follows him) is easy to read. While a reply is up he strolls slowly.
     const holding = mood === "thinking" || mood === "listening" || (mood !== "idle" && mood !== "inactive" && since < 3.5);
+    const half = contain ? Math.max(0.5, state.viewport.width / 2 - 0.5) : state.viewport.width / 3.5;
+    if (!holding && mood !== "idle" && mood !== "inactive") pace = 0.35;
     if (ptr && (!pointed || mood === "thinking") && (holding || mood === "inactive")) {
-      if (holding) at = 0;
+      if (holding) at = Math.max(-1, Math.min(1, bodyRef.current.position.x / half));
       switch (mood) {
         case "thinking":
           // Looks this way and that, quickly; the helmet glows brighter and dimmer.
@@ -629,6 +634,8 @@ export function RobotPrototype({
       bodyRef.current.position.x = THREE.MathUtils.lerp(bodyRef.current.position.x, targetPosX, config.moveSpeed * dt);
     }
     if (shadowRef.current) shadowRef.current.position.x = bodyRef.current.position.x;
+    // Tells the page where he is (0 = left edge, 1 = right), for the bubble over his head.
+    if (followRef?.current) followRef.current.style.setProperty("--pick-x", (0.5 + bodyRef.current.position.x / state.viewport.width).toFixed(4));
 
     // Contained, it looks where it is going (or, standing still, where the mood points it).
     const relativeX = contain ? Math.max(-1.2, Math.min(1.2, tx - bodyRef.current.position.x / Math.max(0.5, maxMoveX))) : tx - bodyRef.current.position.x / 2.5;
@@ -1128,9 +1135,12 @@ export function RobotCharacter({
   mood = "idle",
   pantallaColor = "#c6ff3d",
   className,
+  followRef,
 }: {
   loved?: boolean;
   mood?: RobotMood;
+  /** Gets --pick-x every frame, so something (a thought bubble) can follow him. */
+  followRef?: RefObject<HTMLElement | null>;
   /** The glow of its helmet. The site's lime by default. */
   pantallaColor?: string;
   className?: string;
@@ -1193,7 +1203,7 @@ export function RobotCharacter({
         <ambientLight intensity={0.85} />
         <directionalLight position={[2, 4, 3]} intensity={0.6} />
         <StudioLight />
-        <RobotPrototype pantallaColor={pantallaColor} loved={loved} pointerRef={pointer} contain moodRef={moodRef} still={still} />
+        <RobotPrototype pantallaColor={pantallaColor} loved={loved} pointerRef={pointer} contain moodRef={moodRef} still={still} followRef={followRef} />
       </Canvas>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUp, Minus, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowUp, RotateCcw, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,103 +14,98 @@ import { ProductImage } from "../product-image";
 import type { RobotMood } from "../ui/robot-hero";
 import { SendSheet } from "./gift-pieces";
 
-// Pick, the gift page's robot, as a real helper: a short chat that asks one thing at a time (who
-// it's for, the occasion, their style, a budget, the size), or reads a typed sentence, then shows
-// real pieces from the catalogue with why each one fits. "Send this" opens the same send-as-gift
-// form as the strip below. Every answer comes from /api/pick (lib/pick/turn.ts).
-// The conversation is kept for this tab only (sessionStorage), and only gift preferences are in it.
+// Pick, the gift page's robot. No chat window: a small thought bubble over his head that walks with
+// him. Ask him something (a tap or a few words) and the bubble thinks, then answers, with a few
+// quick answers and, when he has them, up to three real pieces. Only the latest exchange shows.
+// All of the thinking is on the server (/api/pick, lib/pick/turn.ts); this only draws it.
+// What he knows (gift preferences only) is kept for this tab in sessionStorage.
 
 const Robot = dynamic(() => import("../ui/robot-hero").then((m) => m.RobotCharacter), { ssr: false, loading: () => null });
 
-const KEY = "ep-pick-v1";
+const KEY = "ep-pick-v2";
 
-type Line = { from: "pick" | "you"; text: string; cards?: PickCard[] };
-interface Saved {
-  lines: Line[];
-  state: PickState;
+interface Bubble {
+  text: string;
+  cards?: PickCard[];
   quick: Quick[];
-  open: boolean;
+}
+interface Saved {
+  state: PickState;
+  bubble: Bubble;
+  /** The customer's last words, shown small over his answer. */
+  said?: string;
+  hidden?: boolean;
 }
 
-const START: Saved = {
-  lines: [{ from: "pick", text: `${GREETING} ${question("recipient", {}, []).text}` }],
+const FIRST: Saved = {
   state: {},
-  quick: question("recipient", {}, []).quick,
-  open: true,
+  bubble: { text: `${GREETING} ${question("recipient", {}, []).text}`, quick: question("recipient", {}, []).quick },
 };
-
-function load(): Saved | null {
-  try {
-    const raw = sessionStorage.getItem(KEY);
-    if (!raw) return null;
-    const v = JSON.parse(raw) as Saved;
-    return Array.isArray(v.lines) && v.lines.length ? v : null;
-  } catch {
-    return null;
-  }
-}
 
 export function PickChat() {
   const still = useReducedMotion();
-  const [chat, setChat] = useState<Saved>(START);
-  const [restored, setRestored] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [now, setNow] = useState<Saved>(FIRST);
+  const [ready, setReady] = useState(false);
+  const [thinking, setThinking] = useState(false);
   const [mood, setMood] = useState<RobotMood>("greeting");
   const [text, setText] = useState("");
   const [askBudget, setAskBudget] = useState(false);
-  const [typed, setTyped] = useState<number | null>(null); // characters shown of the newest line
+  const [typed, setTyped] = useState<number | null>(null);
   const [sending, setSending] = useState<PickCard | null>(null);
-  const log = useRef<HTMLDivElement>(null);
+  const band = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
 
   // Pick up where they left off in this tab.
   useEffect(() => {
-    const saved = load();
-    if (saved) setChat(saved);
-    setRestored(true);
+    try {
+      const raw = sessionStorage.getItem(KEY);
+      if (raw) {
+        const v = JSON.parse(raw) as Saved;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage is only readable after mount
+        if (typeof v?.bubble?.text === "string") setNow(v);
+      }
+    } catch {
+      // Nothing kept: start fresh.
+    }
+    setReady(true);
     const t = setTimeout(() => setMood((m) => (m === "greeting" ? "curious" : m)), 1800);
     return () => clearTimeout(t);
   }, []);
   useEffect(() => {
-    if (!restored) return;
+    if (!ready) return;
     try {
-      sessionStorage.setItem(KEY, JSON.stringify(chat));
+      sessionStorage.setItem(KEY, JSON.stringify(now));
     } catch {
-      // Private mode: the chat just isn't kept.
+      // Private mode: not kept.
     }
-  }, [chat, restored]);
+  }, [now, ready]);
 
-  // The newest line from Pick types itself out, quickly. Never with reduced motion.
-  const newest = chat.lines[chat.lines.length - 1];
+  // His answer types itself out, quickly (not with reduced motion).
+  const line = now.bubble.text;
   useEffect(() => {
-    if (!restored || still || newest?.from !== "pick" || !newest.text) return;
+    if (!ready || still || !line) return;
     let n = 0;
-    const step = Math.max(2, Math.ceil(newest.text.length / 28));
+    const step = Math.max(2, Math.ceil(line.length / 30));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- starts typing out a new answer
     setTyped(0);
     const id = setInterval(() => {
       n += step;
-      if (n >= newest.text.length) {
+      if (n >= line.length) {
         clearInterval(id);
         setTyped(null);
       } else setTyped(n);
     }, 18);
     return () => clearInterval(id);
-  }, [newest, still, restored]);
+  }, [line, still, ready]);
 
-  // New lines scroll the chat, never the page.
-  useEffect(() => {
-    const el = log.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: still ? "auto" : "smooth" });
-  }, [chat.lines.length, pending, still]);
-
-  const send = useCallback(
+  const ask = useCallback(
     async (body: { quick: Quick } | { text: string }, said: string) => {
-      if (pending) return;
-      setPending(true);
+      if (thinking) return;
+      const before = now;
+      setThinking(true);
       setMood("thinking");
       setAskBudget(false);
-      const before = chat;
-      setChat((c) => ({ ...c, lines: [...c.lines, { from: "you", text: said }], quick: [] }));
+      setNow((c) => ({ ...c, said, hidden: false }));
       try {
         const res = await fetch("/api/pick", {
           method: "POST",
@@ -120,241 +115,214 @@ export function PickChat() {
         });
         if (!res.ok) throw new Error(res.status === 429 ? "busy" : "failed");
         const r = (await res.json()) as PickReply;
-        setChat((c) => ({
-          ...c,
+        setNow({
           state: r.state,
-          quick: r.quick,
-          lines: [...c.lines, ...r.messages.filter((m) => m.text || m.cards?.length).map((m) => ({ from: "pick" as const, text: m.text, cards: m.cards }))],
-        }));
+          said,
+          bubble: { text: r.messages.map((m) => m.text).filter(Boolean).join(" "), cards: r.messages.flatMap((m) => m.cards ?? []), quick: r.quick },
+        });
         setAskBudget(r.input === "budget");
         setMood(moodFor(r.mood));
         if (r.input === "budget") requestAnimationFrame(() => field.current?.focus());
       } catch (e) {
-        // Nothing is lost: their answers stay, and the same buttons come back.
-        setChat((c) => ({
-          ...c,
-          quick: before.quick,
-          lines: [
-            ...c.lines,
-            {
-              from: "pick",
-              text:
-                e instanceof Error && e.message === "busy"
-                  ? "That's a lot of messages at once. Give me a moment, then try again."
-                  : "I lost my connection for a second. Your answers are safe, so just try that again. You can also browse every piece below.",
-            },
-          ],
-        }));
+        // Nothing is lost: what he knew stays, and the same answers come back.
+        setNow({
+          ...before,
+          said,
+          bubble: {
+            ...before.bubble,
+            text:
+              e instanceof Error && e.message === "busy"
+                ? "That's a lot at once. Give me a moment, then try again."
+                : "Hmm, I lost my train of thought. Try that again? You can also browse every piece below.",
+          },
+        });
         setMood("reassuring");
       } finally {
-        setPending(false);
+        setThinking(false);
       }
     },
-    [chat, pending],
+    [now, thinking],
   );
 
   const choose = (q: Quick) => {
-    if (q.action === "own-budget") {
-      setAskBudget(true);
-      setChat((c) => ({ ...c, lines: [...c.lines, { from: "you", text: q.label }, { from: "pick", text: "Sure. Type it in rupees, like 3000." }], quick: [] }));
-      setMood("listening");
-      requestAnimationFrame(() => field.current?.focus());
-      return;
-    }
     if (q.action === "restart") {
-      setChat({ ...START, lines: [{ from: "pick", text: `Fresh start. ${question("recipient", {}, []).text}` }] });
+      setNow({ state: {}, bubble: { text: `Fresh start. ${question("recipient", {}, []).text}`, quick: question("recipient", {}, []).quick } });
       setMood("greeting");
       setAskBudget(false);
       return;
     }
-    void send({ quick: q }, q.label);
+    if (q.action === "own-budget") {
+      setAskBudget(true);
+      setNow((c) => ({ ...c, said: q.label, bubble: { text: "Sure. Type it below, in rupees.", quick: [] } }));
+      setMood("listening");
+      requestAnimationFrame(() => field.current?.focus());
+      return;
+    }
+    void ask({ quick: q }, q.label);
   };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const t = text.trim();
-    if (!t || pending) return;
+    if (!t || thinking) return;
     setText("");
-    // A number on its own, when Pick asked for a budget, is the budget.
     const n = askBudget ? Number(t.replace(/[^0-9]/g, "")) : NaN;
-    if (askBudget && n > 0) void send({ quick: { label: t, set: { budget: n } } }, `Under ${formatPrice(n)}`);
-    else void send({ text: t }, t);
+    if (askBudget && n > 0) void ask({ quick: { label: t, set: { budget: n } } }, `Under ${formatPrice(n)}`);
+    else void ask({ text: t }, t);
   };
 
   const pick = (c: PickCard) => {
     setSending(c);
-    setChat((s) => ({ ...s, state: { ...s.state, picked: c.slug }, lines: [...s.lines, { from: "pick", text: `Great pick. ${c.name} it is. Now the note, the wrap and where it goes.` }] }));
+    setNow((s) => ({ ...s, state: { ...s.state, picked: c.slug }, said: c.name, bubble: { ...s.bubble, text: `Great pick. ${c.name} it is. Now the note, the wrap and where it goes.` } }));
     setMood("happy");
   };
 
-  const setOpen = (open: boolean) => {
-    setChat((c) => ({ ...c, open }));
-    setMood(open ? "curious" : "inactive");
-  };
-
-  const shownText = (l: Line, i: number) => (i === chat.lines.length - 1 && typed !== null && l.from === "pick" ? l.text.slice(0, typed) : l.text);
-  const ready = typed === null && !pending;
+  const shown = typed === null ? line : line.slice(0, typed);
+  const settled = typed === null && !thinking;
+  const open = !now.hidden;
 
   return (
     <section aria-label="Pick, your gift helper">
-      {/* Pick himself, free across the whole width of the screen: he strolls from side to side,
-          follows the pointer over his band, and comes to the middle, over the chat, to talk. */}
-      <div className="relative mx-[calc(50%-50vw)] h-[150px] md:h-[200px]">
-        <Robot mood={chat.open ? mood : "inactive"} loved={mood === "happy"} className="absolute inset-0" />
-      </div>
-
-      <div className="mx-auto max-w-[780px]">
-        <AnimatePresence initial={false} mode="wait">
-          {chat.open ? (
+      {/* Pick walks the whole width of the screen; his bubble walks with him (--pick-x is set by the robot). */}
+      <div ref={band} className="relative mx-[calc(50%-50vw)] [--pick-x:0.5]">
+        {/* Room for the bubble, which grows upward from just over his head */}
+        <div className="relative flex min-h-[170px] items-end pb-6">
+        <AnimatePresence>
+          {open && (
             <motion.div
-              key="open"
-              initial={still ? false : { opacity: 0, y: 8, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={still ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.98 }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              className="relative overflow-hidden rounded-2xl border border-ink bg-paper"
+              key="bubble"
+              initial={still ? false : { opacity: 0, scale: 0.85, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={still ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 8 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              // Above his head, following him, never off the edge of the screen.
+              className="relative z-10 w-[min(340px,calc(100vw-24px))] origin-bottom -translate-x-1/2"
+              style={{ left: "clamp(calc(min(340px, 100vw - 24px) / 2 + 12px), calc(var(--pick-x) * 100%), calc(100% - min(340px, 100vw - 24px) / 2 - 12px))" }}
             >
-              <header className="flex items-center gap-2 border-b border-ink/10 px-4 py-2.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-volt opacity-70 motion-safe:animate-ping" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7fb800]" />
-                </span>
-                <h2 className="text-[14px] font-semibold">Pick</h2>
-                <span className="text-[12px] text-steel-dark">your gift helper</span>
-                <span className="ml-auto flex gap-1">
-                  <button type="button" onClick={() => choose({ label: "Start again", action: "restart" })} className="grid h-9 w-9 cursor-pointer place-items-center rounded-full hover:bg-mist" aria-label="Start again">
-                    <RotateCcw aria-hidden className="h-4 w-4" />
+              {now.said && (
+                <p className="mb-1.5 ml-auto w-fit max-w-[80%] truncate rounded-full bg-ink px-3 py-1 text-[12px] text-paper" aria-label="You said">
+                  {now.said}
+                </p>
+              )}
+              <div className="relative rounded-[22px] border border-ink bg-paper px-4 py-3 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.45)]">
+                <span className="absolute right-1.5 top-1.5 flex">
+                  <button type="button" onClick={() => choose({ label: "Start again", action: "restart" })} aria-label="Start again" className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-steel-dark hover:bg-mist hover:text-ink">
+                    <RotateCcw aria-hidden className="h-3.5 w-3.5" />
                   </button>
-                  <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 cursor-pointer place-items-center rounded-full hover:bg-mist" aria-label="Minimise Pick">
-                    <Minus aria-hidden className="h-4 w-4" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNow((c) => ({ ...c, hidden: true }));
+                      setMood("idle");
+                    }}
+                    aria-label="Hide Pick's bubble"
+                    className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-steel-dark hover:bg-mist hover:text-ink"
+                  >
+                    <X aria-hidden className="h-4 w-4" />
                   </button>
                 </span>
-              </header>
 
-              {/* The conversation: scrolls inside, so the page never jumps */}
-              <div ref={log} role="log" aria-live="polite" aria-label="Chat with Pick" className="max-h-[min(440px,58vh)] space-y-2.5 overflow-y-auto overscroll-contain px-4 py-4">
-                {chat.lines.map((l, i) =>
-                  l.cards?.length ? (
-                    <ul key={i} className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:thin]" aria-label="Pick's suggestions">
-                      {l.cards.map((c) => (
-                        <PickCardView key={c.slug} card={c} onSend={() => pick(c)} />
+                <div aria-live="polite" className="pr-14">
+                  {thinking ? (
+                    <p className="flex h-6 items-center gap-1.5" role="status" aria-label="Pick is thinking">
+                      {[0, 1, 2].map((d) => (
+                        <span key={d} className="h-2 w-2 rounded-full bg-ink/45 motion-safe:animate-bounce" style={{ animationDelay: `${d * 130}ms` }} />
                       ))}
-                    </ul>
+                    </p>
                   ) : (
-                    <motion.p
-                      key={i}
-                      initial={still || i < 1 ? false : { opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.22 }}
-                      className={
-                        l.from === "pick"
-                          ? "max-w-[92%] whitespace-pre-line rounded-2xl rounded-tl-md bg-mist/70 px-3.5 py-2.5 text-[15px] leading-snug"
-                          : "ml-auto w-fit max-w-[85%] rounded-2xl rounded-tr-md bg-ink px-3.5 py-2.5 text-[15px] leading-snug text-paper"
-                      }
-                    >
-                      {shownText(l, i)}
-                    </motion.p>
-                  ),
-                )}
-                {pending && (
-                  <p className="flex w-fit items-center gap-1 rounded-2xl rounded-tl-md bg-mist/70 px-3.5 py-3" role="status" aria-label="Pick is thinking">
-                    {[0, 1, 2].map((d) => (
-                      <span key={d} className="h-1.5 w-1.5 rounded-full bg-ink/50 motion-safe:animate-bounce" style={{ animationDelay: `${d * 120}ms` }} />
+                    <p className="whitespace-pre-line text-[14.5px] leading-snug">{shown}</p>
+                  )}
+                </div>
+
+                {settled && now.bubble.cards && now.bubble.cards.length > 0 && (
+                  <ul className="mt-2.5 space-y-1.5" aria-label="Pick's suggestions">
+                    {now.bubble.cards.map((c) => (
+                      <MiniCard key={c.slug} card={c} onSend={() => pick(c)} />
                     ))}
-                  </p>
+                  </ul>
+                )}
+
+                {settled && now.bubble.quick.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label="Quick answers">
+                    {now.bubble.quick.map((q) => (
+                      <button
+                        key={q.label}
+                        type="button"
+                        onClick={() => choose(q)}
+                        className="inline-flex h-8 cursor-pointer items-center rounded-full border border-ink/20 px-3 text-[12.5px] font-semibold transition-[border-color,background-color,color,scale] duration-150 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.97]"
+                      >
+                        {q.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-
-              {/* Quick answers: the whole journey works with these alone */}
-              {ready && chat.quick.length > 0 && (
-                <div className="flex flex-wrap gap-2 px-4 pb-3" role="group" aria-label="Quick answers">
-                  {chat.quick.map((q) => (
-                    <button
-                      key={q.label}
-                      type="button"
-                      onClick={() => choose(q)}
-                      className="inline-flex h-9 cursor-pointer items-center rounded-full border border-ink/20 bg-paper px-3.5 text-[13px] font-semibold transition-[border-color,background-color,color,scale] duration-150 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.97]"
-                    >
-                      {q.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <form onSubmit={submit} className="flex items-center gap-2 border-t border-ink/10 px-3 py-2.5">
-                <label htmlFor="pick-say" className="sr-only">
-                  Message Pick
-                </label>
-                <input
-                  ref={field}
-                  id="pick-say"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  onFocus={() => !pending && setMood("listening")}
-                  onBlur={() => !pending && setMood((m) => (m === "listening" ? "curious" : m))}
-                  maxLength={400}
-                  autoComplete="off"
-                  enterKeyHint="send"
-                  inputMode={askBudget ? "numeric" : "text"}
-                  placeholder={askBudget ? "Your budget, like 3000" : "Or type: birthday, brother, under 3000"}
-                  className="h-11 min-w-0 flex-1 rounded-full bg-mist/60 px-4 text-base outline-none transition-shadow placeholder:text-steel focus:shadow-[0_0_0_2px_var(--color-ink)] md:text-[14px]"
-                />
-                <button type="submit" disabled={pending || !text.trim()} aria-label="Send" className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-ink text-paper transition-[opacity,scale] active:scale-95 disabled:cursor-default disabled:opacity-30">
-                  <ArrowUp aria-hidden className="h-5 w-5" />
-                </button>
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div key="closed" initial={still ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-center">
-              <button type="button" onClick={() => setOpen(true)} className="group inline-flex h-12 cursor-pointer items-center gap-2.5 rounded-full border border-ink bg-paper pl-4 pr-5 text-[14px] font-semibold transition-colors hover:bg-ink hover:text-paper">
-                <Sparkles aria-hidden className="h-4 w-4" />
-                Ask Pick for a gift idea
-              </button>
+              {/* The thought trail down to his head */}
+              <span aria-hidden className="absolute -bottom-3 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-ink bg-paper" />
+              <span aria-hidden className="absolute -bottom-[22px] left-[calc(50%+6px)] h-1.5 w-1.5 rounded-full border border-ink bg-paper" />
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
+        <div className="relative h-[150px] md:h-[180px]">
+          <Robot mood={open ? mood : "inactive"} loved={mood === "happy"} followRef={band} className="absolute inset-0" />
+        </div>
       </div>
+
+      {/* One short line to talk to him */}
+      <form onSubmit={submit} className="mx-auto mt-2 flex max-w-[460px] items-center gap-2">
+        <label htmlFor="pick-say" className="sr-only">
+          Ask Pick
+        </label>
+        <input
+          ref={field}
+          id="pick-say"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onFocus={() => {
+            if (now.hidden) setNow((c) => ({ ...c, hidden: false }));
+            if (!thinking) setMood("listening");
+          }}
+          onBlur={() => !thinking && setMood((m) => (m === "listening" ? "curious" : m))}
+          maxLength={200}
+          autoComplete="off"
+          enterKeyHint="send"
+          inputMode={askBudget ? "numeric" : "text"}
+          placeholder={askBudget ? "Your budget, like 3000" : "Ask Pick… birthday, brother, under 3000"}
+          className="h-11 min-w-0 flex-1 rounded-full border border-ink/20 bg-paper px-4 text-base outline-none transition-[border-color,box-shadow] placeholder:text-steel focus:border-ink focus:shadow-[0_0_0_3px_rgba(10,10,10,0.08)] md:text-[14px]"
+        />
+        <button type="submit" disabled={thinking || !text.trim()} aria-label="Send" className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-ink text-paper transition-[opacity,scale] active:scale-95 disabled:cursor-default disabled:opacity-30">
+          <ArrowUp aria-hidden className="h-5 w-5" />
+        </button>
+      </form>
 
       <SendSheet
         piece={sending}
-        initial={sending && chat.state.sizing === "known" && chat.state.size && sending.sizes.includes(chat.state.size) ? { size: chat.state.size } : undefined}
+        initial={sending && now.state.sizing === "known" && now.state.size && sending.sizes.includes(now.state.size) ? { size: now.state.size } : undefined}
         onClose={() => setSending(null)}
       />
     </section>
   );
 }
 
-/** A suggested piece: the real photo, name, price, what's in stock, and why it fits. */
-function PickCardView({ card, onSend }: { card: PickCard; onSend: () => void }) {
-  const one = card.sizes.length === 1 && card.sizes[0] === "ONE";
+/** A suggested piece, small: photo, name, price, why; and Send this. */
+function MiniCard({ card, onSend }: { card: PickCard; onSend: () => void }) {
   return (
-    <li className="w-[200px] shrink-0 snap-start overflow-hidden rounded-2xl border border-ink/15 bg-paper md:w-[218px]">
-      <div className="relative aspect-[5/4] overflow-hidden bg-[#efefef]">
-        <span className="absolute inset-x-0 -top-[12%] block">
-          <ProductImage image={card.image ?? { src: null, alt: card.name, kind: "front" }} category={card.category} colourHex={card.colourHex} decorative sizes="220px" />
+    <li className="flex items-center gap-2.5 rounded-xl bg-mist/60 p-1.5 pr-2">
+      <span className="relative block h-12 w-11 shrink-0 overflow-hidden rounded-lg bg-[#efefef]">
+        <span className="absolute inset-x-0 -top-[6%] block">
+          <ProductImage image={card.image ?? { src: null, alt: card.name, kind: "front" }} category={card.category} colourHex={card.colourHex} decorative sizes="48px" />
         </span>
-        {card.few && <span className="absolute left-2 top-2 rounded-full bg-paper/90 px-2 py-0.5 text-[11px] font-semibold">Few left</span>}
-      </div>
-      <div className="p-3">
-        <p className="truncate font-semibold leading-tight">{card.name}</p>
-        <p className="mt-0.5 font-mono text-[13px] tabular-nums">
-          {formatPrice(card.price)}
-          {card.was && <span className="ml-1.5 text-steel-dark line-through">{formatPrice(card.was)}</span>}
-        </p>
-        <p className="mt-1 truncate text-[12px] text-steel-dark">
-          {one ? "One size" : card.sizes.join(" · ")}
-          {card.colours.length > 1 ? ` · ${card.colours.length} colours` : ""}
-        </p>
-        <p className="mt-2 line-clamp-3 min-h-[3.4em] text-[12.5px] leading-snug">{card.why}</p>
-        <div className="mt-3 flex gap-2">
-          <Link href={`/product/${card.slug}?from=gift`} className="inline-flex h-9 flex-1 items-center justify-center rounded-full border border-ink/25 text-[12.5px] font-semibold transition-colors hover:border-ink">
-            View
-          </Link>
-          <button type="button" onClick={onSend} className="inline-flex h-9 flex-[1.4] cursor-pointer items-center justify-center rounded-full bg-volt text-[12.5px] font-semibold transition-[background-color,scale] hover:bg-[#b5f020] active:scale-[0.97]">
-            Send this
-          </button>
-        </div>
-      </div>
+      </span>
+      <Link href={`/product/${card.slug}?from=gift`} className="min-w-0 flex-1" title={card.why}>
+        <span className="block truncate text-[13px] font-semibold leading-tight hover:underline">{card.name}</span>
+        <span className="block truncate text-[11.5px] text-steel-dark">
+          <span className="font-mono text-ink">{formatPrice(card.price)}</span> · {card.why}
+        </span>
+      </Link>
+      <button type="button" onClick={onSend} className="inline-flex h-8 shrink-0 cursor-pointer items-center rounded-full bg-volt px-3 text-[12px] font-semibold transition-[background-color,scale] hover:bg-[#b5f020] active:scale-[0.97]">
+        Send this
+      </button>
     </li>
   );
 }
