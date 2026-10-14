@@ -374,6 +374,48 @@ describe("paying for a gift with a gift card", () => {
   });
 });
 
+describe("a gift bag: several pieces as one gift", () => {
+  const sendBag = async (items: unknown, buyer: string) => {
+    const f = new FormData();
+    f.set("items", JSON.stringify(items));
+    f.set("receiverName", "Sita");
+    f.set("receiverEmail", "sita.bag@test.dev");
+    f.set("receiverPhone", "9811000999");
+    f.set("buyerPhone", buyer);
+    f.set("provider", "esewa");
+    f.set("method", "pickup");
+    try {
+      const r = await placeGiftOrder({ status: "idle" }, f);
+      return { error: r.status === "error" ? r.message : null, id: null as string | null };
+    } catch (e) {
+      const digest = (e as { digest?: string }).digest ?? "";
+      if (!digest.startsWith("NEXT_REDIRECT")) throw e;
+      return { error: null, id: digest.match(/\/pay\/([0-9a-f-]{36})/)?.[1] ?? null };
+    }
+  };
+
+  it("makes one order with every piece, each in its chosen size, priced from the catalogue", async () => {
+    h.ip = "198.51.100.31";
+    const { getProducts } = await import("@/lib/store");
+    const live = (await getProducts()).filter((p) => p.status === "live" && p.variants.some((v) => v.stock > 1));
+    const picks = live.slice(0, 3).map((p) => p.variants.find((v) => v.stock > 1)!);
+    const r = await sendBag(picks.map((v) => v.sku), "9811000910");
+    expect(r.error).toBeNull();
+    const order = await findOrder(r.id!);
+    expect(order!.lines.map((l) => l.sku)).toEqual(picks.map((v) => v.sku));
+    expect(order!.gift!.mode).toBe("set");
+    const expected = live.slice(0, 3).reduce((n, p) => n + (p.salePrice ?? p.price), 0);
+    expect(order!.subtotal).toBe(expected);
+  });
+
+  it("refuses an unreadable or oversized gift bag, and unknown pieces", async () => {
+    h.ip = "198.51.100.32";
+    expect((await sendBag("not-a-list", "9811000911")).error).toMatch(/gift bag changed/);
+    expect((await sendBag(Array.from({ length: 7 }, (_, i) => `X-${i}`), "9811000911")).error).toMatch(/gift bag changed/);
+    expect((await sendBag(["NOPE-000"], "9811000911")).error).toMatch(/isn't available/);
+  });
+});
+
 describe("piece gift sending", () => {
   const inDays = (n: number) => {
     const d = new Date(`${kathmanduToday()}T12:00:00Z`);

@@ -230,3 +230,28 @@ test("gift card: chosen on the Gift page, filled in a sheet over it; no separate
   await expect(page.locator("#gc-remail-hint")).toContainText(/Check the email/);
   await page.screenshot(shot(`gift-cards-${info.project.name}`));
 });
+
+test("gift bag: pieces from the gift strip, sent together as one gift; add to bag from a shop card @phone", async ({ page }) => {
+  test.slow();
+  // Shop card: the bag button adds the piece (a size first, when it isn't known).
+  await page.goto("/shop");
+  await page.getByRole("button", { name: /^Add .* to bag$/ }).first().click();
+  const sizes = page.getByRole("group", { name: /^Size for/ });
+  if (await sizes.count()) await sizes.getByRole("button").first().click();
+  await expect(page.getByText(/Added .* to your bag\./)).toBeVisible();
+  // Gift page: the centre card's gift button fills the gift bag.
+  await page.goto("/gift");
+  await page.getByRole("button", { name: /to the gift bag$/ }).click();
+  const g = page.getByRole("group", { name: /^Size for/ });
+  if (await g.count()) await g.getByRole("button").first().click();
+  await expect(page.getByText(/to your gift bag\./)).toBeVisible();
+  await page.getByRole("link", { name: /^Gift bag · 1 piece/ }).click();
+  // The Bag page opens on the gift bag; sent together in the usual form.
+  await expect(page.getByRole("tab", { name: /Gift bag/ })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", { name: "Send as one gift" }).click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("heading", { name: "The pieces" })).toBeVisible({ timeout: 60_000 });
+  await sheet.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByText("Your gift bag is empty.")).toBeVisible();
+});

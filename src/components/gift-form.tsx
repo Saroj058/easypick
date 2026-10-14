@@ -12,6 +12,7 @@ import { site } from "@/lib/site";
 import type { Product, Size } from "@/lib/types";
 import { GiftNote } from "./gift/gift-box";
 import { KnownField } from "./known-field";
+import type { GiftBagItem } from "@/lib/gift-bag";
 import { useMe, usePrefilled } from "./session";
 import { PayWith } from "./pay-with";
 import { ProductImage } from "./product-image";
@@ -159,13 +160,17 @@ export function GiftForm({
   festival = null,
   initial,
   sheet = false,
+  pieces,
 }: {
   product: Product;
   festival?: GiftFestival;
   initial?: { colour?: string; size?: string };
   /** In a pop-up: the piece and the steps stay at the top, the total and the button at the foot. */
   sheet?: boolean;
+  /** A gift bag: several pieces, each in the size chosen when it was added (sent as "I know their size"). */
+  pieces?: GiftBagItem[];
 }) {
+  const bag = pieces && pieces.length > 0 ? pieces : null;
   const me = useMe();
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<GiftState, FormData>(placeGiftOrder, { status: "idle" });
@@ -185,7 +190,7 @@ export function GiftForm({
   const oneSize = product.variants.every((v) => v.size === "ONE");
   const startColour = product.colours.find((c) => c.name === initial?.colour)?.name ?? product.colours[0].name;
   const startSize = product.variants.find((v) => v.colour === startColour && v.size === initial?.size && v.size !== "ONE" && v.stock - (v.lastPieceOnFloor ? 1 : 0) > 0)?.size ?? null;
-  const [mode, setMode] = useState<"pick" | "set">(oneSize || startSize ? "set" : "pick");
+  const [mode, setMode] = useState<"pick" | "set">(bag || oneSize || startSize ? "set" : "pick");
   const [colour, setColour] = useState(startColour);
   const [size, setSize] = useState<Size | null>(oneSize ? "ONE" : startSize);
   const [message, setMessage] = useState("");
@@ -203,7 +208,7 @@ export function GiftForm({
   const [deliverOn, setDeliverOn] = useState("");
 
   const senderName = anonymous ? null : (sender ?? me?.name ?? "").trim() || null;
-  const price = product.salePrice ?? product.price;
+  const price = bag ? bag.reduce((n, x) => n + x.price, 0) : (product.salePrice ?? product.price);
   const sizes = product.variants.filter((v) => v.colour === colour && v.size !== "ONE");
   const deliveryFee = (mode === "set" && method === "pickup") || price >= site.delivery.freeAbove ? 0 : site.delivery.flatFee;
   const wrapFee = wrap === "premium" ? site.gifting.premiumWrapFee : 0;
@@ -263,7 +268,7 @@ export function GiftForm({
   function next() {
     setHint("");
     setHintField(null);
-    if (step === 0 && mode === "set" && !size) return fail("Pick their size, or let them pick.");
+    if (step === 0 && mode === "set" && !size && !bag) return fail("Pick their size, or let them pick.");
     if (step === 1 && !receiverName.trim()) return fail("Add their name, so the card is for them.", "g-rname");
     goTo(Math.min(step + 1, STEPS.length - 1));
   }
@@ -309,6 +314,7 @@ export function GiftForm({
       <input type="hidden" name="size" value={size ?? ""} />
       <input type="hidden" name="showPrice" value={showPrice ? "on" : ""} />
       <input type="hidden" name="giftCard" value={card?.code ?? ""} />
+      {bag && <input type="hidden" name="items" value={JSON.stringify(bag.map((x) => x.sku))} />}
 
       {/* The piece and where they are in it. In the pop-up it stays at the top while the step scrolls. */}
       <div className={sheet ? "sticky top-0 z-20 border-b border-ink/10 bg-paper px-5 pb-3 pt-5" : "mb-6"}>
@@ -318,9 +324,9 @@ export function GiftForm({
               <ProductImage image={product.images[0] ?? { src: null, alt: product.name, kind: "front" }} category={product.category} colourHex={chosenHex} decorative sizes="40px" />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-[15px] font-semibold leading-tight">{product.name}</span>
+              <span className="block truncate text-[15px] font-semibold leading-tight">{bag ? `Gift bag · ${bag.length === 1 ? "1 piece" : `${bag.length} pieces`}` : product.name}</span>
               <span className="block text-[13px] text-steel-dark">
-                {colour} · <span className="font-mono tabular-nums">{formatPrice(price)}</span>
+                {bag ? "Together" : colour} · <span className="font-mono tabular-nums">{formatPrice(price)}</span>
               </span>
             </span>
           </div>
@@ -349,12 +355,33 @@ export function GiftForm({
 
       <div className={sheet ? "flex-1 px-5 pb-6 pt-5" : ""}>
         <h2 ref={headingRef} tabIndex={-1} className="text-[20px] font-semibold leading-tight outline-none">
-          {STEPS[step]}
+          {bag && step === 0 ? "The pieces" : STEPS[step]}
         </h2>
-        <p className="mt-1 text-[14px] text-steel-dark">{LEAD[step]}</p>
+        <p className="mt-1 text-[14px] text-steel-dark">{bag && step === 0 ? "One box, each piece in the size you chose." : LEAD[step]}</p>
 
         {/* 1. The piece */}
         <section hidden={step !== 0} className="mt-5 space-y-6">
+          {bag && (
+            <>
+              <ul className="divide-y divide-ink/10 rounded-xl border border-ink/15">
+                {bag.map((x) => (
+                  <li key={x.sku} className="flex items-baseline justify-between gap-3 px-4 py-3">
+                    <span className="min-w-0">
+                      <span className="block truncate text-[15px] font-medium">{x.name}</span>
+                      <span className="text-[13px] text-steel-dark">
+                        {x.colour}
+                        {x.size === "ONE" ? "" : `, ${x.size}`}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-mono text-[14px] tabular-nums">{formatPrice(x.price)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[13.5px] leading-relaxed text-steel-dark">Wrong size? They swap it within 14 days with the gift receipt. To change a piece, go back to your gift bag.</p>
+            </>
+          )}
+          {!bag && (
+          <>
           {oneSize && product.colours.length < 2 && <p className="text-[15px]">One size, one colour. Nothing to choose here.</p>}
           {!oneSize && (
             <fieldset className="flex flex-col">
@@ -426,6 +453,8 @@ export function GiftForm({
             <p className="text-[13.5px] leading-relaxed text-steel-dark" aria-label="How they choose">
               We email them a private link. They pick their size online or in our store, and we hold one for them until they do.
             </p>
+          )}
+          </>
           )}
         </section>
 
@@ -709,7 +738,15 @@ export function GiftForm({
           {/* What they're paying for, before they pay */}
           <div className="border-t border-ink/10 pt-4">
             <p className="font-semibold">
-              {product.name} <span className="font-normal text-steel-dark">· {colour} · {mode === "pick" ? "they pick the size" : size === "ONE" ? "one size" : `size ${size}`}</span>
+              {bag ? (
+                <>
+                  {bag.length} pieces <span className="font-normal text-steel-dark">· {bag.map((x) => x.name).join(", ")}</span>
+                </>
+              ) : (
+                <>
+                  {product.name} <span className="font-normal text-steel-dark">· {colour} · {mode === "pick" ? "they pick the size" : size === "ONE" ? "one size" : `size ${size}`}</span>
+                </>
+              )}
             </p>
             <p className="mt-0.5 text-[14px] text-steel-dark">
               For {receiverName.trim() || "them"}

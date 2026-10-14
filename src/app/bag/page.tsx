@@ -1,21 +1,45 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useSyncExternalStore } from "react";
 
 import { useBag } from "@/components/bag-provider";
+import { GiftBagList } from "@/components/gift/gift-bag";
+import { useGiftBag } from "@/lib/gift-bag";
 import { useMe } from "@/components/session";
 import { formatPrice } from "@/lib/format";
 import { site } from "@/lib/site";
 
+const noSubscribe = () => () => {};
+/** /bag?tab=gift opens on the gift bag. */
+const wantsGift = () => new URLSearchParams(window.location.search).get("tab") === "gift";
+
 export default function BagPage() {
   const { lines, ready, subtotal, setQty, remove } = useBag();
   const me = useMe();
+  const gifts = useGiftBag();
+  const linked = useSyncExternalStore(noSubscribe, wantsGift, () => false);
+  const [chosen, setTab] = useState<"bag" | "gift" | null>(null);
+  const tab = chosen ?? (linked ? "gift" : "bag");
+  const tabClass = (on: boolean) =>
+    `flex h-10 items-center justify-center gap-1.5 rounded-full px-4 text-[14px] font-semibold transition-colors ${on ? "bg-paper text-ink shadow-[0_1px_4px_rgba(0,0,0,0.12)]" : "text-ink/60 hover:text-ink"}`;
 
   return (
     <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">
-      <h1 className="display text-[40px] md:text-[72px]">Bag</h1>
+      <h1 className="display text-[40px] md:text-[72px]">{tab === "gift" ? "Gift bag" : "Bag"}</h1>
+      {/* The bag, and the gift bag: pieces to send together as one gift */}
+      <div role="tablist" aria-label="Bags" className="mt-4 inline-grid grid-cols-2 gap-1 rounded-full bg-mist p-1">
+        <button type="button" role="tab" aria-selected={tab === "bag"} onClick={() => setTab("bag")} className={tabClass(tab === "bag")}>
+          Bag{ready && lines.length > 0 ? <span className="font-mono text-[12px] text-steel-dark">{lines.reduce((n, l) => n + l.qty, 0)}</span> : null}
+        </button>
+        <button type="button" role="tab" aria-selected={tab === "gift"} onClick={() => setTab("gift")} className={tabClass(tab === "gift")}>
+          Gift bag{gifts.length > 0 ? <span className="font-mono text-[12px] text-steel-dark">{gifts.length}</span> : null}
+        </button>
+      </div>
 
-      {!ready || me === undefined ? (
+      {tab === "gift" ? (
+        <GiftBagList />
+      ) : !ready || me === undefined ? (
         <div className="mt-10 h-40" aria-hidden />
       ) : lines.length === 0 ? (
         <div className="mt-10">

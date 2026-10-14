@@ -9,6 +9,8 @@ import { useAddToBag } from "@/components/bag-gate";
 import { useFitProfile } from "@/components/fit-finder";
 import { useBag } from "@/components/bag-provider";
 import { PriceTag } from "@/components/hang-tag";
+import { AddToBag } from "@/components/add-to-bag";
+import { addableFromRail } from "@/lib/addable";
 import { BagIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { useMe } from "@/components/session";
@@ -666,6 +668,8 @@ function ShelfRow({
               sizes="(min-width: 1280px) 300px, (min-width: 800px) 24vw, 190px"
               className="h-full overflow-hidden"
             />
+            {/* Add to bag, top right of the card */}
+            <AddToBag piece={addableFromRail(pieces[i])} className="absolute right-1 top-1 z-10" />
             {/* The price, on a tag tied to the bottom of the card and hanging under it. */}
             <PriceTag
               price={formatPrice(pieces[i].price)}

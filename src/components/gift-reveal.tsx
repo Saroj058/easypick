@@ -53,6 +53,8 @@ export interface RevealData {
   /** Null unless the buyer chose to show the price. */
   price: number | null;
   line: { size: Size; colour: string; sku: string };
+  /** A gift bag: the other pieces in the box. */
+  more?: { name: string; colour: string; size: Size }[];
   product: {
     name: string;
     category: Category;
@@ -344,6 +346,22 @@ export function GiftReveal({ data }: { data: RevealData }) {
             </p>
             {data.price !== null && <p className="mt-1 font-mono text-[15px]">{formatPrice(data.price)}</p>}
           </div>
+        </div>
+      )}
+      {data.more && data.more.length > 0 && (
+        <div className="gift-rise mt-6 rounded-xl bg-mist/50 px-5 py-4 [--i:2]">
+          <p className="text-[13px] text-steel-dark">Also in the box</p>
+          <ul className="mt-1.5 space-y-1">
+            {data.more.map((m, i) => (
+              <li key={i} className="text-[15px]">
+                <span className="font-semibold">{m.name}</span>{" "}
+                <span className="text-steel-dark">
+                  · {m.colour}
+                  {m.size === "ONE" ? "" : `, ${m.size}`}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

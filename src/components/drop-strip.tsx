@@ -9,6 +9,8 @@ import { formatPrice } from "@/lib/format";
 import { useMySize } from "@/lib/my-size";
 import type { BagLine } from "@/lib/types";
 import { PieceControls, type RailPiece } from "./home/rail-wall";
+import { addableFromRail } from "@/lib/addable";
+import { AddToBag } from "./add-to-bag";
 import { PriceTag } from "./hang-tag";
 import { ArrowIcon } from "./icons";
 import { ProductImage } from "./product-image";
@@ -63,7 +65,7 @@ function look(d: number, still: boolean, ghost: boolean) {
   };
 }
 
-export function DropStrip({ pieces, label, soon = false, controls, tags = false, big = false, href = (p) => `/product/${p.slug}` }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode; /** A price tag hangs on every card. */ tags?: boolean; /** Larger cards. */ big?: boolean; /** Where a tap on the centre card goes. */ href?: (piece: DropPiece) => string }) {
+export function DropStrip({ pieces, label, soon = false, controls, tags = false, big = false, href = (p) => `/product/${p.slug}`, addTo = "bag" }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode; /** A price tag hangs on every card. */ tags?: boolean; /** Larger cards. */ big?: boolean; /** Where a tap on the centre card goes. */ href?: (piece: DropPiece) => string; /** The centre card's add button: the bag, or (gift page) the gift bag. */ addTo?: "bag" | "gift" }) {
   const router = useRouter();
   const mySize = useMySize();
   /** The piece being bought in the pop-up (the rail's Buy now, without leaving the page). */
@@ -282,6 +284,14 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
             </button>
           );
         })}
+        {!soon && (
+          <AddToBag
+            key={piece.id}
+            piece={addableFromRail(piece)}
+            to={addTo}
+            className={`absolute left-[calc(50%-var(--w)/2+2px)] z-30 ${tags ? "top-[calc(50%-36px-var(--w)*0.55+2px)]" : "top-[calc(50%-var(--w)*0.55+2px)]"}`}
+          />
+        )}
       </div>
 
       {/* How far along the strip: a thin line, in place of arrows */}

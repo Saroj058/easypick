@@ -72,7 +72,9 @@ export default async function GiftRevealPage({ params }: PageProps<"/g/[token]">
     // Whether to ask for a number for the rider (never the number itself).
     needsPhone: !g.receiverPhone,
     // Only sent to the page when the buyer chose to show it.
-    price: g.showPrice ? line.unitPrice * line.qty : null,
+    price: g.showPrice ? order.lines.reduce((n, l) => n + l.unitPrice * l.qty, 0) : null,
+    // A gift bag: the other pieces in the box.
+    more: order.lines.slice(1).map((l) => ({ name: l.name, colour: l.colour, size: l.size })),
     line: { size: line.size, colour: line.colour, sku: line.sku },
     product: product
       ? {

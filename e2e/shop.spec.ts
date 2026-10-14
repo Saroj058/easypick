@@ -51,13 +51,13 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search), the
   await page.keyboard.press("Escape");
   await expect(pay).toHaveCount(0);
   // ...and the bag button adds it without leaving, then the bag's total shows.
-  await first.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
+  await first.getByRole("button", { name: /^Add Everyday Hoodie in / }).click();
   await expect(first.getByRole("button", { name: "Everyday Hoodie is in your bag" })).toBeVisible();
   await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
   // Undo takes it back out; adding again puts it back.
   await rail.getByRole("button", { name: /^Undo/ }).click();
-  await expect(first.getByRole("button", { name: /^Add Everyday Hoodie/ })).toBeEnabled();
-  await first.getByRole("button", { name: /^Add Everyday Hoodie/ }).click();
+  await expect(first.getByRole("button", { name: /^Add Everyday Hoodie in / })).toBeEnabled();
+  await first.getByRole("button", { name: /^Add Everyday Hoodie in / }).click();
   await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
   await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
   // The measurements in cm for the size chosen.

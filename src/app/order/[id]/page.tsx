@@ -1,3 +1,4 @@
+import { ForgetGiftBag } from "@/components/gift/gift-bag";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -201,6 +202,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
   return (
     <div className="container-ep max-w-3xl pb-24 pt-10 md:pt-16">
       {order.source === "bag" && paid && <ClearBag orderId={order.id} skus={order.lines.map((l) => l.sku)} />}
+      {/* A gift sent from the gift bag: those pieces leave it once paid. */}
+      {order.gift && paid && <ForgetGiftBag skus={order.lines.map((l) => l.sku)} />}
       <p className="text-sm font-semibold text-steel-dark">Order {order.number}</p>
       <h1 className="display mt-3 text-[40px] md:text-[72px]">{heading}</h1>
 

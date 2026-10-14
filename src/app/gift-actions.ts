@@ -79,10 +79,28 @@ async function giftOrderAllowed(buyerPhone: string): Promise<boolean> {
 export type GiftState = { status: "idle" } | { status: "error"; message: string };
 
 export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<GiftState> {
+  // A gift bag (owner, 15 Oct 2026): several pieces as one gift, each in the size chosen when it
+  // was added, so it goes as "I know their size". Up to 6 pieces, each checked against live stock.
+  const bag = readGiftBag(str(form, "items", 2000));
+  if (bag === "bad") return { status: "error", message: "Something in your gift bag changed. Refresh the page and try again." };
+  let mode: "pick" | "set";
+  let lines: Order["lines"];
+  if (bag) {
+    const all = await getProducts();
+    lines = [];
+    for (const sku of bag) {
+      const product = all.find((p) => p.status === "live" && p.variants.some((v) => v.sku === sku));
+      const v = product?.variants.find((x) => x.sku === sku);
+      if (!product || !v) return { status: "error", message: "A piece in your gift bag isn't available any more. Remove it and try again." };
+      if (sellable(v) <= 0) return { status: "error", message: `${product.name} (${v.colour}, ${v.size}) just sold out. Remove it from the gift bag, or choose another size.` };
+      lines.push({ sku: v.sku, slug: product.slug, name: product.name, size: v.size, colour: v.colour, unitPrice: product.salePrice ?? product.price, qty: 1 });
+    }
+    mode = "set";
+  } else {
   const product = (await getProducts()).find((p) => p.slug === str(form, "slug") && p.status === "live");
   if (!product) return { status: "error", message: "This piece isn't available to gift right now." };
 
-  const mode = str(form, "mode") === "set" ? "set" : "pick";
+  mode = str(form, "mode") === "set" ? "set" : "pick";
   const colour = product.colours.find((c) => c.name === str(form, "colour"))?.name ?? product.colours[0].name;
   const inStock = product.variants.filter((v) => v.colour === colour && sellable(v) > 0);
   if (inStock.length === 0) return { status: "error", message: `${product.name} is sold out in ${colour}. Try another colour.` };
@@ -91,6 +109,8 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
   const wanted = str(form, "size") as Size;
   const variant = inStock.find((v) => v.size === wanted) ?? (mode === "pick" ? inStock[Math.floor(inStock.length / 2)] : undefined);
   if (!variant) return { status: "error", message: "Pick their size." };
+  lines = [{ sku: variant.sku, slug: product.slug, name: product.name, size: variant.size, colour, unitPrice: product.salePrice ?? product.price, qty: 1 }];
+  }
 
   // Names and the message go into texts and emails to someone else: plain words only.
   const receiverName = cleanSenderName(str(form, "receiverName", 120), 60);
@@ -138,7 +158,7 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
 
   if (!(await giftOrderAllowed(buyerPhone))) return { status: "error", message: TOO_MANY };
 
-  const price = product.salePrice ?? product.price;
+  const price = lines.reduce((n, l) => n + l.unitPrice * l.qty, 0);
   const wrapFee = wrap === "premium" ? site.gifting.premiumWrapFee : 0;
   const deliveryFee = setPickup || price >= site.delivery.freeAbove ? 0 : site.delivery.flatFee;
   const token = randomBytes(18).toString("base64url");
@@ -167,7 +187,7 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
       method: setPickup ? "pickup" : "delivery",
       address,
       provider,
-      lines: [{ sku: variant.sku, slug: product.slug, name: product.name, size: variant.size, colour, unitPrice: price, qty: 1 }],
+      lines,
       subtotal: price,
       deliveryFee,
       wrapFee,
@@ -186,6 +206,20 @@ export async function placeGiftOrder(_prev: GiftState, form: FormData): Promise<
 
   // The receiver is emailed the link once payment is confirmed (lib/payments.ts).
   redirect(`/pay/${order.id}`);
+}
+
+/** The gift bag's pieces as SKUs: null when this isn't a gift bag, "bad" when it can't be read. */
+function readGiftBag(raw: string): string[] | null | "bad" {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw);
+    if (!Array.isArray(v) || v.length < 1 || v.length > 6) return "bad";
+    const skus = v.filter((x): x is string => typeof x === "string" && /^[A-Za-z0-9-]{1,40}$/.test(x));
+    if (skus.length !== v.length || new Set(skus).size !== skus.length) return "bad";
+    return skus;
+  } catch {
+    return "bad";
+  }
 }
 
 // ---------- Buy a gift card ----------

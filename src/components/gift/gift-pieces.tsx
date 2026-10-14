@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { formatPrice } from "@/lib/format";
+import { useGiftBag } from "@/lib/gift-bag";
 import { searchProducts } from "@/lib/search";
 import { categoryLabels } from "@/lib/site";
 import type { Category, Product } from "@/lib/types";
@@ -265,6 +266,7 @@ export function GiftPieces({
         )}
       </div>
 
+      <GiftBagLink />
       {shown.length > 0 ? (
         <>
           <DropStrip
@@ -274,6 +276,7 @@ export function GiftPieces({
             tags
             big
             href={(p) => `/product/${p.slug}?from=gift`}
+            addTo="gift"
             controls={(p) => (
               <SendControls piece={p} onSend={() => setSending(p)} />
             )}
@@ -416,6 +419,21 @@ function label(k: Kind) {
 
 function searchLabel(k: Kind) {
   return `Search ${k === "one" ? "one-size pieces" : label(k).toLowerCase()}`;
+}
+
+/** "Gift bag · 2 pieces →", once something is in it. */
+function GiftBagLink() {
+  const items = useGiftBag();
+  if (!items.length) return null;
+  return (
+    <p className="mt-4 text-center">
+      <Link href="/bag?tab=gift" className="inline-flex h-10 items-center gap-2 rounded-full bg-ink px-4 text-[13px] font-semibold text-paper">
+        <GiftIcon className="h-4 w-4" />
+        Gift bag · {items.length === 1 ? "1 piece" : `${items.length} pieces`}
+        <span aria-hidden>→</span>
+      </Link>
+    </p>
+  );
 }
 
 function kindChip(on: boolean) {
