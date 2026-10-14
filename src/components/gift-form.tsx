@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, Hourglass, Link2, Mail, Package, Ruler, Shirt, ShoppingBag, Store, Truck, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { placeGiftOrder, type GiftState } from "@/app/gift-actions";
@@ -16,7 +16,7 @@ import { ProductImage } from "./product-image";
 
 // scroll-mb: a focused field clears the pay bar that sticks to the bottom on phones.
 const input =
-  "mt-1.5 h-12 w-full scroll-mb-36 rounded-xl border border-ink/20 bg-paper px-4 text-base outline-none transition-[border-color,box-shadow] placeholder:text-steel focus:border-ink focus:shadow-[0_0_0_3px_rgba(10,10,10,0.08)] aria-[invalid=true]:border-2 aria-[invalid=true]:border-error-light";
+  "mt-1.5 h-11 w-full scroll-mb-36 rounded-xl border border-ink/20 bg-paper px-4 text-base outline-none transition-[border-color,box-shadow] placeholder:text-steel focus:border-ink focus:shadow-[0_0_0_3px_rgba(10,10,10,0.08)] aria-[invalid=true]:border-2 aria-[invalid=true]:border-error-light";
 const label = "block text-sm font-semibold";
 const help = "mt-1.5 text-[13px] text-steel-dark";
 const STEPS = ["The piece", "Your note", "Send and pay"] as const;
@@ -70,9 +70,6 @@ function Choice({
   onChange,
   title,
   note,
-  icon: Icon,
-  badge,
-  compact = false,
 }: {
   name: string;
   value: string;
@@ -80,32 +77,19 @@ function Choice({
   onChange: () => void;
   title: string;
   note?: string;
-  icon: LucideIcon;
-  /** A small word in the corner, like "Easiest". */
-  badge?: string;
-  /** Two side by side: the icon sits above the words. */
-  compact?: boolean;
 }) {
+  // Rows sit one under another and share their borders; the chosen one is outlined in ink.
   return (
-    <label className="relative block cursor-pointer">
+    <label className="relative -mt-px block cursor-pointer first-of-type:mt-0 [&:first-of-type>span]:rounded-t-xl [&:last-of-type>span]:rounded-b-xl">
       <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="peer sr-only" />
-      <span
-        className={`flex h-full gap-3 rounded-2xl border border-ink/15 p-4 transition-[border-color,background-color,box-shadow,scale] duration-150 hover:border-ink/40 active:scale-[0.99] peer-checked:border-ink peer-checked:bg-mist/50 peer-checked:shadow-[inset_0_0_0_1px_var(--color-ink)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink ${compact ? "flex-col pr-9" : "items-center pr-12"}`}
-      >
-        <span className={`grid shrink-0 place-items-center rounded-xl bg-paper ring-1 ring-ink/10 ${compact ? "h-9 w-9" : "h-11 w-11"}`}>
-          <Icon aria-hidden className={compact ? "h-[18px] w-[18px]" : "h-5 w-5"} strokeWidth={1.7} />
+      <span className="flex items-start gap-3 border border-ink/15 px-4 py-3 transition-colors hover:bg-mist/30 peer-checked:relative peer-checked:z-10 peer-checked:border-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
+        <span aria-hidden className={`mt-[3px] grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border transition-colors ${checked ? "border-ink" : "border-ink/35"}`}>
+          <span className={`h-2.5 w-2.5 rounded-full bg-ink transition-transform duration-150 ${checked ? "scale-100" : "scale-0"}`} />
         </span>
         <span className="min-w-0">
-          <span className="flex flex-wrap items-center gap-2 font-semibold leading-snug">
-            {title}
-            {badge && <span className="rounded-full bg-volt px-2 py-0.5 text-[11px] font-semibold">{badge}</span>}
-          </span>
+          <span className="block text-[15px] font-medium leading-snug">{title}</span>
           {note && <span className="mt-0.5 block text-[13px] leading-snug text-steel-dark">{note}</span>}
         </span>
-      </span>
-      {/* The radio dot */}
-      <span className="pointer-events-none absolute right-4 top-4 grid h-5 w-5 place-items-center rounded-full border border-ink/30 bg-paper transition-colors peer-checked:border-ink peer-checked:bg-ink" aria-hidden>
-        <span className={`h-2 w-2 rounded-full bg-paper transition-transform duration-200 ${checked ? "scale-100" : "scale-0"}`} />
       </span>
     </label>
   );
@@ -158,7 +142,7 @@ function MessageCard({
   price: string | null;
 }) {
   return (
-    <figure aria-label="Preview of the gift card" className={`rounded-2xl p-5 transition-colors duration-200 ${wrap === "premium" ? "bg-ink [--hole:var(--color-ink)]" : "bg-photo [--hole:var(--color-photo)]"}`}>
+    <figure aria-label="Preview of the gift card" className={`rounded-xl p-4 transition-colors duration-200 ${wrap === "premium" ? "bg-ink [--hole:var(--color-ink)]" : "bg-mist/50 [--hole:var(--color-mist)]"}`}>
       <GiftNote key={wrap} to={to} from={from} message={message} placeholder="Your note appears here." />
       <figcaption className={`mt-3 text-center text-[12px] ${wrap === "premium" ? "text-paper/70" : "text-steel-dark"}`}>
         {wrap === "premium" ? "In the premium black box" : "In an Easypick bag with tissue"} · {price ? `gift receipt shows ${price}` : "no price inside"}
@@ -283,61 +267,56 @@ export function GiftForm({
       <input type="hidden" name="showPrice" value={showPrice ? "on" : ""} />
 
       {/* The piece and where they are in it. In the pop-up it stays at the top while the step scrolls. */}
-      <div className={sheet ? "sticky top-0 z-20 border-b border-ink/10 bg-paper/95 px-5 pb-4 pt-5 backdrop-blur" : "mb-8"}>
+      <div className={sheet ? "sticky top-0 z-20 border-b border-ink/10 bg-paper px-5 pb-3 pt-5" : "mb-6"}>
         {sheet && (
-          <div className="mb-4 flex items-center gap-3 pr-10">
-            <span className="relative block h-16 w-14 shrink-0 overflow-hidden rounded-xl bg-[#efefef]">
-              <ProductImage image={product.images[0] ?? { src: null, alt: product.name, kind: "front" }} category={product.category} colourHex={chosenHex} decorative sizes="56px" />
+          <div className="mb-3.5 flex items-center gap-3 pr-10">
+            <span className="relative block h-12 w-10 shrink-0 overflow-hidden rounded-lg bg-[#efefef]">
+              <ProductImage image={product.images[0] ?? { src: null, alt: product.name, kind: "front" }} category={product.category} colourHex={chosenHex} decorative sizes="40px" />
             </span>
             <span className="min-w-0">
-              <span className="index block text-steel-dark">Send as a gift</span>
-              <span className="mt-0.5 block truncate font-semibold">{product.name}</span>
-              <span className="block font-mono text-[13px] tabular-nums text-steel-dark">
-                {colour} · {formatPrice(price)}
+              <span className="block truncate text-[15px] font-semibold leading-tight">{product.name}</span>
+              <span className="block text-[13px] text-steel-dark">
+                {colour} · <span className="font-mono tabular-nums">{formatPrice(price)}</span>
               </span>
             </span>
           </div>
         )}
-        <ol className="flex items-center gap-2" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+        <p className="text-[12.5px] text-steel-dark" aria-hidden>
+          Step {step + 1} of {STEPS.length}
+        </p>
+        {/* Finished steps can be opened again by their segment; later ones can't be skipped to. */}
+        <ol className="mt-1.5 grid grid-cols-3 gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
           {STEPS.map((s, i) => (
-            <li key={s} className={`flex min-w-0 items-center gap-2 ${i < STEPS.length - 1 ? "flex-1" : ""}`}>
-              {/* Finished steps can be opened again; later ones can't be skipped to. */}
+            <li key={s}>
               <button
                 type="button"
                 disabled={i >= step}
                 onClick={() => goTo(i)}
                 aria-current={i === step ? "step" : undefined}
-                className="group flex min-h-11 shrink-0 items-center gap-2 text-[13px] font-semibold disabled:cursor-default"
+                aria-label={`${i + 1}. ${s}`}
+                className="block w-full py-1 disabled:cursor-default"
               >
-                <span
-                  className={`grid h-7 w-7 place-items-center rounded-full font-mono text-[12px] transition-colors duration-200 ${
-                    i < step ? "bg-ink text-paper" : i === step ? "bg-volt text-ink ring-1 ring-ink" : "bg-mist text-steel-dark"
-                  }`}
-                >
-                  {i < step ? <Check aria-hidden className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
-                </span>
-                <span className={`whitespace-nowrap ${i === step ? "" : "text-steel-dark"} ${i < step ? "group-hover:text-ink group-hover:underline" : ""} ${i === step ? "" : "max-sm:hidden"}`}>{s}</span>
+                <span className={`block h-[3px] rounded-full transition-colors duration-300 ${i <= step ? "bg-ink" : "bg-ink/12"}`} />
               </button>
-              {i < STEPS.length - 1 && <span aria-hidden className={`h-px min-w-3 flex-1 ${i < step ? "bg-ink" : "bg-ink/15"}`} />}
             </li>
           ))}
         </ol>
       </div>
 
       <div className={sheet ? "flex-1 px-5 pb-6 pt-5" : ""}>
-        <h2 ref={headingRef} tabIndex={-1} className="display text-[30px] leading-none outline-none">
+        <h2 ref={headingRef} tabIndex={-1} className="text-[20px] font-semibold leading-tight outline-none">
           {STEPS[step]}
         </h2>
-        <p className="mt-1.5 text-[14px] text-steel-dark">{LEAD[step]}</p>
+        <p className="mt-1 text-[14px] text-steel-dark">{LEAD[step]}</p>
 
         {/* 1. The piece */}
-        <section hidden={step !== 0} className="mt-6 space-y-7">
-          {oneSize && product.colours.length < 2 && <p className="rounded-xl bg-mist/60 px-4 py-3 text-[15px]">One size, one colour. Nothing to choose here.</p>}
+        <section hidden={step !== 0} className="mt-5 space-y-6">
+          {oneSize && product.colours.length < 2 && <p className="text-[15px]">One size, one colour. Nothing to choose here.</p>}
           {!oneSize && (
-            <fieldset className="grid gap-3">
+            <fieldset className="flex flex-col">
               <legend className="sr-only">Who picks the size</legend>
-              <Choice name="modeUi" value="pick" checked={mode === "pick"} onChange={() => setMode("pick")} icon={Link2} title="Let them pick the size" note="They choose from a link, or try it on in our store." badge="Easiest" />
-              <Choice name="modeUi" value="set" checked={mode === "set"} onChange={() => setMode("set")} icon={Ruler} title="I know their size" note="We wrap it and deliver it to them, or you collect it." />
+              <Choice name="modeUi" value="pick" checked={mode === "pick"} onChange={() => setMode("pick")} title="Let them pick the size" note="They choose from a link, or try it on in our store." />
+              <Choice name="modeUi" value="set" checked={mode === "set"} onChange={() => setMode("set")} title="I know their size" note="We wrap it and deliver it to them, or you collect it." />
             </fieldset>
           )}
           {product.colours.length > 1 && (
@@ -358,7 +337,7 @@ export function GiftForm({
                       }}
                       className="peer sr-only"
                     />
-                    <span className="block h-11 w-11 rounded-full border border-ink/20 ring-offset-2 transition-shadow peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ink" style={{ background: c.hex }} />
+                    <span className="block h-9 w-9 rounded-full border border-ink/20 ring-offset-2 transition-shadow peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ink" style={{ background: c.hex }} />
                     <span className="sr-only">{c.name}</span>
                   </label>
                 ))}
@@ -400,31 +379,14 @@ export function GiftForm({
             </fieldset>
           )}
           {mode === "pick" && (
-            <div>
-              <p className={label}>How they choose</p>
-              <ol className="mt-3 grid grid-cols-3 gap-2" aria-label="How they choose">
-                {(
-                  [
-                    [Mail, "We email them a private link"],
-                    [Shirt, "They pick the size, online or in store"],
-                    [Hourglass, "We hold one for them until they do"],
-                  ] as const
-                ).map(([Icon, t], i) => (
-                  <li key={t} className="rounded-xl bg-mist/60 p-3">
-                    <span className="flex items-center justify-between">
-                      <Icon aria-hidden className="h-5 w-5" strokeWidth={1.7} />
-                      <span className="font-mono text-[11px] text-steel-dark">0{i + 1}</span>
-                    </span>
-                    <span className="mt-2 block text-[13px] leading-snug">{t}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <p className="text-[13.5px] leading-relaxed text-steel-dark" aria-label="How they choose">
+              We email them a private link. They pick their size online or in our store, and we hold one for them until they do.
+            </p>
           )}
         </section>
 
         {/* 2. Your note */}
-        <section hidden={step !== 1} className="mt-6 space-y-6">
+        <section hidden={step !== 1} className="mt-5 space-y-5">
           <div className={`grid gap-4 ${anonymous ? "" : "sm:grid-cols-2"}`}>
             <div>
               <label htmlFor="g-rname" className={label}>
@@ -475,10 +437,10 @@ export function GiftForm({
             </p>
           </div>
           <MessageCard to={receiverName} from={senderName} message={message} wrap={wrap} price={showPrice ? formatPrice(price) : null} />
-          <fieldset className="grid grid-cols-2 gap-3">
-            <legend className={`${label} mb-3`}>Wrapping</legend>
-            <Choice name="wrapUi" value="standard" checked={wrap === "standard"} onChange={() => setWrap("standard")} icon={ShoppingBag} title="Easypick bag" note="Tissue and a printed card. Free." compact />
-            <Choice name="wrapUi" value="premium" checked={wrap === "premium"} onChange={() => setWrap("premium")} icon={Package} title="Black box" note={`Sealed, with the card. ${formatPrice(site.gifting.premiumWrapFee)}.`} compact />
+          <fieldset className="flex flex-col">
+            <legend className={`${label} mb-2`}>Wrapping</legend>
+            <Choice name="wrapUi" value="standard" checked={wrap === "standard"} onChange={() => setWrap("standard")} title="Easypick bag" note="Tissue and a printed card. Free." />
+            <Choice name="wrapUi" value="premium" checked={wrap === "premium"} onChange={() => setWrap("premium")} title="Black box" note={`Sealed, with the card. ${formatPrice(site.gifting.premiumWrapFee)}.`} />
           </fieldset>
           <div className="divide-y divide-ink/10 rounded-xl border border-ink/15 px-4">
             <Toggle name="anonymous" checked={anonymous} onChange={setAnonymous}>
@@ -492,7 +454,7 @@ export function GiftForm({
         </section>
 
         {/* 3. Send and pay */}
-        <section hidden={step !== 2} className="mt-6 space-y-7">
+        <section hidden={step !== 2} className="mt-5 space-y-6">
           <Group title="Where the link goes">
             <div>
               <label htmlFor="g-remail" className={label}>
@@ -548,10 +510,10 @@ export function GiftForm({
 
           {mode === "set" && (
             <Group title="Getting it to them">
-              <fieldset className="grid grid-cols-2 gap-3">
+              <fieldset className="flex flex-col">
                 <legend className="sr-only">Delivery or pickup</legend>
-                <Choice name="methodUi" value="delivery" checked={method === "delivery"} onChange={() => setMethod("delivery")} icon={Truck} title="Deliver to them" note="Kathmandu Valley" compact />
-                <Choice name="methodUi" value="pickup" checked={method === "pickup"} onChange={() => setMethod("pickup")} icon={Store} title="I'll pick it up" note="Free, from the store" compact />
+                <Choice name="methodUi" value="delivery" checked={method === "delivery"} onChange={() => setMethod("delivery")} title="Deliver to them" note="Kathmandu Valley" />
+                <Choice name="methodUi" value="pickup" checked={method === "pickup"} onChange={() => setMethod("pickup")} title="I'll pick it up" note="Free, from the store" />
               </fieldset>
               {method === "delivery" && (
                 <>
@@ -654,7 +616,7 @@ export function GiftForm({
           </Group>
 
           {/* What they're paying for, before they pay */}
-          <div className="rounded-2xl bg-mist/60 p-4">
+          <div className="border-t border-ink/10 pt-4">
             <p className="font-semibold">
               {product.name} <span className="font-normal text-steel-dark">· {colour} · {mode === "pick" ? "they pick the size" : size === "ONE" ? "one size" : `size ${size}`}</span>
             </p>
@@ -662,7 +624,7 @@ export function GiftForm({
               For {receiverName.trim() || "them"}
               {senderName ? `, from ${senderName}` : ", anonymously"} · {showPrice ? "price shown" : "price hidden"}
             </p>
-            <dl className="mt-4 space-y-1.5 border-t border-ink/10 pt-3 text-[15px]">
+            <dl className="mt-3 space-y-1.5 text-[15px]">
               <div className="flex justify-between">
                 <dt>Piece</dt>
                 <dd className="font-mono">{formatPrice(price)}</dd>
@@ -702,6 +664,12 @@ export function GiftForm({
           <p className="mr-auto leading-tight">
             <span className="block text-[12px] text-steel-dark">Total</span>
             <span className="font-mono text-[17px] font-semibold tabular-nums">{formatPrice(total)}</span>
+            {/* Why the total is more than the piece, so payment holds no surprise */}
+            {total > price && (
+              <span className="block text-[11.5px] text-steel-dark">
+                incl. {[deliveryFee ? `${formatPrice(deliveryFee)} delivery` : "", wrapFee ? `${formatPrice(wrapFee)} box` : ""].filter(Boolean).join(" + ")}
+              </span>
+            )}
           </p>
           {step > 0 && (
             <button type="button" onClick={() => goTo(step - 1)} className="inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full border border-ink/25 px-4 text-[14px] font-semibold transition-[border-color] hover:border-ink">
