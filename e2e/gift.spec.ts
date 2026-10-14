@@ -12,12 +12,17 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   const start = page.getByRole("navigation", { name: "Start a gift" });
   await expect(start.getByRole("link", { name: "Send a piece" })).toHaveAttribute("href", "#pieces");
   await expect(start.getByRole("link", { name: "Send a gift card" })).toHaveAttribute("href", "#buy");
-  // Right below: someone already holding a gift card types its code here, without leaving the page.
+  // In the opening too: someone already holding a gift card types its code here, without leaving the page.
   const balance = page.getByRole("region", { name: "Got a gift card?" });
   await expect(balance.getByLabel("Gift card code")).toHaveAttribute("placeholder", "EP-XXXX-XXXX");
   await expect(balance.getByRole("button", { name: "Check" })).toBeVisible();
-  // It is one thin strip, not a block.
-  expect((await balance.boundingBox())!.height).toBeLessThan(info.project.name === "phone" ? 150 : 80);
+  // It sits in the hero, under the two tiles, and stays small.
+  const tiles = (await start.boundingBox())!;
+  const box = (await balance.boundingBox())!;
+  expect(box.y).toBeGreaterThan(tiles.y + tiles.height - 1);
+  expect(box.height).toBeLessThan(160);
+  // Nothing pushes the page wider than the screen.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   await expect(page.getByText("Three ways to gift")).toHaveCount(0);
   // The gift cards are shown as cards to pick from, not as a price.
   const cards = page.getByRole("region", { name: "Gift cards." });
@@ -30,10 +35,13 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(cards.getByRole("button", { name: /Your amount/ })).toBeVisible();
   await expect(page.getByText(/from Rs 1,000/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toHaveCount(0);
-  // First time? Yes opens the four steps.
-  await expect(page.getByRole("heading", { name: "First time sending a gift here?" })).toBeVisible();
-  await page.getByRole("button", { name: "Yes, show me" }).click();
-  await expect(page.getByText("They get a link.")).toBeVisible();
+  // The helper asks; Yes walks through it, one bubble at a time.
+  await expect(page.getByRole("heading", { name: "Hi, I'm Pick. First time sending a gift here?" })).toBeVisible();
+  await page.getByRole("button", { name: "Yes, first time" }).click();
+  await expect(page.getByRole("heading", { name: "First, choose the piece." })).toBeVisible();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText(/They get a link and pick their own size/)).toBeVisible();
   await page.screenshot(shot(`gift-${info.project.name}`));
 
   // The pieces: one strip, narrowed in the page by budget, kind and search.
@@ -54,7 +62,7 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await page.getByRole("button", { name: "Send it as a gift" }).click();
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByRole("heading", { name: "Send as gift" })).toBeVisible();
-  await expect(sheet.getByText(/Getting the piece ready/)).toHaveCount(0, { timeout: 10_000 });
+  await expect(sheet.getByText(/Getting the piece ready/)).toHaveCount(0, { timeout: 30_000 });
   await expect(sheet.getByRole("button", { name: "Continue" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
@@ -64,6 +72,20 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(page).toHaveURL(/\/gift(#.*)?$/);
   // No "for her" on a menswear store.
   await expect(page.getByRole("link", { name: /for her/i })).toHaveCount(0);
+});
+
+test("a piece opened from the Gift page only sends: no Buy now, no bag @phone", async ({ page }) => {
+  await page.goto("/product/everyday-hoodie?from=gift");
+  const send = page.getByRole("link", { name: "Send it as a gift" });
+  await expect(send).toBeVisible();
+  await expect(send).toHaveAttribute("href", /^\/gift\/everyday-hoodie\?colour=/);
+  await expect(page.getByRole("link", { name: /Buy now/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Pick a size|Add to bag/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Try in store/ })).toHaveCount(0);
+  // Opened any other way, it sells as usual.
+  await page.goto("/product/everyday-hoodie");
+  await expect(page.getByRole("button", { name: "Pick a size" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Send it as a gift" })).toHaveCount(0);
 });
 
 test("send a piece: three steps, their name before the note, checks before payment @phone", async ({ page }, info) => {

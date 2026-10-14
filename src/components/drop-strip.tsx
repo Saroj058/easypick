@@ -63,7 +63,7 @@ function look(d: number, still: boolean, ghost: boolean) {
   };
 }
 
-export function DropStrip({ pieces, label, soon = false, controls, tags = false, big = false }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode; /** A price tag hangs on every card. */ tags?: boolean; /** Larger cards. */ big?: boolean }) {
+export function DropStrip({ pieces, label, soon = false, controls, tags = false, big = false, href = (p) => `/product/${p.slug}` }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode; /** A price tag hangs on every card. */ tags?: boolean; /** Larger cards. */ big?: boolean; /** Where a tap on the centre card goes. */ href?: (piece: DropPiece) => string }) {
   const router = useRouter();
   const mySize = useMySize();
   /** The piece being bought in the pop-up (the rail's Buy now, without leaving the page). */
@@ -94,6 +94,9 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
       el.style.opacity = s.opacity;
       if (el.style.filter !== s.filter) el.style.filter = s.filter;
       el.style.zIndex = s.zIndex;
+      // Far along the strip a card is off screen: not painted at all, so a long strip stays light.
+      const far = Math.abs(i - pos.current) > 9 ? "hidden" : "";
+      if (el.style.visibility !== far) el.style.visibility = far;
     }
     const c = Math.min(n - 1, Math.max(0, Math.round(pos.current)));
     if (c !== centre.current) {
@@ -234,7 +237,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
           const i = k - GHOSTS;
           const ghost = i < 0 || i >= n;
           const first = look(i - start, false, ghost);
-          const style = { transform: first.transform, opacity: Number(first.opacity), filter: first.filter, zIndex: Number(first.zIndex) };
+          const style = { transform: first.transform, opacity: Number(first.opacity), filter: first.filter, zIndex: Number(first.zIndex), visibility: Math.abs(i - start) > 9 ? ("hidden" as const) : undefined };
           const box = "absolute left-1/2 top-1/2 block aspect-[10/11] w-[var(--w)] overflow-hidden rounded-[14px] bg-[#efefef] will-change-transform";
           if (ghost)
             return (
@@ -261,7 +264,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
               aria-current={i === active ? "true" : undefined}
               onClick={() => {
                 if (dragged.current) return; // the end of a drag is not a tap
-                if (i === centre.current) router.push(`/product/${p.slug}`);
+                if (i === centre.current) router.push(href(p));
                 else go(i);
               }}
               className={`${box} cursor-pointer transition-shadow duration-300 [@media(hover:hover)]:hover:shadow-[0_14px_30px_-14px_rgba(0,0,0,0.35)]`}

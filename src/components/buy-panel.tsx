@@ -2,7 +2,7 @@
 
 import { MapPin, ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { describeMatch, hasFit, matchSize } from "@/lib/fit-profile";
 import { stockFromVariants } from "@/lib/live-stock";
@@ -13,6 +13,11 @@ import { RestockForm } from "./restock-form";
 import { useMe } from "./session";
 import { ArrowIcon, GiftIcon } from "./icons";
 import { FitFinder, useFitProfile } from "./fit-finder";
+
+/** Opened from the gift page (?from=gift): the panel only sends. Read in the browser, since the
+ *  product pages are built ahead of time and can't see the address. */
+const fromGift = () => new URLSearchParams(window.location.search).get("from") === "gift";
+const noSubscribe = () => () => {};
 
 const POLL_MS = 45_000;
 const RETRY_MS = 5_000;
@@ -32,6 +37,8 @@ export function BuyPanel(props: Props) {
   const me = useMe();
   // Vault pieces go in the bag only for someone signed in; a guest buys them with Buy now.
   const canBag = !props.vault || Boolean(me);
+
+  const giftOnly = useSyncExternalStore(noSubscribe, fromGift, () => false);
 
   const sizes = Array.from(new Set(variants.map((v) => v.size)));
   const oneSize = sizes.length === 1 && sizes[0] === "ONE";
@@ -136,7 +143,7 @@ export function BuyPanel(props: Props) {
         </fieldset>
       )}
 
-      {status === "live" && !oneSize && (
+      {status === "live" && !oneSize && !giftOnly && (
         <fieldset className={colours.length > 1 ? "mt-6" : ""}>
           <div className="flex items-baseline justify-between">
             <legend className="text-sm font-semibold">Size</legend>
@@ -217,6 +224,17 @@ export function BuyPanel(props: Props) {
 
       {props.modelNote && <p className="mt-2 text-[14px] text-steel-dark">{props.modelNote}</p>}
 
+      {giftOnly && status === "live" ? (
+        <div className={colours.length > 1 ? "mt-6" : "mt-4"}>
+          <Link href={`/gift/${slug}?colour=${encodeURIComponent(colour.name)}`} className="group flex h-14 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] bg-volt px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] text-ink transition-[background-color,scale] duration-200 hover:bg-[#b5f020] active:scale-[0.98]">
+            <GiftIcon className="h-5 w-5 transition-transform duration-200 group-hover:-translate-y-0.5" />
+            Send it as a gift
+          </Link>
+          <p className="mt-2 text-[13px] text-steel-dark">
+            {oneSize ? "One size. Nothing to guess." : "Know their size? Choose it on the next step. If not, they pick it, or try it on in our store."}
+          </p>
+        </div>
+      ) : (
       <div className="mt-4 flex gap-2.5">
         {status === "live" ? (
           <>
@@ -248,10 +266,11 @@ export function BuyPanel(props: Props) {
           </>
         )}
       </div>
+      )}
       {status === "sold_out" && (
         <RestockForm key={colour.name} slug={slug} options={variants.filter((v) => v.colour === colour.name).map((v) => ({ sku: v.sku, size: v.size }))} />
       )}
-      {status === "live" && (
+      {status === "live" && !giftOnly && (
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
           <div className="mt-3 flex gap-2.5">

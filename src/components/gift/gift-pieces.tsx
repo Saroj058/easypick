@@ -23,10 +23,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../ui/sheet";
 
 /** Budgets offered, when they narrow what is on sale (at least one piece under, and not all). */
 const BUDGETS = [1000, 2000, 3500, 5000];
-/** The strip holds this many at most (the budget, kind and search narrow it). */
-const MOST = 30;
-
-type Kind = Category | "one";
+type Kind = Category | "one" | "trending";
 /** A little garment picture for each kind (the neutral stand-ins in public/stand-ins). */
 const KIND_ICON: Record<Kind, string> = {
   tees: "tee",
@@ -36,12 +33,20 @@ const KIND_ICON: Record<Kind, string> = {
   "co-ords": "set",
   accessories: "cap",
   one: "cap",
+  trending: "hoodie",
 };
 
 const oneSize = (p: RailPiece) =>
   p.colours.every((c) => c.sizes.every((s) => s.size === "ONE"));
 
-export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
+export function GiftPieces({
+  pieces,
+  trending,
+}: {
+  pieces: RailPiece[];
+  /** Slugs selling fastest this week, fastest first. */
+  trending: string[];
+}) {
   const [max, setMax] = useState<number | null>(null);
   const [kind, setKind] = useState<Kind | null>(null);
   const [query, setQuery] = useState("");
@@ -49,14 +54,21 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
   /** The piece being sent, in the pop-up. */
   const [sending, setSending] = useState<RailPiece | null>(null);
 
+  const hot = new Set(trending);
   const inKind = (p: RailPiece, k: Kind | null) =>
-    k === "one" ? oneSize(p) : k ? p.category === k : true;
+    k === "trending"
+      ? hot.has(p.slug)
+      : k === "one"
+        ? oneSize(p)
+        : k
+          ? p.category === k
+          : true;
   const inBudget = (p: RailPiece, m: number | null) =>
     m ? p.price <= m : true;
   const budgets = BUDGETS;
   /** Their own budget, typed in. */
   const custom = max !== null && !BUDGETS.includes(max);
-  const kinds = ([...Object.keys(categoryLabels), "one"] as Kind[])
+  const kinds = (["trending", ...Object.keys(categoryLabels), "one"] as Kind[])
     .map((k) => ({
       k,
       count: pieces.filter((p) => inBudget(p, max) && inKind(p, k)).length,
@@ -69,12 +81,18 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
     pieces.filter((p) => inBudget(p, max) && inKind(p, kind)),
     q,
   );
+  // Trending keeps its own order, the fastest sellers first; the rest go by price.
   const ordered = q
     ? matched
-    : [...matched].sort((a, b) =>
-        max ? b.price - a.price : a.price - b.price,
-      );
-  const shown = ordered.slice(0, MOST);
+    : kind === "trending"
+      ? [...matched].sort(
+          (a, b) => trending.indexOf(a.slug) - trending.indexOf(b.slug),
+        )
+      : [...matched].sort((a, b) =>
+          max ? b.price - a.price : a.price - b.price,
+        );
+  // Every piece, however many: the strip only paints the ones near the centre.
+  const shown = ordered;
   const filtered = Boolean(max || kind || q);
 
   const pill = (on: boolean) =>
@@ -116,9 +134,8 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
                 Under {formatPrice(b)}
               </button>
             ))}
-            {/* Their own budget */}
             {/* Their own budget: always open, filling the rest of the row */}
-            <label className={`inline-flex h-10 min-w-[150px] flex-1 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-colors duration-150 ${custom ? "bg-ink text-paper" : "bg-paper text-ink ring-1 ring-ink"}`}>
+            <label className={`relative inline-flex h-10 min-w-[150px] flex-1 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-colors duration-150 ${custom ? "bg-ink text-paper" : "bg-paper text-ink ring-1 ring-ink"}`}>
               <span className="shrink-0">Under Rs</span>
               <span className="sr-only">Your budget, in rupees</span>
               <input
@@ -136,7 +153,7 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
             </label>
           </div>
           {/* Search every piece: always open, not a button */}
-          <label className="flex h-11 w-full shrink-0 items-center gap-2 rounded-full border border-ink/30 bg-paper px-4 transition-[border-color] duration-200 focus-within:border-ink md:w-[min(300px,30vw)]">
+          <label className="relative flex h-11 w-full shrink-0 items-center gap-2 rounded-full border border-ink/30 bg-paper px-4 transition-[border-color] duration-200 focus-within:border-ink md:w-[min(300px,30vw)]">
             <Search aria-hidden className="h-4 w-4 shrink-0 text-steel-dark" />
             <span className="sr-only">Search the gifts</span>
             <input
@@ -192,7 +209,7 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
                   alt=""
                   className={`h-6 w-6 object-contain ${kind === k ? "brightness-[3]" : "opacity-80"}`}
                 />
-                {k === "one" ? "One size" : categoryLabels[k]}
+                {label(k)}
                 <sup
                   className={`font-mono text-[10px] ${kind === k ? "text-paper/70" : "text-steel-dark"}`}
                 >
@@ -224,11 +241,7 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
             id="pieces-h"
             className="display text-[clamp(2.4rem,1.8rem+3vw,4rem)] leading-[0.88]"
           >
-            {kind === "one"
-              ? "One size"
-              : kind
-                ? categoryLabels[kind]
-                : "Every piece"}
+            {kind ? label(kind) : "Every piece"}
             <span
               className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark"
               aria-label={`${ordered.length} pieces`}
@@ -245,20 +258,8 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
           <ExpandingSearchDock
             value={query}
             onChange={setQuery}
-            label={
-              kind === "one"
-                ? "Search one-size pieces"
-                : kind
-                  ? `Search ${categoryLabels[kind].toLowerCase()}`
-                  : "Search the gifts"
-            }
-            placeholder={
-              kind === "one"
-                ? "Search one-size pieces"
-                : kind
-                  ? `Search ${categoryLabels[kind].toLowerCase()}`
-                  : "Search the gifts"
-            }
+            label={searchLabel(kind)}
+            placeholder={searchLabel(kind)}
             className="min-w-0 max-w-[320px] flex-1 max-sm:basis-full sm:justify-end"
           />
         )}
@@ -272,6 +273,7 @@ export function GiftPieces({ pieces }: { pieces: RailPiece[] }) {
             label="Gifts"
             tags
             big
+            href={(p) => `/product/${p.slug}?from=gift`}
             controls={(p) => (
               <SendControls piece={p} onSend={() => setSending(p)} />
             )}
@@ -404,6 +406,18 @@ function SendSheet({
       </SheetContent>
     </Sheet>
   );
+}
+
+function label(k: Kind) {
+  return k === "trending"
+    ? "Trending"
+    : k === "one"
+      ? "One size"
+      : categoryLabels[k];
+}
+
+function searchLabel(k: Kind) {
+  return `Search ${k === "one" ? "one-size pieces" : label(k).toLowerCase()}`;
 }
 
 function kindChip(on: boolean) {

@@ -5,7 +5,7 @@ import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicker } from "@/components/gift/gift-card-picker";
-import { GiftHow } from "@/components/gift/gift-how";
+import { GiftHelper } from "@/components/gift/gift-helper";
 import { GiftPieces } from "@/components/gift/gift-pieces";
 import { toRailPiece } from "@/components/home/rail";
 import { GiftCardPicture } from "@/components/gift-card-art";
@@ -14,6 +14,7 @@ import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
 import { site } from "@/lib/site";
 import { getProducts } from "@/lib/store";
+import { getTrending } from "@/lib/trending";
 import type { Product } from "@/lib/types";
 
 // Find a gift ("I am buying for someone"). The page opens on the two things to do (send a piece,
@@ -33,7 +34,8 @@ const priceOf = (p: Product) => p.salePrice ?? p.price;
 const inStock = (p: Product) => p.variants.some((v) => sellable(v) > 0);
 
 export default async function GiftPage() {
-  const live = (await getProducts()).filter((p) => p.status === "live" && inStock(p));
+  const [all, trending] = await Promise.all([getProducts(), getTrending()]);
+  const live = all.filter((p) => p.status === "live" && inStock(p));
 
   return (
     <div className="overflow-x-clip pb-24">
@@ -43,7 +45,7 @@ export default async function GiftPage() {
         <Image src="/gift/hero-white-phone.webp" alt="" width={900} height={804} priority sizes="100vw" className="absolute inset-x-0 top-0 h-auto w-full md:hidden" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[36%] to-[#f1f2f5] to-[48%] md:hidden" aria-hidden />
         <Image src="/gift/hero-white.webp" alt="" fill priority sizes="100vw" className="object-cover object-right max-md:hidden" />
-        <div className="container-ep relative flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] items-end pb-6 pt-[66vw] md:min-h-[calc(100svh-88px)] md:items-center md:py-20">
+        <div className="container-ep relative flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] items-end pb-6 pt-[84vw] md:min-h-[calc(100svh-88px)] md:items-center md:py-20">
           <div className="md:max-w-[50%]">
             <p className="index text-ink/60">Gifting, simplified</p>
             <h1 className="display display-h1 mt-3">
@@ -84,33 +86,32 @@ export default async function GiftPage() {
                 </span>
               </a>
             </nav>
+            {/* Already holding a gift card: checked right here in the opening (owner, 14 Oct 2026), on frosted glass over the picture. */}
+            <section id="balance" aria-labelledby="balance-h" className="mt-3 scroll-mt-24 rounded-2xl border border-ink/15 bg-paper/85 px-4 py-3 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.35)] backdrop-blur-sm md:max-w-[440px]">
+              <div className="flex items-center gap-3">
+                <span className="block w-11 shrink-0 -rotate-3" aria-hidden>
+                  <GiftCardPicture amount={null} side="back" className="shadow-[0_6px_14px_-8px_rgba(0,0,0,0.5)]" />
+                </span>
+                <h2 id="balance-h" className="display text-[20px] leading-none">
+                  Got a gift card?
+                </h2>
+                <p className="text-[13px] text-steel-dark">See what&apos;s left on it.</p>
+              </div>
+              <div className="mt-2.5">
+                <BalanceCheck />
+              </div>
+            </section>
           </div>
         </div>
       </section>
 
       <div className="container-ep space-y-14 pt-10 md:space-y-20 md:pt-14">
-        {/* Already holding a gift card: one thin rectangle. The code goes in the rounded field in the middle; Check stands apart at the end. */}
-        <section id="balance" aria-labelledby="balance-h" className="scroll-mt-24 flex flex-col gap-3 rounded-2xl border border-ink px-4 py-3 md:flex-row md:items-center md:gap-6 md:py-2.5 md:pl-3 md:pr-3">
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="block w-14 shrink-0 -rotate-3" aria-hidden>
-              <GiftCardPicture amount={null} side="back" className="shadow-[0_6px_14px_-8px_rgba(0,0,0,0.5)]" />
-            </span>
-            <h2 id="balance-h" className="display text-[22px] leading-none">
-              Got a gift card?
-            </h2>
-            <p className="text-[14px] text-steel-dark max-xl:hidden">See what&apos;s left on it.</p>
-          </div>
-          <div className="min-w-0 flex-1">
-            <BalanceCheck />
-          </div>
-        </section>
-
         {/* The pieces, with budget and kind as plain links */}
-        {/* First time? The four steps, on asking */}
-        <GiftHow />
+        {/* First time? The little helper asks, and walks them through it */}
+        <GiftHelper />
 
         <section id="pieces" aria-labelledby="pieces-h" className="scroll-mt-20">
-          <GiftPieces pieces={live.sort((a, b) => priceOf(a) - priceOf(b)).map(toRailPiece)} />
+          <GiftPieces pieces={live.sort((a, b) => priceOf(a) - priceOf(b)).map(toRailPiece)} trending={trending.items.map((i) => i.product.slug)} />
         </section>
 
         {/* Gift cards: this section is where they are chosen and bought (the form opens over the page) */}
