@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowUp, RotateCcw, Sparkles, X } from "lucide-react";
+import { RotateCcw, Sparkles, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -12,6 +12,7 @@ import type { PickCard } from "@/lib/pick/recommend";
 import type { Mood, PickReply } from "@/lib/pick/turn";
 import { ProductImage } from "../product-image";
 import type { RobotMood } from "../ui/robot-hero";
+import { OrbInput } from "../ui/animated-input";
 import { SendSheet } from "./gift-pieces";
 
 // Pick, the gift page's robot. At first just Pick, roaming, and an "Ask Pick" line. Ask him something
@@ -164,8 +165,7 @@ export function PickChat() {
     void ask({ quick: q }, q.label);
   };
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = () => {
     const t = text.trim();
     if (!t || thinking) return;
     setText("");
@@ -301,29 +301,22 @@ export function PickChat() {
       </div>
 
       {/* Ask Pick: the one way in */}
-      <form onSubmit={submit} className="relative mx-auto mt-3 flex max-w-[520px] items-center rounded-full bg-paper p-1.5 shadow-[0_14px_36px_-22px_rgba(10,10,10,0.5),0_0_0_1px_rgba(10,10,10,0.12)] transition-shadow focus-within:shadow-[0_14px_36px_-22px_rgba(10,10,10,0.5),0_0_0_2px_var(--color-ink)]">
-        <Sparkles aria-hidden className="ml-3 h-4 w-4 shrink-0 text-steel-dark" />
-        <label htmlFor="pick-say" className="sr-only">
-          Ask Pick
-        </label>
-        <input
-          ref={field}
-          id="pick-say"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onFocus={() => !thinking && setMood("listening")}
-          onBlur={() => !thinking && setMood((m) => (m === "listening" ? (open ? "curious" : "idle") : m))}
-          maxLength={200}
-          autoComplete="off"
-          enterKeyHint="send"
-          inputMode={askBudget ? "numeric" : "text"}
-          placeholder={askBudget ? "Your budget, like 3000" : "e.g. “gift for my brother, under 3000”"}
-          className="h-11 min-w-0 flex-1 bg-transparent px-3 text-base outline-none placeholder:text-[14px] placeholder:text-steel md:text-[15px] md:placeholder:text-[15px]"
-        />
-        <button type="submit" disabled={thinking || !text.trim()} aria-label="Send" className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-ink text-paper transition-[opacity,scale,background-color] active:scale-95 enabled:hover:bg-[#222] disabled:cursor-default disabled:opacity-25">
-          <ArrowUp aria-hidden className="h-5 w-5" />
-        </button>
-      </form>
+      <OrbInput
+        id="pick-say"
+        label="Ask Pick"
+        inputRef={field}
+        value={text}
+        onValueChange={setText}
+        onSubmit={submit}
+        busy={thinking}
+        onFocus={() => !thinking && setMood("listening")}
+        onBlur={() => !thinking && setMood((m) => (m === "listening" ? (open ? "curious" : "idle") : m))}
+        maxLength={200}
+        inputMode={askBudget ? "numeric" : "text"}
+        staticPlaceholder={askBudget ? "Your budget, like 3000" : undefined}
+        placeholders={["gift for my brother, under 3000", "birthday gift for my girlfriend", "something minimal for a friend", "hi Pick, how are you?"]}
+        className="mx-auto mt-3 max-w-[560px]"
+      />
 
       <SendSheet
         piece={sending}

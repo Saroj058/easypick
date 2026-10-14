@@ -396,6 +396,16 @@
   transform: translateY(12px);
 }
 
+/* The orb in Pick's "Ask Pick" field (components/ui/animated-input.tsx): a slow turn. */
+.orb-spin {
+  animation: orb-spin 6s linear infinite;
+}
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
