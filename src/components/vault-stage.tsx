@@ -15,6 +15,22 @@ import { ProductImage, standInSrc } from "./product-image";
 // tilt, then drifts gently up and down, and leans a little toward the pointer. Nothing moves for
 // people who ask for less motion.
 
+// Each brand's own logo behind its pieces (public/brand/vault/<brand>.png: shapes taken from the
+// brands' logos on Wikimedia Commons, owner's request 14 Oct 2026). A brand with none here gets the
+// Easypick mark.
+const LOGOS: Record<string, { file: string; aspect: number }> = {
+  nike: { file: "nike", aspect: 1196 / 428 },
+  adidas: { file: "adidas", aspect: 1188 / 801 },
+  puma: { file: "puma", aspect: 1148 / 357 },
+  "new balance": { file: "new-balance", aspect: 1192 / 653 },
+  converse: { file: "converse", aspect: 1200 / 806 },
+  carhartt: { file: "carhartt", aspect: 1134 / 1200 },
+};
+function logoFor(brand: string) {
+  const l = LOGOS[brand.trim().toLowerCase()];
+  return l ? { src: `/brand/vault/${l.file}.png`, aspect: l.aspect, own: true } : { src: "/brand/mark-large.png", aspect: 1024 / 1038, own: false };
+}
+
 export interface VaultSibling {
   slug: string;
   name: string;
@@ -61,7 +77,7 @@ export function VaultStage({
 }: {
   slug: string;
   name: string;
-  /** The brand: names the row of its other pieces. */
+  /** The brand: its logo is drawn behind the piece, and it names the row of its other pieces. */
   brand: string;
   /** The small line over the name: brand, Original, the edition number. */
   label: React.ReactNode;
@@ -77,6 +93,7 @@ export function VaultStage({
   children: React.ReactNode;
 }) {
   const still = useReducedMotion();
+  const logo = logoFor(brand);
   const at = Math.max(0, siblings.findIndex((s) => s.slug === slug));
   const n = siblings.length;
   const prev = n > 1 ? siblings[(at - 1 + n) % n] : null;
@@ -126,15 +143,15 @@ export function VaultStage({
 
         {/* The piece, floating over its brand's name */}
         <div className="relative order-1 mx-auto flex w-full max-w-[560px] items-center justify-center [perspective:1100px] lg:order-2">
-          {/* The Easypick mark, large and white behind the piece; it slides in, then drifts against the pointer */}
+          {/* The brand's logo (or the Easypick mark), large and white behind the piece; it slides in, then drifts against the pointer */}
           <motion.div aria-hidden style={still ? undefined : { x: wordX }} className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <motion.span
               key={`mark-${slug}`}
               initial={still ? false : { opacity: 0, x: -70, rotate: -18 }}
               animate={{ opacity: 1, x: 0, rotate: -8 }}
               transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-              className="block aspect-[1024/1038] w-[96%] -translate-x-[6%] bg-white [filter:drop-shadow(0_18px_30px_rgba(0,0,0,0.08))]"
-              style={{ maskImage: "url(/brand/mark-large.png)", WebkitMaskImage: "url(/brand/mark-large.png)", maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }}
+              className={`block -translate-x-[6%] bg-white [filter:drop-shadow(0_18px_30px_rgba(0,0,0,0.08))] ${logo.aspect > 1.6 ? "w-[118%]" : "w-[96%]"}`}
+              style={{ aspectRatio: String(logo.aspect), maskImage: `url(${logo.src})`, WebkitMaskImage: `url(${logo.src})`, maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }}
             />
           </motion.div>
           <motion.div style={still ? undefined : { rotateY: rotY, rotateX: rotX, x: shiftX }} className="relative w-[64%] [transform-style:preserve-3d] lg:w-[66%]">
