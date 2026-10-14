@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { Fragment, useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { phoneStep, type PhoneState } from "@/app/auth-actions";
 
@@ -24,7 +24,25 @@ function FacebookMark() {
   );
 }
 
-const input = "h-14 w-full rounded-[2px] border border-steel-dark bg-paper px-4 font-mono text-lg tracking-wide";
+const input =
+  "h-12 w-full rounded-xl border border-ink/20 bg-paper px-4 font-mono text-lg tracking-wide outline-none transition-[border-color,box-shadow] placeholder:text-steel focus:border-ink focus:shadow-[0_0_0_3px_rgba(10,10,10,0.06)] aria-[invalid=true]:border-error-light";
+const primary =
+  "inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-full bg-ink px-6 text-[15px] font-semibold text-paper transition-[background-color,scale] hover:bg-[#222] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60";
+
+/** Before anything is sent: the starting answer (also how we know the page was just opened). */
+const FIRST: PhoneState = { step: "phone" };
+
+/** The last number this device sent a code to, so a returning customer just taps. Only the number. */
+const LAST = "ep-last-phone";
+const noSubscribe = () => () => {};
+const readLast = () => {
+  try {
+    const v = localStorage.getItem(LAST);
+    return v && /^9[78]\d{8}$/.test(v) ? v : null;
+  } catch {
+    return null;
+  }
+};
 
 export function LoginPanel({
   next,
@@ -37,12 +55,28 @@ export function LoginPanel({
   phoneOnly?: boolean;
   channels?: ("whatsapp" | "sms")[];
 }) {
-  const [state, action, pending] = useActionState<PhoneState, FormData>(phoneStep, { step: "phone" });
+  const [state, action, pending] = useActionState<PhoneState, FormData>(phoneStep, FIRST);
   const codeRef = useRef<HTMLInputElement>(null);
+  const verifyRef = useRef<HTMLButtonElement>(null);
   const [wait, setWait] = useState(0);
+  // The typed code belongs to the server's latest answer: a new answer (a wrong code, a resend)
+  // starts with empty boxes.
+  const [entry, setEntry] = useState<{ answer: PhoneState; code: string }>({ answer: state, code: "" });
+  const code = entry.answer === state ? entry.code : "";
+  const setCode = (v: string) => setEntry({ answer: state, code: v });
+  const last = useSyncExternalStore(noSubscribe, readLast, () => null);
+  const [other, setOther] = useState(false);
+  // Only on a freshly opened page: after "Change number" or an error they type the number.
+  const welcomeBack = Boolean(last) && !other && !phoneOnly && state === FIRST;
 
   useEffect(() => {
     if (state.step !== "code") return;
+    // A code went to this number: remember it on this device for next time (only the number).
+    try {
+      localStorage.setItem(LAST, state.phone);
+    } catch {
+      // Not remembered; fine.
+    }
     codeRef.current?.focus();
     const tick = () => setWait(Math.max(0, 30 - Math.floor((Date.now() - state.sentAt) / 1000)));
     tick();
@@ -53,7 +87,7 @@ export function LoginPanel({
   const social = (p: "google" | "facebook", label: string, Mark: () => React.JSX.Element) => (
     <a
       href={`/api/auth/${p}?next=${encodeURIComponent(next)}`}
-      className="flex h-[52px] w-full items-center justify-center gap-3 rounded-[2px] border border-steel-dark bg-paper text-[15px] font-semibold transition-colors duration-200 [@media(hover:hover)]:hover:bg-photo"
+      className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-ink/20 bg-paper text-[15px] font-semibold transition-colors duration-200 hover:border-ink"
     >
       <Mark />
       {label}
@@ -61,56 +95,75 @@ export function LoginPanel({
   );
 
   return (
-    <div className="space-y-6">
-      {!phoneOnly && (providers.google || providers.facebook) && (
+    <div className="space-y-5">
+      {!phoneOnly && state.step === "phone" && (providers.google || providers.facebook) && (
         <>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {/* Each shown only once that sign-in is set up (GOOGLE_* / FACEBOOK_* env vars). */}
             {providers.google && social("google", "Continue with Google", GoogleMark)}
             {providers.facebook && social("facebook", "Continue with Facebook", FacebookMark)}
           </div>
-
           <div className="flex items-center gap-4" aria-hidden>
-            <span className="h-px flex-1 bg-mist" />
-            <span className="text-[13px] text-steel-dark">or use your phone</span>
-            <span className="h-px flex-1 bg-mist" />
+            <span className="h-px flex-1 bg-ink/10" />
+            <span className="text-[12.5px] text-steel-dark">or with your phone</span>
+            <span className="h-px flex-1 bg-ink/10" />
           </div>
         </>
       )}
 
-      <form action={action} noValidate className="space-y-4">
+      <form
+        action={action}
+        noValidate
+        className="space-y-4"
+      >
         <input type="hidden" name="next" value={next} />
         {phoneOnly && <input type="hidden" name="add" value="phone" />}
 
+        {/* Separate keys: the number box and the code box must never be the same element. */}
         {state.step === "phone" ? (
-          <>
-            <div>
-              <label htmlFor="login-phone" className="block text-sm font-semibold">
-                Mobile number
-              </label>
-              <p id="login-phone-hint" className="text-[13px] text-steel-dark">
-                We&apos;ll send you a 6-digit code{channels.length === 1 ? (channels[0] === "whatsapp" ? " on WhatsApp" : " by SMS") : ""}. No password.
-              </p>
-              <input
-                id="login-phone"
-                name="phone"
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                placeholder="98XXXXXXXX"
-                aria-describedby="login-phone-hint login-msg"
-                aria-invalid={Boolean(state.error)}
-                className={`${input} mt-2`}
-              />
-            </div>
+          <Fragment key="phone">
+            {welcomeBack && last ? (
+              // A device that has signed in before: one tap.
+              <div key="known" className="rounded-2xl border border-ink/10 bg-mist/40 p-4">
+                <p className="text-[13px] text-steel-dark">Welcome back</p>
+                <p className="mt-0.5 font-mono text-lg font-semibold tracking-wide">
+                  {last.slice(0, 3)}•••{last.slice(-3)}
+                </p>
+                <input type="hidden" name="phone" value={last} />
+                <button type="button" onClick={() => setOther(true)} className="mt-1 min-h-9 cursor-pointer text-[13px] font-semibold underline underline-offset-4">
+                  Use another number
+                </button>
+              </div>
+            ) : (
+              <div key="typed">
+                <label htmlFor="login-phone" className="block text-sm font-semibold">
+                  Mobile number
+                </label>
+                <p id="login-phone-hint" className="text-[13px] text-steel-dark">
+                  We&apos;ll send a 6-digit code{channels.length === 1 ? (channels[0] === "whatsapp" ? " on WhatsApp" : " by SMS") : ""}. No password.
+                </p>
+                <input
+                  id="login-phone"
+                  name="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  placeholder="98XXXXXXXX"
+                  autoFocus={other}
+                  aria-describedby="login-phone-hint login-msg"
+                  aria-invalid={Boolean(state.error)}
+                  className={`${input} mt-2`}
+                />
+              </div>
+            )}
             {channels.length > 1 && (
               <fieldset>
                 <legend className="text-sm font-semibold">Send the code by</legend>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="mt-2 grid grid-cols-2 gap-1 rounded-full bg-mist p-1">
                   {channels.map((c, i) => (
-                    <label key={c} className="relative">
+                    <label key={c} className="relative cursor-pointer">
                       <input type="radio" name="channel" value={c} defaultChecked={i === 0} className="peer sr-only" />
-                      <span className="flex h-12 items-center justify-center rounded-[2px] border border-mist text-[15px] font-semibold peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
+                      <span className="flex h-10 items-center justify-center rounded-full text-[14px] font-semibold text-ink/60 transition-colors peer-checked:bg-paper peer-checked:text-ink peer-checked:shadow-[0_1px_4px_rgba(0,0,0,0.12)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-ink">
                         {c === "whatsapp" ? "WhatsApp" : "SMS"}
                       </span>
                     </label>
@@ -119,51 +172,72 @@ export function LoginPanel({
               </fieldset>
             )}
             {channels.length === 1 && <input type="hidden" name="channel" value={channels[0]} />}
-            <button type="submit" name="intent" value="send" className="btn btn-ink w-full" disabled={pending} aria-busy={pending}>
-              {channels.length === 1 && channels[0] === "whatsapp" ? "Send code on WhatsApp" : "Send code"}
+            <button type="submit" name="intent" value="send" className={primary} disabled={pending} aria-busy={pending}>
+              {pending ? "Sending…" : channels.length === 1 && channels[0] === "whatsapp" ? "Send code on WhatsApp" : "Send code"}
             </button>
-          </>
+          </Fragment>
         ) : (
-          <>
+          <Fragment key="code">
             <div>
               <label htmlFor="login-code" className="block text-sm font-semibold">
                 Code sent{state.via === "whatsapp" ? " on WhatsApp" : state.via === "sms" ? " by SMS" : ""} to {state.masked}
               </label>
               <p id="login-code-hint" className="text-[13px] text-steel-dark">
-                Valid for 5 minutes. 3 tries.
+                It fills in by itself on most phones. Valid for 5 minutes.
               </p>
-              <input
-                ref={codeRef}
-                id="login-code"
-                name="code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]*"
-                maxLength={6}
-                placeholder="••••••"
-                aria-describedby="login-code-hint login-msg"
-                aria-invalid={Boolean(state.error)}
-                className={`${input} mt-2 text-center text-2xl tracking-[0.5em]`}
-              />
+              {/* One real input (so the phone's code autofill and pasting work), drawn as six boxes. */}
+              <div className="relative mt-3">
+                <div aria-hidden className="grid grid-cols-6 gap-2">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <span
+                      key={i}
+                      className={`flex h-14 items-center justify-center rounded-xl border font-mono text-2xl font-semibold transition-colors ${
+                        state.error ? "border-error-light" : i === Math.min(code.length, 5) ? "border-ink shadow-[0_0_0_3px_rgba(10,10,10,0.06)]" : code[i] ? "border-ink/40" : "border-ink/15"
+                      }`}
+                    >
+                      {code[i] ?? ""}
+                    </span>
+                  ))}
+                </div>
+                <input
+                  ref={codeRef}
+                  id="login-code"
+                  name="code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setCode(v);
+                    // All six in: sign in, no button to press.
+                    if (v.length === 6 && !pending) requestAnimationFrame(() => verifyRef.current?.form?.requestSubmit(verifyRef.current));
+                  }}
+                  aria-describedby="login-code-hint login-msg"
+                  aria-invalid={Boolean(state.error)}
+                  className="absolute inset-0 h-full w-full cursor-text bg-transparent text-transparent caret-transparent outline-none [&::selection]:bg-transparent"
+                />
+              </div>
             </div>
             {state.devCode && (
-              <p className="border-l-4 border-volt bg-photo px-4 py-3 text-[13px]">
-                <span className="font-semibold">Dev mode, no SMS yet:</span> your code is <span className="font-mono font-semibold">{state.devCode}</span>
+              <p className="rounded-xl bg-mist/60 px-4 py-3 text-[13px]">
+                <span className="font-semibold">Texts aren&apos;t connected yet:</span> your code is <span className="font-mono font-semibold">{state.devCode}</span>
               </p>
             )}
-            <button type="submit" name="intent" value="verify" className="btn btn-ink w-full" disabled={pending} aria-busy={pending}>
-              Continue
+            <button ref={verifyRef} type="submit" name="intent" value="verify" className={primary} disabled={pending} aria-busy={pending}>
+              {pending ? "Checking…" : "Continue"}
             </button>
-            <div className="flex items-center justify-between text-sm">
-              <button type="submit" name="intent" value="change" className="min-h-11 underline underline-offset-2" formNoValidate>
+            <div className="flex items-center justify-between text-[13.5px]">
+              <button type="submit" name="intent" value="change" className="min-h-11 cursor-pointer underline underline-offset-4" formNoValidate>
                 Change number
               </button>
-              <button type="submit" name="intent" value="resend" className="min-h-11 underline underline-offset-2 disabled:no-underline disabled:opacity-50" disabled={wait > 0 || pending}>
+              <button type="submit" name="intent" value="resend" className="min-h-11 cursor-pointer underline underline-offset-4 disabled:cursor-default disabled:no-underline disabled:opacity-50" disabled={wait > 0 || pending}>
                 {wait > 0 ? `Resend in ${wait}s` : "Resend code"}
               </button>
             </div>
-          </>
+          </Fragment>
         )}
 
         <p id="login-msg" role="alert" className="min-h-5 text-[13px] text-error-light">

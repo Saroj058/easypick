@@ -101,6 +101,32 @@ describe("uploads and page data", () => {
 });
 
 describe("login codes (database)", () => {
+  it("live site, no texts yet: a new number registers with 123456; an existing account never can", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    // Connected first: the database starts up differently in production.
+    const { getDb, schema } = await import("@/lib/db");
+    const db = await getDb();
+    await db.delete(schema.rateLimits);
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const fresh = `97${String(Date.now()).slice(-8)}`;
+      const sent = await requestCode(fresh);
+      expect(sent).toMatchObject({ ok: true, devCode: "123456" });
+      const signed = await verifyCode(fresh, "123456");
+      expect(signed.ok).toBe(true);
+      // Now it has an account: 123456 is never offered for it again.
+      await db.delete(schema.rateLimits);
+      const again = await requestCode(fresh);
+      expect(again.ok).toBe(false);
+      // And the owner can switch it off.
+      vi.stubEnv("PHONE_TEST_CODE", "off");
+      const off = await requestCode(`96${String(Date.now()).slice(-8)}`);
+      expect(off.ok).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("sends only one code when several requests arrive at once", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     const phone = `98${String(Date.now()).slice(-8)}`;

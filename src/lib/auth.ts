@@ -74,8 +74,17 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
   const now = Date.now();
   const channels = codeChannels();
   const via = channel && channels.includes(channel) ? channel : channels[0];
+  // Until SMS or WhatsApp is connected (owner, 15 Oct 2026): on the live site a NEW number can
+  // register with the code 123456, shown on screen. Never for a number that already has an account
+  // (that would let anyone into it), and off by itself once a channel is set up, or with
+  // PHONE_TEST_CODE=off. The usual limits on codes and wrong tries still apply.
+  let testCode: string | undefined;
   if (!via && process.env.NODE_ENV === "production") {
-    return { ok: false, message: "Phone sign-in isn't available right now. Use Google instead." };
+    if (process.env.PHONE_TEST_CODE === "off") return { ok: false, message: "Phone sign-in isn't available right now. Use Google instead." };
+    const db0 = await getDb();
+    const [existing] = await db0.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.phone, phone)).limit(1);
+    if (existing) return { ok: false, message: "Texts aren't connected yet, so this number can't sign in by phone. Use Google for now." };
+    testCode = "123456";
   }
 
   // Stop anyone running up the SMS bill: a daily ceiling for the whole site and for each
@@ -92,7 +101,7 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
 
   // Per number: one code every 30 seconds, 5 an hour. Checked and recorded in one locked
   // step, so two requests at once can't both slip under the limit.
-  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const code = testCode ?? String(randomInt(0, 1_000_000)).padStart(6, "0");
   const db = await getDb();
   const gate = await db.transaction(async (tx) => {
     await tx.insert(schema.otps).values({ phone, hash: "", expiresAt: 0, triesLeft: 0, sentAt: [] }).onConflictDoNothing();
@@ -111,7 +120,7 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
 
   try {
     if (via === "whatsapp") await sendWhatsAppCode(phone, code);
-    else await sendSms(phone, `Your Easypick code is ${code}. It expires in 5 minutes. Don't share it.`);
+    else if (via) await sendSms(phone, `Your Easypick code is ${code}. It expires in 5 minutes. Don't share it.`);
   } catch {
     return {
       ok: false,
@@ -123,7 +132,7 @@ export async function requestCode(phone: string, channel?: CodeChannel): Promise
   }
   await countSentCode(phone, dailyCap);
   // No channel set up yet (development only): show the code on screen so sign-in can be tested.
-  const devCode = !via ? code : undefined;
+  const devCode = !via ? code : undefined; // also the 123456 registration code on the live site, until texts work
   return { ok: true, resendInMs: RESEND_AFTER_MS, ...(devCode && { devCode }) };
 }
 

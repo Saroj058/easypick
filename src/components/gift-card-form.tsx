@@ -6,6 +6,7 @@ import { buyGiftCard, type GiftState } from "@/app/gift-actions";
 import { formatPrice, normaliseNepaliMobile } from "@/lib/format";
 import { kathmanduToday } from "@/lib/kathmandu-date";
 import { GiftCardPicture, PRINTED_CARDS } from "./gift-card-art";
+import { KnownField } from "./known-field";
 import { useMe, usePrefilled } from "./session";
 import { PayWith } from "./pay-with";
 
@@ -185,6 +186,7 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
           <h2 id="gc-pay-h" className="text-xl font-semibold">
             {step(forMe ? 3 : 4)}. Pay
           </h2>
+          <KnownField label="Your mobile, for the receipt" value={me?.phone} hidden={{ buyerPhone: me?.phone ?? "" }} open={Boolean(bphone.error)}>
           <div>
             <label htmlFor="gc-bphone" className={label}>
               Your mobile number <span className="font-normal text-steel-dark">(for the receipt)</span>
@@ -196,6 +198,7 @@ export function GiftCardForm({ initialValue = 2000, initialForMe = false, inShee
               </p>
             )}
           </div>
+          </KnownField>
           <fieldset>
             <legend className={label}>Pay with</legend>
             <PayWith className="mt-2" />

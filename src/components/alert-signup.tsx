@@ -3,11 +3,14 @@
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { signUpForAlerts, type AlertState } from "@/app/actions";
+import { useMe } from "./session";
 
 /** Drop alerts: one message on drop day, on WhatsApp or by email. */
 export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean; source?: string }) {
   const [state, action, pending] = useActionState<AlertState, FormData>(signUpForAlerts, { status: "idle" });
   const [channel, setChannel] = useState<"whatsapp" | "email">("whatsapp");
+  // Signed in: their number or email is already there.
+  const me = useMe();
   const doneRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -65,7 +68,8 @@ export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean;
       <div className={`mt-2 flex items-center gap-1 rounded-full border p-1.5 transition-[border-color,box-shadow] duration-200 ${dark ? "border-paper/40 focus-within:border-paper" : "border-ink/30 bg-paper focus-within:border-ink focus-within:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]"}`}>
         {channel === "email" ? (
           <input
-            key="email"
+            key={`email-${me?.email ?? ""}`}
+            defaultValue={me?.email ?? ""}
             id={`${id}-contact`}
             name="email"
             type="email"
@@ -79,7 +83,8 @@ export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean;
           />
         ) : (
           <input
-            key="phone"
+            key={`phone-${me?.phone ?? ""}`}
+            defaultValue={me?.phone ?? ""}
             id={`${id}-contact`}
             name="phone"
             type="tel"

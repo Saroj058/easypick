@@ -10,6 +10,7 @@ export interface Me {
   /** Account id; the bag in this browser is kept per account. */
   id: string;
   name: string | null;
+  email: string | null;
   phone: string | null;
   fit: FitProfile | null;
   checkout: SavedCheckout | null;

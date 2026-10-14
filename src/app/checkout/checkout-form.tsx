@@ -7,6 +7,7 @@ import { placeOrder, type CheckoutState } from "@/app/actions";
 import { previewGiftCard } from "@/app/gift-actions";
 import { myUsableCards } from "@/app/wallet-actions";
 import { useBag } from "@/components/bag-provider";
+import { KnownField } from "@/components/known-field";
 import { useMe, usePrefilled } from "@/components/session";
 import { formatPrice } from "@/lib/format";
 import { site, walletLabels } from "@/lib/site";
@@ -181,22 +182,27 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
         <h2 id="co-phone" className="display text-[28px]">
           1. Your number
         </h2>
-        <label htmlFor="phone" className="mt-4 block text-sm font-semibold">
-          Mobile number
-        </label>
-        <input
-          id="phone"
-          name="phone"
-          type="tel"
-          inputMode="numeric"
-          autoComplete="tel-national"
-          placeholder="98XXXXXXXX"
-          required
-          {...phoneField}
-          aria-invalid={err?.field === "phone"}
-          {...describe("phone")}
-          className={`${input} font-mono`}
-        />
+        <div className="mt-4">
+          {/* Signed in: their number as one line, no box to fill. */}
+          <KnownField label="Mobile number" value={me?.phone} hidden={{ phone: me?.phone ?? "" }} open={err?.field === "phone"}>
+            <label htmlFor="phone" className="block text-sm font-semibold">
+              Mobile number
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder="98XXXXXXXX"
+              required
+              {...phoneField}
+              aria-invalid={err?.field === "phone"}
+              {...describe("phone")}
+              className={`${input} font-mono`}
+            />
+          </KnownField>
+        </div>
         {guest?.phone && (
           <p className="mt-2 text-[13px] text-steel-dark">
             Filled in from last time on this phone.{" "}
@@ -232,7 +238,14 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
           />
         </div>
         {method === "delivery" && (
-          <div className="mt-6 space-y-4">
+          <div className="mt-6">
+          <KnownField
+            label="Delivering to"
+            value={me && saved?.address?.area && saved.address.landmark ? [saved.address.area, saved.address.landmark, saved.address.details].filter(Boolean).join(", ") : null}
+            hidden={{ area: saved?.address?.area ?? "", landmark: saved?.address?.landmark ?? "", details: saved?.address?.details ?? "" }}
+            open={err?.field === "area" || err?.field === "landmark"}
+          >
+          <div className="space-y-4">
             <div>
               <label htmlFor="area" className="block text-sm font-semibold">
                 Area
@@ -261,6 +274,8 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
               </label>
               <input id="details" name="details" autoComplete="address-line2" {...detailsField} className={input} />
             </div>
+          </div>
+          </KnownField>
           </div>
         )}
       </section>

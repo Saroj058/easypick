@@ -10,6 +10,7 @@ import { formatBS } from "@/lib/nepali-date";
 import { site } from "@/lib/site";
 import type { Product, Size } from "@/lib/types";
 import { GiftNote } from "./gift/gift-box";
+import { KnownField } from "./known-field";
 import { useMe, usePrefilled } from "./session";
 import { PayWith } from "./pay-with";
 import { ProductImage } from "./product-image";
@@ -242,7 +243,7 @@ export function GiftForm({
     if (receiverPhone.trim() && !normaliseNepaliMobile(receiverPhone)) return stop("Their mobile number should be 10 digits, like 98XXXXXXXX, or leave it empty.", "g-rphone");
     if (mode === "set" && method === "delivery" && !normaliseNepaliMobile(receiverPhone)) return stop("Add their mobile number so the rider can reach them.", "g-rphone");
     if (mode === "set" && method === "delivery" && (!area.trim() || !landmark.trim())) return stop("Add their area and a nearby landmark.", area.trim() ? "g-landmark" : "g-area");
-    if (!normaliseNepaliMobile(buyerPhoneRef.current?.value ?? "")) return stop("Add your own mobile number (10 digits, like 98XXXXXXXX) for updates.", "g-bphone");
+    if (!normaliseNepaliMobile(buyerPhoneRef.current?.value ?? me?.phone ?? "")) return stop("Add your own mobile number (10 digits, like 98XXXXXXXX) for updates.", "g-bphone");
   }
 
   // The sheet scrolls itself: a new step starts at its top, under the sticky header.
@@ -589,6 +590,7 @@ export function GiftForm({
           </Group>
 
           <Group title="You">
+            <KnownField label="Your mobile, for updates" value={me?.phone} hidden={{ buyerPhone: me?.phone ?? "" }} open={hintField === "g-bphone"}>
             <div>
               <label htmlFor="g-bphone" className={label}>
                 Your mobile number
@@ -609,6 +611,7 @@ export function GiftForm({
               />
               <p className={help}>We text you when they open it and pick their size.</p>
             </div>
+            </KnownField>
             <div>
               <p className={label}>Pay with</p>
               <PayWith className="mt-2" />

@@ -134,8 +134,8 @@ export default async function AccountPage() {
         </div>
 
         <div className="space-y-16 lg:col-span-4 lg:col-start-9">
-          <Section id="profile-title" index="04" title="Details">
-            <ProfileForm mode="edit" user={{ name: user.name, email: user.email, alerts: user.alerts, phone: user.phone, contactPhone: user.contactPhone ?? null }} />
+          <Section id="profile-title" index="04" title="My details">
+            <ProfileForm mode="edit" user={{ name: user.name, email: user.email, alerts: user.alerts, phone: user.phone, contactPhone: user.contactPhone ?? null, checkout: user.checkout ?? null }} />
           </Section>
 
           <Section id="signin-title" index="05" title="Sign-in methods">

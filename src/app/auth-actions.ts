@@ -6,6 +6,7 @@ import { endAllSessions, endSession, getCurrentUser, requestCode, safeNext, upda
 import type { FitProfile } from "@/lib/fit-profile";
 import { normaliseNepaliMobile } from "@/lib/format";
 import { syncAccountAlerts } from "@/lib/drop-alerts";
+import { site } from "@/lib/site";
 import { forgetAdminHere } from "@/lib/staff";
 
 // ---------- Phone sign-in (also sign-up) ----------
@@ -80,7 +81,23 @@ export async function saveProfile(_prev: ProfileState, form: FormData): Promise<
   if (!name) return { status: "error", message: "Name can't be empty." };
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { status: "error", message: "That email doesn't look right." };
   if (phoneRaw && !phone) return { status: "error", message: "Enter a 10-digit Nepali mobile number, or leave it empty." };
-  await updateUser(user.id, { name, email, alerts, ...(!user.phone && { contactPhone: phone }) });
+  // "My details" on the account page also saves how orders reach them, so checkout and gifts need
+  // nothing typed. Only when the form sends it (the welcome step doesn't).
+  let checkout: typeof user.checkout | undefined;
+  if (form.has("method")) {
+    const method = form.get("method") === "delivery" ? "delivery" : "pickup";
+    const take = (k: string) => String(form.get(k) ?? "").trim().slice(0, 120);
+    const area = take("area");
+    const landmark = take("landmark");
+    const details = take("details");
+    if (method === "delivery" && (!area || !landmark)) return { status: "error", message: "Add your area and a nearby landmark, or choose store pickup." };
+    checkout = {
+      method,
+      provider: user.checkout?.provider ?? site.payments.enabled[0],
+      address: area && landmark ? { area, landmark, details } : user.checkout?.address,
+    };
+  }
+  await updateUser(user.id, { name, email, alerts, ...(!user.phone && { contactPhone: phone }), ...(checkout && { checkout }) });
   await syncAccountAlerts(alerts, email, user.phone ?? phone ?? user.contactPhone ?? null).catch((e) => console.error("[alerts] account sync failed", e));
   return { status: "saved" };
 }
