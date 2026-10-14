@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft, ArrowRight, Check, Hourglass, Link2, Mail, Package, Ruler, Shirt, ShoppingBag, Store, Truck, type LucideIcon } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import { placeGiftOrder, type GiftState } from "@/app/gift-actions";
@@ -11,11 +12,16 @@ import type { Product, Size } from "@/lib/types";
 import { GiftNote } from "./gift/gift-box";
 import { useMe, usePrefilled } from "./session";
 import { PayWith } from "./pay-with";
+import { ProductImage } from "./product-image";
 
 // scroll-mb: a focused field clears the pay bar that sticks to the bottom on phones.
-const input = "mt-2 h-14 w-full scroll-mb-36 rounded-[2px] border border-steel-dark bg-paper px-4 text-base aria-[invalid=true]:border-2 aria-[invalid=true]:border-error-light";
+const input =
+  "mt-1.5 h-12 w-full scroll-mb-36 rounded-xl border border-ink/20 bg-paper px-4 text-base outline-none transition-[border-color,box-shadow] placeholder:text-steel focus:border-ink focus:shadow-[0_0_0_3px_rgba(10,10,10,0.08)] aria-[invalid=true]:border-2 aria-[invalid=true]:border-error-light";
 const label = "block text-sm font-semibold";
+const help = "mt-1.5 text-[13px] text-steel-dark";
 const STEPS = ["The piece", "Your note", "Send and pay"] as const;
+/** One line under each step's title: what it is for. */
+const LEAD = ["How should their size work?", "Who it's for, and what the card says.", "Where the link goes, and paying."] as const;
 /** One tap fills the note; every line can be edited after. */
 const NOTES = [
   ["Birthday", "Happy birthday. Saw this and thought of you."],
@@ -57,19 +63,81 @@ const niceDay = (ymd: string) => `${dayFmt.format(new Date(`${ymd}T12:00:00Z`))}
 /** The festival coming up, worked out on the server (lib/festival.ts). */
 export type GiftFestival = { name: string; open: boolean; dateText: string; orderByText: string } | null;
 
-function Choice({ name, value, checked, onChange, title, note }: { name: string; value: string; checked: boolean; onChange: () => void; title: string; note?: string }) {
+function Choice({
+  name,
+  value,
+  checked,
+  onChange,
+  title,
+  note,
+  icon: Icon,
+  badge,
+  compact = false,
+}: {
+  name: string;
+  value: string;
+  checked: boolean;
+  onChange: () => void;
+  title: string;
+  note?: string;
+  icon: LucideIcon;
+  /** A small word in the corner, like "Easiest". */
+  badge?: string;
+  /** Two side by side: the icon sits above the words. */
+  compact?: boolean;
+}) {
   return (
-    <label className="relative block">
+    <label className="relative block cursor-pointer">
       <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="peer sr-only" />
-      <span className="flex min-h-[64px] flex-col justify-center rounded-[2px] border border-steel px-4 py-3 pr-10 transition-transform duration-150 active:scale-[0.98] peer-checked:border-ink peer-checked:ring-1 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink">
-        <span className="font-semibold">{title}</span>
-        {note && <span className="text-[13px] text-steel-dark">{note}</span>}
+      <span
+        className={`flex h-full gap-3 rounded-2xl border border-ink/15 p-4 transition-[border-color,background-color,box-shadow,scale] duration-150 hover:border-ink/40 active:scale-[0.99] peer-checked:border-ink peer-checked:bg-mist/50 peer-checked:shadow-[inset_0_0_0_1px_var(--color-ink)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink ${compact ? "flex-col pr-9" : "items-center pr-12"}`}
+      >
+        <span className={`grid shrink-0 place-items-center rounded-xl bg-paper ring-1 ring-ink/10 ${compact ? "h-9 w-9" : "h-11 w-11"}`}>
+          <Icon aria-hidden className={compact ? "h-[18px] w-[18px]" : "h-5 w-5"} strokeWidth={1.7} />
+        </span>
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2 font-semibold leading-snug">
+            {title}
+            {badge && <span className="rounded-full bg-volt px-2 py-0.5 text-[11px] font-semibold">{badge}</span>}
+          </span>
+          {note && <span className="mt-0.5 block text-[13px] leading-snug text-steel-dark">{note}</span>}
+        </span>
       </span>
-      <span className="pointer-events-none absolute right-3 top-3 grid h-5 w-5 scale-50 place-items-center rounded-full bg-ink text-paper opacity-0 transition-[opacity,scale] duration-200 peer-checked:scale-100 peer-checked:opacity-100" aria-hidden>
-        <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M2.5 6.2l2.3 2.3 4.7-5" />
-        </svg>
+      {/* The radio dot */}
+      <span className="pointer-events-none absolute right-4 top-4 grid h-5 w-5 place-items-center rounded-full border border-ink/30 bg-paper transition-colors peer-checked:border-ink peer-checked:bg-ink" aria-hidden>
+        <span className={`h-2 w-2 rounded-full bg-paper transition-transform duration-200 ${checked ? "scale-100" : "scale-0"}`} />
       </span>
+    </label>
+  );
+}
+
+/** A yes/no as a switch: the box is still a real checkbox, so it's sent with the form and works with keys. */
+function Toggle({
+  name,
+  checked,
+  onChange,
+  note,
+  className = "",
+  children,
+}: {
+  name?: string;
+  checked?: boolean;
+  onChange?: (on: boolean) => void;
+  note?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`flex min-h-12 cursor-pointer items-center gap-3 py-2 text-[15px] ${className}`}>
+      <input type="checkbox" name={name} checked={checked} onChange={onChange && ((e) => onChange(e.target.checked))} className="peer sr-only" />
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium">{children}</span>
+        {note && <span className="block text-[13px] text-steel-dark">{note}</span>}
+      </span>
+      <span
+        aria-hidden
+        className="relative h-6 w-10 shrink-0 rounded-full bg-ink/15 transition-colors duration-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-paper after:shadow-[0_1px_3px_rgba(0,0,0,0.3)] after:transition-transform after:duration-200 peer-checked:bg-ink peer-checked:after:translate-x-4 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink"
+      />
     </label>
   );
 }
@@ -90,7 +158,7 @@ function MessageCard({
   price: string | null;
 }) {
   return (
-    <figure aria-label="Preview of the gift card" className={`p-5 transition-colors duration-200 ${wrap === "premium" ? "bg-ink [--hole:var(--color-ink)]" : "bg-photo [--hole:var(--color-photo)]"}`}>
+    <figure aria-label="Preview of the gift card" className={`rounded-2xl p-5 transition-colors duration-200 ${wrap === "premium" ? "bg-ink [--hole:var(--color-ink)]" : "bg-photo [--hole:var(--color-photo)]"}`}>
       <GiftNote key={wrap} to={to} from={from} message={message} placeholder="Your note appears here." />
       <figcaption className={`mt-3 text-center text-[12px] ${wrap === "premium" ? "text-paper/70" : "text-steel-dark"}`}>
         {wrap === "premium" ? "In the premium black box" : "In an Easypick bag with tissue"} · {price ? `gift receipt shows ${price}` : "no price inside"}
@@ -100,7 +168,18 @@ function MessageCard({
 }
 
 /** Send one piece as a gift in three short steps. "Let them pick the size" is the default. */
-export function GiftForm({ product, festival = null, initial }: { product: Product; festival?: GiftFestival; initial?: { colour?: string; size?: string } }) {
+export function GiftForm({
+  product,
+  festival = null,
+  initial,
+  sheet = false,
+}: {
+  product: Product;
+  festival?: GiftFestival;
+  initial?: { colour?: string; size?: string };
+  /** In a pop-up: the piece and the steps stay at the top, the total and the button at the foot. */
+  sheet?: boolean;
+}) {
   const me = useMe();
   const phoneField = usePrefilled(me?.phone);
   const [state, action, pending] = useActionState<GiftState, FormData>(placeGiftOrder, { status: "idle" });
@@ -150,16 +229,16 @@ export function GiftForm({ product, festival = null, initial }: { product: Produ
   // Move focus to the step heading so keyboard and screen-reader users land in the right place.
   const moved = useRef(false);
   useEffect(() => {
-    if (moved.current) headingRef.current?.focus();
+    if (moved.current) headingRef.current?.focus({ preventScroll: sheet });
     moved.current = true;
-  }, [step]);
+  }, [step, sheet]);
 
   function next() {
     setHint("");
     setHintField(null);
     if (step === 0 && mode === "set" && !size) return fail("Pick their size, or let them pick.");
     if (step === 1 && !receiverName.trim()) return fail("Add their name, so the card is for them.", "g-rname");
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    goTo(Math.min(step + 1, STEPS.length - 1));
   }
 
   /** The last step is checked here, before eSewa, so nothing comes back from the server as a surprise. */
@@ -182,8 +261,18 @@ export function GiftForm({ product, festival = null, initial }: { product: Produ
     if (!normaliseNepaliMobile(buyerPhoneRef.current?.value ?? "")) return stop("Add your own mobile number (10 digits, like 98XXXXXXXX) for updates.", "g-bphone");
   }
 
+  // The sheet scrolls itself: a new step starts at its top, under the sticky header.
+  const formRef = useRef<HTMLFormElement>(null);
+  const goTo = (s: number) => {
+    setHint("");
+    setHintField(null);
+    setStep(s);
+    if (sheet) formRef.current?.parentElement?.scrollTo({ top: 0 });
+  };
+  const chosenHex = product.colours.find((c) => c.name === colour)?.hex ?? "#888888";
+
   return (
-    <form action={action} onSubmit={check} noValidate>
+    <form ref={formRef} action={action} onSubmit={check} noValidate className={sheet ? "flex min-h-full flex-col" : ""}>
       {/* Every field stays in the form; only the current step is shown. */}
       <input type="hidden" name="slug" value={product.slug} />
       <input type="hidden" name="mode" value={mode} />
@@ -193,393 +282,441 @@ export function GiftForm({ product, festival = null, initial }: { product: Produ
       <input type="hidden" name="size" value={size ?? ""} />
       <input type="hidden" name="showPrice" value={showPrice ? "on" : ""} />
 
-      <div className="mb-8">
-        <ol className="grid grid-cols-3 gap-1" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+      {/* The piece and where they are in it. In the pop-up it stays at the top while the step scrolls. */}
+      <div className={sheet ? "sticky top-0 z-20 border-b border-ink/10 bg-paper/95 px-5 pb-4 pt-5 backdrop-blur" : "mb-8"}>
+        {sheet && (
+          <div className="mb-4 flex items-center gap-3 pr-10">
+            <span className="relative block h-16 w-14 shrink-0 overflow-hidden rounded-xl bg-[#efefef]">
+              <ProductImage image={product.images[0] ?? { src: null, alt: product.name, kind: "front" }} category={product.category} colourHex={chosenHex} decorative sizes="56px" />
+            </span>
+            <span className="min-w-0">
+              <span className="index block text-steel-dark">Send as a gift</span>
+              <span className="mt-0.5 block truncate font-semibold">{product.name}</span>
+              <span className="block font-mono text-[13px] tabular-nums text-steel-dark">
+                {colour} · {formatPrice(price)}
+              </span>
+            </span>
+          </div>
+        )}
+        <ol className="flex items-center gap-2" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
           {STEPS.map((s, i) => (
-            <li key={s}>
+            <li key={s} className={`flex min-w-0 items-center gap-2 ${i < STEPS.length - 1 ? "flex-1" : ""}`}>
               {/* Finished steps can be opened again; later ones can't be skipped to. */}
               <button
                 type="button"
                 disabled={i >= step}
-                onClick={() => {
-                  setHint("");
-                  setHintField(null);
-                  setStep(i);
-                }}
+                onClick={() => goTo(i)}
                 aria-current={i === step ? "step" : undefined}
-                className={`block min-h-11 w-full border-t-4 pt-2 text-left text-[13px] font-semibold disabled:cursor-default ${i <= step ? "border-ink" : "border-mist text-steel-dark"} ${i < step ? "hover:underline" : ""}`}
+                className="group flex min-h-11 shrink-0 items-center gap-2 text-[13px] font-semibold disabled:cursor-default"
               >
-                <span className="font-mono">{i + 1}</span> {s}
+                <span
+                  className={`grid h-7 w-7 place-items-center rounded-full font-mono text-[12px] transition-colors duration-200 ${
+                    i < step ? "bg-ink text-paper" : i === step ? "bg-volt text-ink ring-1 ring-ink" : "bg-mist text-steel-dark"
+                  }`}
+                >
+                  {i < step ? <Check aria-hidden className="h-3.5 w-3.5" strokeWidth={3} /> : i + 1}
+                </span>
+                <span className={`whitespace-nowrap ${i === step ? "" : "text-steel-dark"} ${i < step ? "group-hover:text-ink group-hover:underline" : ""} ${i === step ? "" : "max-sm:hidden"}`}>{s}</span>
               </button>
+              {i < STEPS.length - 1 && <span aria-hidden className={`h-px min-w-3 flex-1 ${i < step ? "bg-ink" : "bg-ink/15"}`} />}
             </li>
           ))}
         </ol>
-        <h2 ref={headingRef} tabIndex={-1} className="display mt-5 text-[32px] leading-none outline-none">
-          {STEPS[step]}
-        </h2>
       </div>
 
-      {/* 1. The piece */}
-      <section hidden={step !== 0} className="space-y-8">
-        {oneSize && product.colours.length < 2 && <p className="text-[15px] text-steel-dark">One size, one colour. Nothing to choose here.</p>}
-        {!oneSize && (
-          <fieldset className="grid gap-3 sm:grid-cols-2">
-            <legend className="sr-only">Who picks the size</legend>
-            <Choice name="modeUi" value="pick" checked={mode === "pick"} onChange={() => setMode("pick")} title="Let them pick the size" note="They choose from a link, or try it on in our store." />
-            <Choice name="modeUi" value="set" checked={mode === "set"} onChange={() => setMode("set")} title="I know their size" note="We wrap it and deliver it, or you collect it." />
-          </fieldset>
-        )}
-        {product.colours.length > 1 && (
-          <fieldset>
-            <legend className={label}>Colour · {colour}</legend>
-            <div className="mt-3 flex gap-3">
-              {product.colours.map((c) => (
-                <label key={c.name} className="relative">
-                  <input
-                    type="radio"
-                    name="colourUi"
-                    checked={colour === c.name}
-                    onChange={() => {
-                      setColour(c.name);
-                      if (!oneSize) setSize(null);
-                    }}
-                    className="peer sr-only"
-                  />
-                  <span className="block h-11 w-11 rounded-full border border-steel ring-offset-2 peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ink" style={{ background: c.hex }} />
-                  <span className="sr-only">{c.name}</span>
+      <div className={sheet ? "flex-1 px-5 pb-6 pt-5" : ""}>
+        <h2 ref={headingRef} tabIndex={-1} className="display text-[30px] leading-none outline-none">
+          {STEPS[step]}
+        </h2>
+        <p className="mt-1.5 text-[14px] text-steel-dark">{LEAD[step]}</p>
+
+        {/* 1. The piece */}
+        <section hidden={step !== 0} className="mt-6 space-y-7">
+          {oneSize && product.colours.length < 2 && <p className="rounded-xl bg-mist/60 px-4 py-3 text-[15px]">One size, one colour. Nothing to choose here.</p>}
+          {!oneSize && (
+            <fieldset className="grid gap-3">
+              <legend className="sr-only">Who picks the size</legend>
+              <Choice name="modeUi" value="pick" checked={mode === "pick"} onChange={() => setMode("pick")} icon={Link2} title="Let them pick the size" note="They choose from a link, or try it on in our store." badge="Easiest" />
+              <Choice name="modeUi" value="set" checked={mode === "set"} onChange={() => setMode("set")} icon={Ruler} title="I know their size" note="We wrap it and deliver it to them, or you collect it." />
+            </fieldset>
+          )}
+          {product.colours.length > 1 && (
+            <fieldset>
+              <legend className={label}>
+                Colour <span className="font-normal text-steel-dark">· {colour}</span>
+              </legend>
+              <div className="mt-3 flex gap-3">
+                {product.colours.map((c) => (
+                  <label key={c.name} className="relative cursor-pointer">
+                    <input
+                      type="radio"
+                      name="colourUi"
+                      checked={colour === c.name}
+                      onChange={() => {
+                        setColour(c.name);
+                        if (!oneSize) setSize(null);
+                      }}
+                      className="peer sr-only"
+                    />
+                    <span className="block h-11 w-11 rounded-full border border-ink/20 ring-offset-2 transition-shadow peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ink" style={{ background: c.hex }} />
+                    <span className="sr-only">{c.name}</span>
+                  </label>
+                ))}
+              </div>
+              {mode === "pick" && (
+                <Toggle name="colourChoice" className="mt-3">
+                  Let them change the colour too
+                </Toggle>
+              )}
+            </fieldset>
+          )}
+          {mode === "set" && !oneSize && (
+            <fieldset>
+              <legend className={label}>Their size</legend>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {sizes.map((v) => {
+                  const out = v.stock - (v.lastPieceOnFloor ? 1 : 0) <= 0;
+                  return (
+                    <label key={v.sku} className={`relative ${out ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                      <input type="radio" name="sizeUi" checked={size === v.size} disabled={out} onChange={() => setSize(v.size)} className="peer sr-only" />
+                      <span
+                        className={`flex h-14 items-center justify-center rounded-xl border font-mono font-semibold transition-colors peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-ink ${
+                          out ? "border-mist text-steel-dark line-through" : "border-ink/20 hover:border-ink"
+                        }`}
+                      >
+                        {v.size}
+                        {out && <span className="sr-only"> (sold out)</span>}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-[13px] text-steel-dark">
+                Between sizes, or theirs is sold out?{" "}
+                <button type="button" onClick={() => setMode("pick")} className="font-semibold text-ink underline underline-offset-2">
+                  Let them pick instead
+                </button>
+              </p>
+            </fieldset>
+          )}
+          {mode === "pick" && (
+            <div>
+              <p className={label}>How they choose</p>
+              <ol className="mt-3 grid grid-cols-3 gap-2" aria-label="How they choose">
+                {(
+                  [
+                    [Mail, "We email them a private link"],
+                    [Shirt, "They pick the size, online or in store"],
+                    [Hourglass, "We hold one for them until they do"],
+                  ] as const
+                ).map(([Icon, t], i) => (
+                  <li key={t} className="rounded-xl bg-mist/60 p-3">
+                    <span className="flex items-center justify-between">
+                      <Icon aria-hidden className="h-5 w-5" strokeWidth={1.7} />
+                      <span className="font-mono text-[11px] text-steel-dark">0{i + 1}</span>
+                    </span>
+                    <span className="mt-2 block text-[13px] leading-snug">{t}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </section>
+
+        {/* 2. Your note */}
+        <section hidden={step !== 1} className="mt-6 space-y-6">
+          <div className={`grid gap-4 ${anonymous ? "" : "sm:grid-cols-2"}`}>
+            <div>
+              <label htmlFor="g-rname" className={label}>
+                Their name
+              </label>
+              <input id="g-rname" {...invalid("g-rname")} aria-required name="receiverName" autoComplete="off" autoCapitalize="words" enterKeyHint="next" maxLength={60} value={receiverName} onChange={(e) => setReceiverName(e.target.value)} placeholder="Sita" className={input} />
+            </div>
+            {!anonymous && (
+              <div>
+                <label htmlFor="g-sender" className={label}>
+                  From
                 </label>
+                <input id="g-sender" name="senderName" autoComplete="given-name" autoCapitalize="words" enterKeyHint="next" maxLength={40} value={sender ?? me?.name ?? ""} onChange={(e) => setSender(e.target.value)} placeholder="Your name" className={input} />
+              </div>
+            )}
+          </div>
+          <div>
+            <label htmlFor="g-message" className={label}>
+              Note <span className="font-normal text-steel-dark">(optional)</span>
+            </label>
+            {/* Stuck for words: one tap writes a line to start from. */}
+            <div className="-mx-5 mt-2 flex scroll-px-5 gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Note ideas">
+              {NOTES.map(([name, words]) => (
+                <button
+                  key={name}
+                  type="button"
+                  aria-pressed={message === words}
+                  onClick={() => setMessage(words)}
+                  className={`inline-flex h-9 shrink-0 cursor-pointer items-center rounded-full border px-3.5 text-[13px] font-semibold transition-[border-color,background-color,color,scale] duration-150 active:scale-[0.97] ${message === words ? "border-ink bg-ink text-paper" : "border-ink/20 hover:border-ink"}`}
+                >
+                  {name}
+                </button>
               ))}
             </div>
-            {mode === "pick" && (
-              <label className="mt-4 flex min-h-11 items-center gap-3 text-[15px]">
-                <input type="checkbox" name="colourChoice" className="h-5 w-5 accent-ink" />
-                Let them change the colour too
+            <textarea
+              id="g-message"
+              name="message"
+              rows={3}
+              maxLength={site.gifting.messageMax}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Saw this and thought of you."
+              aria-describedby="g-message-count"
+              className="mt-2 w-full rounded-xl border border-ink/20 bg-paper p-4 text-base outline-none transition-[border-color,box-shadow] focus:border-ink focus:shadow-[0_0_0_3px_rgba(10,10,10,0.08)]"
+            />
+            <p id="g-message-count" className={`mt-1 text-right text-[12px] ${near ? "font-semibold text-[#7a3e00]" : "text-steel-dark"}`} aria-live={near ? "polite" : "off"}>
+              {near ? `${site.gifting.messageMax - message.length} characters left` : `${message.length}/${site.gifting.messageMax}`}
+            </p>
+          </div>
+          <MessageCard to={receiverName} from={senderName} message={message} wrap={wrap} price={showPrice ? formatPrice(price) : null} />
+          <fieldset className="grid grid-cols-2 gap-3">
+            <legend className={`${label} mb-3`}>Wrapping</legend>
+            <Choice name="wrapUi" value="standard" checked={wrap === "standard"} onChange={() => setWrap("standard")} icon={ShoppingBag} title="Easypick bag" note="Tissue and a printed card. Free." compact />
+            <Choice name="wrapUi" value="premium" checked={wrap === "premium"} onChange={() => setWrap("premium")} icon={Package} title="Black box" note={`Sealed, with the card. ${formatPrice(site.gifting.premiumWrapFee)}.`} compact />
+          </fieldset>
+          <div className="divide-y divide-ink/10 rounded-xl border border-ink/15 px-4">
+            <Toggle name="anonymous" checked={anonymous} onChange={setAnonymous}>
+              Send it anonymously
+            </Toggle>
+            {/* Price visibility: shown by default; on = they never see what it cost. */}
+            <Toggle checked={!showPrice} onChange={(on) => setShowPrice(!on)} note="Their card and receipt won't show what it cost.">
+              Hide the price from them
+            </Toggle>
+          </div>
+        </section>
+
+        {/* 3. Send and pay */}
+        <section hidden={step !== 2} className="mt-6 space-y-7">
+          <Group title="Where the link goes">
+            <div>
+              <label htmlFor="g-remail" className={label}>
+                {receiverName.trim() ? `${receiverName.trim().split(" ")[0]}'s email` : "Their email"}
               </label>
-            )}
-          </fieldset>
-        )}
-        {mode === "set" && !oneSize && (
-          <fieldset>
-            <legend className={label}>Their size</legend>
-            <div className="mt-3 grid grid-cols-4 gap-2">
-              {sizes.map((v) => {
-                const out = v.stock - (v.lastPieceOnFloor ? 1 : 0) <= 0;
-                return (
-                  <label key={v.sku} className="relative">
-                    <input type="radio" name="sizeUi" checked={size === v.size} disabled={out} onChange={() => setSize(v.size)} className="peer sr-only" />
-                    <span
-                      className={`flex h-14 items-center justify-center rounded-[2px] border font-mono font-semibold peer-checked:border-ink peer-checked:bg-ink peer-checked:text-paper peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-ink ${
-                        out ? "border-mist text-steel-dark line-through" : "border-steel"
-                      }`}
-                    >
-                      {v.size}
-                      {out && <span className="sr-only"> (sold out)</span>}
-                    </span>
-                  </label>
-                );
-              })}
+              <input
+                id="g-remail"
+                {...invalid("g-remail")}
+                aria-required
+                name="receiverEmail"
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="name@example.com"
+                value={receiverEmail}
+                onChange={(e) => setReceiverEmail(e.target.value)}
+                className={input}
+              />
+              {typo ? (
+                <p className="mt-1.5 text-[14px]">
+                  Did you mean{" "}
+                  <button type="button" onClick={() => setReceiverEmail(typo)} className="font-semibold underline underline-offset-2">
+                    {typo}
+                  </button>
+                  ?
+                </p>
+              ) : (
+                <p className={help}>{mode === "pick" ? "We email them a private link to open the gift and pick their size." : "We email them a link to see their gift."}</p>
+              )}
             </div>
-            <p className="mt-3 text-[13px] text-steel-dark">
-              Between sizes, or theirs is sold out?{" "}
-              <button type="button" onClick={() => setMode("pick")} className="font-semibold text-ink underline underline-offset-2">
-                Let them pick instead
-              </button>
-            </p>
-          </fieldset>
-        )}
-        {mode === "pick" && (
-          <ol className="space-y-2 border-y border-dashed border-ink/30 py-4 font-mono text-[13px]" aria-label="How they choose">
-            {[
-              ["01", "We email them a private link"],
-              ["02", "They pick the size, online or in store"],
-              ["03", "We hold one for them until they do"],
-            ].map(([n, t]) => (
-              <li key={n} className="flex gap-3">
-                <span className="text-steel-dark">{n}</span>
-                <span className="font-sans text-[15px]">{t}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+            <div>
+              <label htmlFor="g-rphone" className={label}>
+                Their mobile <span className="font-normal text-steel-dark">{mode === "set" && method === "delivery" ? "(for the rider)" : "(optional)"}</span>
+              </label>
+              <input
+                id="g-rphone"
+                {...invalid("g-rphone")}
+                name="receiverPhone"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={14}
+                placeholder="98XXXXXXXX"
+                value={receiverPhone}
+                onChange={(e) => setReceiverPhone(e.target.value)}
+                className={`${input} font-mono`}
+              />
+              <p className={help}>Add it and we text them the link too.</p>
+            </div>
+          </Group>
 
-      {/* 2. Your note */}
-      <section hidden={step !== 1} className="space-y-6">
-        <div>
-          <label htmlFor="g-rname" className={label}>
-            Their name
-          </label>
-          <input id="g-rname" {...invalid("g-rname")} aria-required name="receiverName" autoComplete="off" autoCapitalize="words" enterKeyHint="next" maxLength={60} value={receiverName} onChange={(e) => setReceiverName(e.target.value)} className={input} />
-        </div>
-        <div>
-          <label htmlFor="g-message" className={label}>
-            Message <span className="font-normal text-steel-dark">(optional)</span>
-          </label>
-          <textarea
-            id="g-message"
-            name="message"
-            rows={3}
-            maxLength={site.gifting.messageMax}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Saw this and thought of you."
-            aria-describedby="g-message-count"
-            className="mt-2 w-full rounded-[2px] border border-steel-dark bg-paper p-4 text-base"
-          />
-          <p id="g-message-count" className={`mt-1 text-right text-[13px] ${near ? "font-semibold text-[#7a3e00]" : "text-steel-dark"}`} aria-live={near ? "polite" : "off"}>
-            {near ? `${site.gifting.messageMax - message.length} characters left` : `${message.length}/${site.gifting.messageMax}`}
-          </p>
-          {/* Stuck for words: one tap writes a line to start from. */}
-          <div className="-mx-4 mt-1 flex scroll-px-4 gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Note ideas">
-            {NOTES.map(([name, words]) => (
-              <button key={name} type="button" onClick={() => setMessage(words)} className="inline-flex h-11 shrink-0 items-center rounded-full border border-steel px-4 text-[14px] font-semibold transition-[border-color,scale] duration-150 hover:border-ink active:scale-[0.97]">
-                {name}
-              </button>
-            ))}
-          </div>
-        </div>
-        {!anonymous && (
-          <div>
-            <label htmlFor="g-sender" className={label}>
-              From
-            </label>
-            <input id="g-sender" name="senderName" autoComplete="given-name" autoCapitalize="words" enterKeyHint="next" maxLength={40} value={sender ?? me?.name ?? ""} onChange={(e) => setSender(e.target.value)} className={input} />
-          </div>
-        )}
-        <label className="flex min-h-11 items-center gap-3 text-[15px]">
-          <input type="checkbox" name="anonymous" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} className="h-5 w-5 accent-ink" />
-          Send it anonymously
-        </label>
-        <fieldset className="grid gap-3 sm:grid-cols-2">
-          <legend className="sr-only">Wrapping</legend>
-          <Choice name="wrapUi" value="standard" checked={wrap === "standard"} onChange={() => setWrap("standard")} title="Easypick bag" note="Tissue and a printed card. Free." />
-          <Choice name="wrapUi" value="premium" checked={wrap === "premium"} onChange={() => setWrap("premium")} title="Premium black box" note={`Sealed box and card. ${formatPrice(site.gifting.premiumWrapFee)}.`} />
-        </fieldset>
-        {/* Price visibility: shown by default; ticked = they never see what it cost. */}
-        <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[15px]">
-          <input type="checkbox" checked={!showPrice} onChange={(e) => setShowPrice(!e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
-          <span>
-            Hide the price from them <span className="text-steel-dark">(their card and receipt won&apos;t show what it cost)</span>
-          </span>
-        </label>
-        <MessageCard to={receiverName} from={senderName} message={message} wrap={wrap} price={showPrice ? formatPrice(price) : null} />
-      </section>
-
-      {/* 3. Send and pay */}
-      <section hidden={step !== 2} className="space-y-6">
-        <div>
-          <label htmlFor="g-remail" className={label}>
-            {receiverName.trim() ? `${receiverName.trim().split(" ")[0]}'s email` : "Their email"}
-          </label>
-          <input
-            id="g-remail"
-            {...invalid("g-remail")}
-            aria-required
-            name="receiverEmail"
-            type="email"
-            inputMode="email"
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            placeholder="name@example.com"
-            value={receiverEmail}
-            onChange={(e) => setReceiverEmail(e.target.value)}
-            className={input}
-          />
-          {typo ? (
-            <p className="mt-1 text-[14px]">
-              Did you mean{" "}
-              <button type="button" onClick={() => setReceiverEmail(typo)} className="font-semibold underline underline-offset-2">
-                {typo}
-              </button>
-              ?
-            </p>
-          ) : (
-            <p className="mt-1 text-[13px] text-steel-dark">
-              {mode === "pick" ? "We email them a private link to open the gift and pick their size." : "We email them a link to see their gift."}
-            </p>
+          {mode === "set" && (
+            <Group title="Getting it to them">
+              <fieldset className="grid grid-cols-2 gap-3">
+                <legend className="sr-only">Delivery or pickup</legend>
+                <Choice name="methodUi" value="delivery" checked={method === "delivery"} onChange={() => setMethod("delivery")} icon={Truck} title="Deliver to them" note="Kathmandu Valley" compact />
+                <Choice name="methodUi" value="pickup" checked={method === "pickup"} onChange={() => setMethod("pickup")} icon={Store} title="I'll pick it up" note="Free, from the store" compact />
+              </fieldset>
+              {method === "delivery" && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="g-area" className={label}>
+                        Their area
+                      </label>
+                      <input id="g-area" {...invalid("g-area")} aria-required autoComplete="off" name="area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Baneshwor, Kathmandu" className={input} />
+                    </div>
+                    <div>
+                      <label htmlFor="g-landmark" className={label}>
+                        Nearby landmark
+                      </label>
+                      <input id="g-landmark" {...invalid("g-landmark")} aria-required autoComplete="off" name="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Near the temple gate" className={input} />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="g-details" className={label}>
+                      House or floor <span className="font-normal text-steel-dark">(optional)</span>
+                    </label>
+                    <input id="g-details" name="details" autoComplete="off" className={input} />
+                  </div>
+                </>
+              )}
+            </Group>
           )}
-        </div>
-        <div>
-          <label htmlFor="g-rphone" className={label}>
-            Their mobile number{" "}
-            <span className="font-normal text-steel-dark">{mode === "set" && method === "delivery" ? "(for the rider)" : "(optional)"}</span>
-          </label>
-          <input
-            id="g-rphone"
-            {...invalid("g-rphone")}
-            name="receiverPhone"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={14}
-            placeholder="98XXXXXXXX"
-            value={receiverPhone}
-            onChange={(e) => setReceiverPhone(e.target.value)}
-            className={`${input} font-mono`}
-          />
-          <p className="mt-1 text-[13px] text-steel-dark">Add it and we text them the link too.</p>
-        </div>
-        {mode === "set" && (
-          <>
-            <fieldset className="grid gap-3 sm:grid-cols-2">
-              <legend className="sr-only">Delivery or pickup</legend>
-              <Choice name="methodUi" value="delivery" checked={method === "delivery"} onChange={() => setMethod("delivery")} title="Deliver to them" note="Kathmandu Valley" />
-              <Choice name="methodUi" value="pickup" checked={method === "pickup"} onChange={() => setMethod("pickup")} title="I'll pick it up" note="Free, from the store" />
-            </fieldset>
-            {method === "delivery" && (
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="g-area" className={label}>
-                    Their area
-                  </label>
-                  <input id="g-area" {...invalid("g-area")} aria-required autoComplete="off" name="area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Baneshwor, Kathmandu" className={input} />
-                </div>
-                <div>
-                  <label htmlFor="g-landmark" className={label}>
-                    Nearby landmark
-                  </label>
-                  <input id="g-landmark" {...invalid("g-landmark")} aria-required autoComplete="off" name="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} className={input} />
-                </div>
-                <div>
-                  <label htmlFor="g-details" className={label}>
-                    House or floor <span className="font-normal text-steel-dark">(optional)</span>
-                  </label>
-                  <input id="g-details" name="details" autoComplete="off" className={input} />
-                </div>
-              </div>
-            )}
-          </>
-        )}
-        <div>
-          <label htmlFor="g-date" className={label}>
-            {mode === "set" ? "Deliver on" : "Arrive by"} <span className="font-normal text-steel-dark">(optional)</span>
-          </label>
-          <input
-            id="g-date"
-            {...(hintField === "g-date" ? { "aria-invalid": true } : {})}
-            name="deliverOn"
-            type="date"
-            min={today}
-            max={addDays(today, 60)}
-            value={deliverOn}
-            onChange={(e) => setDeliverOn(e.target.value)}
-            aria-describedby="g-date-hint"
-            className={input}
-          />
-          <p id="g-date-hint" className="mt-1 text-[13px] text-steel-dark">
-            {/^\d{4}-\d{2}-\d{2}$/.test(deliverOn) ? (
-              <>
-                <span className="font-semibold text-ink">{niceDay(deliverOn)}.</span>{" "}
-                {mode === "set" ? "We send them the link that morning, so it stays a surprise until then." : "We send them the link now, so they can pick their size in time."}
-              </>
-            ) : mode === "set" ? (
-              "Leave it empty and we send it as soon as it's packed."
-            ) : (
-              "Leave it empty and we send it as soon as they've picked their size."
-            )}
-          </p>
-          {festival && (
-            <p className="mt-2 flex gap-2 text-[13px]">
-              <span className="mt-1 h-2 w-2 shrink-0 bg-volt ring-1 ring-ink" aria-hidden />
-              <span>
-                {festival.open ? (
+
+          <Group title="When">
+            <div>
+              <label htmlFor="g-date" className={label}>
+                {mode === "set" ? "Deliver on" : "Arrive by"} <span className="font-normal text-steel-dark">(optional)</span>
+              </label>
+              <input
+                id="g-date"
+                {...(hintField === "g-date" ? { "aria-invalid": true } : {})}
+                name="deliverOn"
+                type="date"
+                min={today}
+                max={addDays(today, 60)}
+                value={deliverOn}
+                onChange={(e) => setDeliverOn(e.target.value)}
+                aria-describedby="g-date-hint"
+                className={input}
+              />
+              <p id="g-date-hint" className={help}>
+                {/^\d{4}-\d{2}-\d{2}$/.test(deliverOn) ? (
                   <>
-                    For {festival.name} ({festival.dateText}), order by <span className="font-semibold">{festival.orderByText}</span>.
+                    <span className="font-semibold text-ink">{niceDay(deliverOn)}.</span>{" "}
+                    {mode === "set" ? "We send them the link that morning, so it stays a surprise until then." : "We send them the link now, so they can pick their size in time."}
                   </>
+                ) : mode === "set" ? (
+                  "Leave it empty and we send it as soon as it's packed."
                 ) : (
-                  <>Delivery before {festival.name} has closed. Store pickup still works.</>
+                  "Leave it empty and we send it as soon as they've picked their size."
                 )}
-              </span>
+              </p>
+              {festival && (
+                <p className="mt-2 flex gap-2 text-[13px]">
+                  <span className="mt-1 h-2 w-2 shrink-0 bg-volt ring-1 ring-ink" aria-hidden />
+                  <span>
+                    {festival.open ? (
+                      <>
+                        For {festival.name} ({festival.dateText}), order by <span className="font-semibold">{festival.orderByText}</span>.
+                      </>
+                    ) : (
+                      <>Delivery before {festival.name} has closed. Store pickup still works.</>
+                    )}
+                  </span>
+                </p>
+              )}
+            </div>
+          </Group>
+
+          <Group title="You">
+            <div>
+              <label htmlFor="g-bphone" className={label}>
+                Your mobile number
+              </label>
+              <input
+                id="g-bphone"
+                ref={buyerPhoneRef}
+                {...invalid("g-bphone")}
+                aria-required
+                name="buyerPhone"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                maxLength={14}
+                placeholder="98XXXXXXXX"
+                {...phoneField}
+                className={`${input} font-mono`}
+              />
+              <p className={help}>We text you when they open it and pick their size.</p>
+            </div>
+            <div>
+              <p className={label}>Pay with</p>
+              <PayWith className="mt-2" />
+            </div>
+          </Group>
+
+          {/* What they're paying for, before they pay */}
+          <div className="rounded-2xl bg-mist/60 p-4">
+            <p className="font-semibold">
+              {product.name} <span className="font-normal text-steel-dark">· {colour} · {mode === "pick" ? "they pick the size" : size === "ONE" ? "one size" : `size ${size}`}</span>
             </p>
-          )}
-        </div>
-        <div>
-          <label htmlFor="g-bphone" className={label}>
-            Your mobile number
-          </label>
-          <input
-            id="g-bphone"
-            ref={buyerPhoneRef}
-            {...invalid("g-bphone")}
-            aria-required
-            name="buyerPhone"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel-national"
-            maxLength={14}
-            placeholder="98XXXXXXXX"
-            {...phoneField}
-            className={`${input} font-mono`}
-          />
-          <p className="mt-1 text-[13px] text-steel-dark">We text you when they open it and pick their size.</p>
-        </div>
-        <div>
-          <p className={label}>Pay with</p>
-          <PayWith className="mt-2" />
-        </div>
-
-        <div className="border-t border-mist pt-6">
-          <p className="text-[15px]">
-            {product.name} · {colour} · {mode === "pick" ? "they pick the size" : size === "ONE" ? "one size" : `size ${size}`}
-          </p>
-          <p className="text-[15px] text-steel-dark">
-            For {receiverName.trim() || "them"}
-            {senderName ? `, from ${senderName}` : ", anonymously"} · {showPrice ? "price shown" : "price hidden"}
-          </p>
-          <dl className="mt-4 space-y-2 text-[15px]">
-            <div className="flex justify-between">
-              <dt>Piece</dt>
-              <dd className="font-mono">{formatPrice(price)}</dd>
-            </div>
-            <div className="flex justify-between text-steel-dark">
-              <dt>{mode === "set" && method === "pickup" ? "Store pickup" : "Delivery"}</dt>
-              <dd className="font-mono">{deliveryFee ? formatPrice(deliveryFee) : "Free"}</dd>
-            </div>
-            {wrapFee > 0 && (
-              <div className="flex justify-between text-steel-dark">
-                <dt>Premium box</dt>
-                <dd className="font-mono">{formatPrice(wrapFee)}</dd>
+            <p className="mt-0.5 text-[14px] text-steel-dark">
+              For {receiverName.trim() || "them"}
+              {senderName ? `, from ${senderName}` : ", anonymously"} · {showPrice ? "price shown" : "price hidden"}
+            </p>
+            <dl className="mt-4 space-y-1.5 border-t border-ink/10 pt-3 text-[15px]">
+              <div className="flex justify-between">
+                <dt>Piece</dt>
+                <dd className="font-mono">{formatPrice(price)}</dd>
               </div>
-            )}
-            <div className="flex justify-between pt-2 text-xl font-semibold">
-              <dt>Total</dt>
-              <dd className="font-mono">{formatPrice(total)}</dd>
-            </div>
-          </dl>
-          {mode === "pick" && deliveryFee > 0 && <p className="mt-2 text-[13px] text-steel-dark">If they choose store pickup, we refund the delivery fee.</p>}
-        </div>
-      </section>
+              <div className="flex justify-between text-steel-dark">
+                <dt>{mode === "set" && method === "pickup" ? "Store pickup" : "Delivery"}</dt>
+                <dd className="font-mono">{deliveryFee ? formatPrice(deliveryFee) : "Free"}</dd>
+              </div>
+              {wrapFee > 0 && (
+                <div className="flex justify-between text-steel-dark">
+                  <dt>Black box</dt>
+                  <dd className="font-mono">{formatPrice(wrapFee)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between pt-1.5 text-lg font-semibold">
+                <dt>Total</dt>
+                <dd className="font-mono">{formatPrice(total)}</dd>
+              </div>
+            </dl>
+            {mode === "pick" && deliveryFee > 0 && <p className="mt-2 text-[13px] text-steel-dark">If they choose store pickup, we refund the delivery fee.</p>}
+          </div>
+        </section>
+      </div>
 
-      {/* Stays on screen on phones, with the total, so the next step is always one tap away. */}
-      <div className="sticky bottom-0 z-20 -mx-4 mt-2 border-t border-mist bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
-        <p id="g-hint" role="alert" className="min-h-5 pb-2 text-[14px] text-error-light sm:mt-6">
+      {/* The total and the next step, always one tap away: pinned to the foot of the pop-up, and of the screen on phones. */}
+      <div
+        className={
+          sheet
+            ? "sticky bottom-0 z-20 border-t border-ink/10 bg-paper/95 px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur"
+            : "sticky bottom-0 z-20 -mx-4 mt-6 border-t border-mist bg-paper px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0"
+        }
+      >
+        <p id="g-hint" role="alert" className="text-[14px] text-error-light empty:hidden [&:not(:empty)]:pb-2">
           {hint || (state.status === "error" ? state.message : "")}
         </p>
-        <p className={`mb-2 flex items-baseline justify-between text-[14px] sm:hidden ${step === STEPS.length - 1 ? "hidden" : ""}`}>
-          <span className="text-steel-dark">Total</span>
-          <span className="font-mono font-semibold">{formatPrice(total)}</span>
-        </p>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <p className="mr-auto leading-tight">
+            <span className="block text-[12px] text-steel-dark">Total</span>
+            <span className="font-mono text-[17px] font-semibold tabular-nums">{formatPrice(total)}</span>
+          </p>
           {step > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setHint("");
-                setHintField(null);
-                setStep((s) => s - 1);
-              }}
-              className="btn btn-outline flex-1"
-            >
+            <button type="button" onClick={() => goTo(step - 1)} className="inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full border border-ink/25 px-4 text-[14px] font-semibold transition-[border-color] hover:border-ink">
+              <ArrowLeft aria-hidden className="h-4 w-4" />
               Back
             </button>
           )}
           {step < STEPS.length - 1 ? (
-            <button type="button" onClick={next} className="btn btn-ink flex-[2]">
+            // Separate keys: reusing one button for both would let the Continue click also submit the form.
+            <button key="next" type="button" onClick={next} className="group inline-flex h-12 cursor-pointer items-center gap-2 rounded-full bg-ink px-6 text-[14px] font-semibold text-paper transition-[scale] duration-150 active:scale-[0.97]">
               Continue
+              <ArrowRight aria-hidden className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
             </button>
           ) : (
-            <button type="submit" className="btn btn-volt relative flex-[2] overflow-hidden aria-busy:opacity-100" disabled={pending} aria-busy={pending}>
+            <button key="pay" type="submit" className="relative inline-flex h-12 cursor-pointer items-center gap-2 overflow-hidden rounded-full bg-volt px-6 text-[14px] font-semibold text-ink transition-[background-color,scale] duration-150 hover:bg-[#b5f020] active:scale-[0.97] disabled:cursor-wait" disabled={pending} aria-busy={pending}>
               {pending && <span className="visit-load absolute inset-x-0 bottom-0 h-0.5 bg-ink" aria-hidden />}
               {pending ? "One moment…" : `Pay ${formatPrice(total)}`}
             </button>
@@ -587,5 +724,15 @@ export function GiftForm({ product, festival = null, initial }: { product: Produ
         </div>
       </div>
     </form>
+  );
+}
+
+/** A small titled group on the last step. */
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-4">
+      <p className="index text-steel-dark">{title}</p>
+      {children}
+    </div>
   );
 }

@@ -228,7 +228,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
           drag.current = null;
           if (g?.locked) go(pos.current);
         }}
-        className={`relative mx-[calc(50%-50vw)] h-[calc(var(--w)*1.32)] cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] focus-visible:shadow-[inset_0_0_0_2px_var(--color-ink)] active:cursor-grabbing`}
+        className={`relative mx-[calc(50%-50vw)] ${tags ? "h-[calc(var(--w)*1.32+84px)]" : "h-[calc(var(--w)*1.32)]"} cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] focus-visible:shadow-[inset_0_0_0_2px_var(--color-ink)] active:cursor-grabbing`}
       >
         {/* The band of light the cards sit on */}
         <div aria-hidden className="absolute inset-x-0 top-1/2 h-[46%] -translate-y-1/2 bg-[linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,0.045)_50%,rgba(0,0,0,0))]" />
@@ -238,7 +238,8 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
           const ghost = i < 0 || i >= n;
           const first = look(i - start, false, ghost);
           const style = { transform: first.transform, opacity: Number(first.opacity), filter: first.filter, zIndex: Number(first.zIndex), visibility: Math.abs(i - start) > 9 ? ("hidden" as const) : undefined };
-          const box = "absolute left-1/2 top-1/2 block aspect-[10/11] w-[var(--w)] overflow-hidden rounded-[14px] bg-[#efefef] will-change-transform";
+          // With tags, the cards sit a little higher so the tag can hang below them.
+          const box = `absolute left-1/2 ${tags ? "top-[calc(50%-36px)]" : "top-1/2"} block aspect-[10/11] w-[var(--w)] rounded-[14px] will-change-transform`;
           if (ghost)
             return (
               <span
@@ -247,7 +248,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
                 ref={(el) => {
                   cards.current[k] = el;
                 }}
-                className={box}
+                className={`${box} bg-[#efefef]`}
                 style={style}
               />
             );
@@ -271,10 +272,13 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
               style={style}
             >
               {/* The photo is 4:5 and the card a little squarer: it is cropped from the foot */}
-              <span className="pointer-events-none absolute inset-x-0 -top-[4%] block">
+              <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-[14px] bg-[#efefef]">
+              <span className="absolute inset-x-0 -top-[4%] block">
                 <ProductImage image={p.image} category={p.category} colourHex={p.colours[0]?.hex ?? "#888888"} decorative priority={Math.abs(i - start) < 2} sizes="(min-width: 1240px) 248px, (min-width: 880px) 20vw, 176px" className={!soon && gone(p) ? "opacity-60 grayscale" : ""} />
               </span>
-              {tags && <PriceTag price={formatPrice(p.price)} sku={p.colours[0]?.sizes[0]?.sku ?? p.id} className="absolute right-3 top-0 z-[2]" />}
+              </span>
+              {/* The price, on a tag tied to the foot of the card and hanging under it, as on the home rails. */}
+              {tags && <PriceTag price={formatPrice(p.price)} sku={p.colours[0]?.sizes[0]?.sku ?? p.id} className="absolute right-3 top-full z-[2] -mt-3 md:right-4" />}
             </button>
           );
         })}

@@ -322,10 +322,8 @@ function SendControls({
   );
   return (
     <div className="flex flex-col items-center text-center">
+      {/* The price is on the tag hanging from the card: not said twice. */}
       <h4 className="text-lg font-semibold">{piece.name}</h4>
-      <p className="mt-1 font-mono text-[14px] tabular-nums">
-        {formatPrice(piece.price)}
-      </p>
       <p className="mt-1 text-[13px] text-steel-dark">
         {oneSize
           ? "One size. Nothing to guess."
@@ -373,36 +371,33 @@ function SendSheet({
     <Sheet open={piece !== null} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
         side="right"
-        className="w-full overflow-y-auto border-mist bg-paper p-5 pt-6 sm:max-w-lg"
+        className="w-full overflow-y-auto overscroll-contain border-mist bg-paper p-0 sm:max-w-lg"
       >
-        <SheetTitle className="display text-[34px] leading-none">
-          Send as gift
-        </SheetTitle>
+        <SheetTitle className="sr-only">Send as a gift</SheetTitle>
         {piece && (
-          <SheetDescription className="mt-2 text-[14px] text-steel-dark">
+          <SheetDescription className="sr-only">
             {piece.name} · {formatPrice(piece.price)}
           </SheetDescription>
         )}
-        <div className="mt-6">
-          {product === undefined ? (
-            <p className="text-[14px] text-steel-dark" role="status">
-              Getting the piece ready…
-            </p>
-          ) : product ? (
-            <GiftForm product={product} />
-          ) : (
-            <p className="text-[14px]">
-              This piece can&apos;t be sent right now.{" "}
-              <Link
-                href="#buy"
-                onClick={onClose}
-                className="font-semibold underline underline-offset-2"
-              >
-                Send a gift card instead
-              </Link>
-            </p>
-          )}
-        </div>
+        {product === undefined ? (
+          <div className="flex min-h-full flex-col items-center justify-center gap-3 p-8 text-center" role="status">
+            <span aria-hidden className="h-8 w-8 animate-spin rounded-full border-2 border-ink/15 border-t-ink" />
+            <p className="text-[14px] text-steel-dark">Getting the piece ready…</p>
+          </div>
+        ) : product ? (
+          <GiftForm product={product} sheet />
+        ) : (
+          <p className="p-6 pt-16 text-[14px]">
+            This piece can&apos;t be sent right now.{" "}
+            <Link
+              href="#buy"
+              onClick={onClose}
+              className="font-semibold underline underline-offset-2"
+            >
+              Send a gift card instead
+            </Link>
+          </p>
+        )}
       </SheetContent>
     </Sheet>
   );

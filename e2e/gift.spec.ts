@@ -6,6 +6,8 @@ import { randomPhone } from "./helpers";
 const shot = (name: string) => ({ path: `test-results/shots/${name}.png`, fullPage: true });
 
 test("gift page: a piece or a card, check a balance, then pieces with plain-link filters @phone", async ({ page }, info) => {
+  // The pop-up fetches the piece; on a cold dev server that route compiles first.
+  test.slow();
   await page.goto("/gift");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/You know them\.\s*We handle the rest\./);
   // The opening offers the two things to do, a piece or a card, with equal weight.
@@ -61,10 +63,10 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(page.locator("#pieces").getByRole("button", { name: "Buy now" })).toHaveCount(0);
   await page.getByRole("button", { name: "Send it as a gift" }).click();
   const sheet = page.getByRole("dialog");
-  await expect(sheet.getByRole("heading", { name: "Send as gift" })).toBeVisible();
-  await expect(sheet.getByText(/Getting the piece ready/)).toHaveCount(0, { timeout: 30_000 });
+  await expect(sheet.getByRole("heading", { name: "Send as a gift" })).toBeVisible();
+  await expect(sheet.getByText(/Getting the piece ready/)).toHaveCount(0, { timeout: 60_000 });
   await expect(sheet.getByRole("button", { name: "Continue" })).toBeVisible();
-  await page.keyboard.press("Escape");
+  await sheet.getByRole("button", { name: "Close" }).click();
   await expect(sheet).toHaveCount(0);
   await page.getByRole("button", { name: "Clear" }).click();
   await page.getByRole("textbox", { name: "Search the gifts" }).fill("hoodie");
