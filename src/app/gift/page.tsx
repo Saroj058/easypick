@@ -6,20 +6,21 @@ import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicker } from "@/components/gift/gift-card-picker";
-import { ShopSearch } from "@/components/shop-search";
+import { GiftPieces } from "@/components/gift/gift-pieces";
+import { toRailPiece } from "@/components/home/rail";
 import { GiftCardPicture } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
-import { categoryLabels, site } from "@/lib/site";
+import { site } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import { getTrending } from "@/lib/trending";
 import type { Product } from "@/lib/types";
 
 // Find a gift ("I am buying for someone"). The page opens on the two things to do (send a piece,
-// send a gift card), names the three ways to gift, then goes straight to pieces, filtered by budget. Every control is a plain link, so the
-// page works without JavaScript. Pieces are not tagged by who they suit or by occasion, so the page
+// send a gift card), then goes straight to the pieces: one strip of cards, as on the drops page,
+// narrowed in the page by budget, kind and search (components/gift/gift-pieces.tsx). Pieces are not tagged by who they suit or by occasion, so the page
 // doesn't ask.
 
 export const revalidate = 300;
@@ -31,10 +32,6 @@ export const metadata: Metadata = {
 };
 
 const RAIL = 8;
-const PAGE = 24;
-/** The blueprint's budgets (section 08). */
-const BUDGETS = [2000, 3500, 5000] as const;
-type Cat = keyof typeof categoryLabels | "one";
 
 const priceOf = (p: Product) => p.salePrice ?? p.price;
 const inStock = (p: Product) => p.variants.some((v) => sellable(v) > 0);
@@ -74,60 +71,16 @@ function Rail({ id, title, note, products }: { id: string; title: string; note?:
   );
 }
 
-/** One choice in the finder. Budgets are segments of one control; kinds are quiet words with a line under the chosen one. */
-function Chip({ href, on, tab = false, children }: { href: string; on: boolean; tab?: boolean; children: React.ReactNode }) {
-  const look = tab
-    ? `px-1 font-medium after:absolute after:inset-x-1 after:bottom-1.5 after:h-[2px] after:origin-left after:bg-ink after:transition-transform after:duration-200 ${on ? "text-ink after:scale-x-100" : "text-steel-dark after:scale-x-0 hover:text-ink"}`
-    : `flex-1 justify-center rounded-full px-2 font-semibold sm:flex-none sm:px-4 ${on ? "bg-ink text-paper shadow-[0_4px_10px_-4px_rgba(0,0,0,0.5)]" : "text-ink/70 hover:text-ink"}`;
-  return (
-    <Link href={href} scroll={false} aria-current={on ? "true" : undefined} className={`relative inline-flex h-11 shrink-0 items-center whitespace-nowrap text-sm transition-[background-color,color,scale] duration-150 active:scale-[0.97] ${look}`}>
-      {children}
-    </Link>
-  );
-}
-
-export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
-  const sp = await searchParams;
-  const max = BUDGETS.find((b) => String(b) === sp.max) ?? null;
-  const cat = ([...Object.keys(categoryLabels), "one"] as Cat[]).find((c) => c === sp.cat) ?? null;
-  const search = (Array.isArray(sp.q) ? sp.q[0] : sp.q)?.trim().slice(0, 60) ?? "";
-  const shown = Math.min(Math.max(Number(sp.show) || PAGE, PAGE), 600);
-
+export default async function GiftPage() {
   const [all, trending] = await Promise.all([getProducts(), getTrending()]);
   const live = all.filter((p) => p.status === "live" && inStock(p));
-  const inBudget = (p: Product, m: number | null) => (m ? priceOf(p) <= m : true);
-  const inCat = (p: Product, c: Cat | null) => (c === "one" ? oneSize(p) : c ? p.category === c : true);
-
-  // With a budget, the best that money buys comes first; without one, the small everyday gifts do.
-  // Search, as in the shop: every word typed has to be somewhere in the piece's name, kind, colours, fit, brand or tags.
-  const words = search.toLowerCase().split(/s+/).filter(Boolean);
-  const found = (p: Product) => {
-    if (!words.length) return true;
-    const hay = [p.name, p.shortDescription, categoryLabels[p.category], p.fit, p.brand ?? "", ...p.colours.map((c) => c.name), ...(p.tags ?? [])].join(" ").toLowerCase();
-    return words.every((w) => hay.includes(w));
-  };
-  const every = live.filter((p) => inBudget(p, max) && inCat(p, cat) && found(p)).sort((a, b) => (max ? priceOf(b) - priceOf(a) : priceOf(a) - priceOf(b)));
   const noSize = live.filter(oneSize);
   const liveSlugs = new Set(live.map((p) => p.slug));
   const popular = trending.items.map((i) => i.product).filter((p) => liveSlugs.has(p.slug));
   const popularTitle = trending.mode === "trending" ? "What people are buying." : trending.label === "Staff picks" ? "Staff picks." : "From the latest drop.";
-  const cats = ([...Object.keys(categoryLabels), "one"] as Cat[]).filter((c) => live.some((p) => inBudget(p, max) && inCat(p, c)));
-
-  const q = (next: { max?: number | null; cat?: Cat | null; show?: number; search?: null }) => {
-    const u = new URLSearchParams();
-    const m = next.max === undefined ? max : next.max;
-    const c = next.cat === undefined ? cat : next.cat;
-    if (m) u.set("max", String(m));
-    if (c) u.set("cat", c);
-    if (search && next.search !== null) u.set("q", search);
-    if (next.show) u.set("show", String(next.show));
-    const s = u.toString();
-    return `/gift${s ? `?${s}` : ""}#pieces`;
-  };
-  const filtered = Boolean(max || cat || search);
 
   return (
-    <div className="pb-24">
+    <div className="overflow-x-clip pb-24">
       {/* The opening: the owner's picture (a white room, the box, two cards) fills the screen; the words sit on its open left side. */}
       <section className="relative overflow-hidden bg-[#f1f2f5] text-ink">
         {/* Phones: the box and cards at the top, the words over the picture's pale foot. */}
@@ -198,86 +151,7 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
 
         {/* The pieces, with budget and kind as plain links */}
         <section id="pieces" aria-labelledby="pieces-h" className="scroll-mt-20">
-          <div className="flex items-end justify-between gap-4">
-            <h2 id="pieces-h" className="display display-h2">
-              {max ? `Under ${formatPrice(max)}.` : "Every piece."}
-            </h2>
-            <p className="index shrink-0 pb-1 text-right text-steel-dark">
-              {every.length} {every.length === 1 ? "piece" : "pieces"}
-              <span className="max-sm:hidden">{max ? " · best first" : " · cheapest first"}</span>
-            </p>
-          </div>
-          {/* The finder: one thin outlined card. Budget is a single control; kind is a row of words. */}
-          <div className="mt-5 rounded-2xl border border-ink">
-            <div className="flex items-center gap-3 px-3 py-2 md:px-4">
-              <span className="index w-14 shrink-0 text-steel-dark max-sm:hidden">Budget</span>
-              <nav aria-label="Budget" className="flex min-w-0 gap-1 rounded-full bg-mist p-1 max-sm:flex-1">
-                <Chip href={q({ max: null })} on={!max}>
-                  Any<span className="max-sm:sr-only">&nbsp;price</span>
-                </Chip>
-                {BUDGETS.map((b) => (
-                  <Chip key={b} href={q({ max: b })} on={max === b}>
-                    <span className="max-sm:sr-only">Under&nbsp;</span>
-                    {formatPrice(b)}
-                  </Chip>
-                ))}
-              </nav>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 border-t border-ink/15 px-3 py-1 md:px-4">
-              <span className="index w-14 shrink-0 text-steel-dark max-sm:hidden">Kind</span>
-              <nav aria-label="Kind of piece" className="flex min-w-0 flex-1 gap-4 overflow-x-auto md:gap-6">
-                <Chip tab href={q({ cat: null })} on={!cat}>
-                  Anything
-                </Chip>
-                {cats.map((c) => (
-                  <Chip tab key={c} href={q({ cat: c })} on={cat === c}>
-                    {c === "one" ? "One size" : categoryLabels[c]}
-                  </Chip>
-                ))}
-              </nav>
-              {filtered && (
-                <Link href={q({ max: null, cat: null, search: null })} scroll={false} className="inline-flex h-11 shrink-0 items-center text-[13px] font-semibold underline underline-offset-4">
-                  Clear
-                </Link>
-              )}
-              {/* Search: the shop's round button, opening into a field that searches as they type */}
-              <ShopSearch snug q={search} path="/gift" label="Search the gifts" others={{ max: max ? String(max) : undefined, cat: cat ?? undefined }} />
-            </div>
-          </div>
-          {every.length > 0 ? (
-            <ul key={`${max}-${cat}`} className="mt-6 grid animate-fade-up grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
-              {every.slice(0, shown).map((p, i) => (
-                <li key={p.id}>
-                  <GiftTile p={p} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" priority={i < 2} />
-                </li>
-              ))}
-            </ul>
-          ) : live.length === 0 ? (
-            <p className="mt-6">
-              Nothing to send right now.{" "}
-              <Link href="#buy" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
-                A gift card works today
-              </Link>
-            </p>
-          ) : (
-            <p className="mt-6">
-              Nothing here right now.{" "}
-              <Link href={q({ max: null, cat: null, search: null })} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
-                Show every piece
-              </Link>{" "}
-              or{" "}
-              <Link href="#buy" className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2">
-                send a gift card
-              </Link>
-            </p>
-          )}
-          {every.length > shown && (
-            <div className="mt-10 text-center">
-              <Link href={q({ show: shown + PAGE })} scroll={false} className="btn btn-outline">
-                Show more ({every.length - shown} left)
-              </Link>
-            </div>
-          )}
+          <GiftPieces pieces={live.sort((a, b) => priceOf(a) - priceOf(b)).map(toRailPiece)} />
         </section>
 
         {/* Gift cards: this section is where they are chosen and bought (the form opens over the page) */}
@@ -285,9 +159,9 @@ export default async function GiftPage({ searchParams }: PageProps<"/gift">) {
           <GiftCardPicker />
         </section>
 
-        {/* Two short rows, only while nothing is filtered */}
-        {!filtered && <Rail id="nosize-h" title="No size to guess." note="One size. Nothing to swap." products={noSize} />}
-        {!filtered && <Rail id="popular-h" title={popularTitle} note={trending.mode === "picks" ? trending.why : undefined} products={popular} />}
+        {/* Two short rows */}
+        {<Rail id="nosize-h" title="No size to guess." note="One size. Nothing to swap." products={noSize} />}
+        {<Rail id="popular-h" title={popularTitle} note={trending.mode === "picks" ? trending.why : undefined} products={popular} />}
 
         {/* How it works, as three receipt lines */}
         <section aria-labelledby="how-h" className="border-t border-mist pt-14">

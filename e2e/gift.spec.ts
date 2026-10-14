@@ -32,15 +32,23 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await expect(page.getByRole("heading", { name: /No size to guess/i })).toBeVisible();
   await page.screenshot(shot(`gift-${info.project.name}`));
 
-  const chips = page.getByRole("navigation", { name: "Budget", exact: true });
-  await chips.getByRole("link", { name: "Under Rs 2,000" }).click();
-  await expect(page).toHaveURL(/max=2000/);
-  await expect(chips.getByRole("link", { name: "Under Rs 2,000" })).toHaveAttribute("aria-current", "true");
+  // The pieces: one strip, narrowed in the page by budget, kind and search.
+  const budget = page.getByRole("group", { name: "Budget", exact: true });
+  await budget.getByRole("button", { name: "Under Rs 2,000" }).click();
+  await expect(budget.getByRole("button", { name: "Under Rs 2,000" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("heading", { name: "Under Rs 2,000." })).toBeVisible();
-  // With a filter on, the curated rows step aside; the kind of piece narrows it further.
-  await expect(page.getByRole("heading", { name: /No size to guess/i })).toHaveCount(0);
-  await page.getByRole("navigation", { name: "Kind of piece" }).getByRole("link", { name: "One size" }).click();
-  await expect(page).toHaveURL(/cat=one/);
+  const kind = page.getByRole("group", { name: "Kind of piece" });
+  await kind.getByRole("button", { name: /^One size/ }).click();
+  await expect(kind.getByRole("button", { name: /^One size/ })).toHaveAttribute("aria-pressed", "true");
+  const strip = page.getByRole("region", { name: /^Gifts:/ });
+  await expect(strip).toBeVisible();
+  // The centre piece can be sent as a gift, or bought with the rail's pop-up without leaving.
+  await expect(page.getByRole("link", { name: /Send it as a gift/ })).toHaveAttribute("href", /^\/gift\/[a-z0-9-]+$/);
+  await page.getByRole("button", { name: "Clear" }).click();
+  await page.getByRole("button", { name: "Search the gifts" }).click();
+  await page.getByRole("textbox", { name: "Search the gifts" }).fill("hoodie");
+  await expect(page.getByRole("region", { name: /^Gifts:/ }).getByRole("button", { name: /Hoodie/ }).first()).toBeAttached();
+  await expect(page).toHaveURL(/\/gift(#.*)?$/);
   // No "for her" on a menswear store.
   await expect(page.getByRole("link", { name: /for her/i })).toHaveCount(0);
 });
