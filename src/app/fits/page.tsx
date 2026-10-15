@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { OccasionFits } from "@/components/home/occasion-fits";
+import { FitsShowcase } from "@/components/fits-showcase";
 import { getSavedLooks } from "@/lib/looks";
 import { designerFits } from "@/lib/occasions";
 import { getProducts } from "@/lib/store";
@@ -14,17 +14,18 @@ export const metadata: Metadata = {
   alternates: { canonical: "/fits" },
 };
 
-// "Fits" in the main menu: the Designer Fits by occasion, and the way in to Build a fit.
+// "Fits" in the main menu: the Designer Fits as a lookbook (components/fits-showcase.tsx), and the way in to Build a fit.
 export default async function FitsPage() {
   const [products, saved] = await Promise.all([getProducts(), getSavedLooks()]);
-  const { looks, curated } = designerFits(products, saved);
+  const { looks } = designerFits(products, saved);
 
   return (
+    <div className="overflow-x-clip">
     <div className="container-ep pb-24 pt-10 md:pt-16">
       <h1 className="sr-only">Fits</h1>
       {looks.length > 0 ? (
         <section aria-labelledby="occasion-title">
-          <OccasionFits looks={looks} curated={curated} />
+          <FitsShowcase looks={looks} />
         </section>
       ) : (
         <div>
@@ -35,6 +36,7 @@ export default async function FitsPage() {
           </Link>
         </div>
       )}
+    </div>
     </div>
   );
 }

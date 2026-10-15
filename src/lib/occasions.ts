@@ -16,60 +16,60 @@ const PLAN = [
     key: "party",
     label: "Party",
     fits: [
-      { key: "party", label: "Night out", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-      { key: "party-house", label: "House party", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
-      { key: "party-birthday", label: "Birthday", slots: [["tees", "co-ords"], ["bottoms"], ["jackets"]], tone: "mixed" },
+      { key: "party", label: "Night out", note: "Dark layers for a late one.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
+      { key: "party-house", label: "House party", note: "Easy, warm, ready for the floor.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "party-birthday", label: "Birthday", note: "A little louder than usual.", slots: [["tees", "co-ords"], ["bottoms"], ["jackets"]], tone: "mixed" },
     ],
   },
   {
     key: "date",
     label: "Date",
     fits: [
-      { key: "date", label: "Dinner", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-      { key: "date-coffee", label: "Coffee", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "light" },
-      { key: "date-movie", label: "Movie night", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
+      { key: "date", label: "Dinner", note: "Sharp without trying too hard.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
+      { key: "date-coffee", label: "Coffee", note: "Light and relaxed, for daylight.", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "light" },
+      { key: "date-movie", label: "Movie night", note: "Soft layers for the back row.", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
     ],
   },
   {
     key: "college",
     label: "College",
     fits: [
-      { key: "college", label: "Class day", slots: [["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
-      { key: "college-presentation", label: "Presentation", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-      { key: "college-fest", label: "Fest", slots: [["tees"], ["bottoms"], ["jackets"], ["accessories"]], tone: "dark" },
+      { key: "college", label: "Class day", note: "Comfortable from first class to last.", slots: [["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
+      { key: "college-presentation", label: "Presentation", note: "Clean lines, quiet confidence.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
+      { key: "college-fest", label: "Fest", note: "Built for a long day out.", slots: [["tees"], ["bottoms"], ["jackets"], ["accessories"]], tone: "dark" },
     ],
   },
   {
     key: "cafe",
     label: "Café",
     fits: [
-      { key: "cafe", label: "Brunch", slots: [["tees", "co-ords"], ["bottoms"], ["accessories"]], tone: "light" },
-      { key: "cafe-laptop", label: "Laptop day", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
-      { key: "cafe-evening", label: "Evening", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "mixed" },
+      { key: "cafe", label: "Brunch", note: "Fresh, light, unhurried.", slots: [["tees", "co-ords"], ["bottoms"], ["accessories"]], tone: "light" },
+      { key: "cafe-laptop", label: "Laptop day", note: "Cosy enough for hours at a table.", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
+      { key: "cafe-evening", label: "Evening", note: "A layer for when it cools down.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "mixed" },
     ],
   },
   {
     key: "dashain",
     label: "Dashain",
     fits: [
-      { key: "dashain", label: "Tika day", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-      { key: "dashain-family", label: "Family visit", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
-      { key: "dashain-travel", label: "Travel home", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "dashain", label: "Tika day", note: "Neat and bright for the family.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
+      { key: "dashain-family", label: "Family visit", note: "Smart, but you can still sit on the floor.", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
+      { key: "dashain-travel", label: "Travel home", note: "Comfort for the long ride.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
     ],
   },
   {
     key: "weekend",
     label: "Weekend",
     fits: [
-      { key: "weekend", label: "Easy day", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-      { key: "weekend-roadtrip", label: "Road trip", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-      { key: "weekend-ride", label: "Bike ride", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "weekend", label: "Easy day", note: "Nothing to think about.", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
+      { key: "weekend-roadtrip", label: "Road trip", note: "Made for the passenger seat.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
+      { key: "weekend-ride", label: "Bike ride", note: "Wind-ready, dark, easy to move in.", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
     ],
   },
 ] as const satisfies readonly {
   key: string;
   label: string;
-  fits: readonly { key: string; label: string; slots: readonly (readonly Category[])[]; tone: Tone }[];
+  fits: readonly { key: string; label: string; note: string; slots: readonly (readonly Category[])[]; tone: Tone }[];
 }[];
 
 /** One fit inside an occasion, e.g. "party-house". */
@@ -96,11 +96,15 @@ export interface Look {
   groupLabel: string;
   /** Set by the owner in /admin/looks, not picked by the site. */
   curated: boolean;
+  /** One short line about the fit: "Dark layers for a late one." */
+  note: string;
+  /** A photo of the fit being worn, uploaded in /admin/looks. Only on a fit the owner set (so it shows these pieces). */
+  photo?: string;
   pieces: LookPiece[];
 }
 
 /** What the owner picked per fit in /admin/looks: up to four pieces, each in a colour. */
-export type SavedLooks = Partial<Record<OccasionKey, { place?: string; pieces: { slug: string; colour: string }[] }>>;
+export type SavedLooks = Partial<Record<OccasionKey, { place?: string; pieces: { slug: string; colour: string }[]; /** The fit worn, photographed. */ photo?: string }>>;
 
 /** Every fit the owner can set, named with its occasion: "Party · Night out". */
 export const OCCASIONS: { key: OccasionKey; label: string }[] = PLAN.flatMap((g) => g.fits.map((f) => ({ key: f.key, label: `${g.label} · ${f.label}` })));
@@ -149,7 +153,7 @@ export function designerFits(products: Product[], saved: SavedLooks = {}): { loo
   for (const group of PLAN) {
     for (const plan of group.fits) {
       const i = n++;
-      const base = { key: plan.key, label: plan.label, group: group.key, groupLabel: group.label };
+      const base = { key: plan.key, label: plan.label, note: plan.note, group: group.key, groupLabel: group.label };
       // The owner's fit, when at least two of its pieces are live and in stock.
       const mine = saved[plan.key];
       if (mine && mine.pieces.length) {
@@ -159,7 +163,9 @@ export function designerFits(products: Product[], saved: SavedLooks = {}): { loo
           return piece ? [piece] : [];
         });
         if (pieces.length >= 2) {
-          looks.push({ ...base, curated: true, pieces });
+          // The photo shows the pieces the owner set: only shown while all of them are still in it.
+          const photo = mine.photo && pieces.length === mine.pieces.length ? mine.photo : undefined;
+          looks.push({ ...base, curated: true, pieces, ...(photo ? { photo } : {}) });
           continue;
         }
       }

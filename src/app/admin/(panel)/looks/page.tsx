@@ -6,6 +6,7 @@ import { OCCASIONS } from "@/lib/occasions";
 import { categoryLabels } from "@/lib/site";
 import { requireOwner } from "@/lib/staff";
 import type { Category } from "@/lib/types";
+import { FitPhotos } from "./fit-photos";
 import { LooksForm, type PieceOption } from "./looks-form";
 
 export const metadata: Metadata = { title: "Looks" };
@@ -34,6 +35,7 @@ export default async function AdminLooks() {
         </a>
       </p>
       <LooksForm occasions={OCCASIONS} options={options} saved={saved} />
+      <FitPhotos fits={OCCASIONS.map((o) => ({ key: o.key, label: o.label, photo: saved[o.key]?.photo, set: (saved[o.key]?.pieces.length ?? 0) >= 2 }))} />
     </div>
   );
 }
