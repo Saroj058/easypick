@@ -40,6 +40,9 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   // Pick, the robot: nothing over him until he's asked. Then one question at a time, by buttons.
   const pick = page.getByRole("region", { name: "Pick, your gift helper" });
   await expect(pick.getByRole("group", { name: "Quick answers" })).toHaveCount(0);
+  // The box appears once his walking line is tapped.
+  await expect(pick.getByRole("textbox", { name: "Ask Pick" })).toHaveCount(0);
+  await pick.getByRole("button", { name: /Ask me anything about clothes/ }).click();
   await pick.getByRole("textbox", { name: "Ask Pick" }).fill("a gift for a friend");
   await pick.getByRole("button", { name: "Send", exact: true }).click();
   await expect(pick).toContainText("What's the occasion?");
@@ -87,6 +90,9 @@ test("Pick: a few words, an answer beside him, real suggestions; Send this opens
   const pick = page.getByRole("region", { name: "Pick, your gift helper" });
   // No chat window: one bubble with his latest answer.
   await expect(pick.getByRole("log")).toHaveCount(0);
+  // The box appears once his walking line is tapped.
+  await expect(pick.getByRole("textbox", { name: "Ask Pick" })).toHaveCount(0);
+  await pick.getByRole("button", { name: /Ask me anything about clothes/ }).click();
   await pick.getByRole("textbox", { name: "Ask Pick" }).fill("birthday gift for my brother under 3000, he likes oversized, don't know his size");
   await pick.getByRole("button", { name: "Send", exact: true }).click();
   await expect(pick.getByLabel("You said")).toContainText("birthday gift for my brother");

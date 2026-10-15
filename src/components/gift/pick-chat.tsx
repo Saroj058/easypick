@@ -12,6 +12,7 @@ import type { PickCard } from "@/lib/pick/recommend";
 import type { Mood, PickReply } from "@/lib/pick/turn";
 import { ProductImage } from "../product-image";
 import type { RobotMood } from "../ui/robot-hero";
+import { ThinkingOrb } from "../ui/ai-thinking-orb";
 import { OrbInput } from "../ui/animated-input";
 import { SendSheet } from "./gift-pieces";
 
@@ -221,16 +222,37 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
   const close = () => {
     setNow((c) => ({ ...c, hidden: true }));
     setMood("idle");
+    setAsking(false);
+  };
+  // The "Ask Pick" box shows once they tap his line (or while an answer is open).
+  const [asking, setAsking] = useState(false);
+  const showBox = asking || open;
+  const startAsking = () => {
+    setAsking(true);
+    setMood("listening");
+    requestAnimationFrame(() => field.current?.focus());
   };
 
   return (
     <section aria-label={where === "shop" ? "Pick, your shopping helper" : "Pick, your gift helper"} className="!mb-8 -mt-6 md:!mb-10 md:-mt-10">
       {/* Pick walks the whole width of the screen. Asked something, he walks over and answers in a
           panel on his left, turning to it; closed, he goes back to roaming. */}
-      <div ref={band} className="relative mx-[calc(50%-50vw)] flex min-h-[150px] items-end md:min-h-[190px]">
+      <div ref={band} className={`relative mx-[calc(50%-50vw)] flex items-end [--pick-x:0.5] ${open ? "min-h-[150px] md:min-h-[190px]" : "min-h-[200px] md:min-h-[244px]"}`}>
         <div className="absolute inset-x-0 bottom-0 h-[150px] md:h-[190px]">
-          <Robot mood={open ? mood : "idle"} loved={mood === "happy"} spotRef={spot} className="absolute inset-0" />
+          <Robot mood={open ? mood : asking ? "listening" : "idle"} loved={mood === "happy"} spotRef={spot} followRef={band} className="absolute inset-0" />
         </div>
+        {/* Before anything is asked: his line, carried over his head as he walks. Tap it to ask. */}
+        {!open && (
+          <button
+            type="button"
+            onClick={startAsking}
+            className="absolute bottom-[136px] z-10 w-max max-w-[calc(100vw-32px)] -translate-x-1/2 cursor-pointer rounded-full bg-paper px-4 py-2 text-center text-[13.5px] font-semibold shadow-[0_10px_28px_-14px_rgba(10,10,10,0.5),0_0_0_1px_rgba(10,10,10,0.1)] transition-[scale] hover:scale-[1.03] active:scale-[0.98] md:bottom-[172px] md:text-[14px]"
+            style={{ left: "clamp(min(170px, 50vw), calc(var(--pick-x) * 100%), calc(100% - min(170px, 50vw)))" }}
+          >
+            Hi, I&apos;m Pick. Ask me anything about clothes.
+            <span aria-hidden className="absolute -bottom-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-paper shadow-[1px_1px_0_0_rgba(10,10,10,0.08)]" />
+          </button>
+        )}
 
         <div className="relative z-10 mx-auto w-full max-w-[820px] px-3 pb-4 md:px-4 md:pb-6">
           <AnimatePresence>
@@ -272,11 +294,8 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
                     )}
                     <div aria-live="polite">
                       {thinking ? (
-                        <p className="flex h-7 items-center gap-1.5" role="status" aria-label="Pick is thinking">
-                          {[0, 1, 2].map((d) => (
-                            <span key={d} className="h-2 w-2 rounded-full bg-ink/40 motion-safe:animate-bounce" style={{ animationDelay: `${d * 130}ms` }} />
-                          ))}
-                        </p>
+                        // The dotted orb lights up while he works it out (ui/ai-thinking-orb.tsx).
+                        <ThinkingOrb size={64} className="-my-1" />
                       ) : (
                         <p className="whitespace-pre-line text-[15.5px] leading-snug tracking-[-0.005em] md:text-[17px]">{shown}</p>
                       )}
@@ -314,7 +333,8 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
         </div>
       </div>
 
-      {/* Ask Pick: the one way in */}
+      {/* Ask Pick: shown once they tap his line */}
+      {showBox && (
       <OrbInput
         id="pick-say"
         label="Ask Pick"
@@ -331,6 +351,7 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
         placeholders={where === "shop" ? ["something for me under 2000", "an oversized hoodie in M", "what goes with black cargos?", "hi Pick, how are you?"] : ["gift for my brother, under 3000", "birthday gift for my girlfriend", "something minimal for a friend", "hi Pick, how are you?"]}
         className="mx-auto mt-3 max-w-[460px]"
       />
+      )}
 
       <SendSheet
         piece={sending}

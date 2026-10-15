@@ -360,6 +360,9 @@ test("account dashboard: greeting, calm summaries, Edit opens the form; Pick on 
   // Pick on the shop: for themselves first.
   await page.goto("/shop");
   const pick = page.getByRole("region", { name: "Pick, your shopping helper" });
+  // The box appears once his walking line is tapped.
+  await expect(pick.getByRole("textbox", { name: "Ask Pick" })).toHaveCount(0);
+  await pick.getByRole("button", { name: /Ask me anything about clothes/ }).click();
   await pick.getByRole("textbox", { name: "Ask Pick" }).fill("something for me under 2000, oversized, size M");
   await pick.getByRole("button", { name: "Send", exact: true }).click();
   await expect(pick.getByRole("list", { name: "Pick's suggestions" }).getByRole("link", { name: "View" }).first()).toBeVisible({ timeout: 30_000 });
