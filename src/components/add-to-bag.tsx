@@ -3,22 +3,26 @@
 import { Gift, ShoppingBag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { addToGiftBag } from "@/lib/gift-bag";
+import { addToGiftBag, removeFromGiftBag, useGiftBag } from "@/lib/gift-bag";
 import { useMySize } from "@/lib/my-size";
 import type { Addable } from "@/lib/addable";
 import type { Size } from "@/lib/types";
 import { useAddToBag, showBagToast } from "./bag-gate";
+import { useBag } from "./bag-provider";
 import { useMe } from "./session";
 
 // The small "add to bag" button on product cards across the site (owner, 15 Oct 2026). One tap
 // adds the piece when its size is known (one size, or the customer's saved size); otherwise a tiny
 // size picker opens on the card. On the gift page it fills the gift bag instead, for sending
-// several pieces as one gift.
+// several pieces as one gift. Already in the bag, it shows filled, and a tap takes it out again
+// (owner, 15 Oct 2026).
 
 const ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
 export function AddToBag({ piece, to = "bag", className = "" }: { piece: Addable; to?: "bag" | "gift"; className?: string }) {
   const add = useAddToBag();
+  const { lines, remove } = useBag();
+  const giftBag = useGiftBag();
   const me = useMe();
   const mySize = useMySize();
   const [open, setOpen] = useState(false);
@@ -44,6 +48,14 @@ export function AddToBag({ piece, to = "bag", className = "" }: { piece: Addable
     };
   }, [open]);
 
+  // What of this piece is already in the bag (any colour or size).
+  const inBag = to === "gift" ? giftBag.filter((l) => l.slug === piece.slug) : lines.filter((l) => l.slug === piece.slug);
+  const takeOut = () => {
+    setOpen(false);
+    inBag.forEach((l) => (to === "gift" ? removeFromGiftBag(l.sku) : remove(l.sku)));
+    showBagToast(`Removed ${piece.name} from your ${to === "gift" ? "gift bag" : "bag"}.`);
+  };
+
   const inStock = piece.options.filter((o) => o.left > 0);
   // Vault pieces go in the bag only for someone signed in (as on the product page).
   if (!inStock.length || (to === "bag" && piece.vault && !me)) return null;
@@ -67,17 +79,25 @@ export function AddToBag({ piece, to = "bag", className = "" }: { piece: Addable
     }
   };
 
-  const label = to === "gift" ? `Add ${piece.name} to the gift bag` : `Add ${piece.name} to bag`;
+  const label = inBag.length
+    ? to === "gift"
+      ? `Remove ${piece.name} from the gift bag`
+      : `Remove ${piece.name} from bag`
+    : to === "gift"
+      ? `Add ${piece.name} to the gift bag`
+      : `Add ${piece.name} to bag`;
   return (
     <div ref={box} className={className || "relative"}>
       <button
         type="button"
         aria-label={label}
-        aria-expanded={known ? undefined : open}
+        aria-expanded={known || inBag.length ? undefined : open}
+        aria-pressed={inBag.length > 0}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (known) put(known);
+          if (inBag.length) takeOut();
+          else if (known) put(known);
           else setOpen((v) => !v);
         }}
         onPointerDown={(e) => e.stopPropagation()}
@@ -85,7 +105,7 @@ export function AddToBag({ piece, to = "bag", className = "" }: { piece: Addable
       >
         <span
           className={`grid h-9 w-9 place-items-center rounded-full ring-1 backdrop-blur-md transition-[background-color,color,scale,box-shadow] duration-200 active:scale-90 [:focus-visible>&]:outline [:focus-visible>&]:outline-2 [:focus-visible>&]:outline-ink ${
-            done ? "scale-110 bg-ink text-paper ring-ink" : "bg-paper/80 text-ink ring-ink/10 hover:bg-paper"
+            done ? "scale-110 bg-ink text-paper ring-ink" : inBag.length ? "bg-ink text-paper ring-ink hover:bg-[#333]" : "bg-paper/80 text-ink ring-ink/10 hover:bg-paper"
           }`}
         >
           {to === "gift" ? <Gift aria-hidden className="h-4 w-4" strokeWidth={1.8} /> : <ShoppingBag aria-hidden className="h-4 w-4" strokeWidth={1.8} />}

@@ -256,12 +256,16 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
             );
           const p = pieces[i];
           return (
-            <button
+            <div
               key={p.id}
-              type="button"
               ref={(el) => {
                 cards.current[k] = el;
               }}
+              className={box}
+              style={style}
+            >
+            <button
+              type="button"
               tabIndex={-1}
               aria-label={`${p.name}, ${formatPrice(p.price)}, ${i + 1} of ${n}`}
               aria-current={i === active ? "true" : undefined}
@@ -270,8 +274,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
                 if (i === centre.current) router.push(href(p));
                 else go(i);
               }}
-              className={`${box} cursor-pointer transition-shadow duration-300 [@media(hover:hover)]:hover:shadow-[0_14px_30px_-14px_rgba(0,0,0,0.35)]`}
-              style={style}
+              className="absolute inset-0 cursor-pointer rounded-[14px] transition-shadow duration-300 [@media(hover:hover)]:hover:shadow-[0_14px_30px_-14px_rgba(0,0,0,0.35)]"
             >
               {/* The photo is 4:5 and the card a little squarer: it is cropped from the foot */}
               <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-[14px] bg-[#efefef]">
@@ -282,16 +285,11 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
               {/* The price, on a tag tied to the foot of the card and hanging under it, as on the home rails. */}
               {tags && <PriceTag price={formatPrice(p.price)} sku={p.colours[0]?.sizes[0]?.sku ?? p.id} className="absolute right-3 top-full z-[2] -mt-3 md:right-4" />}
             </button>
+            {/* Add to bag: on the card in front, bottom left; it moves with the card */}
+            {!soon && i === active && <AddToBag piece={addableFromRail(p)} to={addTo} className="absolute bottom-[2px] left-[2px] z-10" />}
+            </div>
           );
         })}
-        {!soon && (
-          <AddToBag
-            key={piece.id}
-            piece={addableFromRail(piece)}
-            to={addTo}
-            className={`absolute left-[calc(50%-var(--w)/2+2px)] z-30 ${tags ? "top-[calc(50%-36px+var(--w)*0.55-46px)]" : "top-[calc(50%+var(--w)*0.55-46px)]"}`}
-          />
-        )}
       </div>
 
       {/* How far along the strip: a thin line, in place of arrows */}

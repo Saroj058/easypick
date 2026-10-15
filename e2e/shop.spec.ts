@@ -55,6 +55,11 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search), the
   await first.getByRole("button", { name: "Add Everyday Hoodie to bag" }).click();
   await expect(page.getByText(/Added Everyday Hoodie \(.*, M\) to your bag\./)).toBeVisible();
   await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
+  // A second tap takes it out of the bag; a third puts it back.
+  await first.getByRole("button", { name: "Remove Everyday Hoodie from bag" }).click();
+  await expect(page.getByText("Removed Everyday Hoodie from your bag.")).toBeVisible();
+  await first.getByRole("button", { name: "Add Everyday Hoodie to bag" }).click();
+  await expect(first.getByRole("button", { name: "Remove Everyday Hoodie from bag" })).toBeVisible();
   // The measurements in cm for the size chosen.
   await first.getByRole("button", { name: "Measurements in cm" }).click();
   await expect(first.getByText(/Size M · cm/)).toBeVisible();

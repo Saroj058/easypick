@@ -16,6 +16,7 @@ import type { RobotMood } from "../ui/robot-hero";
 import { ThinkingOrb } from "../ui/ai-thinking-orb";
 import { OrbInput } from "../ui/animated-input";
 import { showBagToast, useAddToBag } from "../bag-gate";
+import { useBag } from "../bag-provider";
 import { SendSheet } from "./gift-pieces";
 
 // Pick, the gift page's robot. At first just Pick, roaming, and an "Ask Pick" line. Ask him something
@@ -479,13 +480,18 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
 function MiniCard({ card, index, onSend, where, size }: { card: PickCard; index: number; onSend: () => void; where: Where; size?: string }) {
   const still = useReducedMotion();
   const add = useAddToBag();
-  const [added, setAdded] = useState(false);
+  const { lines, remove } = useBag();
   // In their size, else one size; the first colour that has it.
   const option = where === "shop" ? (card.options ?? []).find((o) => o.left > 0 && (o.size === "ONE" || o.size === size)) : undefined;
+  const added = Boolean(option && lines.some((l) => l.sku === option.sku));
   const addIt = () => {
     if (!option) return;
+    if (added) {
+      remove(option.sku);
+      showBagToast(`Removed ${card.name} from your bag.`);
+      return;
+    }
     add([{ slug: card.slug, sku: option.sku, name: card.name, size: option.size, colour: option.colour, price: card.price }]);
-    setAdded(true);
     showBagToast(`Added ${card.name} (${option.colour}${option.size === "ONE" ? "" : `, ${option.size}`}) to your bag.`);
   };
   return (
@@ -512,7 +518,8 @@ function MiniCard({ card, index, onSend, where, size }: { card: PickCard; index:
         <button
           type="button"
           onClick={addIt}
-          aria-label={`Add ${card.name} in ${option.size === "ONE" ? "one size" : option.size} to bag`}
+          aria-label={added ? `Remove ${card.name} from bag` : `Add ${card.name} in ${option.size === "ONE" ? "one size" : option.size} to bag`}
+          aria-pressed={added}
           className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[12.5px] font-semibold transition-[background-color,color,scale] active:scale-[0.97] md:px-3.5 ${added ? "bg-mist text-ink" : "bg-ink text-paper hover:bg-[#222]"}`}
         >
           <ShoppingBag aria-hidden className="h-3.5 w-3.5" strokeWidth={2} />
