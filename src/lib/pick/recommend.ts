@@ -5,7 +5,7 @@
 import { formatPrice } from "../format";
 import { sellable } from "../inventory";
 import type { Category, Product, Size } from "../types";
-import type { PickState } from "./journey";
+import { categoryOf, forSelf, type PickState } from "./journey";
 
 /** Colours that read as calm neutrals, for "minimal and clean". */
 const NEUTRAL = /\b(black|white|ivory|bone|cream|stone|sand|ash|charcoal|grey|gray|navy|slate|off-white|ecru|oat)\b/i;
@@ -29,10 +29,22 @@ export interface PickCard {
   /** 3 or fewer pieces left in all, across every size and colour. */
   few: boolean;
   why: string;
+  /** Every colour and size with what is left, for "Add to bag" on the shop. */
+  options: { colour: string; size: Size; sku: string; left: number }[];
 }
 
 const priceOf = (p: Product) => p.salePrice ?? p.price;
 const isVault = (p: Product) => Boolean(p.vault) || p.tags.includes("vault");
+
+/** What goes with each kind of piece, for "What goes with it?". */
+export const GOES_WITH: Record<Category, Category[]> = {
+  tees: ["bottoms", "jackets"],
+  hoodies: ["bottoms", "accessories"],
+  jackets: ["tees", "bottoms"],
+  bottoms: ["tees", "hoodies"],
+  "co-ords": ["accessories", "jackets"],
+  accessories: ["tees", "hoodies"],
+};
 
 /** Pieces that can be sent as a gift right now. */
 export function giftable(products: Product[]): Product[] {
@@ -84,15 +96,20 @@ function firstMatch(text: string, re: RegExp): string {
  * Up to `count` pieces for the state, best first, skipping any already shown. With a budget,
  * only pieces at or under it. With a known size, only pieces with that size to sell.
  */
-export function recommend(all: Product[], s: PickState, count = 3): { cards: PickCard[]; total: number } {
+export function recommend(all: Product[], s: PickState, count = 3, kinds?: Category[]): { cards: PickCard[]; total: number } {
   const shown = new Set(s.shown ?? []);
+  // On the shop: only the kind they asked for (or the kinds that go with it), in their colour if they named one.
+  const only = kinds ?? (categoryOf(s.kind) ? [categoryOf(s.kind)!] : undefined);
+  const colour = s.colour ? new RegExp(`\\b${s.colour === "grey" ? "gr[ae]y" : s.colour}\\b`, "i") : null;
   const pool = giftable(all).filter((p) => {
+    if (only && !only.includes(p.category)) return false;
+    if (colour && !p.colours.some((c) => colour.test(c.name) && p.variants.some((v) => v.colour === c.name && sellable(v) > 0))) return false;
     if (s.budget && priceOf(p) > s.budget) return false;
     if (s.sizing === "known" && s.size && !oneSize(p) && !p.variants.some((v) => v.size === s.size && sellable(v) > 0)) return false;
     return true;
   });
   // A special person or occasion leans to the top of the budget; otherwise the middle of it.
-  const special = s.recipient === "partner" || s.occasion === "anniversary" || s.occasion === "valentine";
+  const special = !forSelf(s) && (s.recipient === "partner" || s.occasion === "anniversary" || s.occasion === "valentine");
   const aim = s.budget ? s.budget * (special ? 0.95 : 0.7) : special ? 4000 : 2500;
   const ranked = pool
     .map((p) => {
@@ -108,12 +125,12 @@ export function recommend(all: Product[], s: PickState, count = 3): { cards: Pic
   // A little variety: one per kind of piece first, then the rest.
   const fresh = ranked.filter((r) => !shown.has(r.p.slug));
   const picked: typeof fresh = [];
-  const kinds = new Set<Category>();
+  const seenKinds = new Set<Category>();
   for (const r of fresh) {
     if (picked.length >= count) break;
-    if (!kinds.has(r.p.category)) {
+    if (!seenKinds.has(r.p.category)) {
       picked.push(r);
-      kinds.add(r.p.category);
+      seenKinds.add(r.p.category);
     }
   }
   for (const r of fresh) {
@@ -130,6 +147,7 @@ export function card(p: Product, s: PickState, styleWhy?: string): PickCard {
   const left = p.variants.reduce((n, v) => n + sellable(v), 0);
   const reasons: string[] = [];
   if (styleWhy) reasons.push(styleWhy);
+  if (s.colour && p.colours.some((c) => c.name.toLowerCase().includes(s.colour!))) reasons.push(`In ${p.colours.find((c) => c.name.toLowerCase().includes(s.colour!))!.name.toLowerCase()}, as you asked.`);
   if (oneSize(p)) reasons.push("One size, so there's nothing to guess.");
   else if (s.sizing === "known" && s.size) reasons.push(`Size ${s.size} is in stock.`);
   // The price is shown next to this anyway: the budget is only the reason when there is no other.
@@ -147,6 +165,7 @@ export function card(p: Product, s: PickState, styleWhy?: string): PickCard {
     sizes,
     few: left > 0 && left <= 3,
     why: reasons.slice(0, 2).join(" ") || "A good all-rounder.",
+    options: p.variants.map((v) => ({ colour: v.colour, size: v.size, sku: v.sku, left: sellable(v) })),
   };
 }
 

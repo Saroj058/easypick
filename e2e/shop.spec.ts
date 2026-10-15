@@ -366,5 +366,12 @@ test("account dashboard: greeting, calm summaries, Edit opens the form; Pick on 
   await pick.getByRole("button", { name: /Ask me anything about clothes/ }).click();
   await pick.getByRole("textbox", { name: "Ask Pick" }).fill("something for me under 2000, oversized, size M");
   await pick.getByRole("button", { name: "Send", exact: true }).click();
-  await expect(pick.getByRole("list", { name: "Pick's suggestions" }).getByRole("link", { name: "View" }).first()).toBeVisible({ timeout: 30_000 });
+  // His picks go in the bag in the size they said, in one tap.
+  const add = pick.getByRole("list", { name: "Pick's suggestions" }).getByRole("button", { name: /to bag$/ }).first();
+  await expect(add).toBeVisible({ timeout: 30_000 });
+  await add.click();
+  await expect(page.getByText(/to your bag\./)).toBeVisible();
+  // He asks what they're after, and knows "what goes with it".
+  await pick.getByRole("group", { name: "Quick answers" }).getByRole("button", { name: "Something else" }).click();
+  await expect(pick).toContainText("What are you after today?", { timeout: 30_000 });
 });

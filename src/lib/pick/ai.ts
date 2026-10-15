@@ -1,6 +1,6 @@
 import "server-only";
 
-import { OCCASIONS, RECIPIENTS, SIZES, STYLES, type PickAction, type PickState, type Quick } from "./journey";
+import { COLOURS, KINDS, OCCASIONS, RECIPIENTS, SIZES, STYLES, type PickAction, type PickState, type Quick } from "./journey";
 
 // Pick's reading of free text. The model only turns the customer's words into the same fields the
 // buttons set (who it's for, occasion, style, budget, size) plus one short, warm line. It never
@@ -28,7 +28,7 @@ const TIMEOUT_MS = 6000;
 const QUOTA_PAUSE_MS = 10 * 60_000;
 let pausedUntil = 0;
 
-const SYSTEM = `You are Pick, the small robot who helps people choose clothing gifts at Easypick, a streetwear store in Kathmandu.
+const SYSTEM = `You are Pick, the small robot who helps people choose clothes at Easypick, a streetwear store in Kathmandu: gifts on the gift page, and pieces for themselves on the shop (when "Already known" has mode "shop", they are shopping for themselves unless they say it is for someone else).
 Read the customer's message and fill only the fields they actually stated or clearly implied. Never guess a field they did not mention.
 - recipient: partner (boyfriend, girlfriend, husband, wife), friend, family, self, someone (anyone else).
 - occasion: birthday, anniversary, valentine, festival (Dashain, Tihar, Bhai Tika and other festivals), thanks, just-because, other.
@@ -36,9 +36,11 @@ Read the customer's message and fill only the fields they actually stated or cle
 - budget: their top spend in Nepali rupees as a whole number, only if they gave one. "3k" is 3000. 0 means no limit.
 - sizing: unknown if they said they don't know the size; known if they gave one.
 - size: XS, S, M, L, XL or XXL, only if stated.
+- kind: tees, hoodies, jackets, bottoms (pants, jeans, cargos, joggers, shorts), co-ords (matching sets), accessories (caps, bags, socks), any (anything), only if stated.
+- colour: black, white, grey, navy, blue, green, olive, brown, beige, cream, red, maroon, pink, purple, yellow or orange, only if stated.
 - intent: answer (they gave preferences), more (more options), cheaper, compare, restart, fit (what if it doesn't fit, exchanges), delivery (delivery, sending it to them), offtopic, unclear.
 reply: one or two short sentences (under 25 words) in Pick's voice: warm, clever, a little playful, never pushy or salesy.
-In reply, never mention prices, numbers, products, discounts, delivery times or store policies, and never promise anything. Acknowledge what they said; if offtopic, answer in a few friendly words and steer back to the gift.`;
+In reply, never mention prices, numbers, products, discounts, delivery times or store policies, and never promise anything. Acknowledge what they said; if offtopic, answer in a few friendly words and steer back to the gift (or, on the shop, to what they'd like to wear).`;
 
 const SCHEMA = {
   type: "OBJECT",
@@ -49,6 +51,8 @@ const SCHEMA = {
     budget: { type: "INTEGER" },
     sizing: { type: "STRING", enum: ["known", "unknown"] },
     size: { type: "STRING", enum: [...SIZES] },
+    kind: { type: "STRING", enum: [...KINDS] },
+    colour: { type: "STRING", enum: [...COLOURS] },
     intent: { type: "STRING", enum: [...INTENTS] },
     reply: { type: "STRING" },
   },
@@ -71,6 +75,10 @@ export function validate(raw: unknown): Understanding | null {
   if (style) set.style = style;
   if (sizing) set.sizing = sizing;
   if (size) set.size = size;
+  const kind = oneOf(r.kind, KINDS);
+  const colour = oneOf(r.colour, COLOURS);
+  if (kind) set.kind = kind;
+  if (colour) set.colour = colour;
   if (typeof r.budget === "number" && Number.isInteger(r.budget) && r.budget >= 0 && r.budget <= 1_000_000) set.budget = r.budget;
   const intent = oneOf(r.intent, INTENTS);
   const action: PickAction | undefined = intent && ["more", "cheaper", "compare", "restart", "fit", "delivery"].includes(intent) ? (intent as PickAction) : undefined;

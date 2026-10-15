@@ -189,3 +189,65 @@ describe("asides", () => {
     expect(r.quick.map((q) => q.label)).toContain("Show me more");
   });
 });
+
+describe("on the shop, for themselves", () => {
+  const SHOP = { mode: "shop" as const };
+  const pressOn = async (r: Awaited<ReturnType<typeof turn>>, label: string) => {
+    const q = r.quick.find((x) => x.label === label || x.label.startsWith(label));
+    if (!q) throw new Error(`no button ${label}: ${r.quick.map((x) => x.label).join(" | ")}`);
+    return turn(CATALOGUE, r.state, { quick: q });
+  };
+
+  it("asks what they're after, their size, the fit and a budget; never who it's for", async () => {
+    expect(stageOf(SHOP)).toBe("kind");
+    let r = await turn(CATALOGUE, SHOP, { quick: { label: "Hoodies", set: { kind: "hoodies" } } });
+    expect(r.messages[0].text).toMatch(/Hoodies\. .*Which size do you wear\?/);
+    r = await pressOn(r, "M");
+    expect(r.messages[0].text).toMatch(/How do you like it to fit\?/);
+    r = await pressOn(r, "Oversized");
+    r = await pressOn(r, "No limit");
+    const cards = r.messages.flatMap((m) => m.cards ?? []);
+    expect(cards.map((c) => c.slug)).toEqual(["box-hoodie"]);
+    expect(cards[0].options.find((o) => o.size === "M")?.sku).toBe("box-hoodie-M");
+    expect(r.quick.map((q) => q.label)).toContain("What goes with it?");
+    // What goes with a hoodie: bottoms and accessories, not more hoodies.
+    r = await pressOn(r, "What goes with it?");
+    const pairs = r.messages.flatMap((m) => m.cards ?? []);
+    expect(pairs.length).toBeGreaterThan(0);
+    expect(pairs.every((c) => c.category === "bottoms" || c.category === "accessories")).toBe(true);
+  });
+
+  it("reads a kind, a colour and a size from one sentence; a saved size skips the question", async () => {
+    expect(readMessage("a black hoodie in size M").set).toMatchObject({ kind: "hoodies", colour: "black", size: "M" });
+    expect(readMessage("olive cargos").set).toMatchObject({ kind: "bottoms", colour: "olive" });
+    const r = await turn(CATALOGUE, { ...SHOP, sizing: "known", size: "M", style: "unsure", budget: 0 }, { text: "olive cargos" });
+    expect(r.messages.flatMap((m) => m.cards ?? []).map((c) => c.slug)).toEqual(["relaxed-cargo"]);
+  });
+
+  it("a sentence with no kind but enough to go on shows anything; a colour with nothing to show offers 'any colour'", async () => {
+    const r = await turn(CATALOGUE, SHOP, { text: "something for me under 2000, oversized, size M" });
+    expect(r.state.kind).toBe("any");
+    const none = await turn(CATALOGUE, { ...SHOP, kind: "tees", sizing: "unknown", style: "unsure", budget: 0 }, { text: "a pink tee" });
+    expect(none.quick.map((q) => q.label)).toContain("Any colour");
+    const any = await pressOn(none, "Any colour");
+    expect(any.state.colour).toBeUndefined();
+    expect(any.messages.flatMap((m) => m.cards ?? []).length).toBeGreaterThan(0);
+  });
+
+  it("'a gift for someone' switches to the gift questions; start again stays on the shop", async () => {
+    let r = await turn(CATALOGUE, SHOP, { quick: { label: "A gift for someone 🎁", action: "gift" } });
+    expect(r.state.gift).toBe(true);
+    expect(r.messages[0].text).toMatch(/Who are we shopping for/);
+    r = await turn(CATALOGUE, r.state, { quick: { label: "Start again", action: "restart" } });
+    expect(r.state).toEqual({ mode: "shop" });
+    expect(r.messages[0].text).toMatch(/What are you after today\?/);
+    // Typing that it's for someone else also turns it into a gift.
+    const g = await turn(CATALOGUE, SHOP, { text: "a birthday gift for my brother" });
+    expect(g.state).toMatchObject({ gift: true, recipient: "family", occasion: "birthday" });
+  });
+
+  it("only keeps known kinds and colours from the browser", () => {
+    expect(cleanState({ mode: "shop", kind: "hats", colour: "rainbow", gift: "yes" })).toEqual({ mode: "shop" });
+    expect(applySet({}, { kind: "co-ords", colour: "navy" }).state).toMatchObject({ kind: "co-ords", colour: "navy" });
+  });
+});

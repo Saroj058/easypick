@@ -6,8 +6,8 @@
 import { formatPrice } from "../format";
 import { site } from "../site";
 import type { Product } from "../types";
-import { GREETING, smallTalk, acknowledge, applySet, cleanState, question, readMessage, stageOf, type PickAction, type PickState, type Quick } from "./journey";
-import { compare, giftable, recommend, type PickCard } from "./recommend";
+import { GREETING, KIND_WORDS, categoryOf, forSelf, smallTalk, acknowledge, applySet, cleanState, question, readMessage, stageOf, type PickAction, type PickState, type Quick } from "./journey";
+import { GOES_WITH, compare, giftable, recommend, type PickCard } from "./recommend";
 import type { Understanding } from "./ai";
 
 /** How the robot should look while this answer is on screen. */
@@ -31,7 +31,10 @@ export interface PickReply {
 
 export type PickInput = { start: true } | { quick: Quick } | { text: string };
 
-const ACTIONS: PickAction[] = ["help-decide", "more", "cheaper", "restart", "change-budget", "change-style", "own-budget", "fit", "delivery", "compare", "skip"];
+const ACTIONS: PickAction[] = ["help-decide", "more", "cheaper", "restart", "change-budget", "change-style", "own-budget", "fit", "delivery", "compare", "skip", "pair", "change-kind", "gift", "any-colour"];
+
+/** The shop's first words (and after "start again"). */
+export const SHOP_HELLO = "Hey, I'm Pick! 👋";
 
 const WORDS: Record<string, string> = {
   partner: "for someone special",
@@ -52,6 +55,13 @@ const WORDS: Record<string, string> = {
   premium: "premium",
   bold: "something bold",
   unsure: "open on style",
+  tees: "tees",
+  hoodies: "hoodies",
+  jackets: "jackets",
+  bottoms: "bottoms",
+  "co-ords": "co-ords",
+  accessories: "accessories",
+  any: "anything",
 };
 
 export async function turn(products: Product[], rawState: unknown, input: PickInput, understand?: (text: string, known: PickState) => Promise<Understanding | null>): Promise<PickReply> {
@@ -74,7 +84,10 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
   } else {
     const text = input.text.slice(0, 400);
     const plain = readMessage(text);
+    // On the shop, "for me" is the starting point: a recipient other than themselves turns it into a gift.
+    if (s.mode === "shop" && plain.set.recipient && plain.set.recipient !== "self") s = { ...s, gift: true };
     const ai = understand ? await understand(text, s) : null;
+    if (s.mode === "shop" && ai?.set.recipient && ai.set.recipient !== "self") s = { ...s, gift: true };
     usedAi = Boolean(ai);
     // The AI's reading wins where it gave a value; the simple reading fills the rest.
     set = { ...plain.set, ...(ai?.set ?? {}) };
@@ -82,12 +95,12 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
     if (ai?.reply) lines.push(ai.reply);
     if (!Object.keys(set).length && !action && !ai?.reply) {
       // Small talk gets a real answer; anything else, a gentle nudge.
-      const chat = smallTalk(text);
+      const chat = smallTalk(text, forSelf(s));
       if (chat) {
         lines.push(chat);
         mood = "speaking";
       } else {
-        lines.push("Hmm, I'm not sure I got that. Tell me who it's for, or a budget, and I'll find something.");
+        lines.push(forSelf(s) ? "Hmm, I'm not sure I got that. Tell me what you're after, like a black hoodie in M, and I'll find it." : "Hmm, I'm not sure I got that. Tell me who it's for, or a budget, and I'll find something.");
         mood = "reassuring";
       }
     }
@@ -96,7 +109,7 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
   // What they told Pick
   const before = s;
   const fields: (keyof PickState)[] = [];
-  for (const key of ["recipient", "occasion", "style", "budget", "sizing", "size"] as const) {
+  for (const key of ["kind", "colour", "recipient", "occasion", "style", "budget", "sizing", "size"] as const) {
     if (set[key] === undefined) continue;
     const r = applySet(s, { [key]: set[key] } as NonNullable<Quick["set"]>);
     if (r.field) {
@@ -106,6 +119,10 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
   }
   // A button gets a short acknowledgement; typed words get a summary of what Pick understood,
   // unless the AI already answered in its own words.
+  // On the shop, a sentence that says enough (a budget, a fit, a size) but no kind: anything goes.
+  if ("text" in input && forSelf(s) && !s.kind && fields.length >= 2) s = { ...s, kind: "any" };
+  // A gift chosen from the shop: the gift questions from here on.
+  if ("quick" in input && s.mode === "shop" && set.recipient && set.recipient !== "self") s = { ...s, gift: true };
   if ("quick" in input && fields.length === 1) lines.push(acknowledge(fields[0], s));
   else if ("text" in input && fields.length && !lines.length) lines.push(summary(s, fields));
 
@@ -113,7 +130,26 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
   let input2: PickReply["input"];
   switch (action) {
     case "restart":
+      if (s.mode === "shop") {
+        const fresh: PickState = { mode: "shop" };
+        return { messages: [{ text: `Fresh start. ${question("kind", fresh, prices).text}` }], state: fresh, quick: question("kind", fresh, prices).quick, mood: "greeting", ai: usedAi };
+      }
       return { messages: [{ text: "Fresh start. Who are we shopping for?" }], state: {}, quick: question("recipient", {}, prices).quick, mood: "greeting", ai: usedAi };
+    case "gift":
+      // From the shop: the gift questions, starting with who it's for.
+      s = { mode: s.mode, gift: true, budget: s.budget };
+      lines.push("A gift! Love that.");
+      mood = "happy";
+      break;
+    case "change-kind":
+      s = { ...s, kind: undefined, colour: undefined, shown: [] };
+      break;
+    case "pair":
+      break;
+    case "any-colour":
+      s = { ...s, colour: undefined, shown: [] };
+      lines.push("Any colour, then.");
+      break;
     case "help-decide":
       s = { ...s, recipientUnsure: true };
       lines.push("No pressure. Let's work it out together, one easy question at a time.");
@@ -139,12 +175,18 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
       input2 = "budget";
       break;
     case "fit":
-      lines.push("If it doesn't fit, they change the size from their gift link. Or they come to our store, try it on and swap it there.");
+      lines.push(
+        forSelf(s)
+          ? "If it doesn't fit, swap the size within 14 days, in our store or by delivery."
+          : "If it doesn't fit, they change the size from their gift link. Or they come to our store, try it on and swap it there.",
+      );
       mood = "reassuring";
       break;
     case "delivery":
       lines.push(
-        `We deliver in the Kathmandu Valley for ${formatPrice(site.delivery.flatFee)}, free on orders over ${formatPrice(site.delivery.freeAbove)}, or they collect it from the store. They get the gift link by email, and you can choose the day it arrives.`,
+        forSelf(s)
+          ? `We deliver in the Kathmandu Valley for ${formatPrice(site.delivery.flatFee)}, free on orders over ${formatPrice(site.delivery.freeAbove)}. Or pick it up from the store.`
+          : `We deliver in the Kathmandu Valley for ${formatPrice(site.delivery.flatFee)}, free on orders over ${formatPrice(site.delivery.freeAbove)}, or they collect it from the store. They get the gift link by email, and you can choose the day it arrives.`,
       );
       break;
     case "compare": {
@@ -174,25 +216,50 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
     return { messages: [{ text: lines.join(" ") }], state: s, quick: question("results", s, prices).quick, mood, ai: usedAi };
   }
 
+  if (action === "pair") {
+    const kind = categoryOf(s.kind);
+    const kinds = kind ? GOES_WITH[kind] : undefined;
+    // Their colour was for the first piece, not for what goes with it.
+    const { cards } = recommend(products, { ...s, colour: undefined, budget: undefined }, 3, kinds);
+    if (cards.length) {
+      s = { ...s, shown: [...(s.shown ?? []), ...cards.map((c) => c.slug)] };
+      return {
+        messages: [{ text: [...lines, `To wear with ${kind ? KIND_WORDS[s.kind!].toLowerCase() : "it"}:`].join(" ") }, { text: "", cards }],
+        state: s,
+        quick: question("results", s, prices).quick,
+        mood: "happy",
+        ai: usedAi,
+      };
+    }
+  }
+
   const { cards } = recommend(products, s);
   if (!cards.length) {
     const none = s.shown?.length ? "That's everything that matches. Want to widen it a little?" : "Nothing matches all of that right now. Let's loosen one thing.";
     return {
       messages: [{ text: [...lines, none].join(" ") }],
       state: s,
-      quick: [
-        { label: "Raise the budget", action: "change-budget" },
-        { label: "Try another style", action: "change-style" },
-        ...(s.sizing === "known" ? [{ label: "Let them pick the size", set: { sizing: "unknown" } }] : []),
-        { label: "Start again", action: "restart" },
-      ],
+      quick: forSelf(s)
+        ? [
+            ...(s.colour ? [{ label: "Any colour", action: "any-colour" as const }] : []),
+            ...(s.budget ? [{ label: "Raise the budget", action: "change-budget" as const }] : []),
+            { label: "Another fit", action: "change-style" },
+            ...(s.sizing === "known" ? [{ label: "Show all sizes", set: { sizing: "unknown" } }] : []),
+            { label: "Something else", action: "change-kind" },
+          ]
+        : [
+            { label: "Raise the budget", action: "change-budget" },
+            { label: "Try another style", action: "change-style" },
+            ...(s.sizing === "known" ? [{ label: "Let them pick the size", set: { sizing: "unknown" } }] : []),
+            { label: "Start again", action: "restart" },
+          ],
       mood: "reassuring",
       ai: usedAi,
     };
   }
   s = { ...s, shown: [...(s.shown ?? []), ...cards.map((c) => c.slug)] };
   // Style ranks pieces rather than filtering them, so no "from N that fit" count here.
-  const intro = action === "more" ? "A few more:" : "Here's what I'd pick:";
+  const intro = action === "more" ? "A few more:" : forSelf(s) && s.kind && s.kind !== "any" ? `${KIND_WORDS[s.kind]} I'd pick for you:` : "Here's what I'd pick:";
   return {
     messages: [{ text: [...lines, intro].join(" ") }, { text: "", cards }],
     state: s,
@@ -212,7 +279,8 @@ function maxShown(products: Product[], s: PickState): number {
 function summary(s: PickState, fields: (keyof PickState)[]): string {
   const bits = fields.map((f) => {
     if (f === "budget") return s.budget ? `under ${formatPrice(s.budget)}` : "no budget limit";
-    if (f === "sizing") return s.sizing === "unknown" ? "size unknown, so they'll pick it" : "you know the size";
+    if (f === "sizing") return s.sizing === "unknown" ? (forSelf(s) ? "any size" : "size unknown, so they'll pick it") : "you know the size";
+    if (f === "colour") return s.colour ?? "";
     if (f === "size") return `size ${s.size}`;
     const v = s[f];
     return typeof v === "string" ? (WORDS[v] ?? v) : "";

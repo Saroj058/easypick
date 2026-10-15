@@ -1,19 +1,21 @@
 "use client";
 
 import { AnimatePresence, animate, motion, useReducedMotion } from "framer-motion";
-import { RotateCcw, Sparkles, X } from "lucide-react";
+import { RotateCcw, ShoppingBag, Sparkles, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { formatPrice } from "@/lib/format";
-import { GREETING, question, type PickState, type Quick } from "@/lib/pick/journey";
+import { MY_SIZES, setMySize, useMySize } from "@/lib/my-size";
+import { GREETING, forSelf, question, type PickState, type Quick } from "@/lib/pick/journey";
 import type { PickCard } from "@/lib/pick/recommend";
 import type { Mood, PickReply } from "@/lib/pick/turn";
 import { ProductImage } from "../product-image";
 import type { RobotMood } from "../ui/robot-hero";
 import { ThinkingOrb } from "../ui/ai-thinking-orb";
 import { OrbInput } from "../ui/animated-input";
+import { showBagToast, useAddToBag } from "../bag-gate";
 import { SendSheet } from "./gift-pieces";
 
 // Pick, the gift page's robot. At first just Pick, roaming, and an "Ask Pick" line. Ask him something
@@ -27,16 +29,18 @@ const Robot = dynamic(() => import("../ui/robot-hero").then((m) => m.RobotCharac
 
 /** Where Pick is: the gift page, or the shop (for themselves first, gifts too). */
 type Where = "gift" | "shop";
-const keyFor = (w: Where) => (w === "shop" ? "ep-pick-shop-v1" : "ep-pick-v3");
+const keyFor = (w: Where) => (w === "shop" ? "ep-pick-shop-v2" : "ep-pick-v3");
+/** What Pick knows before anything is said: on the shop, that it's the shop. */
+const startState = (w: Where): PickState => (w === "shop" ? { mode: "shop" } : {});
 
 /** The first question. On the shop it starts with "for me". */
 function opening(where: Where): { text: string; quick: Quick[] } {
-  const q = question("recipient", {}, []);
-  if (where === "gift") return { text: `${GREETING} ${q.text}`, quick: q.quick };
-  return {
-    text: "Hey, I'm Pick! 👋 Looking for something for yourself, or for someone?",
-    quick: [{ label: "For me", set: { recipient: "self" } }, ...q.quick.filter((x) => x.set?.recipient !== "self")],
-  };
+  if (where === "gift") {
+    const q = question("recipient", {}, []);
+    return { text: `${GREETING} ${q.text}`, quick: q.quick };
+  }
+  const q = question("kind", startState("shop"), []);
+  return { text: `Hey, I'm Pick! 👋 ${q.text}`, quick: q.quick };
 }
 
 interface Bubble {
@@ -53,7 +57,7 @@ interface Saved {
 }
 
 const first = (where: Where): Saved => ({
-  state: {},
+  state: startState(where),
   bubble: opening(where),
   // Nothing over him at first: just Pick and the "Ask Pick" line.
   hidden: true,
@@ -61,6 +65,7 @@ const first = (where: Where): Saved => ({
 
 export function PickChat({ where = "gift" }: { where?: Where } = {}) {
   const KEY = keyFor(where);
+  const mySize = useMySize();
   const FIRST = first(where);
   const still = useReducedMotion();
   const [now, setNow] = useState<Saved>(FIRST);
@@ -168,6 +173,17 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
     return () => clearInterval(id);
   }, [line, still, ready]);
 
+  /** What is sent to Pick: on the shop, the mode and (if they saved one on the site) their size. */
+  const known = useCallback(
+    (st: PickState): PickState => {
+      if (where !== "shop") return st;
+      const k: PickState = { ...st, mode: "shop" };
+      if (!k.sizing && mySize && forSelf(k)) Object.assign(k, { sizing: "known", size: mySize });
+      return k;
+    },
+    [where, mySize],
+  );
+
   const ask = useCallback(
     async (body: { quick: Quick } | { text: string }, said: string) => {
       if (thinking) return;
@@ -186,12 +202,13 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
         const res = await fetch("/api/pick", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ state: before.state, ...body }),
+          body: JSON.stringify({ state: known(before.state), ...body }),
           signal: AbortSignal.timeout(15_000),
         });
         if (!res.ok) throw new Error(res.status === 429 ? "busy" : "failed");
         await atLeast3s();
         const r = (await res.json()) as PickReply;
+        if (where === "shop" && forSelf(r.state) && r.state.size && r.state.size !== mySize && MY_SIZES.includes(r.state.size)) setMySize(r.state.size);
         setNow({
           state: r.state,
           said,
@@ -222,12 +239,12 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
         setGliding(false);
       }
     },
-    [now, thinking, launch],
+    [now, thinking, launch, known, where, mySize],
   );
 
   const choose = (q: Quick) => {
     if (q.action === "restart") {
-      setNow({ state: {}, bubble: { text: `Fresh start. ${opening(where).text.replace(/^Hey, I'm Pick! 👋 /, "")}`, quick: opening(where).quick }, hidden: false });
+      setNow({ state: startState(where), bubble: { text: `Fresh start. ${opening(where).text.replace(/^Hey, I'm Pick! 👋 /, "")}`, quick: opening(where).quick }, hidden: false });
       setMood("greeting");
       setAskBudget(false);
       return;
@@ -384,7 +401,7 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
                     {settled && now.bubble.cards && now.bubble.cards.length > 0 && (
                       <ul className="mt-3 divide-y divide-ink/[0.07] overflow-hidden rounded-2xl ring-1 ring-ink/[0.08]" aria-label="Pick's suggestions">
                         {now.bubble.cards.map((c, i) => (
-                          <MiniCard key={c.slug} card={c} index={i} onSend={() => pick(c)} where={where} />
+                          <MiniCard key={c.slug} card={c} index={i} onSend={() => pick(c)} where={where} size={now.state.sizing === "known" ? now.state.size : (mySize ?? undefined)} />
                         ))}
                       </ul>
                     )}
@@ -444,7 +461,7 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
         maxLength={200}
         inputMode={askBudget ? "numeric" : "text"}
         staticPlaceholder={askBudget ? "Your budget, like 3000" : undefined}
-        placeholders={where === "shop" ? ["something for me under 2000", "an oversized hoodie in M", "what goes with black cargos?", "hi Pick, how are you?"] : ["gift for my brother, under 3000", "birthday gift for my girlfriend", "something minimal for a friend", "hi Pick, how are you?"]}
+        placeholders={where === "shop" ? ["a black hoodie in M", "oversized tees under 2000", "cargos to go with a white tee", "hi Pick, how are you?"] : ["gift for my brother, under 3000", "birthday gift for my girlfriend", "something minimal for a friend", "hi Pick, how are you?"]}
       />
       </motion.div>
       )}
@@ -459,8 +476,18 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
 }
 
 /** A suggested piece: photo, name, price and why; Send this. */
-function MiniCard({ card, index, onSend, where }: { card: PickCard; index: number; onSend: () => void; where: Where }) {
+function MiniCard({ card, index, onSend, where, size }: { card: PickCard; index: number; onSend: () => void; where: Where; size?: string }) {
   const still = useReducedMotion();
+  const add = useAddToBag();
+  const [added, setAdded] = useState(false);
+  // In their size, else one size; the first colour that has it.
+  const option = where === "shop" ? (card.options ?? []).find((o) => o.left > 0 && (o.size === "ONE" || o.size === size)) : undefined;
+  const addIt = () => {
+    if (!option) return;
+    add([{ slug: card.slug, sku: option.sku, name: card.name, size: option.size, colour: option.colour, price: card.price }]);
+    setAdded(true);
+    showBagToast(`Added ${card.name} (${option.colour}${option.size === "ONE" ? "" : `, ${option.size}`}) to your bag.`);
+  };
   return (
     <motion.li
       initial={still ? false : { opacity: 0, y: 6 }}
@@ -481,7 +508,22 @@ function MiniCard({ card, index, onSend, where }: { card: PickCard; index: numbe
         </span>
         <span className="block truncate text-[11.5px] text-steel-dark">{card.why}</span>
       </Link>
-      {where === "shop" && card.slug ? (
+      {where === "shop" && option ? (
+        <button
+          type="button"
+          onClick={addIt}
+          aria-label={`Add ${card.name} in ${option.size === "ONE" ? "one size" : option.size} to bag`}
+          className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[12.5px] font-semibold transition-[background-color,color,scale] active:scale-[0.97] md:px-3.5 ${added ? "bg-mist text-ink" : "bg-ink text-paper hover:bg-[#222]"}`}
+        >
+          <ShoppingBag aria-hidden className="h-3.5 w-3.5" strokeWidth={2} />
+          {added ? "Added" : option.size === "ONE" ? "Add" : (
+            <>
+              <span className="max-md:hidden">Add&nbsp;</span>
+              {option.size}
+            </>
+          )}
+        </button>
+      ) : where === "shop" && card.slug ? (
         <Link href={`/product/${card.slug}`} className="inline-flex h-9 shrink-0 items-center rounded-full bg-ink px-3.5 text-[12.5px] font-semibold text-paper">
           View
         </Link>

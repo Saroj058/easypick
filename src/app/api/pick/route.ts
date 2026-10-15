@@ -4,8 +4,8 @@ import { turn, type PickInput } from "@/lib/pick/turn";
 import { allow, clientIp } from "@/lib/rate-limit";
 import { getProducts } from "@/lib/store";
 
-// Pick, the gift page's robot: one chat turn. The browser sends what Pick knows so far (only gift
-// preferences) and the customer's button or message; the answer comes from lib/pick/turn.ts.
+// Pick, the robot (gift page and shop): one chat turn. The browser sends what Pick knows so far (only
+// shopping preferences) and the customer's button or message; the answer comes from lib/pick/turn.ts.
 // Typed messages may be read by the AI (lib/pick/ai.ts); buttons never are. Nothing is stored.
 
 const MAX_BODY = 8_000;
@@ -44,7 +44,7 @@ function cleanQuick(q: object): Quick {
   if (r.set && typeof r.set === "object") {
     const s = r.set as Record<string, unknown>;
     const set: NonNullable<Quick["set"]> = {};
-    for (const k of ["recipient", "occasion", "style", "sizing", "size"] as const) if (typeof s[k] === "string") set[k] = (s[k] as string).slice(0, 20);
+    for (const k of ["recipient", "occasion", "style", "sizing", "size", "kind", "colour"] as const) if (typeof s[k] === "string") set[k] = (s[k] as string).slice(0, 20);
     if (typeof s.budget === "number") set.budget = s.budget;
     out.set = set;
   }
