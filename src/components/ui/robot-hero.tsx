@@ -522,10 +522,14 @@ export function RobotPrototype({
     headLookY: 1.8,
   };
 
+  const wake = useRef(-1);
+
   useFrame((state, delta) => {
     if (!bodyRef.current || !headRef.current) return;
 
     const dt = Math.min(delta, 0.1);
+    // First frame, or back after a pause (off screen, under a dialog): the slow start begins again.
+    if (wake.current < 0 || delta > 0.5) wake.current = state.clock.getElapsedTime();
 
     let tx = state.pointer.x;
     let ty = state.pointer.y;
@@ -637,10 +641,12 @@ export function RobotPrototype({
     const maxMoveX = contain ? Math.max(0, state.viewport.width / 2 - 0.5) : state.viewport.width / 3.5;
     const targetPosX = (at ?? tx) * maxMoveX;
     if (contain) {
-      // Eases toward the spot, but never faster than a calm walk, however wide the frame.
+      // Eases toward the spot, but never faster than a calm walk, however wide the frame. Just after
+      // the page loads he sets off slowly, picking up to his usual pace over a few seconds.
       const gap = targetPosX - bodyRef.current.position.x;
-      const walk = 2.2 * pace * dt;
-      bodyRef.current.position.x += Math.max(-walk, Math.min(walk, gap * Math.min(1, 1.6 * pace * dt)));
+      const warm = Math.min(1, 0.2 + (now - wake.current) / 7);
+      const walk = 1.8 * pace * warm * dt;
+      bodyRef.current.position.x += Math.max(-walk, Math.min(walk, gap * Math.min(1, 1.6 * pace * warm * dt)));
     } else {
       bodyRef.current.position.x = THREE.MathUtils.lerp(bodyRef.current.position.x, targetPosX, config.moveSpeed * dt);
     }

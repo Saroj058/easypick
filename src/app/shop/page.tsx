@@ -134,184 +134,186 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   const title = f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.q ? `“${f.q}”` : kinds.length === 1 ? categoryLabels[kinds[0]] : "Every piece";
 
   return (
-    <div className="container-ep pb-24 pt-10 md:pt-16">
-      {/* One bar, like the home page's Rail: the name on a black tab, the same search button, and Filter (its panel drops below the bar) */}
-      <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-t-2xl border border-ink py-2 pr-3">
-        <h1 className="display on-dark order-1 -my-2 -ml-px flex items-center self-stretch rounded-tl-[15px] bg-ink px-5 py-3 text-[34px] leading-[0.9] text-paper md:text-[44px]">
-          {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
-        </h1>
-        {/* Search: the Rail's round button, opening into a field that searches as they type */}
-        <ShopSearch q={f.q ?? ""} others={{ category: f.category, size: f.size, colour: f.colour, price: f.price, fit: f.fit, sort: f.sort, sale: f.sale, new: f.new, vault: f.vault, brand: f.brand }} />
-        <details className="group order-2 lg:order-3">
-          <summary aria-label="Filter and sort" className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-mist px-4 text-sm font-semibold transition-colors hover:border-ink group-open:border-ink [&::-webkit-details-marker]:hidden">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
-              <circle cx="16" cy="7" r="2" />
-              <circle cx="8" cy="17" r="2" />
-            </svg>
-            Filter {active && <span className="tag-volt">On</span>}
-          </summary>
-          <div className="absolute inset-x-[-1px] top-full z-20 grid gap-6 border border-ink bg-paper p-5 shadow-[0_18px_30px_-20px_rgba(0,0,0,0.35)] md:grid-cols-3 lg:grid-cols-5">
-            <div>
-              <p className="text-sm font-semibold">Size</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {sizes.map((s) => (
-                  <Chip key={s} active={f.size === s} href={href(f, { size: f.size === s ? undefined : s })}>
-                    {s}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Colour</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {colours.map((c) => (
-                  <Chip key={c} active={f.colour === c} href={href(f, { colour: f.colour === c ? undefined : c })}>
-                    {c}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Price</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {prices.filter((p) => p.chip).map((p) => (
-                  <Chip key={p.key} active={f.price === p.key} href={href(f, { price: f.price === p.key ? undefined : p.key })}>
-                    {p.label}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Fit</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {fits.map((x) => (
-                  <Chip key={x.key} active={f.fit === x.key} href={href(f, { fit: f.fit === x.key ? undefined : x.key })}>
-                    {x.label}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Sort</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {sorts.map((s) => (
-                  <Chip key={s.key} active={(f.sort ?? "new") === s.key} href={href(f, { sort: s.key === "new" ? undefined : s.key })}>
-                    {s.label}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-          </div>
-        </details>
-      </div>
-      {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
-
-      <div className="mt-4 space-y-3">
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
-          <Chip active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })}>
-            All
-          </Chip>
-          {onSale.length > 0 && (
-            <Chip active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })}>
-              On sale
-            </Chip>
-          )}
-          {anyNew && (
-            <Chip active={Boolean(f.new)} href={href(f, { new: f.new ? undefined : "1" })}>
-              New in
-            </Chip>
-          )}
-          {(Object.keys(categoryLabels) as Category[])
-            .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
-            .map((c) => (
-            <Chip key={c} active={f.category === c} href={href(f, { category: c })}>
-              {categoryLabels[c]}
-            </Chip>
-          ))}
-        </div>
-
-        {active && (
-          <ul aria-label="Filters on" className="flex flex-wrap gap-2">
-            {(
-              [
-                ["q", f.q && `“${f.q}”`],
-                ["size", f.size && `Size ${f.size}`],
-                ["colour", f.colour],
-                ["price", prices.find((x) => x.key === f.price)?.label],
-                ["fit", fits.find((x) => x.key === f.fit)?.label],
-                ["brand", f.brand],
-                ["vault", f.vault && "The Vault"],
-              ] as [keyof Filters, string | undefined][]
-            )
-              .filter(([, label]) => label)
-              .map(([key, label]) => (
-                <li key={key}>
-                  <Link
-                    href={href(f, { [key]: undefined })}
-                    scroll={false}
-                    className="inline-flex h-11 items-center gap-2 rounded-[2px] bg-photo px-3 text-[13px] font-semibold hover:bg-mist"
-                  >
-                    {label}
-                    <span aria-hidden>×</span>
-                    <span className="sr-only">, remove filter</span>
-                  </Link>
-                </li>
-              ))}
-          </ul>
-        )}
-
-      </div>
-
-      <p className="mt-6 font-mono text-[13px] text-steel-dark" aria-live="polite">
-        {list.length} {list.length === 1 ? "piece" : "pieces"}
-        {active && (
-          <>
-            {" · "}
-            <Link href={href({ sort: f.sort }, {})} className="underline">
-              Clear filters
-            </Link>
-          </>
-        )}
-      </p>
-
-      {/* Pick, the robot: for themselves first, gifts too; sizes, delivery, swaps and small talk */}
-      <div className="mt-12 overflow-x-clip md:mt-16">
-        <PickChat where="shop" />
-      </div>
-
-      <div className="mt-6 overflow-x-clip">
-        {!list.length ? (
-          <p className="py-24 text-center text-steel-dark">{f.q ? `Nothing matches “${f.q}”. Try another word, or clear the filters.` : "Nothing matches that yet. Try another size or colour."}</p>
-        ) : single ? (
-          <section aria-labelledby="shop-one">
-            {/* The name is already on the black tab above: here only for screen readers. */}
-            <h2 id="shop-one" className="sr-only">
-              {title}
-              <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{list.length}</span>
-            </h2>
-            <DropStrip pieces={list.map(toRailPiece)} label={title} tags />
-          </section>
-        ) : (
-          <div className="space-y-16 md:space-y-24">
-            {groups.map(({ c, pieces }) => (
-              <section key={c} aria-labelledby={`shop-${c}`}>
-                <div className="flex items-end justify-between gap-4">
-                  <h2 id={`shop-${c}`} className="display text-[clamp(2.2rem,1.6rem+2.6vw,3.6rem)] leading-[0.88]">
-                    {categoryLabels[c]}
-                    <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{pieces.length}</span>
-                  </h2>
-                  <Link href={href(f, { category: c })} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-ink/25 px-4 text-[13px] font-semibold hover:border-ink">
-                    Only {categoryLabels[c].toLowerCase()} <span aria-hidden>→</span>
-                  </Link>
+    <div className="overflow-x-clip">
+      <div className="container-ep pb-24 pt-10 md:pt-16">
+        {/* One bar, like the home page's Rail: the name on a black tab, the same search button, and Filter (its panel drops below the bar) */}
+        <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-t-2xl border border-ink py-2 pr-3">
+          <h1 className="display on-dark order-1 -my-2 -ml-px flex items-center self-stretch rounded-tl-[15px] bg-ink px-5 py-3 text-[34px] leading-[0.9] text-paper md:text-[44px]">
+            {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
+          </h1>
+          {/* Search: the Rail's round button, opening into a field that searches as they type */}
+          <ShopSearch q={f.q ?? ""} others={{ category: f.category, size: f.size, colour: f.colour, price: f.price, fit: f.fit, sort: f.sort, sale: f.sale, new: f.new, vault: f.vault, brand: f.brand }} />
+          <details className="group order-2 lg:order-3">
+            <summary aria-label="Filter and sort" className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-mist px-4 text-sm font-semibold transition-colors hover:border-ink group-open:border-ink [&::-webkit-details-marker]:hidden">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+                <circle cx="16" cy="7" r="2" />
+                <circle cx="8" cy="17" r="2" />
+              </svg>
+              Filter {active && <span className="tag-volt">On</span>}
+            </summary>
+            <div className="absolute inset-x-[-1px] top-full z-20 grid gap-6 border border-ink bg-paper p-5 shadow-[0_18px_30px_-20px_rgba(0,0,0,0.35)] md:grid-cols-3 lg:grid-cols-5">
+              <div>
+                <p className="text-sm font-semibold">Size</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {sizes.map((s) => (
+                    <Chip key={s} active={f.size === s} href={href(f, { size: f.size === s ? undefined : s })}>
+                      {s}
+                    </Chip>
+                  ))}
                 </div>
-                <DropStrip pieces={pieces.map(toRailPiece)} label={categoryLabels[c]} tags />
-              </section>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Colour</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {colours.map((c) => (
+                    <Chip key={c} active={f.colour === c} href={href(f, { colour: f.colour === c ? undefined : c })}>
+                      {c}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Price</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {prices.filter((p) => p.chip).map((p) => (
+                    <Chip key={p.key} active={f.price === p.key} href={href(f, { price: f.price === p.key ? undefined : p.key })}>
+                      {p.label}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Fit</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {fits.map((x) => (
+                    <Chip key={x.key} active={f.fit === x.key} href={href(f, { fit: f.fit === x.key ? undefined : x.key })}>
+                      {x.label}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Sort</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {sorts.map((s) => (
+                    <Chip key={s.key} active={(f.sort ?? "new") === s.key} href={href(f, { sort: s.key === "new" ? undefined : s.key })}>
+                      {s.label}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+        {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
+  
+        <div className="mt-4 space-y-3">
+          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
+            <Chip active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })}>
+              All
+            </Chip>
+            {onSale.length > 0 && (
+              <Chip active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })}>
+                On sale
+              </Chip>
+            )}
+            {anyNew && (
+              <Chip active={Boolean(f.new)} href={href(f, { new: f.new ? undefined : "1" })}>
+                New in
+              </Chip>
+            )}
+            {(Object.keys(categoryLabels) as Category[])
+              .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
+              .map((c) => (
+              <Chip key={c} active={f.category === c} href={href(f, { category: c })}>
+                {categoryLabels[c]}
+              </Chip>
             ))}
           </div>
-        )}
+  
+          {active && (
+            <ul aria-label="Filters on" className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["q", f.q && `“${f.q}”`],
+                  ["size", f.size && `Size ${f.size}`],
+                  ["colour", f.colour],
+                  ["price", prices.find((x) => x.key === f.price)?.label],
+                  ["fit", fits.find((x) => x.key === f.fit)?.label],
+                  ["brand", f.brand],
+                  ["vault", f.vault && "The Vault"],
+                ] as [keyof Filters, string | undefined][]
+              )
+                .filter(([, label]) => label)
+                .map(([key, label]) => (
+                  <li key={key}>
+                    <Link
+                      href={href(f, { [key]: undefined })}
+                      scroll={false}
+                      className="inline-flex h-11 items-center gap-2 rounded-[2px] bg-photo px-3 text-[13px] font-semibold hover:bg-mist"
+                    >
+                      {label}
+                      <span aria-hidden>×</span>
+                      <span className="sr-only">, remove filter</span>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          )}
+  
+        </div>
+  
+        <p className="mt-6 font-mono text-[13px] text-steel-dark" aria-live="polite">
+          {list.length} {list.length === 1 ? "piece" : "pieces"}
+          {active && (
+            <>
+              {" · "}
+              <Link href={href({ sort: f.sort }, {})} className="underline">
+                Clear filters
+              </Link>
+            </>
+          )}
+        </p>
+  
+        {/* Pick, the robot: for themselves first, gifts too; sizes, delivery, swaps and small talk */}
+        <div className="mt-12 md:mt-16">
+          <PickChat where="shop" />
+        </div>
+  
+        <div className="mt-6 overflow-x-clip">
+          {!list.length ? (
+            <p className="py-24 text-center text-steel-dark">{f.q ? `Nothing matches “${f.q}”. Try another word, or clear the filters.` : "Nothing matches that yet. Try another size or colour."}</p>
+          ) : single ? (
+            <section aria-labelledby="shop-one">
+              {/* The name is already on the black tab above: here only for screen readers. */}
+              <h2 id="shop-one" className="sr-only">
+                {title}
+                <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{list.length}</span>
+              </h2>
+              <DropStrip pieces={list.map(toRailPiece)} label={title} tags />
+            </section>
+          ) : (
+            <div className="space-y-16 md:space-y-24">
+              {groups.map(({ c, pieces }) => (
+                <section key={c} aria-labelledby={`shop-${c}`}>
+                  <div className="flex items-end justify-between gap-4">
+                    <h2 id={`shop-${c}`} className="display text-[clamp(2.2rem,1.6rem+2.6vw,3.6rem)] leading-[0.88]">
+                      {categoryLabels[c]}
+                      <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{pieces.length}</span>
+                    </h2>
+                    <Link href={href(f, { category: c })} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-ink/25 px-4 text-[13px] font-semibold hover:border-ink">
+                      Only {categoryLabels[c].toLowerCase()} <span aria-hidden>→</span>
+                    </Link>
+                  </div>
+                  <DropStrip pieces={pieces.map(toRailPiece)} label={categoryLabels[c]} tags />
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+        <RecentlyViewed />
       </div>
-      <RecentlyViewed />
     </div>
   );
 }

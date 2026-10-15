@@ -82,7 +82,16 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
   const orbSpot = useRef<HTMLDivElement>(null);
   const ball = useRef<HTMLDivElement>(null);
   /** Plays the flight; resolves when the orb starts thinking, with that moment. */
+  // The flight plays once, for the first question; after that only the orb thinks (owner, 15 Oct 2026).
+  const flew = useRef(false);
+  const [gliding, setGliding] = useState(false);
   const launch = useCallback(async () => {
+    if (flew.current) {
+      setPhase("think");
+      return performance.now();
+    }
+    flew.current = true;
+    setGliding(true);
     setPhase("launch");
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const sec = section.current;
@@ -210,6 +219,7 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
       } finally {
         setThinking(false);
         setPhase("idle");
+        setGliding(false);
       }
     },
     [now, thinking, launch],
@@ -328,9 +338,15 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
               >
                 {thinking ? (
                   // Where the ball lands and thinks: the dotted orb (ui/ai-thinking-orb.tsx), beside Pick.
-                  <div className="flex min-h-[112px] items-center justify-end pr-2" aria-live="polite">
+                  <motion.div
+                    initial={still || gliding ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex min-h-[112px] items-center justify-end pr-2"
+                    aria-live="polite"
+                  >
                     {phase === "think" ? <ThinkingOrb size={96} /> : <div ref={orbSpot} aria-hidden className="h-24 w-24" />}
-                  </div>
+                  </motion.div>
                 ) : (
                 <motion.div
                   initial={still ? false : { opacity: 0, y: 8, scale: 0.98 }}
@@ -411,9 +427,9 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
       <motion.div
         ref={pillBox}
         initial={false}
-        animate={phase === "idle" ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 0, scale: 1 }}
-        transition={phase === "idle" ? { duration: 0.4, ease: [0.22, 1, 0.36, 1] } : { duration: 0.08 }}
-        className={`mx-auto mt-3 max-w-[460px] ${phase === "idle" ? "" : "pointer-events-none"}`}
+        animate={gliding ? { opacity: 0, y: 0, scale: 1 } : { opacity: 1, y: 0, scale: 1 }}
+        transition={gliding ? { duration: 0.08 } : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className={`mx-auto mt-3 max-w-[460px] ${gliding ? "pointer-events-none" : ""}`}
       >
       <OrbInput
         id="pick-say"
