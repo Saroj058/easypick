@@ -45,7 +45,7 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
   await pick.getByRole("button", { name: /Ask me anything about clothes/ }).click();
   await pick.getByRole("textbox", { name: "Ask Pick" }).fill("a gift for a friend");
   await pick.getByRole("button", { name: "Send", exact: true }).click();
-  await expect(pick).toContainText("What's the occasion?");
+  await expect(pick).toContainText("What's the occasion?", { timeout: 30_000 });
   const quick = pick.getByRole("group", { name: "Quick answers" });
   for (const answer of ["Birthday", /^Streetwear/, "No limit", "I don't know it"]) {
     await quick.getByRole("button", { name: answer }).click();

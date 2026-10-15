@@ -125,6 +125,9 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
       setMood("thinking");
       setAskBudget(false);
       setNow((c) => ({ ...c, said, hidden: false }));
+      // The thinking orb always shows for at least 3 seconds before the answer (owner, 15 Oct 2026).
+      const started = performance.now();
+      const atLeast3s = () => new Promise((r) => setTimeout(r, Math.max(0, 3000 - (performance.now() - started))));
       try {
         const res = await fetch("/api/pick", {
           method: "POST",
@@ -133,6 +136,7 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
           signal: AbortSignal.timeout(15_000),
         });
         if (!res.ok) throw new Error(res.status === 429 ? "busy" : "failed");
+        await atLeast3s();
         const r = (await res.json()) as PickReply;
         setNow({
           state: r.state,
@@ -143,6 +147,7 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
         setMood(moodFor(r.mood));
         if (r.input === "budget") requestAnimationFrame(() => field.current?.focus());
       } catch (e) {
+        await atLeast3s();
         // Nothing is lost: what he knew stays, and the same answers come back.
         setNow({
           ...before,
@@ -237,20 +242,20 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
     <section aria-label={where === "shop" ? "Pick, your shopping helper" : "Pick, your gift helper"} className="!mb-8 -mt-6 md:!mb-10 md:-mt-10">
       {/* Pick walks the whole width of the screen. Asked something, he walks over and answers in a
           panel on his left, turning to it; closed, he goes back to roaming. */}
-      <div ref={band} className={`relative mx-[calc(50%-50vw)] flex items-end [--pick-x:0.5] ${open ? "min-h-[150px] md:min-h-[190px]" : "min-h-[200px] md:min-h-[244px]"}`}>
+      <div ref={band} className={`relative mx-[calc(50%-50vw)] flex items-end [--pick-side:1] [--pick-x:0.5] min-h-[150px] md:min-h-[190px]`}>
         <div className="absolute inset-x-0 bottom-0 h-[150px] md:h-[190px]">
           <Robot mood={open ? mood : asking ? "listening" : "idle"} loved={mood === "happy"} spotRef={spot} followRef={band} className="absolute inset-0" />
         </div>
-        {/* Before anything is asked: his line, carried over his head as he walks. Tap it to ask. */}
+        {/* Before anything is asked: his line, beside him (on the side with room) as he walks. Tap it to ask. */}
         {!open && (
           <button
             type="button"
             onClick={startAsking}
-            className="absolute bottom-[136px] z-10 w-max max-w-[calc(100vw-32px)] -translate-x-1/2 cursor-pointer rounded-full bg-paper px-4 py-2 text-center text-[13.5px] font-semibold shadow-[0_10px_28px_-14px_rgba(10,10,10,0.5),0_0_0_1px_rgba(10,10,10,0.1)] transition-[scale] hover:scale-[1.03] active:scale-[0.98] md:bottom-[172px] md:text-[14px]"
-            style={{ left: "clamp(min(170px, 50vw), calc(var(--pick-x) * 100%), calc(100% - min(170px, 50vw)))" }}
+            className="absolute bottom-[78px] z-10 w-max max-w-[min(280px,calc(50vw-64px))] cursor-pointer rounded-2xl bg-paper px-4 py-2.5 text-left text-[13px] font-semibold leading-snug shadow-[0_10px_28px_-14px_rgba(10,10,10,0.5),0_0_0_1px_rgba(10,10,10,0.1)] transition-[scale] hover:scale-[1.03] active:scale-[0.98] md:bottom-[100px] md:text-[14px]"
+            style={{ left: "calc(var(--pick-x) * 100% + var(--pick-side) * 58px)", transform: "translateX(calc((var(--pick-side) - 1) * 50%))" }}
           >
             Hi, I&apos;m Pick. Ask me anything about clothes.
-            <span aria-hidden className="absolute -bottom-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-paper shadow-[1px_1px_0_0_rgba(10,10,10,0.08)]" />
+
           </button>
         )}
 

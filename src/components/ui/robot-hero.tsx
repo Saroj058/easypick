@@ -646,7 +646,12 @@ export function RobotPrototype({
     }
     if (shadowRef.current) shadowRef.current.position.x = bodyRef.current.position.x;
     // Tells the page where he is (0 = left edge, 1 = right), for the bubble over his head.
-    if (followRef?.current) followRef.current.style.setProperty("--pick-x", (0.5 + bodyRef.current.position.x / state.viewport.width).toFixed(4));
+    if (followRef?.current) {
+      const fx = 0.5 + bodyRef.current.position.x / state.viewport.width;
+      followRef.current.style.setProperty("--pick-x", fx.toFixed(4));
+      // Which side has room for something beside him: toward the middle (1 = his right, -1 = his left).
+      followRef.current.style.setProperty("--pick-side", fx < 0.5 ? "1" : "-1");
+    }
 
     // Contained, it looks where it is going (or, standing still, where the mood points it).
     const relativeX = faceLeft ? -0.45 : contain ? Math.max(-1.2, Math.min(1.2, tx - bodyRef.current.position.x / Math.max(0.5, maxMoveX))) : tx - bodyRef.current.position.x / 2.5;
