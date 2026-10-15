@@ -4,7 +4,8 @@ import Link from "next/link";
 import { RecentlyViewed } from "@/components/local-lists";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
-import { ProductGrid } from "@/components/product-card";
+import { DropStrip } from "@/components/drop-strip";
+import { toRailPiece } from "@/components/home/rail";
 import { ShopSearch } from "@/components/shop-search";
 import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
@@ -40,7 +41,6 @@ const sorts = [
 type Filters = { q?: string; category?: string; size?: string; colour?: string; price?: string; fit?: string; sort?: string; sale?: string; new?: string; vault?: string; brand?: string; page?: string };
 
 /** Pieces per page: enough to browse, small enough for a phone on mobile data. */
-const PER_PAGE = 48;
 
 function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
@@ -124,9 +124,13 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   const onSale = all.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = onSale.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
-  const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
-  const page = Math.min(pages, Math.max(1, Math.floor(Number(f.page) || 1)));
-  const shown = list.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  // As the rails and the gift page (owner, 15 Oct 2026): "All" is a strip per kind of piece; one
+  // kind chosen (or a search, sale, new, Vault or brand view) is one strip under its big name.
+  const single = kinds.length === 1 || Boolean(f.q || f.sale || f.new || f.vault || f.brand);
+  const groups = (Object.keys(categoryLabels) as Category[])
+    .map((c) => ({ c, pieces: list.filter((p) => p.category === c) }))
+    .filter((g) => g.pieces.length > 0);
+  const title = f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.q ? `“${f.q}”` : kinds.length === 1 ? categoryLabels[kinds[0]] : "Every piece";
 
   return (
     <div className="container-ep pb-24 pt-10 md:pt-16">
@@ -260,7 +264,6 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
       <p className="mt-6 font-mono text-[13px] text-steel-dark" aria-live="polite">
         {list.length} {list.length === 1 ? "piece" : "pieces"}
-        {pages > 1 && ` · page ${page} of ${pages}`}
         {active && (
           <>
             {" · "}
@@ -271,37 +274,35 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
         )}
       </p>
 
-      <div className="mt-8">
-        {list.length ? (
-          <>
-            <ProductGrid products={shown} priorityCount={page === 1 ? 2 : 0} />
-            {pages > 1 && (
-              <nav aria-label="Pages" className="mt-16 flex flex-wrap items-center justify-center gap-2">
-                {page > 1 && (
-                  <Link href={href(f, { page: String(page - 1) })} className="btn btn-outline">
-                    Previous
-                  </Link>
-                )}
-                {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
-                  <Link
-                    key={n}
-                    href={href(f, { page: n === 1 ? undefined : String(n) })}
-                    aria-current={n === page ? "page" : undefined}
-                    className={`grid h-11 min-w-11 place-items-center rounded-[2px] border px-3 font-mono text-[14px] ${n === page ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}
-                  >
-                    {n}
-                  </Link>
-                ))}
-                {page < pages && (
-                  <Link href={href(f, { page: String(page + 1) })} className="btn btn-ink">
-                    Next
-                  </Link>
-                )}
-              </nav>
-            )}
-          </>
-        ) : (
+      <div className="mt-6 overflow-x-clip">
+        {!list.length ? (
           <p className="py-24 text-center text-steel-dark">{f.q ? `Nothing matches “${f.q}”. Try another word, or clear the filters.` : "Nothing matches that yet. Try another size or colour."}</p>
+        ) : single ? (
+          <section aria-labelledby="shop-one">
+            {/* The name is already on the black tab above: here only for screen readers. */}
+            <h2 id="shop-one" className="sr-only">
+              {title}
+              <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{list.length}</span>
+            </h2>
+            <DropStrip pieces={list.map(toRailPiece)} label={title} tags />
+          </section>
+        ) : (
+          <div className="space-y-16 md:space-y-24">
+            {groups.map(({ c, pieces }) => (
+              <section key={c} aria-labelledby={`shop-${c}`}>
+                <div className="flex items-end justify-between gap-4">
+                  <h2 id={`shop-${c}`} className="display text-[clamp(2.2rem,1.6rem+2.6vw,3.6rem)] leading-[0.88]">
+                    {categoryLabels[c]}
+                    <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{pieces.length}</span>
+                  </h2>
+                  <Link href={href(f, { category: c })} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-ink/25 px-4 text-[13px] font-semibold hover:border-ink">
+                    Only {categoryLabels[c].toLowerCase()} <span aria-hidden>→</span>
+                  </Link>
+                </div>
+                <DropStrip pieces={pieces.map(toRailPiece)} label={categoryLabels[c]} tags />
+              </section>
+            ))}
+          </div>
         )}
       </div>
       <RecentlyViewed />

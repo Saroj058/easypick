@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/format";
 import { removeFromGiftBag, useGiftBag, type GiftBagItem } from "@/lib/gift-bag";
 import type { Product } from "@/lib/types";
+import { BagItem } from "../bag-item";
 import { GiftForm } from "../gift-form";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../ui/sheet";
 
@@ -33,22 +34,9 @@ export function GiftBagList() {
 
   return (
     <>
-      <ul className="mt-8 divide-y divide-mist border-y border-mist">
+      <ul className="mt-8 space-y-3" aria-label="In your gift bag">
         {items.map((i) => (
-          <li key={i.sku} className="flex items-start justify-between gap-4 py-5">
-            <div className="min-w-0">
-              <Link href={`/product/${i.slug}?from=gift`} className="font-semibold hover:underline">
-                {i.name}
-              </Link>
-              <p className="font-mono text-[14px] text-steel-dark">
-                {i.colour} · {i.size === "ONE" ? "One size" : i.size}
-              </p>
-              <button type="button" onClick={() => removeFromGiftBag(i.sku)} className="mt-2 h-11 cursor-pointer text-sm underline underline-offset-2">
-                Remove
-              </button>
-            </div>
-            <p className="shrink-0 font-mono">{formatPrice(i.price)}</p>
-          </li>
+          <BagItem key={i.sku} slug={i.slug} name={i.name} colour={i.colour} size={i.size} price={i.price} href={`/product/${i.slug}?from=gift`} onRemove={() => removeFromGiftBag(i.sku)} />
         ))}
       </ul>
       <div className="mt-6 flex items-baseline justify-between text-lg font-semibold">

@@ -5,14 +5,14 @@ import { randomPhone } from "./helpers";
 test("home, shop and a product page load @phone", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/Easypick/);
-  await page.goto("/shop");
-  await page.locator('a[href="/product/everyday-hoodie"]').first().click();
-  await page.waitForURL(/\/product\/everyday-hoodie/);
+  // The shop is strips, as on the rails: the piece in front links to its page.
+  await page.goto("/shop?category=hoodies");
+  await page.locator('a[href^="/product/"]').first().click();
+  await page.waitForURL(/\/product\//);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   // The price is on the hang tag, so the panel doesn't repeat it or the delivery lines.
   await expect(page.getByText(/No DM needed/)).toHaveCount(0);
   await expect(page.getByText(/Gift cards accepted/)).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /Save/ }).first()).toBeVisible();
 });
 
 test("home: the rail (cover-flow rows, size asked once, buy or bag, search), then Designer Fits @phone", async ({ page }) => {
@@ -244,18 +244,16 @@ test("drop pages: the run, what's left, and the drops list @phone", async ({ pag
   expect(story.headers()["content-type"]).toContain("image/png");
 });
 
-test("the heart saves a piece (it never adds to the bag or asks for a login)", async ({ page }) => {
+test("shop: strips like the rails, one bag on the card in front, no heart (owner, 15 Oct 2026)", async ({ page }) => {
+  // Everything: a strip for each kind, each with "Only …" to see just that kind.
   await page.goto("/shop");
-  const heart = page.getByRole("button", { name: "Save Everyday Hoodie" });
-  await expect(async () => {
-    await heart.scrollIntoViewIfNeeded();
-    await heart.hover();
-    await heart.click();
-    await expect(heart).toHaveAttribute("aria-pressed", "true", { timeout: 1500 });
-  }).toPass();
-  await expect(page).toHaveURL(/\/shop$/); // not sent to log in
-  await page.goto("/saved");
-  await expect(page.getByRole("link", { name: /Everyday Hoodie/ }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: /^Hoodies/ })).toBeVisible();
+  await page.getByRole("link", { name: /^Only hoodies/ }).click();
+  await expect(page).toHaveURL(/category=hoodies/);
+  // One kind: one strip under its big name, with one bag button (on the card in front).
+  await expect(page.getByRole("heading", { level: 2, name: /^Hoodies/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Add .* to bag$/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^Save / })).toHaveCount(0);
 });
 
 test("Buy now remembers a guest's number on this phone, and forgets it when asked", async ({ page }) => {
