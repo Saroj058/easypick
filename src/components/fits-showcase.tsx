@@ -28,11 +28,16 @@ import type { BagLine, Size } from "@/lib/types";
 //   name for a close look). One row under it: what the fit is, and where you are.
 //   Right: the story, the pieces numbered 01, 02, 03 (size, swap: hover an alternative to try it
 //   on, tap to keep it), what goes in the bag, delivery and payment, Add the fit and Quick buy.
+// The fits play on their own, one every 10 seconds (owner, 16 Oct 2026), with a pause button;
+// they hold while someone is choosing (10 seconds from their last tap or key), pointing at a
+// piece, trying a swap, in a pop-up, or away from the tab. Reduced motion starts them paused.
 // A change of fit is choreographed: the old fit leaves together, the new one is laid down from
 // the trousers up, the dots and lines follow, then the names. A fit the owner photographed (in
 // /admin/looks) shows the photo instead.
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+/** How long each fit stays before the next comes on its own. */
+const AUTO = 10_000;
 const two = (n: number) => String(n).padStart(2, "0");
 const SLOT_NAME: Record<SlotKey, string> = { cap: "cap", layer: "jacket", top: "top", bottom: "bottom" };
 /** Head to toe. */
@@ -212,10 +217,10 @@ function Showcase({ looks, options }: { looks: Look[]; options: Record<SlotKey, 
   }, [looks]);
 
   const go = useCallback(
-    (i: number) => {
+    (i: number, forward?: boolean) => {
       const next = Math.max(0, Math.min(looks.length - 1, i));
       if (next === index) return;
-      setDir(next > index ? 1 : -1);
+      setDir(forward || next > index ? 1 : -1);
       setIndex(next);
       setChange("fit");
       setAdded(false);
@@ -248,6 +253,28 @@ function Showcase({ looks, options }: { looks: Look[]; options: Record<SlotKey, 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [go, index]);
+
+  // Playing on its own: on unless they paused it (or asked for less motion and haven't pressed play).
+  const [chosenPlay, setChosenPlay] = useState<boolean | null>(null);
+  const playing = chosenPlay ?? !still;
+  /** Bumped by any tap or key inside: the 10 seconds start again from there. */
+  const [touched, setTouched] = useState(0);
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const on = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", on);
+    return () => document.removeEventListener("visibilitychange", on);
+  }, []);
+  const holding = !playing || hidden || swapping !== null || preview !== null || focus !== null;
+  useEffect(() => {
+    if (holding || looks.length < 2) return;
+    const t = setTimeout(() => {
+      // Not while a pop-up (Quick buy, the bag) is open: wait another round.
+      if (document.querySelector("[role=dialog]")) setTouched((n) => n + 1);
+      else go((index + 1) % looks.length, true);
+    }, AUTO);
+    return () => clearTimeout(t);
+  }, [holding, index, touched, go, looks.length]);
 
   // The next and previous fits' pictures, and (once a swap opens) its alternatives, are fetched ahead.
   useEffect(() => {
@@ -415,7 +442,7 @@ function Showcase({ looks, options }: { looks: Look[]; options: Record<SlotKey, 
   const announce = `Fit ${index + 1} of ${looks.length}: ${base.label}, ${base.groupLabel}. ${kept.pieces.length} pieces, ${formatPrice(total)}.`;
 
   return (
-    <div className="relative overflow-hidden bg-[#ededeb]">
+    <div className="relative overflow-hidden bg-[#ededeb]" onPointerDown={() => setTouched((n) => n + 1)} onKeyDown={() => setTouched((n) => n + 1)}>
       {/* A soft light behind the figure, tinted by the fit */}
       <motion.div
         aria-hidden
@@ -740,6 +767,40 @@ function Showcase({ looks, options }: { looks: Look[]; options: Record<SlotKey, 
               {!photo && <span className="hidden sm:inline"> · Sneakers for styling</span>}
             </span>
             <span className="ml-auto flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setChosenPlay(!playing)}
+                aria-label={playing ? "Pause the fits" : "Play the fits"}
+                aria-pressed={!playing}
+                className="relative mr-1 grid h-11 w-11 cursor-pointer place-items-center rounded-full text-ink transition-colors hover:bg-ink/5"
+              >
+                <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden className="absolute -rotate-90">
+                  <circle cx="13" cy="13" r="11" fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" />
+                  {!holding && (
+                    <motion.circle
+                      key={`${index}-${touched}`}
+                      cx="13"
+                      cy="13"
+                      r="11"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: AUTO / 1000, ease: "linear" }}
+                    />
+                  )}
+                </svg>
+                {playing ? (
+                  <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                    <path d="M2.5 1.5v7M7.5 1.5v7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                    <path d="M3 1.5l5 3.5-5 3.5z" fill="currentColor" />
+                  </svg>
+                )}
+              </button>
               <span className="mr-1 tabular-nums">
                 <span className="font-semibold text-ink">{two(index + 1)}</span> / {two(looks.length)}
               </span>

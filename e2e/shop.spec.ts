@@ -385,3 +385,18 @@ test("account dashboard: greeting, calm summaries, Edit opens the form; Pick on 
   await pick.getByRole("group", { name: "Quick answers" }).getByRole("button", { name: "Something else" }).click();
   await expect(pick).toContainText("What are you after today?", { timeout: 30_000 });
 });
+
+test("Designer Fits play on their own every 10 seconds, and pause", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/fits");
+  const fits = page.getByRole("region", { name: "Designer Fits" });
+  const party = fits.getByRole("radiogroup", { name: "Party fits" });
+  await expect(party.getByRole("radio", { name: "Night out" })).toHaveAttribute("aria-checked", "true");
+  await page.clock.fastForward(10_500);
+  await expect(party.getByRole("radio", { name: "House party" })).toHaveAttribute("aria-checked", "true");
+  // Paused, it stays.
+  await fits.getByRole("button", { name: "Pause the fits" }).click();
+  await page.clock.fastForward(25_000);
+  await expect(party.getByRole("radio", { name: "House party" })).toHaveAttribute("aria-checked", "true");
+  await expect(fits.getByRole("button", { name: "Play the fits" })).toBeVisible();
+});
