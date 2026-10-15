@@ -220,6 +220,7 @@ describe("on the shop, for themselves", () => {
   it("reads a kind, a colour and a size from one sentence; a saved size skips the question", async () => {
     expect(readMessage("a black hoodie in size M").set).toMatchObject({ kind: "hoodies", colour: "black", size: "M" });
     expect(readMessage("olive cargos").set).toMatchObject({ kind: "bottoms", colour: "olive" });
+    expect(readMessage("a black hoodie in M").set).toMatchObject({ kind: "hoodies", colour: "black", size: "M" });
     const r = await turn(CATALOGUE, { ...SHOP, sizing: "known", size: "M", style: "unsure", budget: 0 }, { text: "olive cargos" });
     expect(r.messages.flatMap((m) => m.cards ?? []).map((c) => c.slug)).toEqual(["relaxed-cargo"]);
   });

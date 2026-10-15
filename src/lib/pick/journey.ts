@@ -413,7 +413,7 @@ export function readMessage(text: string): { set: NonNullable<Quick["set"]>; act
   else if (has(/\b(bold|colou?rful|bright|loud|statement)\b/)) set.style = "bold";
 
   if (has(/\b(don't know (his|her|their) size|dont know (his|her|their) size|not sure (of|about) (his|her|their) size|no idea (of|about)? ?(his|her|their)? ?size|unknown size)\b/)) set.sizing = "unknown";
-  const sz = t.match(/\b(?:size|wears?(?: a| an)?|is an?)\s+(xxl|xl|xs|s|m|l)\b/) ?? t.match(/\b(xxl|xl|xs)\b/);
+  const sz = t.match(/\b(?:size|wears?(?: a| an)?|is an?|in(?: an?)?)\s+(xxl|xl|xs|s|m|l)\b/) ?? t.match(/\b(xxl|xl|xs)\b/);
   if (sz) set.size = sz[1].toUpperCase();
 
   return { set, action };
