@@ -17,9 +17,9 @@ const PLAN = [
     key: "party",
     label: "Party",
     fits: [
-      { key: "party", label: "Night out", note: "Dark layers for a late one.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-      { key: "party-house", label: "House party", note: "Easy, warm, ready for the floor.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
-      { key: "party-birthday", label: "Birthday", note: "A little louder than usual.", slots: [["tees", "co-ords"], ["bottoms"], ["jackets"]], tone: "mixed" },
+      { key: "party", label: "Night out", note: "Dark, sharp, made for late.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
+      { key: "party-house", label: "House party", note: "Easy enough to dance in.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "party-birthday", label: "Birthday", note: "Your day. Dress a bit louder.", slots: [["tees", "co-ords"], ["bottoms"], ["jackets"]], tone: "mixed" },
     ],
   },
   {
@@ -27,15 +27,15 @@ const PLAN = [
     label: "Date",
     fits: [
       { key: "date", label: "Dinner", note: "Sharp without trying too hard.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-      { key: "date-coffee", label: "Coffee", note: "Light and relaxed, for daylight.", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "light" },
-      { key: "date-movie", label: "Movie night", note: "Soft layers for the back row.", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
+      { key: "date-coffee", label: "Coffee", note: "Light colours for a daylight date.", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "light" },
+      { key: "date-movie", label: "Movie night", note: "Comfy for the back row.", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
     ],
   },
   {
     key: "college",
     label: "College",
     fits: [
-      { key: "college", label: "Class day", note: "Comfortable from first class to last.", slots: [["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
+      { key: "college", label: "Class day", note: "First class to last, no fuss.", slots: [["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
       { key: "college-presentation", label: "Presentation", note: "Clean lines, quiet confidence.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
       { key: "college-fest", label: "Fest", note: "Built for a long day out.", slots: [["tees"], ["bottoms"], ["jackets"], ["accessories"]], tone: "dark" },
     ],
@@ -45,8 +45,8 @@ const PLAN = [
     label: "Café",
     fits: [
       { key: "cafe", label: "Brunch", note: "Fresh, light, unhurried.", slots: [["tees", "co-ords"], ["bottoms"], ["accessories"]], tone: "light" },
-      { key: "cafe-laptop", label: "Laptop day", note: "Cosy enough for hours at a table.", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
-      { key: "cafe-evening", label: "Evening", note: "A layer for when it cools down.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "mixed" },
+      { key: "cafe-laptop", label: "Laptop day", note: "Comfy for hours at a table.", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
+      { key: "cafe-evening", label: "Evening", note: "One more layer for when it cools.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "mixed" },
     ],
   },
   {
@@ -54,8 +54,8 @@ const PLAN = [
     label: "Dashain",
     fits: [
       { key: "dashain", label: "Tika day", note: "Neat and bright for the family.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-      { key: "dashain-family", label: "Family visit", note: "Smart, but you can still sit on the floor.", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
-      { key: "dashain-travel", label: "Travel home", note: "Comfort for the long ride.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "dashain-family", label: "Family visit", note: "Smart, but floor-sitting friendly.", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
+      { key: "dashain-travel", label: "Travel home", note: "Easy for the long bus ride home.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
     ],
   },
   {
@@ -64,7 +64,7 @@ const PLAN = [
     fits: [
       { key: "weekend", label: "Easy day", note: "Nothing to think about.", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
       { key: "weekend-roadtrip", label: "Road trip", note: "Made for the passenger seat.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-      { key: "weekend-ride", label: "Bike ride", note: "Wind-ready, dark, easy to move in.", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "weekend-ride", label: "Bike ride", note: "Dark, easy to move in.", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
     ],
   },
 ] as const satisfies readonly {
@@ -99,7 +99,7 @@ export interface Look {
   groupLabel: string;
   /** Set by the owner in /admin/looks, not picked by the site. */
   curated: boolean;
-  /** One short line about the fit: "Dark layers for a late one." */
+  /** One short line about the fit: "Dark, sharp, made for late." */
   note: string;
   /** A photo of the fit being worn, uploaded in /admin/looks. Only on a fit the owner set (so it shows these pieces). */
   photo?: string;
@@ -119,13 +119,32 @@ function luminance(hex: string) {
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 }
 
-function toPiece(p: Product, tone: Tone, slot: number, pickedColour?: string): LookPiece | null {
+/** Colours that go with anything. */
+const NEUTRAL = /(black|white|ivory|bone|cream|stone|sand|ash|charcoal|grey|gray|navy|indigo|slate|off-white|ecru|oat|denim)/i;
+
+/**
+ * A piece in the colour its place in the fit calls for (a stylist's rule, owner's review 16 Oct
+ * 2026): the jacket darkest; a top under a jacket the lightest neutral; trousers the darkest
+ * neutral; a cap dark. A top worn alone follows the fit's tone. When the photographed colour (the
+ * first) is close enough, it wins, so the lay shows the real thing. `role` "any" (swapping) takes
+ * the photographed colour.
+ */
+function toPiece(p: Product, tone: Tone, role: "top" | "bottom" | "layer" | "cap" | "any", pickedColour?: string, layered = false): LookPiece | null {
   const inStock = p.colours.filter((c) => p.variants.some((v) => v.colour === c.name && v.stock > 0));
   if (inStock.length === 0) return null;
   const byLight = [...inStock].sort((a, b) => luminance(a.hex) - luminance(b.hex));
-  // Wedding: a light top under a dark layer; party: all dark; otherwise alternate.
-  const wantLight = tone === "light" ? slot === 1 : tone === "mixed" ? slot % 2 === 1 : false;
-  const colour = inStock.find((c) => c.name === pickedColour) ?? (wantLight ? byLight[byLight.length - 1] : byLight[0]);
+  const neutral = byLight.filter((c) => NEUTRAL.test(c.name));
+  const darkest = (list: typeof byLight) => list[0];
+  const lightest = (list: typeof byLight) => list[list.length - 1];
+  let want = byLight[0];
+  if (role === "any") want = inStock.find((c) => c.name === p.colours[0]?.name) ?? byLight[0];
+  else if (role === "layer" || role === "cap") want = darkest(byLight);
+  else if (role === "bottom") want = darkest(neutral.length ? neutral : byLight);
+  else if (layered) want = lightest(neutral.length ? neutral : byLight);
+  else want = tone === "dark" ? darkest(byLight) : tone === "light" ? lightest(byLight) : lightest(neutral.length ? neutral : byLight);
+  const first = inStock.find((c) => c.name === p.colours[0]?.name);
+  if (first && Math.abs(luminance(first.hex) - luminance(want.hex)) < 0.15) want = first;
+  const colour = inStock.find((c) => c.name === pickedColour) ?? want;
   const sizes = p.variants
     .filter((v) => v.colour === colour.name)
     .sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size))
@@ -162,9 +181,9 @@ export function designerFits(products: Product[], saved: SavedLooks = {}): { loo
       // The owner's fit, when at least two of its pieces are live and in stock.
       const mine = saved[plan.key];
       if (mine && mine.pieces.length) {
-        const pieces = mine.pieces.flatMap((x, slot) => {
+        const pieces = mine.pieces.flatMap((x) => {
           const p = live.find((q) => q.slug === x.slug);
-          const piece = p && toPiece(p, plan.tone, slot, x.colour);
+          const piece = p && toPiece(p, plan.tone, fitSlot(p.category), x.colour);
           return piece ? [piece] : [];
         });
         if (pieces.length >= 2) {
@@ -180,12 +199,15 @@ export function designerFits(products: Product[], saved: SavedLooks = {}): { loo
       for (let turn = 0; turn < 4; turn++) {
         const used = new Set<string>();
         pieces = [];
+        const layered = plan.slots.some((cats) => (cats as readonly Category[]).includes("jackets"));
         plan.slots.forEach((cats, slot) => {
+          // A co-ord set is top and bottom in one: no second pair of trousers with it.
+          if ((cats as readonly Category[]).includes("bottoms") && pieces.some((x) => x.category === "co-ords")) return;
           // Vault pieces are only in a fit when the owner puts them there.
           const options = live.filter((p) => !p.vault && (cats as readonly Category[]).includes(p.category) && !used.has(p.slug));
           if (options.length === 0) return;
           const p = options[(i + turn + (turn ? slot : 0)) % options.length];
-          const piece = toPiece(p, plan.tone, slot);
+          const piece = toPiece(p, plan.tone, fitSlot(p.category), undefined, layered);
           if (!piece) return;
           used.add(p.slug);
           pieces.push(piece);
@@ -210,7 +232,7 @@ export function swapOptions(products: Product[]): Record<"top" | "bottom" | "lay
   const out: Record<"top" | "bottom" | "layer" | "cap", LookPiece[]> = { top: [], bottom: [], layer: [], cap: [] };
   for (const p of products) {
     if (p.status !== "live" || p.vault) continue;
-    const piece = toPiece(p, "dark", 0);
+    const piece = toPiece(p, "dark", "any");
     if (piece) out[fitSlot(p.category)].push(piece);
   }
   return out;

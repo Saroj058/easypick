@@ -1167,16 +1167,19 @@
   }
 }
 
-/* Designer Fits: each piece of the fit in front breathes, very slightly (components/fits-showcase.tsx). */
+/* Designer Fits: the fit in front breathes, very slightly, as one (components/fits-showcase.tsx). */
 @keyframes fit-breathe {
   0%,
   100% {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-2px);
+    transform: translateY(-1.5px);
   }
 }
-.fit-breathe {
-  animation: fit-breathe 6s ease-in-out infinite;
+@media (prefers-reduced-motion: no-preference) {
+  .fit-breathe {
+    animation: fit-breathe 7s ease-in-out infinite;
+    will-change: transform;
+  }
 }
