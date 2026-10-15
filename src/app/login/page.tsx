@@ -52,17 +52,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               : "Log in to see your orders and saved size."}
         </p>
 
-        {!forBag && (
-          <ul className="mt-5 space-y-1.5 text-[13.5px] text-steel-dark">
-            {["Your size, saved for every piece", "Orders, gift links and gift cards in one place", "Checkout and gifts filled in for you"].map((t) => (
-              <li key={t} className="flex items-center gap-2.5">
-                <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-volt ring-1 ring-ink/20" />
-                {t}
-              </li>
-            ))}
-          </ul>
-        )}
-
         <div className="mt-8">
           {error && (
             <p role="alert" className="mb-5 rounded-xl bg-mist/60 px-4 py-3 text-[14px]">
