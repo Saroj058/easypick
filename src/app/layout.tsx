@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Baloo_2, Barlow_Condensed, Inter, JetBrains_Mono, Mukta } from "next/font/google";
 
 import { PendingBagAdd } from "@/components/bag-gate";
+import { BuySheets } from "@/components/buy-sheets";
 import { BagProvider } from "@/components/bag-provider";
 import { FooterChrome, ShopChrome } from "@/components/shop-chrome";
 import { SiteAnalytics } from "@/components/site-analytics";
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <MobileTabBar />
           </ShopChrome>
           <PendingBagAdd />
+          <BuySheets />
           <SiteAnalytics />
         </BagProvider>
       </body>

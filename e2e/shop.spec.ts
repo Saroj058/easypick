@@ -130,8 +130,10 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search), the
 test("Buy now needs no account and goes to payment", async ({ page }) => {
   await page.goto("/product/everyday-hoodie");
   await pickInStockSize(page);
-  await page.getByRole("link", { name: /Buy now/ }).first().click();
-  await expect(page).toHaveURL(/\/buy\/everyday-hoodie/);
+  // Buy now opens over the product page, not on a page of its own.
+  await page.getByRole("button", { name: /^Buy now/ }).first().click();
+  await expect(page.getByRole("dialog", { name: "Buy now" })).toBeVisible();
+  await expect(page).toHaveURL(/\/product\/everyday-hoodie$/);
   await page.getByLabel("Mobile number").fill("12345");
   await page.getByRole("button", { name: /^Pay Rs/ }).click();
   await expect(page.locator("#co-error")).toContainText(/10-digit/);
@@ -152,8 +154,9 @@ test("guests can use the bag; the phone code is asked for only at checkout", asy
   await page.goto("/bag");
   await expect(page.getByText("Everyday Hoodie").first()).toBeVisible();
   await expect(page.getByText(/code at checkout/)).toBeVisible();
-  await page.getByRole("link", { name: "Checkout", exact: true }).click();
-  await expect(page).toHaveURL(/\/login\?reason=bag&next=(%2F|\/)checkout/);
+  await page.getByRole("button", { name: "Checkout", exact: true }).click();
+  // After the code, they come back to the bag with the checkout open over it.
+  await expect(page).toHaveURL(/\/login\?reason=bag&next=%2Fbag%3Fcheckout%3D1/);
   await expect(page.getByRole("heading", { name: "Confirm your number." })).toBeVisible();
 
   // Still there after the detour (and after a reload).
@@ -265,15 +268,17 @@ test("Buy now remembers a guest's number on this phone, and forgets it when aske
   const phone = randomPhone();
   await page.goto("/product/everyday-hoodie");
   await pickInStockSize(page);
-  await page.getByRole("link", { name: /Buy now/ }).first().click();
-  await expect(page).toHaveURL(/\/buy\/everyday-hoodie/);
+  // Buy now opens over the product page, not on a page of its own.
+  await page.getByRole("button", { name: /^Buy now/ }).first().click();
+  await expect(page.getByRole("dialog", { name: "Buy now" })).toBeVisible();
+  await expect(page).toHaveURL(/\/product\/everyday-hoodie$/);
   await page.getByLabel("Mobile number").fill(phone);
   await page.getByRole("button", { name: /^Pay Rs/ }).click();
   await page.waitForURL(/esewa|\/order\//, { timeout: 30_000, waitUntil: "commit" });
 
   await page.goto("/product/everyday-hoodie");
   await pickInStockSize(page);
-  await page.getByRole("link", { name: /Buy now/ }).first().click();
+  await page.getByRole("button", { name: /^Buy now/ }).first().click();
   await expect(page.getByLabel("Mobile number")).toHaveValue(phone);
   await page.getByRole("button", { name: "Forget my details" }).click();
   await expect(page.getByRole("button", { name: "Forget my details" })).toHaveCount(0);

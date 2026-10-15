@@ -10,6 +10,7 @@ import { kathmanduToday } from "@/lib/kathmandu-date";
 import { formatBS } from "@/lib/nepali-date";
 import { site } from "@/lib/site";
 import type { Product, Size } from "@/lib/types";
+import { GiftCardSwitch } from "./gift-card-switch";
 import { GiftNote } from "./gift/gift-box";
 import { KnownField } from "./known-field";
 import type { GiftBagItem } from "@/lib/gift-bag";
@@ -220,7 +221,9 @@ export function GiftForm({
   const [cardMsg, setCardMsg] = useState("");
   const [applying, setApplying] = useState(false);
   const [walletTried, setWalletTried] = useState(false);
-  const cardApplied = card ? Math.min(card.balance, total) : 0;
+  /** The card found or typed is used unless they switch it off. */
+  const [useCard, setUseCard] = useState(true);
+  const cardApplied = card && useCard ? Math.min(card.balance, total) : 0;
   const toPay = total - cardApplied;
   async function applyCard() {
     if (applying || !cardCode.trim()) return;
@@ -313,7 +316,7 @@ export function GiftForm({
       <input type="hidden" name="colour" value={colour} />
       <input type="hidden" name="size" value={size ?? ""} />
       <input type="hidden" name="showPrice" value={showPrice ? "on" : ""} />
-      <input type="hidden" name="giftCard" value={card?.code ?? ""} />
+      <input type="hidden" name="giftCard" value={card && useCard ? card.code : ""} />
       {bag && <input type="hidden" name="items" value={JSON.stringify(bag.map((x) => x.sku))} />}
 
       {/* The piece and where they are in it. In the pop-up it stays at the top while the step scrolls. */}
@@ -691,12 +694,17 @@ export function GiftForm({
             {/* A gift card pays some or all of it */}
             <div>
               {card ? (
-                <p className="text-[14px]">
-                  {card.saved ? `Your saved gift card ${card.code.replace(/^EP-[A-Z0-9]{4}-/, "EP-••••-")} is applied.` : "Gift card applied."} {formatPrice(card.balance - cardApplied)} stays on the card.{" "}
-                  <button type="button" onClick={() => setCard(null)} className="min-h-11 cursor-pointer font-semibold underline underline-offset-4">
-                    Remove
-                  </button>
-                </p>
+                <GiftCardSwitch
+                  card={card}
+                  use={useCard}
+                  onUse={setUseCard}
+                  applied={cardApplied}
+                  onRemove={() => {
+                    setCard(null);
+                    setUseCard(true);
+                    setCardOpen(true);
+                  }}
+                />
               ) : !cardOpen ? (
                 <button type="button" onClick={() => setCardOpen(true)} className="min-h-11 cursor-pointer text-[14px] font-semibold underline underline-offset-4">
                   Have a gift card?

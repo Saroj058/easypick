@@ -9,6 +9,7 @@ import { sellable } from "@/lib/inventory";
 import { useMySize } from "@/lib/my-size";
 import type { Product, Size, Variant } from "@/lib/types";
 import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
+import { openBuyNow, openSendGift } from "./buy-sheets";
 import { useFitProfile } from "./fit-finder";
 import { BagIcon, HeartIcon } from "./icons";
 import { toggleSaved, useList } from "./saved";
@@ -192,9 +193,16 @@ export function QuickBuy({
 
           {chosen ? (
             <>
-              <Link href={`/buy/${product.slug}?sku=${encodeURIComponent(chosen.sku)}`} onClick={() => setOpen(false)} className="btn btn-volt mt-8 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  openBuyNow([{ slug: product.slug, sku: chosen.sku, name: product.name, size: chosen.size, colour: chosen.colour, price: product.salePrice ?? product.price, qty: 1 }]);
+                }}
+                className="btn btn-volt mt-8 w-full"
+              >
                 Buy now
-              </Link>
+              </button>
               {canBag && (
                 <button
                   type="button"
@@ -208,13 +216,16 @@ export function QuickBuy({
                   Add to bag
                 </button>
               )}
-              <Link
-                href={`/gift/${product.slug}?colour=${encodeURIComponent(chosen.colour)}${chosen.size !== "ONE" ? `&size=${chosen.size}` : ""}`}
-                onClick={() => setOpen(false)}
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  openSendGift({ slug: product.slug, name: product.name, price: product.salePrice ?? product.price }, { colour: chosen.colour, size: chosen.size !== "ONE" ? chosen.size : undefined });
+                }}
                 className="btn btn-outline mt-3 w-full"
               >
                 Send as gift
-              </Link>
+              </button>
             </>
           ) : (
             <button type="button" disabled className="btn btn-volt mt-8 w-full">

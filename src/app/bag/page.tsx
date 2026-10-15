@@ -2,10 +2,12 @@
 
 import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { BagItem } from "@/components/bag-item";
 import { useBag } from "@/components/bag-provider";
+import { openCheckout } from "@/components/buy-sheets";
 import { GiftBagList } from "@/components/gift/gift-bag";
 import { useMe } from "@/components/session";
 import { formatPrice } from "@/lib/format";
@@ -22,6 +24,13 @@ export default function BagPage() {
   const gifts = useGiftBag();
   const linked = useSyncExternalStore(noSubscribe, wantsGift, () => false);
   const [chosen, setTab] = useState<"bag" | "gift" | null>(null);
+  const router = useRouter();
+  // Back from signing in to check out (/bag?checkout=1): the checkout opens over the bag.
+  useEffect(() => {
+    if (!me || !ready || !lines.length || new URLSearchParams(location.search).get("checkout") !== "1") return;
+    history.replaceState(null, "", "/bag");
+    openCheckout();
+  }, [me, ready, lines.length]);
   const tab = chosen ?? (linked ? "gift" : "bag");
   const pieces = lines.reduce((n, l) => n + l.qty, 0);
   const tabClass = (on: boolean) =>
@@ -112,9 +121,13 @@ export default function BagPage() {
             </div>
             <p className="text-right text-[12.5px] text-steel-dark">{toFree === 0 ? "pickup or delivery" : `pickup · ${formatPrice(subtotal + site.delivery.flatFee)} delivered`}</p>
 
-            <Link href="/checkout" className="mt-5 flex h-12 w-full items-center justify-center rounded-full bg-volt text-[15px] font-semibold text-ink transition-[background-color,scale] hover:bg-[#b5f020] active:scale-[0.98]">
+            <button
+              type="button"
+              onClick={() => (me ? openCheckout() : router.push(`/login?reason=bag&next=${encodeURIComponent("/bag?checkout=1")}`))}
+              className="mt-5 flex h-12 w-full cursor-pointer items-center justify-center rounded-full bg-volt text-[15px] font-semibold text-ink transition-[background-color,scale] hover:bg-[#b5f020] active:scale-[0.98]"
+            >
               Checkout
-            </Link>
+            </button>
             <Link href="/shop" className="mt-2 flex h-11 w-full items-center justify-center rounded-full text-[14px] font-semibold underline-offset-4 hover:underline">
               Keep shopping
             </Link>

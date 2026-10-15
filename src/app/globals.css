@@ -1166,3 +1166,17 @@
     animation-delay: 0s !important;
   }
 }
+
+/* Designer Fits: each piece of the fit in front breathes, very slightly (components/fits-showcase.tsx). */
+@keyframes fit-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+.fit-breathe {
+  animation: fit-breathe 6s ease-in-out infinite;
+}

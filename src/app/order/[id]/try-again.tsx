@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { useBag } from "@/components/bag-provider";
+import { openBuyNow, openSendGift } from "@/components/buy-sheets";
 import type { OrderLine } from "@/lib/orders";
 
 /** After an expired payment: one piece goes back to Buy now; several go back into the bag. */
@@ -12,16 +12,20 @@ export function TryAgain({ lines, gift }: { lines: OrderLine[]; gift: boolean })
   const router = useRouter();
   if (gift) {
     return (
-      <Link href={`/gift/${lines[0].slug}`} className="btn btn-volt mt-4">
+      <button type="button" onClick={() => openSendGift({ slug: lines[0].slug, name: lines[0].name, price: lines[0].unitPrice }, { colour: lines[0].colour })} className="btn btn-volt mt-4">
         Send the gift again
-      </Link>
+      </button>
     );
   }
   if (lines.length === 1 && lines[0].qty === 1) {
     return (
-      <Link href={`/buy/${lines[0].slug}?sku=${encodeURIComponent(lines[0].sku)}`} className="btn btn-volt mt-4">
+      <button
+        type="button"
+        onClick={() => openBuyNow([{ slug: lines[0].slug, sku: lines[0].sku, name: lines[0].name, size: lines[0].size, colour: lines[0].colour, price: lines[0].unitPrice, qty: 1 }])}
+        className="btn btn-volt mt-4"
+      >
         Try again
-      </Link>
+      </button>
     );
   }
   return (

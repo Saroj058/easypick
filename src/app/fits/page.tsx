@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { FitsShowcase } from "@/components/fits-showcase";
 import { getSavedLooks } from "@/lib/looks";
-import { designerFits } from "@/lib/occasions";
+import { designerFits, swapOptions } from "@/lib/occasions";
 import { getProducts } from "@/lib/store";
 
 export const revalidate = 60;
@@ -21,11 +21,11 @@ export default async function FitsPage() {
 
   return (
     <div className="overflow-x-clip">
-    <div className="container-ep pb-24 pt-10 md:pt-16">
+    <div className={looks.length > 0 ? "bg-[#ededeb]" : "container-ep pb-24 pt-10 md:pt-16"}>
       <h1 className="sr-only">Fits</h1>
       {looks.length > 0 ? (
         <section aria-labelledby="occasion-title">
-          <FitsShowcase looks={looks} />
+          <FitsShowcase looks={looks} options={swapOptions(products)} />
         </section>
       ) : (
         <div>

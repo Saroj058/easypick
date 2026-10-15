@@ -124,7 +124,7 @@ test("a piece opened from the Gift page only sends: no Buy now, no bag @phone", 
   await page.goto("/product/everyday-hoodie?from=gift");
   const send = page.getByRole("button", { name: "Send it as a gift" });
   await expect(send).toBeVisible();
-  await expect(page.getByRole("link", { name: /Buy now/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Buy now/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Pick a size|Add to bag/ })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Try in store/ })).toHaveCount(0);
   // Opened any other way, it sells as usual.

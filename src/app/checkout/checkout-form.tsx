@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState, useSyncExternalStore } from "react
 
 import { placeOrder, type CheckoutState } from "@/app/actions";
 import { previewGiftCard } from "@/app/gift-actions";
+import { GiftCardSwitch } from "@/components/gift-card-switch";
 import { myUsableCards } from "@/app/wallet-actions";
 import { useBag } from "@/components/bag-provider";
 import { KnownField } from "@/components/known-field";
@@ -100,6 +101,8 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
   const [cardCode, setCardCode] = useState("");
   const [card, setCard] = useState<{ code: string; balance: number; saved?: boolean } | null>(null);
   const [walletTried, setWalletTried] = useState(false);
+  /** The card found or typed is used unless they switch it off. */
+  const [useCard, setUseCard] = useState(true);
   const [cardMsg, setCardMsg] = useState("");
   const [applying, setApplying] = useState(false);
 
@@ -154,7 +157,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
   const deliveryFee = method === "delivery" && subtotal < site.delivery.freeAbove ? site.delivery.flatFee : 0;
   const err = state.status === "error" ? state : null;
   const describe = (field: string) => (err?.field === field ? { "aria-describedby": "co-error" } : {});
-  const cardApplied = card ? Math.min(card.balance, subtotal + deliveryFee) : 0;
+  const cardApplied = card && useCard ? Math.min(card.balance, subtotal + deliveryFee) : 0;
   const toPay = subtotal + deliveryFee - cardApplied;
 
   return (
@@ -176,7 +179,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
     >
       <input type="hidden" name="bag" value={JSON.stringify(lines)} />
       <input type="hidden" name="mode" value={buyNow ? "buy_now" : "bag"} />
-      <input type="hidden" name="giftCard" value={card?.code ?? ""} />
+      <input type="hidden" name="giftCard" value={card && useCard ? card.code : ""} />
 
       <section aria-labelledby="co-phone">
         <h2 id="co-phone" className="display text-[28px]">
@@ -307,7 +310,7 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
             </li>
           )}
         </ul>
-        {card && (
+        {card && useCard && (
           <p className="mt-2 flex justify-between text-[15px] text-steel-dark">
             <span>Gift card {card.code}</span>
             <span className="font-mono">−{formatPrice(cardApplied)}</span>
@@ -324,12 +327,17 @@ export function CheckoutForm({ buyNow }: { buyNow?: BagLine | BagLine[] }) {
               Have a gift card?
             </button>
           ) : card ? (
-            <p className="text-[14px]">
-              {card.saved ? `Your saved gift card ${card.code.replace(/^EP-[A-Z0-9]{4}-/, "EP-••••-")} is applied.` : "Gift card applied."} {formatPrice(card.balance - cardApplied)} stays on the card.{" "}
-              <button type="button" onClick={() => setCard(null)} className="min-h-11 underline">
-                Remove
-              </button>
-            </p>
+            <GiftCardSwitch
+              card={card}
+              use={useCard}
+              onUse={setUseCard}
+              applied={cardApplied}
+              onRemove={() => {
+                setCard(null);
+                setUseCard(true);
+                setCardOpen(true);
+              }}
+            />
           ) : (
             <div>
               <label htmlFor="co-card" className="block text-sm font-semibold">

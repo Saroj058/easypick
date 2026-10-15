@@ -2,6 +2,7 @@
 // Each occasion holds three fits (Party: night out, house party, birthday); a fit is two to
 // four pieces, and its colours lean dark or light to suit it.
 
+import { RACK_CUTOUTS } from "./rack-cutouts";
 import type { Category, Product, Size } from "./types";
 
 type Tone = "dark" | "light" | "mixed";
@@ -83,6 +84,8 @@ export interface LookPiece {
   colour: string;
   hex: string;
   image: Product["images"][number];
+  /** The piece cut out on transparent (public/rack), when it's photographed in this colour. */
+  cutout?: string;
   measurements: Product["measurements"];
   sizes: { size: Size; sku: string; stock: number }[];
 }
@@ -135,6 +138,8 @@ function toPiece(p: Product, tone: Tone, slot: number, pickedColour?: string): L
     colour: colour.name,
     hex: colour.hex,
     image: p.images[0] ?? { src: null, alt: p.name, kind: "front" },
+    // The cut-out shows the product's first colour.
+    ...(RACK_CUTOUTS.has(p.slug) && colour.name === p.colours[0]?.name ? { cutout: `/rack/${p.slug}.webp` } : {}),
     measurements: p.measurements,
     sizes,
   };
@@ -198,6 +203,17 @@ export function designerFits(products: Product[], saved: SavedLooks = {}): { loo
 
 function signature(pieces: LookPiece[]) {
   return pieces.map((p) => `${p.slug}~${p.colour}`).sort().join("|");
+}
+
+/** Every piece that can go in a fit, by place on the body, for swapping one piece of a fit. */
+export function swapOptions(products: Product[]): Record<"top" | "bottom" | "layer" | "cap", LookPiece[]> {
+  const out: Record<"top" | "bottom" | "layer" | "cap", LookPiece[]> = { top: [], bottom: [], layer: [], cap: [] };
+  for (const p of products) {
+    if (p.status !== "live" || p.vault) continue;
+    const piece = toPiece(p, "dark", 0);
+    if (piece) out[fitSlot(p.category)].push(piece);
+  }
+  return out;
 }
 
 /** Which /fit slot a category goes in, for "Build your own fit". */

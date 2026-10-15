@@ -9,6 +9,7 @@ import { stockFromVariants } from "@/lib/live-stock";
 import type { Colour, LiveStock, Product, Size } from "@/lib/types";
 import { AskWhatsApp } from "./ask-whatsapp";
 import { useAddToBag } from "./bag-gate";
+import { openBuyNow } from "./buy-sheets";
 import { SendSheet } from "./gift/gift-pieces";
 import { RestockForm } from "./restock-form";
 import { useMe } from "./session";
@@ -242,10 +243,13 @@ export function BuyPanel(props: Props) {
         {status === "live" ? (
           <>
             {variant && sellable > 0 ? (
-              <Link href={`/buy/${slug}?sku=${encodeURIComponent(variant.sku)}`} className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-volt text-ink hover:bg-[#b5f020]">
+              <button
+                type="button"
+                onClick={() => openBuyNow([{ slug, sku: variant.sku, name, size: variant.size, colour: colour.name, price, qty: 1 }])}
+                className="group flex h-14 flex-1 cursor-pointer items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-volt text-ink hover:bg-[#b5f020]">
                 Buy now
                 <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-              </Link>
+              </button>
             ) : (
               <button type="button" disabled className="group flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-[4px] px-4 text-[14.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color,scale] duration-200 active:scale-[0.98] bg-volt/45 text-ink/55">
                 Pick a size
