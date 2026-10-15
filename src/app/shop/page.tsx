@@ -5,6 +5,7 @@ import { RecentlyViewed } from "@/components/local-lists";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
 import { DropStrip } from "@/components/drop-strip";
+import { PickChat } from "@/components/gift/pick-chat";
 import { toRailPiece } from "@/components/home/rail";
 import { ShopSearch } from "@/components/shop-search";
 import { categoryLabels } from "@/lib/site";
@@ -273,6 +274,11 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           </>
         )}
       </p>
+
+      {/* Pick, the robot: for themselves first, gifts too; sizes, delivery, swaps and small talk */}
+      <div className="mt-12 overflow-x-clip md:mt-16">
+        <PickChat where="shop" />
+      </div>
 
       <div className="mt-6 overflow-x-clip">
         {!list.length ? (

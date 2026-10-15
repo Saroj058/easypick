@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -41,26 +40,9 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const error = typeof sp.error === "string" ? errors[sp.error] : undefined;
 
   return (
-    <div className="container-ep grid gap-10 pb-24 pt-8 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:items-stretch md:gap-14 md:pt-10 lg:gap-20">
-      {/* The store itself, and why an account is worth it. Larger screens only: on a phone the form comes first. */}
-      <aside className="relative hidden min-h-[600px] overflow-hidden rounded-[28px] bg-ink text-paper md:block">
-        <Image src="/drops/hero-2.webp" alt="" fill priority sizes="50vw" className="object-cover object-[72%_50%] opacity-90" />
-        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
-        <div className="absolute inset-x-0 bottom-0 p-8 lg:p-10">
-          <p className="index text-paper/60">Pick it · Pay it · Wear it</p>
-          <p className="display mt-3 text-[clamp(2.4rem,1.6rem+2vw,3.4rem)] leading-[0.92]">One account. The website and the store.</p>
-          <ul className="mt-6 space-y-2.5 text-[15px] text-paper/85">
-            {["Your size, saved: every piece marks it", "Orders, gift links and gift cards in one place", "Checkout and gifts filled in for you"].map((t) => (
-              <li key={t} className="flex items-start gap-3">
-                <span aria-hidden className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-volt" />
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </aside>
-
-      <div className="mx-auto flex w-full max-w-[400px] flex-col justify-center md:py-10">
+    <div className="container-ep pb-24 pt-10 md:pt-16">
+      {/* One calm column, no photos (owner, 15 Oct 2026). */}
+      <div className="mx-auto flex w-full max-w-[420px] flex-col">
         <h1 className="display text-[clamp(2.6rem,2rem+2vw,3.6rem)] leading-[0.92]">{forBag ? "Confirm your number." : signup ? "Join Easypick." : "Welcome back."}</h1>
         <p className="mt-3 text-[16px] text-steel-dark">
           {forBag
@@ -69,6 +51,17 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               ? "One account for the website and the store."
               : "Log in to see your orders and saved size."}
         </p>
+
+        {!forBag && (
+          <ul className="mt-5 space-y-1.5 text-[13.5px] text-steel-dark">
+            {["Your size, saved for every piece", "Orders, gift links and gift cards in one place", "Checkout and gifts filled in for you"].map((t) => (
+              <li key={t} className="flex items-center gap-2.5">
+                <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-volt ring-1 ring-ink/20" />
+                {t}
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="mt-8">
           {error && (

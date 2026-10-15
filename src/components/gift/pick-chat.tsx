@@ -23,7 +23,19 @@ import { SendSheet } from "./gift-pieces";
 
 const Robot = dynamic(() => import("../ui/robot-hero").then((m) => m.RobotCharacter), { ssr: false, loading: () => null });
 
-const KEY = "ep-pick-v3";
+/** Where Pick is: the gift page, or the shop (for themselves first, gifts too). */
+type Where = "gift" | "shop";
+const keyFor = (w: Where) => (w === "shop" ? "ep-pick-shop-v1" : "ep-pick-v3");
+
+/** The first question. On the shop it starts with "for me". */
+function opening(where: Where): { text: string; quick: Quick[] } {
+  const q = question("recipient", {}, []);
+  if (where === "gift") return { text: `${GREETING} ${q.text}`, quick: q.quick };
+  return {
+    text: "Hey, I'm Pick! 👋 Looking for something for yourself, or for someone?",
+    quick: [{ label: "For me", set: { recipient: "self" } }, ...q.quick.filter((x) => x.set?.recipient !== "self")],
+  };
+}
 
 interface Bubble {
   text: string;
@@ -38,14 +50,16 @@ interface Saved {
   hidden?: boolean;
 }
 
-const FIRST: Saved = {
+const first = (where: Where): Saved => ({
   state: {},
-  bubble: { text: `${GREETING} ${question("recipient", {}, []).text}`, quick: question("recipient", {}, []).quick },
+  bubble: opening(where),
   // Nothing over him at first: just Pick and the "Ask Pick" line.
   hidden: true,
-};
+});
 
-export function PickChat() {
+export function PickChat({ where = "gift" }: { where?: Where } = {}) {
+  const KEY = keyFor(where);
+  const FIRST = first(where);
   const still = useReducedMotion();
   const [now, setNow] = useState<Saved>(FIRST);
   const [ready, setReady] = useState(false);
@@ -73,7 +87,7 @@ export function PickChat() {
     setReady(true);
     const t = setTimeout(() => setMood((m) => (m === "greeting" ? "curious" : m)), 1800);
     return () => clearTimeout(t);
-  }, []);
+  }, [KEY]);
   useEffect(() => {
     if (!ready) return;
     try {
@@ -81,7 +95,7 @@ export function PickChat() {
     } catch {
       // Private mode: not kept.
     }
-  }, [now, ready]);
+  }, [now, ready, KEY]);
 
   // His answer types itself out, quickly (not with reduced motion).
   const line = now.bubble.text;
@@ -150,7 +164,7 @@ export function PickChat() {
 
   const choose = (q: Quick) => {
     if (q.action === "restart") {
-      setNow({ state: {}, bubble: { text: `Fresh start. ${question("recipient", {}, []).text}`, quick: question("recipient", {}, []).quick }, hidden: false });
+      setNow({ state: {}, bubble: { text: `Fresh start. ${opening(where).text.replace(/^Hey, I'm Pick! 👋 /, "")}`, quick: opening(where).quick }, hidden: false });
       setMood("greeting");
       setAskBudget(false);
       return;
@@ -210,7 +224,7 @@ export function PickChat() {
   };
 
   return (
-    <section aria-label="Pick, your gift helper" className="!mb-8 -mt-6 md:!mb-10 md:-mt-10">
+    <section aria-label={where === "shop" ? "Pick, your shopping helper" : "Pick, your gift helper"} className="!mb-8 -mt-6 md:!mb-10 md:-mt-10">
       {/* Pick walks the whole width of the screen. Asked something, he walks over and answers in a
           panel on his left, turning to it; closed, he goes back to roaming. */}
       <div ref={band} className="relative mx-[calc(50%-50vw)] flex min-h-[150px] items-end md:min-h-[190px]">
@@ -238,7 +252,7 @@ export function PickChat() {
                       <Sparkles aria-hidden className="h-3.5 w-3.5" />
                     </span>
                     <span className="text-[13px] font-semibold">Pick</span>
-                    <span className="text-[12px] text-steel-dark">{thinking ? "thinking…" : "your gift helper"}</span>
+                    <span className="text-[12px] text-steel-dark">{thinking ? "thinking…" : where === "shop" ? "your shopping helper" : "your gift helper"}</span>
                     <span className="ml-auto -mr-2 flex">
                       <button type="button" onClick={() => choose({ label: "Start again", action: "restart" })} aria-label="Start again" className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-steel-dark hover:bg-mist hover:text-ink">
                         <RotateCcw aria-hidden className="h-3.5 w-3.5" />
@@ -271,7 +285,7 @@ export function PickChat() {
                     {settled && now.bubble.cards && now.bubble.cards.length > 0 && (
                       <ul className="mt-3 divide-y divide-ink/[0.07] overflow-hidden rounded-2xl ring-1 ring-ink/[0.08]" aria-label="Pick's suggestions">
                         {now.bubble.cards.map((c, i) => (
-                          <MiniCard key={c.slug} card={c} index={i} onSend={() => pick(c)} />
+                          <MiniCard key={c.slug} card={c} index={i} onSend={() => pick(c)} where={where} />
                         ))}
                       </ul>
                     )}
@@ -314,7 +328,7 @@ export function PickChat() {
         maxLength={200}
         inputMode={askBudget ? "numeric" : "text"}
         staticPlaceholder={askBudget ? "Your budget, like 3000" : undefined}
-        placeholders={["gift for my brother, under 3000", "birthday gift for my girlfriend", "something minimal for a friend", "hi Pick, how are you?"]}
+        placeholders={where === "shop" ? ["something for me under 2000", "an oversized hoodie in M", "what goes with black cargos?", "hi Pick, how are you?"] : ["gift for my brother, under 3000", "birthday gift for my girlfriend", "something minimal for a friend", "hi Pick, how are you?"]}
         className="mx-auto mt-3 max-w-[460px]"
       />
 
@@ -328,7 +342,7 @@ export function PickChat() {
 }
 
 /** A suggested piece: photo, name, price and why; Send this. */
-function MiniCard({ card, index, onSend }: { card: PickCard; index: number; onSend: () => void }) {
+function MiniCard({ card, index, onSend, where }: { card: PickCard; index: number; onSend: () => void; where: Where }) {
   const still = useReducedMotion();
   return (
     <motion.li
@@ -342,7 +356,7 @@ function MiniCard({ card, index, onSend }: { card: PickCard; index: number; onSe
           <ProductImage image={card.image ?? { src: null, alt: card.name, kind: "front" }} category={card.category} colourHex={card.colourHex} decorative sizes="48px" />
         </span>
       </span>
-      <Link href={`/product/${card.slug}?from=gift`} className="group min-w-0 flex-1">
+      <Link href={where === "shop" ? `/product/${card.slug}` : `/product/${card.slug}?from=gift`} className="group min-w-0 flex-1">
         <span className="block truncate text-[13.5px] font-semibold leading-tight group-hover:underline">{card.name}</span>
         <span className="mt-0.5 block font-mono text-[12px] tabular-nums">
           {formatPrice(card.price)}
@@ -350,9 +364,15 @@ function MiniCard({ card, index, onSend }: { card: PickCard; index: number; onSe
         </span>
         <span className="block truncate text-[11.5px] text-steel-dark">{card.why}</span>
       </Link>
-      <button type="button" onClick={onSend} aria-label="Send this" className="inline-flex h-9 shrink-0 cursor-pointer items-center rounded-full bg-volt px-3 text-[12.5px] font-semibold transition-[background-color,scale] hover:bg-[#b5f020] active:scale-[0.97] md:px-3.5">
-        Send<span className="max-md:hidden">&nbsp;this</span>
-      </button>
+      {where === "shop" && card.slug ? (
+        <Link href={`/product/${card.slug}`} className="inline-flex h-9 shrink-0 items-center rounded-full bg-ink px-3.5 text-[12.5px] font-semibold text-paper">
+          View
+        </Link>
+      ) : (
+        <button type="button" onClick={onSend} aria-label="Send this" className="inline-flex h-9 shrink-0 cursor-pointer items-center rounded-full bg-volt px-3 text-[12.5px] font-semibold transition-[background-color,scale] hover:bg-[#b5f020] active:scale-[0.97] md:px-3.5">
+          Send<span className="max-md:hidden">&nbsp;this</span>
+        </button>
+      )}
     </motion.li>
   );
 }

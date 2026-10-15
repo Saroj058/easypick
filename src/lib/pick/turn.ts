@@ -192,7 +192,7 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
   }
   s = { ...s, shown: [...(s.shown ?? []), ...cards.map((c) => c.slug)] };
   // Style ranks pieces rather than filtering them, so no "from N that fit" count here.
-  const intro = action === "more" ? "A few more:" : "Here's what I'd send:";
+  const intro = action === "more" ? "A few more:" : "Here's what I'd pick:";
   return {
     messages: [{ text: [...lines, intro].join(" ") }, { text: "", cards }],
     state: s,

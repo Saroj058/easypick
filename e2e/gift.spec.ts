@@ -48,7 +48,7 @@ test("gift page: a piece or a card, check a balance, then pieces with plain-link
     await quick.getByRole("button", { name: answer }).click();
   }
   await expect(pick.getByRole("list", { name: "Pick's suggestions" }).getByRole("listitem").first()).toBeVisible();
-  await expect(pick).toContainText("Here's what I'd send");
+  await expect(pick).toContainText("Here's what I'd pick");
   await page.screenshot(shot(`gift-${info.project.name}`));
 
   // The pieces: one strip, narrowed in the page by budget, kind and search.

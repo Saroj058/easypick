@@ -328,3 +328,39 @@ test("the rail: sizing from measurements is for logged-in customers; a guest is 
   await expect(nudge).toHaveCount(0);
   await page.screenshot({ path: "test-results/shots/rail-fit-nudge.png" });
 });
+
+test("account dashboard: greeting, calm summaries, Edit opens the form; Pick on the shop @phone", async ({ page }) => {
+  test.slow();
+  const phone = `98${String(Date.now()).slice(-8)}`;
+  await page.goto("/login");
+  await page.getByLabel("Mobile number").fill(phone);
+  await page.getByRole("button", { name: /^Send code/ }).click();
+  const dev = page.getByText(/your code is/);
+  await expect(dev).toBeVisible({ timeout: 30_000 });
+  await page.locator("#login-code").pressSequentially((await dev.locator("span.font-mono").innerText()).trim(), { delay: 40 });
+  await page.waitForURL(/welcome|account/, { timeout: 30_000 });
+  if (page.url().includes("welcome")) {
+    await page.getByLabel("Your name").fill("Dash Test");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.waitForURL(/account/);
+  }
+  await page.goto("/account");
+  await expect(page.getByRole("heading", { level: 1, name: "Namaste, Dash." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
+  await expect(page.getByText("No orders yet.")).toBeVisible();
+  // Saved details as one line each; the form only opens on Edit.
+  const details = page.getByRole("region", { name: "My details" });
+  await expect(details).toContainText("Dash Test");
+  await expect(details.getByLabel("Your name")).toBeHidden();
+  await details.getByText("Edit", { exact: true }).click();
+  await expect(details.getByLabel("Your name")).toBeVisible();
+  // Gift card codes never show in full; sign out sits at the bottom.
+  await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+
+  // Pick on the shop: for themselves first.
+  await page.goto("/shop");
+  const pick = page.getByRole("region", { name: "Pick, your shopping helper" });
+  await pick.getByRole("textbox", { name: "Ask Pick" }).fill("something for me under 2000, oversized, size M");
+  await pick.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(pick.getByRole("list", { name: "Pick's suggestions" }).getByRole("link", { name: "View" }).first()).toBeVisible({ timeout: 30_000 });
+});
