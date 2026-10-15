@@ -342,7 +342,8 @@ test("account dashboard: greeting, calm summaries, Edit opens the form; Pick on 
   if (page.url().includes("welcome")) {
     await page.getByLabel("Your name").fill("Dash Test");
     await page.getByRole("button", { name: "Continue" }).click();
-    await page.waitForURL(/account/);
+    // The welcome page's own address has "account" in it (next=/account): wait for the page itself.
+    await page.waitForURL((u) => u.pathname === "/account");
   }
   await page.goto("/account");
   await expect(page.getByRole("heading", { level: 1, name: "Namaste, Dash." })).toBeVisible();
