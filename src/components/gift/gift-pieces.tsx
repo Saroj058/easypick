@@ -43,8 +43,11 @@ const oneSize = (p: RailPiece) =>
 export function GiftPieces({
   pieces,
   trending,
+  above,
 }: {
   pieces: RailPiece[];
+  /** Shown between the filters and the "Every piece" title (Pick, on the gift page). */
+  above?: React.ReactNode;
   /** Slugs selling fastest this week, fastest first. */
   trending: string[];
 }) {
@@ -235,6 +238,8 @@ export function GiftPieces({
           )}
         </div>
       </div>
+
+      {above && <div className="mt-10 md:mt-14">{above}</div>}
 
       <div className="mt-8 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 md:mt-10">
         <div className="min-w-0">
