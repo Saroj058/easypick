@@ -289,7 +289,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
             key={piece.id}
             piece={addableFromRail(piece)}
             to={addTo}
-            className={`absolute left-[calc(50%-var(--w)/2+2px)] z-30 ${tags ? "top-[calc(50%-36px-var(--w)*0.55+2px)]" : "top-[calc(50%-var(--w)*0.55+2px)]"}`}
+            className={`absolute left-[calc(50%-var(--w)/2+2px)] z-30 ${tags ? "top-[calc(50%-36px+var(--w)*0.55-46px)]" : "top-[calc(50%+var(--w)*0.55-46px)]"}`}
           />
         )}
       </div>

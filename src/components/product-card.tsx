@@ -159,11 +159,12 @@ export function ProductCard({
         </div>
       </Link>
       {/* Outside the link: a button can't sit inside one. */}
-      {/* Add to bag: top right of the photo; one tap when the size is known, else a small size picker. */}
-      <AddToBag piece={addableFromProduct(product)} className="absolute right-1 top-1 z-10 md:right-2 md:top-2" />
-      {/* Heart = add to bag: bottom left of the photo (a 4:5 box laid over it, so it tracks the photo's size). */}
+      {/* Save: top right of the photo. */}
+      <HeartAdd product={product} className="absolute right-1 top-1 z-10 md:right-2 md:top-2" />
+      {/* Add to bag: bottom left of the photo (a 4:5 box laid over it, so it tracks the photo's size).
+          One tap when the size is known, else a small size picker. */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 aspect-[4/5]">
-        <HeartAdd product={product} className="pointer-events-auto absolute bottom-1 left-1 md:bottom-2 md:left-2" />
+        <AddToBag piece={addableFromProduct(product)} className="pointer-events-auto absolute bottom-1 left-1 md:bottom-2 md:left-2" />
       </div>
     </div>
   );

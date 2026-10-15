@@ -1,6 +1,6 @@
 "use client";
 
-import { Gift, Plus, ShoppingBag } from "lucide-react";
+import { Gift, ShoppingBag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { addToGiftBag } from "@/lib/gift-bag";
@@ -22,6 +22,13 @@ export function AddToBag({ piece, to = "bag", className = "" }: { piece: Addable
   const me = useMe();
   const mySize = useMySize();
   const [open, setOpen] = useState(false);
+  /** Just added: the circle fills in for a moment. */
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => setDone(false), 1400);
+    return () => clearTimeout(t);
+  }, [done]);
   const box = useRef<HTMLDivElement>(null);
 
   // Close the size picker on a tap anywhere else, or Escape.
@@ -50,10 +57,14 @@ export function AddToBag({ piece, to = "bag", className = "" }: { piece: Addable
     const what = `${piece.name} (${o.colour}${o.size === "ONE" ? "" : `, ${o.size}`})`;
     if (to === "gift") {
       const r = addToGiftBag({ slug: piece.slug, sku: o.sku, name: piece.name, colour: o.colour, size: o.size, price: piece.price });
+      if (r === "added") setDone(true);
       showBagToast(r === "added" ? `Added ${what} to your gift bag.` : r === "already" ? `${what} is already in your gift bag.` : "Your gift bag is full: 6 pieces at most.");
       return;
     }
-    if (add([{ slug: piece.slug, sku: o.sku, name: piece.name, size: o.size, colour: o.colour, price: piece.price }])) showBagToast(`Added ${what} to your bag.`);
+    if (add([{ slug: piece.slug, sku: o.sku, name: piece.name, size: o.size, colour: o.colour, price: piece.price }])) {
+      setDone(true);
+      showBagToast(`Added ${what} to your bag.`);
+    }
   };
 
   const label = to === "gift" ? `Add ${piece.name} to the gift bag` : `Add ${piece.name} to bag`;
@@ -72,11 +83,12 @@ export function AddToBag({ piece, to = "bag", className = "" }: { piece: Addable
         onPointerDown={(e) => e.stopPropagation()}
         className="flex h-11 w-11 cursor-pointer items-center justify-center outline-none"
       >
-        <span className="relative grid h-9 w-9 place-items-center rounded-full bg-paper/85 text-ink shadow-[0_2px_8px_-2px_rgba(0,0,0,0.25)] ring-1 ring-ink/10 backdrop-blur-md transition-[background-color,scale] duration-150 hover:bg-paper active:scale-90 [:focus-visible>&]:outline [:focus-visible>&]:outline-2 [:focus-visible>&]:outline-ink">
+        <span
+          className={`grid h-9 w-9 place-items-center rounded-full ring-1 backdrop-blur-md transition-[background-color,color,scale,box-shadow] duration-200 active:scale-90 [:focus-visible>&]:outline [:focus-visible>&]:outline-2 [:focus-visible>&]:outline-ink ${
+            done ? "scale-110 bg-ink text-paper ring-ink" : "bg-paper/80 text-ink ring-ink/10 hover:bg-paper"
+          }`}
+        >
           {to === "gift" ? <Gift aria-hidden className="h-4 w-4" strokeWidth={1.8} /> : <ShoppingBag aria-hidden className="h-4 w-4" strokeWidth={1.8} />}
-          <span aria-hidden className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-ink text-paper">
-            <Plus className="h-2.5 w-2.5" strokeWidth={3} />
-          </span>
         </span>
       </button>
       {open && (
@@ -85,7 +97,7 @@ export function AddToBag({ piece, to = "bag", className = "" }: { piece: Addable
           aria-label={`Size for ${piece.name}`}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
-          className="absolute right-0 top-full z-30 mt-1 w-max max-w-[220px] rounded-2xl bg-paper p-2 shadow-[0_16px_36px_-16px_rgba(0,0,0,0.45)] ring-1 ring-ink/10"
+          className="absolute bottom-full left-0 z-30 mb-1 w-max max-w-[220px] rounded-2xl bg-paper p-2 shadow-[0_16px_36px_-16px_rgba(0,0,0,0.45)] ring-1 ring-ink/10"
         >
           <p className="px-1 pb-1.5 text-[11.5px] text-steel-dark">Pick a size</p>
           <div className="flex flex-wrap gap-1">

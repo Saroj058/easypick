@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
-import { useAddToBag } from "@/components/bag-gate";
 import { useFitProfile } from "@/components/fit-finder";
 import { useBag } from "@/components/bag-provider";
 import { PriceTag } from "@/components/hang-tag";
 import { AddToBag } from "@/components/add-to-bag";
 import { addableFromRail } from "@/lib/addable";
-import { BagIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { useMe } from "@/components/session";
 import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
@@ -161,16 +159,14 @@ const Arrow = ({ className = "" }: { className?: string }) => (
 export function PieceControls({
   piece,
   mySize,
-  onAdded,
   onBuy,
 }: {
   piece: RailPiece;
   mySize: string | null;
-  onAdded: (line: { sku: string; name: string }) => void;
+  /** Unused here now: adding is the card's own bag button. */
+  onAdded?: (line: { sku: string; name: string }) => void;
   onBuy: (line: BagLine) => void;
 }) {
-  const addToBag = useAddToBag();
-  const bag = useBag();
   const saved = useFitProfile();
   const me = useMe();
   // Measurements pick the size only for a logged-in customer (they are kept on the account).
@@ -221,28 +217,7 @@ export function PieceControls({
     strong = true;
   } // No size chosen yet: the size buttons below already list them, so the line says nothing.
 
-  function add() {
-    if (!variant || !size) return;
-    if (
-      addToBag([
-        {
-          slug: piece.slug,
-          sku: variant.sku,
-          name: piece.name,
-          size,
-          colour: colour.name,
-          price: piece.price,
-        },
-      ])
-    )
-      onAdded({ sku: variant.sku, name: piece.name });
-  }
-
   const sizeRowOpen = !oneSize && anyLeft && (open || !variant);
-  // True for anything already in the bag, from this visit or an earlier one.
-  const inBag = Boolean(
-    variant && bag.lines.some((l) => l.sku === variant.sku),
-  );
   // The measurements shown are for the size chosen, or the first one in stock.
   const tagSize = size ?? inStock[0]?.size ?? colour.sizes[0]?.size;
   const cm = Object.entries(
@@ -390,33 +365,7 @@ export function PieceControls({
             {anyLeft ? "Pick a size" : "In store only"}
           </button>
         )}
-        <button
-          type="button"
-          onClick={add}
-          disabled={!variant || inBag}
-          aria-label={
-            inBag
-              ? `${piece.name} is in your bag`
-              : `Add ${piece.name}${variant && !oneSize ? ` in ${size}` : ""} to bag`
-          }
-          className={`grid h-12 w-12 shrink-0 place-items-center border ${inBag ? "border-ink bg-ink text-paper" : "border-ink hover:bg-photo disabled:border-mist disabled:text-[#8e8e93]"}`}
-        >
-          {inBag ? (
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              aria-hidden
-            >
-              <path d="M5 12l5 5 9-10" />
-            </svg>
-          ) : (
-            <BagIcon className="h-[18px] w-[18px]" />
-          )}
-        </button>
+        {/* Add to bag lives on the card itself (one bag button per card, bottom left). */}
       </div>
 
       {/* The back of the tag: the garment's measurements in cm. */}
@@ -668,8 +617,8 @@ function ShelfRow({
               sizes="(min-width: 1280px) 300px, (min-width: 800px) 24vw, 190px"
               className="h-full overflow-hidden"
             />
-            {/* Add to bag, top right of the card */}
-            <AddToBag piece={addableFromRail(pieces[i])} className="absolute right-1 top-1 z-10" />
+            {/* Add to bag: only on the card in front, bottom left */}
+            {i === Math.min(active, pieces.length - 1) && <AddToBag piece={addableFromRail(pieces[i])} className="absolute bottom-1 left-1 z-10" />}
             {/* The price, on a tag tied to the bottom of the card and hanging under it. */}
             <PriceTag
               price={formatPrice(pieces[i].price)}

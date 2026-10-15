@@ -50,15 +50,10 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search), the
   await expect(page).toHaveURL(/\/$/);
   await page.keyboard.press("Escape");
   await expect(pay).toHaveCount(0);
-  // ...and the bag button adds it without leaving, then the bag's total shows.
-  await first.getByRole("button", { name: /^Add Everyday Hoodie in / }).click();
-  await expect(first.getByRole("button", { name: "Everyday Hoodie is in your bag" })).toBeVisible();
-  await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
-  // Undo takes it back out; adding again puts it back.
-  await rail.getByRole("button", { name: /^Undo/ }).click();
-  await expect(first.getByRole("button", { name: /^Add Everyday Hoodie in / })).toBeEnabled();
-  await first.getByRole("button", { name: /^Add Everyday Hoodie in / }).click();
-  await expect(rail.getByRole("link", { name: /View bag/ })).toContainText("1 piece");
+  // ...and the bag on the card in front (only that one has it) adds it in the size now known, without leaving.
+  await expect(first.getByRole("button", { name: /^Add .* to bag$/ })).toHaveCount(1);
+  await first.getByRole("button", { name: "Add Everyday Hoodie to bag" }).click();
+  await expect(page.getByText(/Added Everyday Hoodie \(.*, M\) to your bag\./)).toBeVisible();
   await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
   // The measurements in cm for the size chosen.
   await first.getByRole("button", { name: "Measurements in cm" }).click();
