@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-// A slim white pill input with a glowing orb, and example questions that type themselves out as the
+// A slim white pill input with a softly shining black orb, and example questions that type themselves out as the
 // placeholder. From a shadcn-style "OrbInput" (owner, 15 Oct 2026), made into a real field: it is
 // controlled, submits, has a send button and stretches to its container. The original loaded its
 // orb as a GIF from another site; here the orb is drawn in CSS (no outside file, nothing for the
@@ -70,7 +70,7 @@ export function OrbInput({ value, onValueChange, onSubmit, placeholders = ["Ask 
     >
       {/* The orb: a soft, slowly turning sphere */}
       <span aria-hidden className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full">
-        <span className="orb-spin absolute -inset-2 rounded-full bg-[conic-gradient(from_0deg,#c6ff3d,#f4ffd6,#5f8f00,#ffffff,#c6ff3d)] blur-[6px]" />
+        <span className="orb-spin absolute -inset-2 rounded-full bg-[conic-gradient(from_0deg,#0a0a0a,#5a5a5a,#000000,#9a9a9a,#0a0a0a)] blur-[6px]" />
         <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(255,255,255,0.85),rgba(255,255,255,0)_45%)]" />
         <span className="absolute inset-0 rounded-full shadow-[inset_0_-6px_12px_rgba(0,0,0,0.35)]" />
       </span>

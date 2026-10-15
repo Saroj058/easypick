@@ -417,7 +417,7 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
       {/* The ball the box shrinks into, on its way up (see launch) */}
       <div ref={ball} aria-hidden className="pointer-events-none absolute left-0 top-0 z-20 rounded-full border border-ink/15 bg-paper opacity-0 shadow-[0_12px_30px_-20px_rgba(10,10,10,0.45)]">
         <span className="absolute inset-1 overflow-hidden rounded-full opacity-0">
-          <span className="orb-spin absolute -inset-2 rounded-full bg-[conic-gradient(from_0deg,#c6ff3d,#f4ffd6,#5f8f00,#ffffff,#c6ff3d)] blur-[6px]" />
+          <span className="orb-spin absolute -inset-2 rounded-full bg-[conic-gradient(from_0deg,#0a0a0a,#5a5a5a,#000000,#9a9a9a,#0a0a0a)] blur-[6px]" />
           <span className="absolute inset-0 rounded-full shadow-[inset_0_-6px_12px_rgba(0,0,0,0.35)]" />
         </span>
       </div>
