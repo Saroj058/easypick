@@ -188,7 +188,7 @@ export function GiftPieces({
           <div
             role="group"
             aria-label="Kind of piece"
-            className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none]"
+            className="flex min-w-0 flex-1 gap-2 overflow-x-auto [mask-image:linear-gradient(90deg,#000_calc(100%-28px),transparent)] [scrollbar-width:none] md:flex-wrap md:overflow-visible md:[mask-image:none]"
           >
             <button
               type="button"

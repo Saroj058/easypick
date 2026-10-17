@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LayoutGrid, Sparkles, Tag } from "lucide-react";
 import Link from "next/link";
 
 import { RecentlyViewed } from "@/components/local-lists";
@@ -72,25 +73,30 @@ function Chip({ active, href: to, children }: { active: boolean; href: string; c
   );
 }
 
+/** A little garment picture for each kind (the neutral stand-ins), as on the gift page. */
+const KIND_ICON: Record<Category, string> = { tees: "tee", hoodies: "hoodie", jackets: "jacket", bottoms: "cargo", "co-ords": "set", accessories: "cap" };
+
 /**
- * A kind of piece, as a quiet tab (owner, 17 Oct 2026: the boxed chips were too loud): the chosen
- * one in ink with a short line under it, the rest softer; a small count beside each.
+ * A kind of piece, as on the gift page (owner, 17 Oct 2026): a rounded button with a little picture
+ * of the garment and how many there are; the chosen one in ink.
  */
-function Tab({ active, href: to, count, children }: { active: boolean; href: string; count?: number; children: React.ReactNode }) {
+function KindChip({ active, href: to, count, icon, children }: { active: boolean; href: string; count?: number; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <Link
       href={to}
       scroll={false}
       aria-current={active ? "true" : undefined}
-      className={`group relative inline-flex h-11 shrink-0 items-center gap-1.5 text-[15px] font-semibold transition-colors duration-200 ${active ? "text-ink" : "text-ink/45 hover:text-ink"}`}
+      className={`inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border px-3 text-[13px] font-semibold transition-[background-color,border-color,color,scale] duration-150 active:scale-[0.97] ${
+        active ? "border-ink bg-ink text-paper" : "border-ink/15 bg-paper hover:border-ink"
+      }`}
     >
+      {icon}
       {children}
       {count !== undefined && (
-        <span aria-hidden className={`-translate-y-1.5 font-mono text-[10px] font-normal tabular-nums ${active ? "text-ink/60" : "text-ink/35"}`}>
+        <sup aria-hidden className={`font-mono text-[10px] ${active ? "text-paper/70" : "text-steel-dark"}`}>
           {count}
-        </span>
+        </sup>
       )}
-      <span aria-hidden className={`absolute inset-x-0 bottom-1.5 h-[2px] origin-left bg-ink transition-transform duration-300 ${active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100 group-hover:bg-ink/25"}`} />
     </Link>
   );
 }
@@ -231,28 +237,42 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
         </div>
         {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
   
-        <div className="mt-4 space-y-3">
-          <div className="flex items-center gap-6 border-b border-ink/10">
-            <div className="no-scrollbar -mx-4 flex min-w-0 flex-1 gap-6 overflow-x-auto px-4 md:gap-7" role="group" aria-label="Category">
-              <Tab active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })}>
+        <div className="space-y-3">
+          {/* The kinds: joined to the bar above, as on the gift page; they wrap so none hides */}
+          <div className="flex items-center gap-3 rounded-b-2xl border border-t-0 border-ink px-3 py-2.5 md:px-4">
+            <div
+              className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto [mask-image:linear-gradient(90deg,#000_calc(100%-28px),transparent)] md:flex-wrap md:overflow-visible md:[mask-image:none]"
+              role="group"
+              aria-label="Category"
+            >
+              <KindChip active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })} icon={<LayoutGrid aria-hidden className="h-4 w-4" strokeWidth={1.8} />}>
                 All
-              </Tab>
+              </KindChip>
               {onSale.length > 0 && (
-                <Tab active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })} count={onSale.length}>
+                <KindChip active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })} count={onSale.length} icon={<Tag aria-hidden className="h-4 w-4" strokeWidth={1.8} />}>
                   On sale
-                </Tab>
+                </KindChip>
               )}
               {anyNew && (
-                <Tab active={Boolean(f.new)} href={href(f, { new: f.new ? undefined : "1" })}>
+                <KindChip active={Boolean(f.new)} href={href(f, { new: f.new ? undefined : "1" })} icon={<Sparkles aria-hidden className="h-4 w-4" strokeWidth={1.8} />}>
                   New in
-                </Tab>
+                </KindChip>
               )}
               {(Object.keys(categoryLabels) as Category[])
                 .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
                 .map((c) => (
-                  <Tab key={c} active={f.category === c} href={href(f, { category: c })} count={all.filter((p) => p.category === c && p.status !== "scheduled").length}>
+                  <KindChip
+                    key={c}
+                    active={f.category === c}
+                    href={href(f, { category: c })}
+                    count={all.filter((p) => p.category === c && p.status !== "scheduled").length}
+                    icon={
+                      // eslint-disable-next-line @next/next/no-img-element -- a tiny garment picture, already compressed
+                      <img src={`/stand-ins/${KIND_ICON[c]}.webp`} alt="" className={`h-6 w-6 object-contain ${f.category === c ? "brightness-[3]" : "opacity-80"}`} />
+                    }
+                  >
                     {categoryLabels[c]}
-                  </Tab>
+                  </KindChip>
                 ))}
             </div>
             <p className={`hidden shrink-0 font-mono text-[12px] tabular-nums text-steel-dark ${active ? "" : "md:block"}`} aria-hidden>

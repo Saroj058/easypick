@@ -10,7 +10,7 @@ import { useMe } from "./session";
  * means email); signed in, their number is already there. Kept to one line on purpose (owner,
  * 17 Oct 2026: "no stress, easy and premium").
  */
-export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean; source?: string }) {
+export function AlertSignup({ dark = false, source = "site", note = "One message on drop day. Stop anytime.", done }: { dark?: boolean; source?: string; note?: string; /** What it says once they're in; "{to}" is their number or email, masked. */ done?: string }) {
   const [state, action, pending] = useActionState<AlertState, FormData>(signUpForAlerts, { status: "idle" });
   // Signed in: their number or email is already there.
   const me = useMe();
@@ -23,7 +23,7 @@ export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean;
   if (state.status === "done") {
     return (
       <p ref={doneRef} tabIndex={-1} role="status" className="text-lg font-semibold outline-none">
-        You&apos;re in. One {state.channel === "email" ? "email" : "WhatsApp message"} to {state.to} on drop day, before it opens.
+        {done ? done.replace("{to}", state.to) : <>You&apos;re in. One {state.channel === "email" ? "email" : "WhatsApp message"} to {state.to} on drop day, before it opens.</>}
       </p>
     );
   }
@@ -78,7 +78,7 @@ export function AlertSignup({ dark = false, source = "site" }: { dark?: boolean;
         </button>
       </div>
       <p id={`${id}-msg`} role={state.status === "error" ? "alert" : undefined} className={`mt-2.5 px-1 text-[12.5px] ${state.status === "error" ? (dark ? "text-error-dark" : "text-error-light") : muted}`}>
-        {state.status === "error" ? state.message : "One message on drop day. Stop anytime."}
+        {state.status === "error" ? state.message : note}
       </p>
     </form>
   );

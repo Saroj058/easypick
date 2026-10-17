@@ -1183,3 +1183,10 @@
     will-change: transform;
   }
 }
+
+/* The Vault: a quieter focus ring than the site's ink box (owner, 17 Oct 2026). */
+.vault :focus-visible {
+  outline: 1.5px solid #55575c;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
