@@ -72,6 +72,29 @@ function Chip({ active, href: to, children }: { active: boolean; href: string; c
   );
 }
 
+/**
+ * A kind of piece, as a quiet tab (owner, 17 Oct 2026: the boxed chips were too loud): the chosen
+ * one in ink with a short line under it, the rest softer; a small count beside each.
+ */
+function Tab({ active, href: to, count, children }: { active: boolean; href: string; count?: number; children: React.ReactNode }) {
+  return (
+    <Link
+      href={to}
+      scroll={false}
+      aria-current={active ? "true" : undefined}
+      className={`group relative inline-flex h-11 shrink-0 items-center gap-1.5 text-[15px] font-semibold transition-colors duration-200 ${active ? "text-ink" : "text-ink/45 hover:text-ink"}`}
+    >
+      {children}
+      {count !== undefined && (
+        <span aria-hidden className={`-translate-y-1.5 font-mono text-[10px] font-normal tabular-nums ${active ? "text-ink/60" : "text-ink/35"}`}>
+          {count}
+        </span>
+      )}
+      <span aria-hidden className={`absolute inset-x-0 bottom-1.5 h-[2px] origin-left bg-ink transition-transform duration-300 ${active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100 group-hover:bg-ink/25"}`} />
+    </Link>
+  );
+}
+
 export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   const sp = await searchParams;
   const f: Filters = {
@@ -209,27 +232,32 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
         {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
   
         <div className="mt-4 space-y-3">
-          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Category">
-            <Chip active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })}>
-              All
-            </Chip>
-            {onSale.length > 0 && (
-              <Chip active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })}>
-                On sale
-              </Chip>
-            )}
-            {anyNew && (
-              <Chip active={Boolean(f.new)} href={href(f, { new: f.new ? undefined : "1" })}>
-                New in
-              </Chip>
-            )}
-            {(Object.keys(categoryLabels) as Category[])
-              .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
-              .map((c) => (
-              <Chip key={c} active={f.category === c} href={href(f, { category: c })}>
-                {categoryLabels[c]}
-              </Chip>
-            ))}
+          <div className="flex items-center gap-6 border-b border-ink/10">
+            <div className="no-scrollbar -mx-4 flex min-w-0 flex-1 gap-6 overflow-x-auto px-4 md:gap-7" role="group" aria-label="Category">
+              <Tab active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })}>
+                All
+              </Tab>
+              {onSale.length > 0 && (
+                <Tab active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })} count={onSale.length}>
+                  On sale
+                </Tab>
+              )}
+              {anyNew && (
+                <Tab active={Boolean(f.new)} href={href(f, { new: f.new ? undefined : "1" })}>
+                  New in
+                </Tab>
+              )}
+              {(Object.keys(categoryLabels) as Category[])
+                .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
+                .map((c) => (
+                  <Tab key={c} active={f.category === c} href={href(f, { category: c })} count={all.filter((p) => p.category === c && p.status !== "scheduled").length}>
+                    {categoryLabels[c]}
+                  </Tab>
+                ))}
+            </div>
+            <p className={`hidden shrink-0 font-mono text-[12px] tabular-nums text-steel-dark ${active ? "" : "md:block"}`} aria-hidden>
+              {list.length} {list.length === 1 ? "piece" : "pieces"}
+            </p>
           </div>
   
           {active && (
@@ -264,7 +292,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   
         </div>
   
-        <p className="mt-6 font-mono text-[13px] text-steel-dark" aria-live="polite">
+        <p className={`mt-6 font-mono text-[13px] text-steel-dark ${active ? "" : "md:hidden"}`} aria-live="polite">
           {list.length} {list.length === 1 ? "piece" : "pieces"}
           {active && (
             <>

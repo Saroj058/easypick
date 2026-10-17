@@ -82,32 +82,78 @@ export function vaultBrands(pieces: Product[]) {
 
 export const vaultHref = (brand?: string) => (brand ? `/vault?brand=${encodeURIComponent(brand)}` : "/vault");
 
-/** One Vault piece: photo on the dark ground, brand and tag, name and price. */
+/** "Nike Club Fleece Hoodie" under Nike reads "Club Fleece Hoodie". */
+export const vaultModel = (p: Product) => (p.brand && p.name.toLowerCase().startsWith(`${p.brand.toLowerCase()} `) ? p.name.slice(p.brand.length + 1) : p.name);
+
+const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
+/** The sizes it comes in, in order, with whether each can still be bought. */
+export function vaultSizes(p: Product): { size: string; left: boolean }[] {
+  const by = new Map<string, boolean>();
+  for (const v of p.variants) by.set(v.size, (by.get(v.size) ?? false) || v.stock > 0);
+  return Array.from(by, ([size, left]) => ({ size, left })).sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
+}
+
+/** The Vault's tile: a cool steel ground with two corners cut, as on the store's Vault wall. */
+export const VAULT_TILE = "bg-[radial-gradient(120%_90%_at_50%_30%,#e3e7eb_0%,#cdd3d9_70%,#c3cad1_100%)]";
+export const VAULT_CUT = "[clip-path:polygon(14px_0,100%_0,100%_calc(100%-14px),calc(100%-14px)_100%,0_100%,0_14px)]";
+
+/**
+ * One Vault piece (owner's reference, 17 Oct 2026): the piece on a cut-corner steel tile, and under
+ * it quiet mono lines: its number, the name and price, its colour and the sizes it comes in (the
+ * ones gone struck through). Sold pieces stay, greyed, as the archive.
+ */
 export function VaultCard({ piece, sizes }: { piece: Product; sizes: string }) {
-  // The brand has its own line, so the name doesn't repeat it ("Nike Club Fleece Hoodie" reads "Club Fleece Hoodie").
-  const model = piece.brand && piece.name.toLowerCase().startsWith(`${piece.brand.toLowerCase()} `) ? piece.name.slice(piece.brand.length + 1) : piece.name;
+  const sold = piece.status === "sold_out";
+  const label = tag(piece);
   return (
-    <Link href={`/product/${piece.slug}`} aria-label={`${piece.name}, ${piece.status === "sold_out" ? "sold" : formatPrice(piece.salePrice ?? piece.price)}`} className="group flex flex-col gap-3">
-      <span className="block overflow-hidden bg-[#151517]">
+    <Link
+      href={`/product/${piece.slug}`}
+      aria-label={`${piece.name}, ${sold ? "sold" : formatPrice(piece.salePrice ?? piece.price)}`}
+      className="group flex flex-col gap-3"
+    >
+      <span className={`relative block overflow-hidden ${VAULT_CUT} ${sold ? "opacity-55 grayscale" : ""}`}>
         <ProductImage
           image={piece.images[0] ?? { src: null, alt: piece.name, kind: "front" }}
           category={piece.category}
           colourHex={piece.colours[0]?.hex ?? "#2b2b2e"}
           decorative
-          className="bg-[#151517] transition-transform duration-300 group-hover:scale-[1.02]"
+          ground={VAULT_TILE}
+          className={sold ? "" : "transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-1 group-hover:scale-[1.02]"}
           sizes={sizes}
         />
+        {label && <span className="absolute left-3.5 top-3 font-mono text-[9.5px] tracking-[0.14em] text-[#0d0e10]/55">{label}</span>}
       </span>
       <span className="flex items-baseline justify-between gap-3">
-        <span className="text-[12px] uppercase tracking-[0.16em] text-steel">{piece.brand ?? ""}</span>
-        <span className="font-mono text-[11px] tracking-[0.08em] text-steel">{tag(piece)}</span>
+        <span className="min-w-0 text-[14.5px] leading-snug decoration-1 underline-offset-4 group-hover:underline">{vaultModel(piece)}</span>
+        <span className="shrink-0 font-mono text-[13px] tabular-nums">{sold ? "Sold" : formatPrice(piece.salePrice ?? piece.price)}</span>
       </span>
-      <span className="flex justify-between gap-3">
-        <span className="text-[15px] leading-snug group-hover:underline">{model}</span>
-        <span className="shrink-0 font-mono text-[14px] tabular-nums">{piece.status === "sold_out" ? "Sold" : formatPrice(piece.salePrice ?? piece.price)}</span>
+      <span className="-mt-1.5 flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-[#9aa0a6]">
+        <span aria-hidden className="h-2 w-2 rounded-full ring-1 ring-white/20" style={{ background: piece.colours[0]?.hex ?? "#2b2b2e" }} />
+        {piece.colours[0]?.name ?? ""}
+        <span aria-hidden className="text-white/20">·</span>
+        <span>
+          {vaultSizes(piece).map((s, i) => (
+            <span key={s.size} className={s.left ? "text-[#dcdfe3]" : "line-through opacity-50"}>
+              {i > 0 && " "}
+              {s.size === "ONE" ? "One size" : s.size}
+            </span>
+          ))}
+        </span>
       </span>
     </Link>
   );
+}
+
+/** Pieces to show first: buyable before sold, numbered before not, one brand after another. */
+export function featuredVault(pieces: Product[], n: number) {
+  const order = (list: Product[]) => [...list].sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out") || Number(Boolean(b.edition)) - Number(Boolean(a.edition)));
+  const brands = vaultBrands(pieces);
+  const rows = brands.length ? brands.map((b) => order(b.pieces)) : [order(pieces)];
+  const out: Product[] = [];
+  for (let round = 0; out.length < n && rows.some((r) => r.length > round); round++) {
+    for (const r of rows) if (r[round] && out.length < n) out.push(r[round]);
+  }
+  return out;
 }
 
 const FEATURED = 5;
@@ -118,12 +164,7 @@ export function Vault({ products }: { products: Product[] }) {
 
   const brands = vaultBrands(pieces);
   // Featured: one piece from each brand in turn (what can be bought first), five in all.
-  const buyable = (list: Product[]) => [...list].sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
-  const rows = brands.length ? brands.map((b) => buyable(b.pieces)) : [buyable(pieces)];
-  const featured: Product[] = [];
-  for (let round = 0; featured.length < FEATURED && rows.some((r) => r.length > round); round++) {
-    for (const r of rows) if (r[round] && featured.length < FEATURED) featured.push(r[round]);
-  }
+  const featured = featuredVault(pieces, FEATURED);
 
   return (
     <section aria-labelledby="vault-title" className="on-dark section bg-ink text-[#f2efe8]">

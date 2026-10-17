@@ -189,6 +189,7 @@ export function ProductImage({
   decorative = false,
   sizes = "(min-width: 1024px) 25vw, 50vw",
   className = "",
+  ground = "bg-photo",
 }: {
   image: Img;
   category: Category;
@@ -198,10 +199,12 @@ export function ProductImage({
   decorative?: boolean;
   sizes?: string;
   className?: string;
+  /** The tile behind the piece (the Vault uses its own cool steel). */
+  ground?: string;
 }) {
   if (image.src) {
     return (
-      <div className={`relative aspect-[4/5] overflow-hidden bg-photo ${className}`}>
+      <div className={`relative aspect-[4/5] overflow-hidden ${ground} ${className}`}>
         <Image src={image.src} alt={decorative ? "" : image.alt} fill sizes={sizes} priority={priority} className="object-cover" />
       </div>
     );
@@ -212,7 +215,7 @@ export function ProductImage({
     const src = `/stand-ins/${kind}.webp`;
     const a11y = decorative ? { "aria-hidden": true } : { role: "img", "aria-label": image.alt };
     return (
-      <div {...a11y} className={`relative aspect-[4/5] overflow-hidden bg-photo ${className}`}>
+      <div {...a11y} className={`relative aspect-[4/5] overflow-hidden ${ground} ${className}`}>
         {/* The colour, in the garment's shape; over it the grey photograph, multiplied in for its folds and seams, and a little of it screened back for the highlights a dark colour would lose */}
         <div className="absolute inset-0 m-auto h-[76%] w-[76%] isolate [filter:drop-shadow(0_10px_12px_rgba(0,0,0,0.16))]" style={image.kind === "detail" ? { transform: "scale(2) translate(-6%, 8%)" } : undefined}>
           <div className="absolute inset-0" style={{ backgroundColor: colourHex, maskImage: `url(${src})`, WebkitMaskImage: `url(${src})`, maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }} />
@@ -229,7 +232,7 @@ export function ProductImage({
   const a11y = decorative ? { "aria-hidden": true } : { role: "img", "aria-label": image.alt };
 
   return (
-    <div {...a11y} className={`relative aspect-[4/5] overflow-hidden bg-photo shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)] ${className}`}>
+    <div {...a11y} className={`relative aspect-[4/5] overflow-hidden ${ground} shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)] ${className}`}>
       {image.kind === "model" && <div className="absolute inset-x-0 bottom-0 h-1/4 bg-mist/60" />}
       <GarmentSvg
         category={category}
