@@ -219,16 +219,16 @@ test("phone menu and tab bar @phone", async ({ page }) => {
 test("drop alerts: sign up by email, then stop with the link @phone", async ({ page }) => {
   await page.goto("/alerts");
   const email = `e2e-${Date.now()}@example.com`;
-  await expect(async () => {
-    await page.getByRole("radio", { name: "Email" }).click();
-    await expect(page.getByLabel("Email address")).toBeVisible({ timeout: 1000 });
-  }).toPass();
   const main = page.locator("#main"); // the footer has its own one-line sign-up
-  await page.getByLabel("Email address").fill(email);
-  await main.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByText("Tick the box so we're allowed to message you.")).toBeVisible();
-  await expect(page.getByLabel("Email address")).toHaveValue(email); // a mistake keeps what was typed
-  await main.getByRole("checkbox").check();
+  // One field takes a WhatsApp number or an email; a wrong one keeps what was typed.
+  const field = main.getByLabel("WhatsApp number or email");
+  await expect(async () => {
+    await field.fill("12345");
+    await main.getByRole("button", { name: "Notify me" }).click();
+    await expect(main.getByRole("alert")).toContainText(/10-digit/, { timeout: 2000 });
+  }).toPass();
+  await expect(field).toHaveValue("12345");
+  await field.fill(email);
   await main.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByText(/You're in\. One email to e•••@example\.com on drop day/)).toBeVisible();
 
@@ -399,4 +399,8 @@ test("Designer Fits play on their own every 10 seconds, and pause", async ({ pag
   await page.clock.fastForward(25_000);
   await expect(party.getByRole("radio", { name: "House party" })).toHaveAttribute("aria-checked", "true");
   await expect(fits.getByRole("button", { name: "Play the fits" })).toBeVisible();
+  // The arrow keys move between fits wherever the focus is (here, on a button).
+  await fits.getByRole("button", { name: "Play the fits" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(party.getByRole("radio", { name: "Birthday" })).toHaveAttribute("aria-checked", "true");
 });

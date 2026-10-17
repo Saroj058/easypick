@@ -59,16 +59,11 @@ export default async function DropsPage() {
             <h1 id="drops-title" className="display mt-3 text-[clamp(3.6rem,2.4rem+5vw,6.5rem)] leading-[0.82]">
               Drops
             </h1>
-            <span aria-hidden className="mt-4 block h-1 w-14 bg-volt" />
-            <h2 id="drops-alert" className="mt-4 font-mono text-[clamp(1rem,0.85rem+0.6vw,1.35rem)] uppercase leading-snug tracking-[0.14em]">
-              Dress like you mean it.
+            {/* One calm line, then the sign-up (owner, 17 Oct 2026: less on it, no stress) */}
+            <h2 id="drops-alert" className="mt-5 max-w-[30ch] text-[17px] leading-snug text-paper/85 md:text-[18px]">
+              {next ? `${next.name} lands soon.` : "The next drop lands soon."} Get one message when it&apos;s out.
             </h2>
-            <p className="mt-2.5 text-[15px] leading-relaxed text-paper/80 md:text-[16px]">Your next everyday favourite is closer than you think. Discover the next Easypick lineup before it lands.</p>
-            <p className="mt-2.5 text-[15px] font-semibold md:text-[16px]">{next ? `${next.name}. Stay ready.` : "The next drop. Stay ready."}</p>
-            <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.14em] text-volt">First to know. First to pick.</p>
-
-            {/* The sign-up, on dark glass, under the words */}
-            <div className="mt-5 rounded-2xl border border-paper/15 bg-black/45 p-4 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)] backdrop-blur-md md:p-5">
+            <div className="mt-6">
               <AlertSignup dark source={next ? `drops-${next.slug}` : "drops"} />
             </div>
           </div>

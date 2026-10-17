@@ -241,12 +241,13 @@ function Showcase({ looks, options }: { looks: Look[]; options: Record<SlotKey, 
     [looks, index],
   );
 
-  // ← and → browse, when nothing else wants the keys (focus on the page or the stage, no modifier).
+  // ← and → browse from anywhere on the page (owner, 17 Oct 2026), except while typing, in a pop-up,
+  // in a picker that uses the arrows itself (occasions, fits, sizes), or with a modifier key.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key !== "ArrowLeft" && e.key !== "ArrowRight") || e.altKey || e.metaKey || e.ctrlKey || e.shiftKey || e.defaultPrevented) return;
       const t = document.activeElement as HTMLElement | null;
-      if (t && t !== document.body && !t.closest("[data-fits-stage]")) return;
+      if (t?.closest("input, textarea, select, [contenteditable=true], [role=dialog], [role=radiogroup]")) return;
       e.preventDefault();
       go(index + (e.key === "ArrowRight" ? 1 : -1));
     };
@@ -442,7 +443,7 @@ function Showcase({ looks, options }: { looks: Look[]; options: Record<SlotKey, 
   const announce = `Fit ${index + 1} of ${looks.length}: ${base.label}, ${base.groupLabel}. ${kept.pieces.length} pieces, ${formatPrice(total)}.`;
 
   return (
-    <div className="relative overflow-hidden bg-[#ededeb]" onPointerDown={() => setTouched((n) => n + 1)} onKeyDown={() => setTouched((n) => n + 1)}>
+    <div className="relative overflow-hidden bg-[#ededeb] [&_[role=radio]:focus-visible]:outline-none" onPointerDown={() => setTouched((n) => n + 1)} onKeyDown={() => setTouched((n) => n + 1)}>
       {/* A soft light behind the figure, tinted by the fit */}
       <motion.div
         aria-hidden
@@ -548,7 +549,7 @@ function Showcase({ looks, options }: { looks: Look[]; options: Record<SlotKey, 
             role="region"
             aria-label={`${base.label}, fit ${index + 1} of ${looks.length}. Use the left and right arrow keys to browse.`}
             tabIndex={0}
-            className="relative h-[min(50svh,420px)] min-w-0 select-none overflow-hidden outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--color-ink)] lg:h-auto lg:min-h-0 lg:flex-1"
+            className="relative h-[min(50svh,420px)] min-w-0 select-none overflow-hidden outline-none lg:h-auto lg:min-h-0 lg:flex-1"
           >
             {/* The fit's name, huge and faint, behind it */}
             <AnimatePresence initial={false}>
