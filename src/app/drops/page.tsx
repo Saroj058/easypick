@@ -43,28 +43,27 @@ export default async function DropsPage() {
 
   return (
     <div className="overflow-x-clip">
-      {/* The opening: one full screen of the store at dusk (the owner's picture and concept, 10 Oct 2026).
-          The page's name, the owner's lines and the alert sign-up (on a sheet of dark glass) all sit on the
-          left. The picture is decoration: every word is real text over it. */}
-      <section aria-labelledby="drops-title" className="on-dark relative isolate overflow-hidden bg-[#0c0c0c] text-paper">
-        <Image src="/drops/hero-2.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover object-right max-md:hidden" />
-        <Image src="/drops/hero-2-phone.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover md:hidden" />
-        {/* Shade for the words: darker on the left and at the foot, lighter where the rail and the sign are */}
-        <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(0,0,0,0.78)_0%,rgba(0,0,0,0.5)_34%,rgba(0,0,0,0.08)_62%,rgba(0,0,0,0)_100%)] max-md:bg-[linear-gradient(180deg,rgba(0,0,0,0.35)_0%,rgba(0,0,0,0.55)_45%,rgba(0,0,0,0.85)_100%)]" />
+      {/* The opening: the bright white showroom (the owner's picture, 17 Oct 2026). On wide screens it
+          fills the screen and the words sit on its empty wall, on the left; on phones the picture
+          comes first and the words follow on white. The picture is decoration: every word is text. */}
+      <section aria-labelledby="drops-title" className="relative isolate overflow-hidden bg-[#f4f4f2] text-ink">
+        <Image src="/drops/hero-white.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover object-right max-md:hidden" />
+        {/* A whisper of white over the empty wall, so the words read */}
+        <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(248,248,246,0.85)_0%,rgba(248,248,246,0.55)_32%,rgba(248,248,246,0)_55%)] max-md:hidden" />
+        <Image src="/drops/hero-white-phone.webp" alt="" width={900} height={867} priority sizes="100vw" className="block h-auto w-full md:hidden" />
 
-        {/* Everything sits on the picture's empty wall, on the left: the lit sign and the counter on the right stay clear */}
-        <div className="container-ep flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] flex-col justify-end py-8 md:min-h-[calc(100svh-88px)] md:justify-center md:py-10">
-          <div className="w-full md:max-w-[470px]">
-            <p className="index text-paper/80">Every other Friday · 6 PM</p>
-            <h1 id="drops-title" className="display mt-3 text-[clamp(3.6rem,2.4rem+5vw,6.5rem)] leading-[0.82]">
+        <div className="container-ep flex flex-col py-8 md:min-h-[calc(100svh-88px)] md:justify-center md:py-10">
+          <div className="w-full md:max-w-[440px]">
+            <p className="index text-ink/60">Every other Friday · 6 PM</p>
+            <h1 id="drops-title" className="display mt-3 text-[clamp(4rem,2.6rem+6vw,8rem)] font-extralight leading-[0.82] tracking-[0.02em]">
               Drops
             </h1>
             {/* One calm line, then the sign-up (owner, 17 Oct 2026: less on it, no stress) */}
-            <h2 id="drops-alert" className="mt-5 max-w-[30ch] text-[17px] leading-snug text-paper/85 md:text-[18px]">
+            <h2 id="drops-alert" className="mt-5 max-w-[30ch] text-[17px] leading-snug text-ink/70 md:text-[18px]">
               {next ? `${next.name} lands soon.` : "The next drop lands soon."} Get one message when it&apos;s out.
             </h2>
             <div className="mt-6">
-              <AlertSignup dark source={next ? `drops-${next.slug}` : "drops"} />
+              <AlertSignup source={next ? `drops-${next.slug}` : "drops"} />
             </div>
           </div>
         </div>

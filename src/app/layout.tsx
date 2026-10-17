@@ -11,7 +11,7 @@ import { MobileTabBar, SiteHeader } from "@/components/site-header";
 import { site } from "@/lib/site";
 import "./globals.css";
 
-const barlow = Barlow_Condensed({ subsets: ["latin"], weight: "700", variable: "--font-barlow", display: "swap" });
+const barlow = Barlow_Condensed({ subsets: ["latin"], weight: ["200", "700"], variable: "--font-barlow", display: "swap" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "600"], variable: "--font-jetbrains", display: "swap" });
 const baloo = Baloo_2({ subsets: ["devanagari", "latin"], weight: "700", variable: "--font-baloo-2", display: "swap", preload: false });
