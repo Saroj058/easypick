@@ -8,7 +8,7 @@ import { PickChat } from "@/components/gift/pick-chat";
 import { toRailPiece } from "@/components/home/rail";
 import { ShopSearch } from "@/components/shop-search";
 import { ShopShelf } from "@/components/shop-shelf";
-import { OfferBoard } from "@/components/offer-board";
+import { OfferStacks } from "@/components/offer-stacks";
 import { ktmDay } from "@/lib/ktm-day";
 import { inOffer, liveOffers, running } from "@/lib/offer-rules";
 import { getOffers } from "@/lib/offers";
@@ -331,10 +331,10 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           )}
         </p>
   
-        {/* Festival offers: on the sale view and each offer's own page, the offers running now in orbit, then written out. */}
+        {/* Festival offers: on the sale view and each offer's own page, the offers running now as three stacks of cards. */}
         {(f.sale || offer) && offers.length > 0 && (
           <div className="mt-10">
-            <OfferBoard offers={offerList} products={all} today={ktmDay()} active={offer?.id} />
+            <OfferStacks key={offer?.id ?? "all"} offers={offers} start={offer?.id} />
           </div>
         )}
 

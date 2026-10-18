@@ -12,8 +12,9 @@ import { Vault } from "@/components/home/vault";
 
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
-import { OffersCarousel } from "@/components/ui/offers-carousel";
 import { OfferBoard } from "@/components/offer-board";
+import { OfferStacks } from "@/components/offer-stacks";
+import { liveOffers } from "@/lib/offer-rules";
 import { ktmDay } from "@/lib/ktm-day";
 import { getOffers } from "@/lib/offers";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
@@ -74,6 +75,7 @@ export default async function HomePage() {
   const heroPieces = [...inTurn(withPhoto.filter(buyable)), ...inTurn(withPhoto.filter((p) => !buyable(p)))];
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
+  const offerList = await getOffers();
   const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
   const { looks } = designerFits(products, await getSavedLooks());
@@ -166,6 +168,15 @@ export default async function HomePage() {
 
 
 
+      {/* Designer Fits: just a pointer here; the fits themselves are on /fits (above the Vault, owner, 18 Oct 2026) */}
+      {looks.length > 0 && (
+        <section aria-labelledby="fits-title" className="py-8 md:py-10">
+          <div className="container-ep">
+            <FitsTeaser looks={looks} />
+          </div>
+        </section>
+      )}
+
       {/* The Vault: original brands and numbered pieces */}
       <Vault products={products} />
 
@@ -174,50 +185,40 @@ export default async function HomePage() {
       {offers.length > 0 && (
         <section aria-labelledby="offers-title" className="section overflow-hidden">
           <div className="container-ep">
-            {/* The named offers in orbit, then written out (owner's reference "Orbit", 18 Oct 2026); then the marked-down pieces moving along. */}
-            <div className="mb-16 md:mb-20">
+            {/* Pick your offer: three stacks of three cards (owner, 18 Oct 2026). */}
+            <div className="mb-20 md:mb-28">
               <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Festival offers</p>
               <h2 className="mt-2 text-center text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
                 Pick your offer.
                 <span className="block text-steel-dark">Same price in store.</span>
               </h2>
-              <div className="mt-4">
-                <OfferBoard offers={await getOffers()} products={products} today={ktmDay()} />
+              <div className="mt-10">
+                <OfferStacks offers={liveOffers(offerList, products, ktmDay())} />
               </div>
             </div>
-            <OffersCarousel
-              eyebrow="Marked down now"
-              title="Festival offers"
-              subtitle={`${offers.length} pieces marked down, up to ${formatPrice(bestSaving)} off. Same price in store.`}
-              ctaText="See all offers"
-              ctaHref="/shop?sale=1"
-              items={offers.slice(0, 12).map((p) => ({
-                id: p.id,
-                href: `/product/${p.slug}`,
-                name: p.name,
-                sub: p.colours.length > 1 ? `${p.colours.length} colours` : (p.colours[0]?.name ?? ""),
-                price: formatPrice(p.salePrice ?? p.price),
-                was: formatPrice(p.price),
-                off: Math.round((1 - (p.salePrice ?? p.price) / p.price) * 100),
-                sku: p.variants[0]?.sku ?? p.id,
-                image: p.images[0] ?? { src: null, alt: p.name, kind: "front" },
-                category: p.category,
-                hex: p.colours[0]?.hex ?? "#2b2b2e",
-                product: p,
-              }))}
-            />
+            {/* Then every offer in orbit, written out below it (owner's reference "Orbit"), in place of the old row of marked-down pieces. */}
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Marked down now</p>
+                <h2 id="offers-title" className="display mt-2 text-[clamp(2.6rem,1.8rem+3vw,4.6rem)] leading-[0.86]">
+                  Festival offers
+                </h2>
+                <p className="mt-3 max-w-[44ch] text-[16px] text-steel-dark">
+                  {offers.length} pieces marked down, up to {formatPrice(bestSaving)} off. Same price in store.
+                </p>
+              </div>
+              <Link href="/shop?sale=1" className="inline-flex h-12 items-center rounded-full border border-ink px-6 text-[13px] font-semibold uppercase tracking-[0.08em] hover:bg-ink hover:text-paper">
+                See all offers
+              </Link>
+            </div>
+            <div className="mt-2">
+              <OfferBoard offers={offerList} products={products} today={ktmDay()} />
+            </div>
           </div>
         </section>
       )}
 
-      {/* Designer Fits, then buying for someone, just above Our store (owner, 18 Oct 2026). */}
-      {looks.length > 0 && (
-        <section aria-labelledby="fits-title" className="section">
-          <div className="container-ep">
-            <FitsTeaser looks={looks} />
-          </div>
-        </section>
-      )}
+      {/* Buying for someone, just above Our store (owner, 18 Oct 2026). */}
       <section aria-labelledby="gift-title" className="section pt-0 md:pt-0">
         <div className="container-ep">
           <GiftBlock />
