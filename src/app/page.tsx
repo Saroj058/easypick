@@ -191,7 +191,6 @@ export default async function HomePage() {
                 <OfferStack offers={liveOffers(offerList, products, ktmDay())} label="Festival" />
               </div>
             </div>
-            {/* Then every offer in orbit, written out below it (owner's reference "Orbit"), in place of the old row of marked-down pieces. */}
           </div>
         </section>
       )}
