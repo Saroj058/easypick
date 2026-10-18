@@ -21,7 +21,7 @@ export default async function HelperMe() {
             Sign out
           </button>
         </form>
-        <p className="mt-2 text-[13px] text-[#6b6d72]">Signing out ends your login on every phone and computer.</p>
+        <p className="mt-2 text-[13px] text-[#6b6d72]">Signing out ends your helper login on this device. The admin has its own login.</p>
       </div>
       <PasswordForm min={MIN_PASSWORD} />
     </div>

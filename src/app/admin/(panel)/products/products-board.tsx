@@ -7,6 +7,7 @@ import { Copy, ExternalLink, LayoutGrid, List, Search, X } from "lucide-react";
 import { ProductImage } from "@/components/product-image";
 import { bulkProductStatus, duplicateProduct } from "@/app/admin/actions";
 import { formatPrice } from "@/lib/format";
+import { categoryLabels } from "@/lib/site";
 import type { Category, ProductImage as Img, ProductStatus, Size } from "@/lib/types";
 
 export type BoardRow = {
@@ -112,10 +113,10 @@ function Duplicate({ slug, compact }: { slug: string; compact?: boolean }) {
   );
 }
 
-export function ProductsBoard({ rows }: { rows: BoardRow[] }) {
+export function ProductsBoard({ rows, initialKind = "" }: { rows: BoardRow[]; /** From /admin/categories: open on one kind. */ initialKind?: "" | Category }) {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<(typeof TABS)[number]>("all");
-  const [kind, setKind] = useState<"" | Category>("");
+  const [kind, setKind] = useState<"" | Category>(initialKind);
   const [flags, setFlags] = useState<Flag[]>([]);
   const [sort, setSort] = useState<Sort>("shop");
   const [view, setView] = useState<"table" | "grid">("table");
@@ -123,7 +124,8 @@ export function ProductsBoard({ rows }: { rows: BoardRow[] }) {
   const [note, setNote] = useState("");
   const [busy, start] = useTransition();
 
-  const kinds = useMemo(() => [...new Map(rows.map((r) => [r.category, r.categoryLabel]))], [rows]);
+  // Every one of the twelve kinds, in the shop's order, even when it has nothing yet.
+  const kinds = useMemo(() => Object.entries(categoryLabels) as [Category, string][], []);
   const counts = useMemo(() => Object.fromEntries(TABS.map((t) => [t, t === "all" ? rows.length : rows.filter((r) => r.status === t).length])), [rows]);
 
   const list = useMemo(() => {

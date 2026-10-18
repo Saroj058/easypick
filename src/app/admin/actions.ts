@@ -37,8 +37,9 @@ import {
   endAdminSession,
   logStaff,
   removeStaff,
+  actionPortal,
+  requireActionStaff,
   requireOwner,
-  requireStaff,
   startAdminSession,
 } from "@/lib/staff";
 import { SIZE_ORDER } from "@/lib/inventory";
@@ -85,10 +86,15 @@ export async function signInAdmin(_prev: LoginState, form: FormData): Promise<Lo
   }
   await clearLimit(byIp);
   await clearLimit(byUser);
-  await startAdminSession(member.id);
-  await logStaff(member, "signed in", null, { ip, portal: str(form, "portal") || "admin" });
-  // Helpers always go to their portal; an owner signing in on the helper login goes there too.
-  redirect(member.role === "helper" || str(form, "portal") === "helper" ? "/helper" : "/admin");
+  // Each portal has its own login (owner, 18 Oct 2026). The admin is for owners only; a helper's
+  // right password here still doesn't open it.
+  const portal = str(form, "portal") === "helper" ? "helper" : "admin";
+  if (portal === "admin" && member.role !== "owner") {
+    return { status: "error", message: "This login is for the owner. Helpers sign in on the helper portal.", username: shown };
+  }
+  await startAdminSession(member.id, portal);
+  await logStaff(member, "signed in", null, { ip, portal });
+  redirect(portal === "helper" ? "/helper" : "/admin");
 }
 
 // ---------- Your staff login ----------
@@ -99,7 +105,7 @@ export type AccountState =
   | { status: "error"; field: "current" | "username" | "password"; message: string };
 
 export async function changeUsername(_prev: AccountState, form: FormData): Promise<AccountState> {
-  const me = await requireStaff();
+  const me = await requireActionStaff();
   const res = await changeStaffLogin(me.id, String(form.get("current") ?? ""), { username: str(form, "username") });
   if (!res.ok) return { status: "error", field: res.field, message: res.message };
   await logStaff(me, "changed username", str(form, "username"));
@@ -108,22 +114,24 @@ export async function changeUsername(_prev: AccountState, form: FormData): Promi
 }
 
 export async function changePassword(_prev: AccountState, form: FormData): Promise<AccountState> {
-  const me = await requireStaff();
+  const me = await requireActionStaff();
   const password = String(form.get("password") ?? "");
   if (password !== String(form.get("confirm") ?? "")) return { status: "error", field: "password", message: "The two new passwords don't match." };
   const res = await changeStaffLogin(me.id, String(form.get("current") ?? ""), { password });
   if (!res.ok) return { status: "error", field: res.field, message: res.message };
   // Keep this device signed in; every other device is signed out by the new password.
-  await startAdminSession(me.id);
+  await startAdminSession(me.id, await actionPortal());
   await logStaff(me, "changed password");
   return { status: "saved", message: "Password changed. Other devices have been signed out." };
 }
 
 export async function signOutAdmin(form?: FormData) {
-  const me = await currentStaff();
-  if (me) await logStaff(me, "signed out");
-  await endAdminSession();
-  redirect(form?.get("portal") === "helper" ? "/helper/login" : "/admin/login");
+  // Out of this portal only: the other portal's login stays as it was.
+  const portal = form?.get("portal") === "helper" ? "helper" : "admin";
+  const me = await currentStaff(portal);
+  if (me) await logStaff(me, "signed out", null, { portal });
+  await endAdminSession(portal);
+  redirect(portal === "helper" ? "/helper/login" : "/admin/login");
 }
 
 // ---------- Staff accounts (owner) ----------
@@ -153,7 +161,7 @@ export type { OrderStep };
 
 /** Moves an order one step on (never back, never twice) and tells the customer when there's something for them to do. */
 export async function setOrderStep(form: FormData) {
-  const me = await requireStaff();
+  const me = await requireActionStaff();
   const id = str(form, "orderId");
   const step = str(form, "step") as OrderStep;
   const riderName = str(form, "riderName").slice(0, 60);
@@ -250,7 +258,7 @@ export async function refundOrder(_prev: SaveState, form: FormData): Promise<Sav
 
 /** Any staff: swap one piece for another size or colour of the same product (within 7 days, 14 for gifts; after that only the owner). */
 export async function exchangeLine(_prev: SaveState, form: FormData): Promise<SaveState> {
-  const me = await requireStaff();
+  const me = await requireActionStaff();
   const id = str(form, "orderId");
   try {
     const res = await exchangeOnePiece(id, { username: me.username, owner: me.role === "owner" }, { line: int(form, "line"), newSku: str(form, "newSku"), override: form.get("override") === "on" });
@@ -451,7 +459,7 @@ const ADJUST_REASONS: StockReason[] = ["received", "count", "damaged", "returned
 
 /** Any staff: stock + or − per size, with a reason. Tells anyone waiting on a size that came back. */
 export async function adjustStock(_prev: SaveState, form: FormData): Promise<SaveState> {
-  const me = await requireStaff();
+  const me = await requireActionStaff();
   const slug = str(form, "slug");
   const reason = str(form, "reason") as StockReason;
   if (!ADJUST_REASONS.includes(reason)) return { status: "error", message: "Choose why the stock is changing." };
@@ -498,7 +506,7 @@ export type CountState =
  * exactly those changes, skipping any size whose stock moved since (a sale meanwhile).
  */
 export async function bulkCount(_prev: CountState, form: FormData): Promise<CountState> {
-  const me = await requireStaff();
+  const me = await requireActionStaff();
 
   if (form.get("apply") === "1") {
     const plan = readPlan(String(form.get("plan") ?? ""));

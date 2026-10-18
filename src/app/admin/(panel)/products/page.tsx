@@ -15,8 +15,10 @@ export const dynamic = "force-dynamic";
 const label = "font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#6b6d72]";
 
 /** Every piece in one board: find, filter, sort, change status in bulk, duplicate. */
-export default async function AdminProducts() {
+export default async function AdminProducts({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireOwner();
+  const sp = await searchParams;
+  const kind = typeof sp.kind === "string" && sp.kind in categoryLabels ? (sp.kind as keyof typeof categoryLabels) : "";
   const [products, demand, drops] = await Promise.all([allProducts(), restockDemand(), allDrops()]);
   const dropName = new Map(drops.map((d) => [d.slug, d.name]));
 
@@ -80,7 +82,7 @@ export default async function AdminProducts() {
         ))}
       </dl>
 
-      <ProductsBoard rows={rows} />
+      <ProductsBoard rows={rows} initialKind={kind} />
     </div>
   );
 }

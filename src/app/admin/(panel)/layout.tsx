@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 
 import { allDrops, allProducts, festivals } from "@/lib/catalogue";
 import { ktmDay } from "@/lib/ktm-day";
@@ -20,7 +19,6 @@ export const metadata: Metadata = { title: { default: "Admin", template: "%s | E
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const who = await requireStaff();
   // Helpers have their own, simpler portal.
-  if (who.role === "helper") redirect("/helper");
 
   const [orders, toCheck, products, drops, fests] = await Promise.all([activeOrders(), ordersWithPaymentAttempts(7), allProducts(), allDrops(), festivals()]);
   const toPack = orders.filter((o) => inView(o, "pack")).length;

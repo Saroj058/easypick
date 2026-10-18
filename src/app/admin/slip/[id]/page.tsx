@@ -6,7 +6,9 @@ import { formatPrice } from "@/lib/format";
 import { deliverOnText, packLines } from "@/lib/helper-view";
 import { findOrder } from "@/lib/orders";
 import { site } from "@/lib/site";
-import { requireStaff } from "@/lib/staff";
+import { redirect } from "next/navigation";
+
+import { anyStaff } from "@/lib/staff";
 import { PrintButton } from "./print-button";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +21,8 @@ const day = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, day: "nu
  * and no buyer phone: only who it's from and their message.
  */
 export default async function PackingSlip({ params }: PageProps<"/admin/slip/[id]">) {
-  await requireStaff();
+  // Printed from the admin and the helper portal alike.
+  if (!(await anyStaff())) redirect("/admin/login");
   const o = await findOrder((await params).id);
   if (!o) notFound();
   const g = o.gift;

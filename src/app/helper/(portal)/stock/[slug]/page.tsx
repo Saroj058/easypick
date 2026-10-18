@@ -10,7 +10,7 @@ import { currentStaff, requireStaff } from "@/lib/staff";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/helper/stock/[slug]">): Promise<Metadata> {
-  if (!(await currentStaff())) return { title: "Stock" };
+  if (!(await currentStaff("helper"))) return { title: "Stock" };
   return { title: (await findProduct((await params).slug))?.name ?? "Stock" };
 }
 

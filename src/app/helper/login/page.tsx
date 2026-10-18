@@ -8,7 +8,7 @@ import { adminConfigured, currentStaff } from "@/lib/staff";
 export const metadata: Metadata = { title: "Helper login", robots: { index: false, follow: false } };
 
 export default async function HelperLogin() {
-  if (await currentStaff()) redirect("/helper");
+  if (await currentStaff("helper")) redirect("/helper");
   return (
     <div className="admin-ui grid min-h-dvh place-items-center bg-[#e9e9e7] px-3 py-10">
       <div className="w-full max-w-md rounded-[28px] bg-white/90 p-6 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.3)] sm:p-8">

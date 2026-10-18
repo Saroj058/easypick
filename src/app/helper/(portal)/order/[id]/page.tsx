@@ -14,7 +14,7 @@ import { HelperOrderCard } from "../../queue";
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/helper/order/[id]">): Promise<Metadata> {
-  if (!(await currentStaff())) return { title: "Order" };
+  if (!(await currentStaff("helper"))) return { title: "Order" };
   return { title: (await findOrder((await params).id))?.number ?? "Order" };
 }
 

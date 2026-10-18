@@ -3,7 +3,7 @@ import "server-only";
 import { createHash, createHmac, randomBytes, randomUUID, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { count, eq, sql } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
@@ -16,12 +16,19 @@ import { getDb, schema, type StaffRole } from "./db";
 // ADMIN_PASSWORD in .env.local when the staff table is empty.
 //
 // The login is a signed cookie tied to the account's password hash and a session
-// version: changing the password, or signing out, ends every existing login.
+// version: changing the password, or "Sign out everywhere", ends every existing login.
 //
 // Roles: "owner" does everything; "helper" handles orders, exchanges and stock counts
 // but can't change prices, products, refunds, festivals or staff.
+//
+// Two portals, two logins (owner, 18 Oct 2026): the admin and the helper portal each have their
+// own cookie. Signing in to one never signs you in to the other, and going from the helper portal
+// to the admin asks for the username and password again. Only owners can sign in to the admin.
 
+export type Portal = "admin" | "helper";
 export const ADMIN_COOKIE = "ep_admin";
+export const HELPER_COOKIE = "ep_helper";
+const COOKIE: Record<Portal, string> = { admin: ADMIN_COOKIE, helper: HELPER_COOKIE };
 const TTL_MS = 12 * 60 * 60_000;
 export const MIN_PASSWORD = 10;
 
@@ -109,12 +116,12 @@ const same = (a: string, b: string) => {
   return timingSafeEqual(x, y);
 };
 
-export async function startAdminSession(staffId: string) {
+export async function startAdminSession(staffId: string, portal: Portal = "admin") {
   const db = await getDb();
   const [row] = await db.select().from(schema.staff).where(eq(schema.staff.id, staffId));
   if (!row) return;
   const payload = `${row.id}.${Date.now() + TTL_MS}`;
-  (await cookies()).set(ADMIN_COOKIE, `${payload}.${sign(payload, row.passwordHash, row.sessionVersion)}`, {
+  (await cookies()).set(COOKIE[portal], `${payload}.${sign(payload, row.passwordHash, row.sessionVersion)}`, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     // Strict: the staff login is never sent on a request started from another site.
@@ -124,17 +131,12 @@ export async function startAdminSession(staffId: string) {
   });
 }
 
-/** Signs this staff member out everywhere (the cookie alone isn't trusted after this). */
-export async function endAdminSession() {
-  const me = await currentStaff();
-  if (me) {
-    const db = await getDb();
-    await db
-      .update(schema.staff)
-      .set({ sessionVersion: sql`${schema.staff.sessionVersion} + 1` })
-      .where(eq(schema.staff.id, me.id));
-  }
-  (await cookies()).delete(ADMIN_COOKIE);
+/**
+ * Signs out of one portal in this browser. The other portal's login is left alone, so the two stay
+ * independent; "Sign out everywhere" on the Staff page ends every login of an account.
+ */
+export async function endAdminSession(portal: Portal = "admin") {
+  (await cookies()).delete(COOKIE[portal]);
 }
 
 /**
@@ -143,33 +145,59 @@ export async function endAdminSession() {
  * admin on a login the owner left behind.
  */
 export async function forgetAdminHere() {
-  (await cookies()).delete(ADMIN_COOKIE);
+  const jar = await cookies();
+  jar.delete(ADMIN_COOKIE);
+  jar.delete(HELPER_COOKIE);
 }
 
-/** The signed-in staff member, or null. */
-export const currentStaff = cache(async (): Promise<StaffMember | null> => {
-  const raw = (await cookies()).get(ADMIN_COOKIE)?.value;
+/** The staff member signed in to a portal (the admin unless said), or null. */
+export const currentStaff = cache(async (portal: Portal = "admin"): Promise<StaffMember | null> => {
+  const raw = (await cookies()).get(COOKIE[portal])?.value;
   if (!raw) return null;
   const [id, expires, sig] = raw.split(".");
   if (!id || !sig || !(Number(expires) > Date.now())) return null;
   const db = await getDb();
   const [row] = await db.select().from(schema.staff).where(eq(schema.staff.id, id));
   if (!row || !same(sig, sign(`${id}.${expires}`, row.passwordHash, row.sessionVersion))) return null;
+  // The admin is for owners only, even with a valid cookie.
+  if (portal === "admin" && row.role !== "owner") return null;
   return { id: row.id, username: row.username, role: row.role };
 });
 
+/** Anyone signed in to either portal: for things both use (the packing slip, the stock sheet, new-order alerts). */
+export async function anyStaff(): Promise<StaffMember | null> {
+  return (await currentStaff("admin")) ?? (await currentStaff("helper"));
+}
+
+/**
+ * For actions both portals call (order steps, stock, exchanges, your password): the login of the
+ * portal the form was sent from. A form on a /helper page uses the helper login, any other the admin's.
+ */
+export async function actionPortal(): Promise<Portal> {
+  const from = (await headers()).get("referer") ?? "";
+  try {
+    return new URL(from).pathname.startsWith("/helper") ? "helper" : "admin";
+  } catch {
+    return "admin";
+  }
+}
+
+/** Actions both portals call: the staff member of the portal the form came from, or off to its login. */
+export async function requireActionStaff(): Promise<StaffMember> {
+  const portal = await actionPortal();
+  return requireStaff(portal === "helper" ? "/helper/login" : "/admin/login");
+}
+
 /** For staff pages and actions: the staff member, or off to a staff login. */
 export async function requireStaff(login = "/admin/login"): Promise<StaffMember> {
-  const who = await currentStaff();
+  const who = await currentStaff(login.startsWith("/helper") ? "helper" : "admin");
   if (!who) redirect(login);
   return who;
 }
 
-/** Owner-only pages and actions (the admin). Helpers are sent to their own portal. */
+/** Owner-only pages and actions (the admin). Its login only ever holds an owner. */
 export async function requireOwner(): Promise<StaffMember> {
-  const who = await requireStaff();
-  if (who.role !== "owner") redirect("/helper");
-  return who;
+  return requireStaff();
 }
 
 /** Where a staff member lands after signing in: helpers use /helper, owners /admin. */

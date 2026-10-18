@@ -29,10 +29,15 @@ test("a helper works in the helper portal, not the admin @phone", async ({ page 
   await expect(page).toHaveURL(/\/helper$/);
   await expect(page.getByRole("heading", { name: /To pack/ })).toBeVisible();
 
-  // The admin sends helpers back to their portal.
+  // The admin has its own login (owner, 18 Oct 2026): the helper's login doesn't open it, and a
+  // helper's username and password don't either.
   await page.goto("/admin/reports");
-  await expect(page).toHaveURL(/\/helper$/);
-  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await page.getByLabel("Username").fill(HELPER.username);
+  await page.getByLabel("Password", { exact: true }).fill(HELPER.password);
+  await page.getByRole("button", { name: /Sign in/ }).click();
+  await expect(page.getByText("This login is for the owner.")).toBeVisible();
+  await page.goto("/helper");
   await expect(page).toHaveURL(/\/helper$/);
 
   // Find
@@ -55,6 +60,21 @@ test("a helper works in the helper portal, not the admin @phone", async ({ page 
   await page.goto("/helper/me");
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(page).toHaveURL(/\/helper\/login/);
+});
+
+test("the owner's admin login doesn't open the helper portal, and the other way round", async ({ page }) => {
+  await signIn(page, "/admin/login", "e2e-owner", "e2e-owner-password");
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto("/helper");
+  await expect(page).toHaveURL(/\/helper\/login/);
+  // Signing in to the helper portal too, then out of it, leaves the admin signed in.
+  await signIn(page, "/helper/login", "e2e-owner", "e2e-owner-password");
+  await expect(page).toHaveURL(/\/helper$/);
+  await page.goto("/helper/me");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page).toHaveURL(/\/helper\/login/);
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/admin$/);
 });
 
 test("the portal needs a login", async ({ page }) => {
