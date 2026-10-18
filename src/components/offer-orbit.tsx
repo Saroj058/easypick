@@ -27,7 +27,7 @@ const SPEED = 2.4;
  * solid colour. It stops while a card is pointed at; drag it, or use the arrow keys, to turn it by hand.
  * Every card opens its offer in the shop. Nothing moves for people who ask for less motion.
  */
-export function OfferOrbit({ offers, pictures }: { offers: OfferSummary[]; pictures: Record<string, OfferPicture | undefined> }) {
+export function OfferOrbit({ offers, pictures, children }: { offers: OfferSummary[]; pictures: Record<string, OfferPicture | undefined>; /** Set in the curve, under the cards. */ children?: React.ReactNode }) {
   const still = useReducedMotion();
   const ring = useRef<HTMLDivElement>(null);
   const cards = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -119,10 +119,10 @@ export function OfferOrbit({ offers, pictures }: { offers: OfferSummary[]; pictu
         if (drag.current?.moved) target.current = Math.round(angle.current / STEP) * STEP;
         setTimeout(() => (drag.current = null), 0);
       }}
-      className="relative mx-[calc(50%-50vw)] h-[330px] cursor-grab touch-pan-y select-none overflow-hidden active:cursor-grabbing sm:h-[460px] lg:h-[520px]"
+      className="relative mx-[calc(50%-50vw)] h-[420px] cursor-grab touch-pan-y select-none overflow-hidden active:cursor-grabbing sm:h-[460px] lg:h-[520px]"
     >
       {/* The ring's centre sits far below; every card hangs from it */}
-      <div className="absolute left-1/2" style={{ top: `calc(100% + ${radius - (radius > 900 ? 330 : radius > 700 ? 290 : 190)}px)` }}>
+      <div className="absolute left-1/2" style={{ top: `calc(100% + ${radius - (radius > 900 ? 330 : radius > 700 ? 300 : 270)}px)` }}>
         {offers.map((s, i) => (
           <Link
             key={s.offer.id}
@@ -146,6 +146,8 @@ export function OfferOrbit({ offers, pictures }: { offers: OfferSummary[]; pictu
           </Link>
         ))}
       </div>
+      {/* The heading and the way in, in the curve under the cards */}
+      {children && <div className="pointer-events-none absolute inset-x-0 bottom-5 z-[200] [&_a]:pointer-events-auto flex flex-col items-center gap-4 text-center sm:bottom-8">{children}</div>}
     </div>
   );
 }

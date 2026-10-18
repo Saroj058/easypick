@@ -7,7 +7,7 @@ import { OfferOrbit, type OfferPicture } from "./offer-orbit";
  * each with a piece from it for the photo cards. (The written list under it was taken out at the
  * owner's request the same day.)
  */
-export function OfferBoard({ offers: all, products, today }: { offers: Offer[]; products: Product[]; today: string }) {
+export function OfferBoard({ offers: all, products, today, children }: { offers: Offer[]; products: Product[]; today: string; children?: React.ReactNode }) {
   const offers = liveOffers(all, products, today);
   if (!offers.length) return null;
   const pictures: Record<string, OfferPicture | undefined> = {};
@@ -18,7 +18,9 @@ export function OfferBoard({ offers: all, products, today }: { offers: Offer[]; 
 
   return (
     <div>
-      <OfferOrbit offers={offers} pictures={pictures} />
+      <OfferOrbit offers={offers} pictures={pictures}>
+        {children}
+      </OfferOrbit>
     </div>
   );
 }

@@ -20,7 +20,7 @@ import { getOffers } from "@/lib/offers";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { SelfCheckout } from "@/components/self-checkout";
 import { getStoreInfo } from "@/lib/store-info";
-import { formatDropTime, formatPrice } from "@/lib/format";
+import { formatDropTime } from "@/lib/format";
 import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
 import { RACK_CUTOUTS } from "@/lib/rack-cutouts";
@@ -76,7 +76,6 @@ export default async function HomePage() {
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const offerList = await getOffers();
-  const bestSaving = offers.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
   const { looks } = designerFits(products, await getSavedLooks());
 
@@ -197,22 +196,15 @@ export default async function HomePage() {
               </div>
             </div>
             {/* Then every offer in orbit, written out below it (owner's reference "Orbit"), in place of the old row of marked-down pieces. */}
-            <div className="text-center">
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Marked down now</p>
-              <h2 id="offers-title" className="mt-2 text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
+            {/* The ring, with only its name and the way in set in the curve under the cards (owner, 18 Oct 2026). */}
+            <OfferBoard offers={offerList} products={products} today={ktmDay()}>
+              <h2 id="offers-title" className="text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
                 Festival offers.
-                <span className="block text-steel-dark">
-                  {offers.length} pieces marked down, up to {formatPrice(bestSaving)} off.
-                </span>
               </h2>
-              <p className="mt-3 text-[15px] text-steel-dark">Same price in store.</p>
-              <Link href="/shop?sale=1" className="mt-5 inline-flex h-11 items-center rounded-full bg-paper px-6 text-[14px] font-semibold text-ink shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 transition hover:ring-ink">
+              <Link href="/shop?sale=1" className="inline-flex h-11 items-center rounded-full bg-paper px-6 text-[14px] font-semibold text-ink shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 transition hover:ring-ink">
                 See all offers
               </Link>
-            </div>
-            <div className="mt-2">
-              <OfferBoard offers={offerList} products={products} today={ktmDay()} />
-            </div>
+            </OfferBoard>
           </div>
         </section>
       )}
