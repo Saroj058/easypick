@@ -8,7 +8,6 @@ import { toRailPiece } from "@/components/home/rail";
 import { RefreshAt } from "@/components/refresh-at";
 import { ShareDrop } from "@/components/share-drop";
 import { formatDropTime } from "@/lib/format";
-import { sellable } from "@/lib/inventory";
 import { getDrop, getDrops, getDropTimeline, getProducts, isReleased } from "@/lib/store";
 
 // Short, so the page turns buyable within moments of the drop opening.
@@ -34,11 +33,7 @@ export default async function DropPage({ params }: PageProps<"/drop/[slug]">) {
   // Pieces you can still buy come first.
   const products = all.filter((p) => p.dropSlug === drop.slug).sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
 
-  // What can still be bought online, against how many the drop started with.
-  const left = products.reduce((n, p) => n + (p.status === "live" ? p.variants.reduce((m, v) => m + sellable(v), 0) : 0), 0);
-  const total = Math.max(drop.pieceCount, left);
   const soldOut = released && products.length > 0 && products.every((p) => p.status === "sold_out");
-  const stylesGone = products.filter((p) => p.status === "sold_out").length;
   const upcoming = next && next.slug !== drop.slug ? next : null;
 
   return (
@@ -60,17 +55,6 @@ export default async function DropPage({ params }: PageProps<"/drop/[slug]">) {
               <h1 className="display display-h1 mt-3">{drop.name}</h1>
               {drop.story && <p className="mt-3 max-w-[46ch] text-lg text-steel-dark md:text-xl">{drop.story}</p>}
 
-              {released && !soldOut && total > 0 && (
-                <div className="mt-6 max-w-sm">
-                  <p className="font-mono text-[15px]">
-                    <span className="font-semibold tabular-nums">{left}</span> of <span className="tabular-nums">{total}</span> left
-                    {stylesGone > 0 && <span className="text-steel-dark"> · {stylesGone} sold out</span>}
-                  </p>
-                  <div className="mt-2 h-1 bg-mist" aria-hidden>
-                    <div className="h-full bg-ink" style={{ width: `${Math.round((left / total) * 100)}%` }} />
-                  </div>
-                </div>
-              )}
               <div className="mt-5">
                 <ShareDrop slug={drop.slug} name={drop.name} />
               </div>
