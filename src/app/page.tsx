@@ -13,7 +13,7 @@ import { Vault } from "@/components/home/vault";
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
 import { OffersCarousel } from "@/components/ui/offers-carousel";
-import { OfferCards } from "@/components/offer-cards";
+import { OfferStack } from "@/components/offer-stack";
 import { ktmDay } from "@/lib/ktm-day";
 import { liveOffers } from "@/lib/offer-rules";
 import { getOffers } from "@/lib/offers";
@@ -189,9 +189,16 @@ export default async function HomePage() {
       {offers.length > 0 && (
         <section aria-labelledby="offers-title" className="section overflow-hidden">
           <div className="container-ep">
-            {/* The named offers running now (owner, 18 Oct 2026), then the marked-down pieces moving along. */}
-            <div className="mb-10">
-              <OfferCards offers={liveOffers(await getOffers(), products, ktmDay())} />
+            {/* The named offers running now, as a fanned stack of cards (owner's reference, 18 Oct 2026), then the marked-down pieces moving along. */}
+            <div className="mb-16 text-center md:mb-20">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Festival offers</p>
+              <h2 className="mt-2 text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
+                Pick your offer.
+                <span className="block text-steel-dark">Same price in store.</span>
+              </h2>
+              <div className="mt-10">
+                <OfferStack offers={liveOffers(await getOffers(), products, ktmDay())} />
+              </div>
             </div>
             <OffersCarousel
               eyebrow="Marked down now"

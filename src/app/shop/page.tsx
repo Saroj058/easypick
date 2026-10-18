@@ -3,13 +3,12 @@ import { LayoutGrid, Sparkles, Tag } from "lucide-react";
 import Link from "next/link";
 
 import { RecentlyViewed } from "@/components/local-lists";
-import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
 import { PickChat } from "@/components/gift/pick-chat";
 import { toRailPiece } from "@/components/home/rail";
 import { ShopSearch } from "@/components/shop-search";
 import { ShopShelf } from "@/components/shop-shelf";
-import { OfferCards } from "@/components/offer-cards";
+import { OfferStack } from "@/components/offer-stack";
 import { ktmDay } from "@/lib/ktm-day";
 import { inOffer, liveOffers, running } from "@/lib/offer-rules";
 import { getOffers } from "@/lib/offers";
@@ -160,7 +159,6 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   const active = Boolean(f.q || f.category || f.size || f.colour || f.price || f.fit || f.sale || f.new || f.vault || f.brand || f.offer);
   const anyNew = all.some((p) => p.isNew && p.status !== "scheduled");
   const onSale = all.filter((p) => p.salePrice && p.status === "live");
-  const bestSaving = onSale.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
   // As the rails and the gift page (owner, 15 Oct 2026): "All" is a strip per kind of piece; one
   // kind chosen (or a search, sale, new, Vault or brand view) is one strip under its big name.
@@ -244,7 +242,6 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
             </div>
           </details>
         </div>
-        {f.sale && bestSaving > 0 && <p className="mt-2 text-steel-dark">Festival prices on {onSale.length} pieces, up to {formatPrice(bestSaving)} off. While stock lasts.</p>}
   
         <div className="space-y-3">
           {/* The kinds: joined to the bar above, as on the gift page; they wrap so none hides */}
@@ -334,10 +331,10 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           )}
         </p>
   
-        {/* Festival offers: on the sale view and each offer's own page, the offers running now side by side. */}
+        {/* Festival offers: on the sale view and each offer's own page, the offers running now as a stack of cards. */}
         {(f.sale || offer) && offers.length > 0 && (
-          <div className="mt-6">
-            <OfferCards offers={offers} active={offer?.id} />
+          <div className="mt-10">
+            <OfferStack key={offer?.id ?? "all"} offers={offers} start={offer?.id} />
           </div>
         )}
 
