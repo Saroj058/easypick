@@ -197,17 +197,16 @@ export default async function HomePage() {
               </div>
             </div>
             {/* Then every offer in orbit, written out below it (owner's reference "Orbit"), in place of the old row of marked-down pieces. */}
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Marked down now</p>
-                <h2 id="offers-title" className="display mt-2 text-[clamp(2.6rem,1.8rem+3vw,4.6rem)] leading-[0.86]">
-                  Festival offers
-                </h2>
-                <p className="mt-3 max-w-[44ch] text-[16px] text-steel-dark">
-                  {offers.length} pieces marked down, up to {formatPrice(bestSaving)} off. Same price in store.
-                </p>
-              </div>
-              <Link href="/shop?sale=1" className="inline-flex h-12 items-center rounded-full border border-ink px-6 text-[13px] font-semibold uppercase tracking-[0.08em] hover:bg-ink hover:text-paper">
+            <div className="text-center">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Marked down now</p>
+              <h2 id="offers-title" className="mt-2 text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
+                Festival offers.
+                <span className="block text-steel-dark">
+                  {offers.length} pieces marked down, up to {formatPrice(bestSaving)} off.
+                </span>
+              </h2>
+              <p className="mt-3 text-[15px] text-steel-dark">Same price in store.</p>
+              <Link href="/shop?sale=1" className="mt-5 inline-flex h-11 items-center rounded-full bg-paper px-6 text-[14px] font-semibold text-ink shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 transition hover:ring-ink">
                 See all offers
               </Link>
             </div>
@@ -219,7 +218,7 @@ export default async function HomePage() {
       )}
 
       {/* Buying for someone, just above Our store (owner, 18 Oct 2026). */}
-      <section aria-labelledby="gift-title" className="section pt-0 md:pt-0">
+      <section aria-labelledby="gift-title" className="py-8 md:py-12">
         <div className="container-ep">
           <GiftBlock />
         </div>

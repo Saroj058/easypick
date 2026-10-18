@@ -24,7 +24,7 @@ const SPEED = 2.4;
  * The festival offers in orbit (owner's reference, "Orbit", 18 Oct 2026): every offer is a card on
  * a huge circle whose top rises into view, the cards tilted along it, the ring turning slowly on
  * its own. Each card has its own look: a giant figure, a giant letter, a piece from the offer, a
- * solid colour. It stops while pointed at; drag it, or use the arrow keys, to turn it by hand.
+ * solid colour. It stops while a card is pointed at; drag it, or use the arrow keys, to turn it by hand.
  * Every card opens its offer in the shop. Nothing moves for people who ask for less motion.
  */
 export function OfferOrbit({ offers, pictures }: { offers: OfferSummary[]; pictures: Record<string, OfferPicture | undefined> }) {
@@ -99,7 +99,6 @@ export function OfferOrbit({ offers, pictures }: { offers: OfferSummary[]; pictu
       role="region"
       aria-roledescription="carousel"
       aria-label="Festival offers in orbit"
-      onPointerEnter={() => (held.current = true)}
       onPointerLeave={() => {
         held.current = false;
         drag.current = null;
@@ -132,6 +131,11 @@ export function OfferOrbit({ offers, pictures }: { offers: OfferSummary[]; pictu
             }}
             href={`/shop?offer=${s.offer.id}`}
             onClick={(e) => drag.current?.moved && e.preventDefault()}
+            // The ring stops only while a card is pointed at (owner, 18 Oct 2026).
+            onPointerEnter={() => (held.current = true)}
+            onPointerLeave={() => (held.current = false)}
+            onFocus={() => (held.current = true)}
+            onBlur={() => (held.current = false)}
             draggable={false}
             aria-label={`${s.offer.name}: ${s.count} pieces, up to ${s.upTo}% off`}
             className="absolute left-0 top-0 -ml-[70px] -mt-[98px] block h-[196px] w-[140px] origin-[50%_50%] will-change-transform sm:-ml-[100px] sm:-mt-[140px] sm:h-[280px] sm:w-[200px]"

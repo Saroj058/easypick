@@ -1,89 +1,61 @@
 import Link from "next/link";
 
-import { GiftBox } from "@/components/gift/gift-box";
 import { GiftCardPicture } from "@/components/gift-card-art";
 import { ArrowIcon } from "@/components/icons";
-import { formatPrice } from "@/lib/format";
-import { GIFT_CARD_MAX, GIFT_CARD_MIN } from "@/lib/gift-cards";
 
 /**
- * Buying for someone (owner, 18 Oct 2026: "better design", above Our store): two panels side by
- * side. A dark one for sending a piece, with the box whose lid lifts when pointed at and the three
- * steps; a light one for gift cards, the cards fanning out. The Gift page does the explaining.
+ * Buying for someone (owner, 18 Oct 2026: "small, thin, more creative"): one slim black strip
+ * wrapped like a present: a faint diagonal wrap pattern, a white ribbon running down it with a bow
+ * on top, the line, and the two ways in. Three gift cards peek out of the top edge and rise when
+ * the strip is pointed at.
  */
 export function GiftBlock() {
-  const door = "inline-flex h-12 items-center gap-2 rounded-full px-6 text-[13px] font-semibold uppercase tracking-[0.08em] transition-[background-color,color,scale] duration-200 active:scale-[0.97]";
-  const steps = ["Pick a piece and add a message", "We wrap it, box or bag", "They pick their own size"];
+  const door = "inline-flex h-11 items-center gap-2 rounded-full px-5 text-[12.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,color,scale] duration-200 active:scale-[0.97]";
   return (
-    <div>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Gifts</p>
-          <h2 id="gift-title" className="display mt-2 text-[clamp(2.6rem,1.8rem+3vw,4.6rem)] leading-[0.86]">
+    <div className="group relative pt-6">
+      {/* The cards, tucked behind the strip's top edge */}
+      <span aria-hidden className="pointer-events-none absolute right-[6%] top-0 hidden h-[70px] w-[120px] md:block">
+        {[
+          { a: 20000, r: "-rotate-[14deg] group-hover:-rotate-[22deg]", y: "translate-y-6 group-hover:-translate-y-1" },
+          { a: 5000, r: "-rotate-[3deg] group-hover:-rotate-[6deg]", y: "translate-y-7 group-hover:translate-y-0" },
+          { a: 2000, r: "rotate-[8deg] group-hover:rotate-[14deg]", y: "translate-y-8 group-hover:translate-y-1" },
+        ].map((c) => (
+          <span key={c.a} className={`absolute inset-x-0 top-0 block origin-bottom transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${c.r} ${c.y}`}>
+            <GiftCardPicture amount={c.a} className="shadow-[0_10px_20px_-10px_rgba(0,0,0,0.5)]" />
+          </span>
+        ))}
+      </span>
+
+      {/* The bow, sitting on the strip's top edge where the ribbon starts */}
+      <span aria-hidden className="pointer-events-none absolute left-[58%] top-[4px] z-10 hidden -translate-x-[33px] md:block">
+        <svg width="76" height="36" viewBox="0 0 56 26" className="transition-transform duration-500 group-hover:scale-110">
+          <path d="M28 12C22 2 8 0 6 8s14 8 22 4Z" fill="#f5f5f2" stroke="#0a0a0a" strokeWidth="1.4" />
+          <path d="M28 12C34 2 48 0 50 8s-14 8-22 4Z" fill="#f5f5f2" stroke="#0a0a0a" strokeWidth="1.4" />
+          <path d="M26 13l-5 11M30 13l5 11" stroke="#f5f5f2" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="28" cy="12" r="4.5" fill="#f5f5f2" stroke="#0a0a0a" strokeWidth="1.4" />
+        </svg>
+      </span>
+      <div className="on-dark relative isolate flex flex-col gap-4 overflow-hidden rounded-2xl bg-ink px-5 py-5 text-paper md:flex-row md:items-center md:gap-8 md:py-4 md:pl-8 md:pr-5">
+        {/* The wrap: faint diagonal lines */}
+        <span aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[repeating-linear-gradient(135deg,rgba(255,255,255,0.035)_0_2px,transparent_2px_14px)]" />
+        {/* The ribbon, down the strip, with its bow at the top */}
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[58%] -z-10 hidden w-[10px] bg-paper/90 md:block" />
+
+        <div className="min-w-0">
+          <h2 id="gift-title" className="display text-[26px] leading-none md:text-[30px]">
             Buying for someone?
           </h2>
-        </div>
-        <p className="max-w-[34ch] text-[16px] leading-snug text-steel-dark">You know them. We handle the size, the wrap and the delivery.</p>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        {/* Send a piece */}
-        <div className="gift-tile on-dark group relative overflow-hidden rounded-[26px] bg-ink p-6 text-paper md:p-9">
-          <span aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_85%_100%,rgba(255,255,255,0.12),transparent_70%)]" />
-          <div className="relative grid gap-8 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-paper/60">Send a gift</p>
-              <p className="display mt-2 text-[clamp(1.9rem,1.4rem+1.6vw,2.8rem)] leading-[0.92]">
-                You pick the piece.
-                <br />
-                <span className="text-paper/60">They pick the size.</span>
-              </p>
-              <ol className="mt-6 space-y-2.5">
-                {steps.map((s, i) => (
-                  <li key={s} className="flex items-center gap-3 text-[14px] text-paper/85">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-paper/25 font-mono text-[11px]">{i + 1}</span>
-                    {s}
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-4 text-[13px] text-paper/60">Wrong size? They swap it within 14 days, in store or by delivery.</p>
-              <Link href="/gift" className={`${door} mt-7 bg-paper text-ink hover:bg-volt`}>
-                Send a gift <ArrowIcon className="h-4 w-4" />
-              </Link>
-            </div>
-            <span aria-hidden className="mx-auto block w-[180px] transition-transform duration-500 group-hover:-translate-y-1 sm:w-[210px]">
-              <GiftBox className="w-full" />
-            </span>
-          </div>
+          <p className="mt-1.5 text-[14px] text-paper/70">
+            You pick the piece. <span className="text-paper">They pick the size.</span> We wrap it and bring it.
+          </p>
         </div>
 
-        {/* Gift cards */}
-        <div className="group relative flex flex-col justify-between overflow-hidden rounded-[26px] bg-[#f2f2f0] p-6 md:p-9">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Gift cards</p>
-            <p className="display mt-2 text-[clamp(1.9rem,1.4rem+1.6vw,2.8rem)] leading-[0.92]">
-              Not sure what?
-              <br />
-              <span className="text-steel-dark">Let them choose.</span>
-            </p>
-            <p className="mt-3 text-[14px] text-steel-dark">
-              From {formatPrice(GIFT_CARD_MIN)} to {formatPrice(GIFT_CARD_MAX)}. Spend it online or in store.
-            </p>
-          </div>
-          {/* Three cards, held like a hand: they spread when the panel is pointed at */}
-          <span className="relative mx-auto my-8 block h-[120px] w-[190px]" aria-hidden>
-            <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[-12deg] transition-transform duration-500 group-hover:rotate-[-22deg]">
-              <GiftCardPicture amount={20000} className="shadow-[0_12px_24px_-10px_rgba(0,0,0,0.5)]" />
-            </span>
-            <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[-3deg] transition-transform duration-500 group-hover:rotate-[-7deg]">
-              <GiftCardPicture amount={5000} className="shadow-[0_12px_24px_-10px_rgba(0,0,0,0.5)]" />
-            </span>
-            <span className="absolute inset-x-0 top-2 block origin-bottom-left rotate-[6deg] transition-transform duration-500 group-hover:rotate-[12deg]">
-              <GiftCardPicture amount={2000} className="shadow-[0_12px_24px_-10px_rgba(0,0,0,0.5)]" />
-            </span>
-          </span>
-          <Link href="/gift#buy" className={`${door} self-start border border-ink hover:bg-ink hover:text-paper`}>
-            Gift cards <ArrowIcon className="h-4 w-4" />
+        <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+          <Link href="/gift" className={`${door} bg-paper text-ink hover:bg-white`}>
+            Send a gift <ArrowIcon className="h-4 w-4" />
+          </Link>
+          <Link href="/gift#buy" className={`${door} border border-paper/40 text-paper hover:border-paper hover:bg-paper hover:text-ink`}>
+            Gift cards
           </Link>
         </div>
       </div>
