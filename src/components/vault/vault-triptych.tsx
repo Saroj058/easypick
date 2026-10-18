@@ -79,7 +79,7 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
                   <Link href={`/product/${p.slug}`} className="group block" aria-label={`${p.brand} ${p.model}, ${p.sold ? "sold" : p.priceText}`}>
                     <motion.span
                       layout
-                      className="relative block overflow-hidden bg-[#c3d4e4] shadow-[0_40px_80px_-40px_rgba(15,30,45,0.6)]"
+                      className="relative block overflow-hidden bg-[var(--v-tile)] shadow-[0_40px_80px_-40px_rgba(15,30,45,0.6)]"
                       animate={still ? undefined : { y: [0, -6, 0] }}
                       transition={still ? undefined : { duration: 6, repeat: Infinity, ease: "easeInOut" }}
                     >
@@ -96,8 +96,8 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
                     aria-label={`${slot === 0 ? "Previous" : "Next"}: ${p.brand} ${p.model}`}
                     className="group block w-full cursor-pointer"
                   >
-                    <span className="relative block overflow-hidden bg-[#c3d4e4] opacity-80 transition-opacity duration-500 group-hover:opacity-100">
-                      <span aria-hidden className="pointer-events-none absolute inset-0 z-10 bg-[#4b6680]/25 transition-opacity duration-500 group-hover:opacity-0" />
+                    <span className="relative block overflow-hidden bg-[var(--v-tile)] opacity-80 transition-opacity duration-500 group-hover:opacity-100">
+                      <span aria-hidden className="pointer-events-none absolute inset-0 z-10 bg-[var(--v-slate)]/25 transition-opacity duration-500 group-hover:opacity-0" />
                       <ProductImage image={p.image} category={p.category} colourHex={p.hex} decorative ground="bg-transparent" className="[&_img]:mix-blend-multiply" sizes="220px" />
                     </span>
                   </button>
@@ -134,7 +134,7 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
         </AnimatePresence>
         {n > 1 && (
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => go(-1)} aria-label="Previous piece" className="grid h-11 w-11 cursor-pointer place-items-center rounded-full border border-white/30 text-white transition-colors hover:bg-white hover:text-[#1f3347]">
+            <button type="button" onClick={() => go(-1)} aria-label="Previous piece" className="grid h-11 w-11 cursor-pointer place-items-center rounded-full border border-white/30 text-white transition-colors hover:bg-white hover:text-[var(--v-ink)]">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                 <path d="M15 18l-6-6 6-6" />
               </svg>
@@ -142,7 +142,7 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
             <span aria-hidden className={`w-20 text-center ${V.mono} tabular-nums text-white`}>
               {two(at + 1)} <span className={V.iceDim}>/ {two(n)}</span>
             </span>
-            <button type="button" onClick={() => go(1)} aria-label="Next piece" className="grid h-11 w-11 cursor-pointer place-items-center rounded-full border border-white/30 text-white transition-colors hover:bg-white hover:text-[#1f3347]">
+            <button type="button" onClick={() => go(1)} aria-label="Next piece" className="grid h-11 w-11 cursor-pointer place-items-center rounded-full border border-white/30 text-white transition-colors hover:bg-white hover:text-[var(--v-ink)]">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                 <path d="M9 18l6-6-6-6" />
               </svg>

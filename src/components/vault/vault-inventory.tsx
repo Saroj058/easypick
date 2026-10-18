@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { two, V } from "./look";
@@ -12,11 +11,11 @@ type Sort = keyof typeof SORTS;
 const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
 /**
- * Everything in the Vault (after the reference's "inventory"): the brands as tabs (each its own
- * page, so it can be shared), then a size, "still available" and an order, all at once, with the
+ * Everything in the Vault, or in one brand (after the reference's "inventory"; the brands are picked
+ * at the top of the page): a size, "still available" and an order, all at once, with the
  * tiles sliding into their new places. Sold pieces stay at the end as the archive.
  */
-export function VaultInventory({ tiles, brands, brand }: { tiles: TileData[]; brands: { name: string; n: number; href: string }[]; brand?: string }) {
+export function VaultInventory({ tiles, brand }: { tiles: TileData[]; brand?: string }) {
   const still = useReducedMotion();
   const [size, setSize] = useState<string | null>(null);
   const [avail, setAvail] = useState(false);
@@ -32,7 +31,7 @@ export function VaultInventory({ tiles, brands, brand }: { tiles: TileData[]; br
   const on = Boolean(size || avail || sort !== "new");
 
   const pill = (active: boolean) =>
-    `inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 ${V.mono} transition-colors ${active ? "border-white bg-white text-[#1f3347]" : "border-white/30 text-white hover:border-white"}`;
+    `inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 ${V.mono} transition-colors ${active ? "border-white bg-white text-[var(--v-ink)]" : "border-white/30 text-white hover:border-white"}`;
 
   return (
     <section aria-labelledby="vault-inv" className="pb-6">
@@ -45,21 +44,6 @@ export function VaultInventory({ tiles, brands, brand }: { tiles: TileData[]; br
           Filters{on ? " · on" : ""}
         </button>
       </div>
-
-      {/* The brands: each its own page */}
-      {brands.length > 1 && (
-        <nav aria-label="Vault brands" className="no-scrollbar -mx-4 mt-6 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
-          <Link href="/vault#inventory" aria-current={brand ? undefined : "page"} className={pill(!brand)}>
-            All
-          </Link>
-          {brands.map((b) => (
-            <Link key={b.name} href={b.href} aria-current={brand === b.name ? "page" : undefined} className={pill(brand === b.name)}>
-              {b.name}
-              <span className="opacity-70">{two(b.n)}</span>
-            </Link>
-          ))}
-        </nav>
-      )}
 
       <AnimatePresence initial={false}>
         {open && (

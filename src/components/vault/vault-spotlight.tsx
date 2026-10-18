@@ -44,13 +44,13 @@ export function VaultSpotlight({ piece }: { piece: TileData }) {
         <motion.div style={{ y, rotate }} className="relative z-10 mx-auto -mt-[10%] w-[min(78%,460px)] md:-mt-[14%]">
           <motion.div animate={still ? undefined : { y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
             <Link href={`/product/${piece.slug}`} tabIndex={-1} aria-hidden className="block">
-              <span className="relative block overflow-hidden rounded-[2px] bg-[#c3d4e4] shadow-[0_60px_90px_-50px_rgba(10,25,40,0.75)]">
+              <span className="relative block overflow-hidden rounded-[2px] bg-[var(--v-tile)] shadow-[0_60px_90px_-50px_rgba(10,25,40,0.75)]">
                 <span aria-hidden className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(60%_45%_at_50%_0%,rgba(255,255,255,0.5),transparent_70%)]" />
                 <ProductImage image={piece.image} category={piece.category} colourHex={piece.hex} decorative ground="bg-transparent" className="[&_img]:mix-blend-multiply" sizes="460px" />
               </span>
             </Link>
           </motion.div>
-          <span aria-hidden className="mx-auto mt-6 block h-4 w-[60%] rounded-[50%] bg-[#1f3347]/40 blur-[14px]" />
+          <span aria-hidden className="mx-auto mt-6 block h-4 w-[60%] rounded-[50%] bg-black/40 blur-[14px]" />
         </motion.div>
 
         <div className="relative z-20 mt-8 grid gap-8 md:-mt-24 md:grid-cols-[1fr_auto] md:items-end">

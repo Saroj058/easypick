@@ -3,7 +3,9 @@ import Link from "next/link";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
-import { two, V } from "@/components/vault/look";
+import { brandWorld, COLD, themeVars, two, V } from "@/components/vault/look";
+import { ScrollToOpen } from "@/components/vault/scroll-to-open";
+import { VaultBrands } from "@/components/vault/vault-brands";
 import { VaultInventory } from "@/components/vault/vault-inventory";
 import { VaultSpotlight } from "@/components/vault/vault-spotlight";
 import { VaultTriptych } from "@/components/vault/vault-triptych";
@@ -35,6 +37,8 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   // The spotlight: a different piece from the one the triptych opens on, one that can be bought.
   const spot = featured.slice(1).find((t) => !t.sold) ?? featured.find((t) => !t.sold) ?? featured[0];
   const tiles = list.map((p, i) => toTile(p, i));
+  // Each brand wears its own colours and tells its own story; "All" is the Vault's cold blue.
+  const world = brandWorld(one?.name);
   const facts = [
     "Original brands",
     "One of each",
@@ -44,7 +48,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   ];
 
   return (
-    <div className={`vault min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0`}>
+    <div style={themeVars(world?.theme ?? COLD)} className={`vault min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] transition-colors duration-500 md:pb-0`}>
       {/* The opening, on frost */}
       <div className="container-ep pt-8 md:pt-12">
         <div className={`flex items-center justify-between gap-4 ${V.mono} ${V.ink}`}>
@@ -59,13 +63,40 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
             [ {two(brands.length)} brands · {two(pieces.length)} pieces{sold ? ` · ${two(sold)} sold` : ""} ]
           </span>
         </div>
-        <div className="mt-8 grid gap-6 md:mt-12 md:grid-cols-[1fr_auto] md:items-end">
-          <h1 className={`display text-[clamp(3rem,1.6rem+6vw,8rem)] leading-[0.84] ${V.deep}`}>{one ? one.name : "The Vault"}</h1>
-          <p className={`max-w-[30ch] text-left ${V.mono} leading-[1.7] ${V.ink} md:text-right`}>
-            {one ? `${one.pieces.length} ${one.pieces.length === 1 ? "piece" : "pieces"} from ${one.name}. One of each.` : "Original brands, one of each. Checked by hand, never restocked, gone when it's gone."}
-          </p>
+        {/* The brands first: one card each, in its own colours */}
+        {brands.length > 0 && (
+          <div className="mt-6">
+            <ScrollToOpen>
+              <VaultBrands total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />
+            </ScrollToOpen>
+          </div>
+        )}
+        <div className="mt-10 grid gap-6 md:mt-14 md:grid-cols-[1fr_minmax(0,34ch)] md:items-end">
+          <div>
+            {world && <p className={`${V.mono} ${V.ink}`}>[ {world.origin} ]</p>}
+            <h1 className={`display mt-2 text-[clamp(3rem,1.6rem+6vw,8rem)] leading-[0.84] ${V.deep}`}>{one ? one.name : "The Vault"}</h1>
+            {world && (
+              <p className={`display mt-3 text-[clamp(1.6rem,1.1rem+1.8vw,2.6rem)] leading-[0.95] ${V.deep}`}>
+                {world.line[0]} <span className="opacity-70">{world.line[1]}</span>
+              </p>
+            )}
+          </div>
+          <div className={`text-left md:text-right`}>
+            {world ? (
+              <p className={`text-[15px] leading-relaxed ${V.ink}`}>{world.story}</p>
+            ) : (
+              <p className={`${V.mono} leading-[1.7] ${V.ink}`}>
+                {one ? `${one.pieces.length} ${one.pieces.length === 1 ? "piece" : "pieces"} from ${one.name}. One of each.` : "Original brands, one of each. Checked by hand, never restocked, gone when it's gone."}
+              </p>
+            )}
+            {one && (
+              <p className={`mt-3 ${V.mono} ${V.ink}`}>
+                [ {two(one.pieces.length)} {one.pieces.length === 1 ? "piece" : "pieces"} here · one of each ]
+              </p>
+            )}
+          </div>
         </div>
-        <ul aria-label="Good to know" className={`no-scrollbar -mx-4 mt-8 flex gap-x-6 overflow-x-auto whitespace-nowrap border-y border-[#1f3347]/15 px-4 py-3 ${V.mono} ${V.ink} md:mx-0 md:flex-wrap md:px-0`}>
+        <ul aria-label="Good to know" className={`no-scrollbar -mx-4 mt-8 flex gap-x-6 overflow-x-auto whitespace-nowrap border-y border-[var(--v-ink)]/15 px-4 py-3 ${V.mono} ${V.ink} md:mx-0 md:flex-wrap md:px-0`}>
           {facts.map((f) => (
             <li key={f}>[ {f} ]</li>
           ))}
@@ -86,11 +117,16 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
             <>
               {wanted && !one && <p className={`mt-6 text-[15px] ${V.iceDim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
               <div className="mt-8 md:mt-10">
-                <VaultTriptych pieces={featured} left={["Not for many.", "For the few."]} right={["Checked by hand.", "Never restocked."]} />
+                <VaultTriptych
+                  key={one?.name ?? "all"}
+                  pieces={featured}
+                  left={world ? world.line : ["Not for many.", "For the few."]}
+                  right={world ? ["One of each.", "Never restocked."] : ["Checked by hand.", "Never restocked."]}
+                />
               </div>
               {spot && <VaultSpotlight piece={spot} />}
               <div id="inventory" className="scroll-mt-28">
-                <VaultInventory tiles={tiles} brand={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: `${vaultHref(b.name)}#inventory` }))} />
+                <VaultInventory tiles={tiles} brand={one?.name} />
               </div>
             </>
           )}

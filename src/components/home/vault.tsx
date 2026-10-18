@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { formatPrice } from "@/lib/format";
-import { V } from "@/components/vault/look";
+import { themeVars, V } from "@/components/vault/look";
 import { VaultTile, type TileData } from "@/components/vault/vault-tile";
 import type { Product } from "@/lib/types";
 
@@ -34,14 +34,14 @@ export const brandId = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/
  */
 function VaultWaiting() {
   return (
-    <section aria-labelledby="vault-title" className={`section ${V.frost}`}>
+    <section aria-labelledby="vault-title" style={themeVars()} className={`section ${V.frost}`}>
       <div className="container-ep">
         <div className={`${V.slate} px-6 py-14 text-white md:px-12`}>
           <h2 id="vault-title" className="display display-h1">
             The Vault
           </h2>
           <p className={`mt-2.5 text-[17px] ${V.iceDim}`}>Original brands. One of each. The first pieces are on their way.</p>
-          <Link href="/alerts" className={`mt-6 inline-flex h-11 items-center rounded-full border border-white/40 px-5 ${V.mono} hover:bg-white hover:text-[#1f3347]`}>
+          <Link href="/alerts" className={`mt-6 inline-flex h-11 items-center rounded-full border border-white/40 px-5 ${V.mono} hover:bg-white hover:text-[var(--v-ink)]`}>
             Get the alert
           </Link>
         </div>
@@ -118,7 +118,7 @@ export function Vault({ products }: { products: Product[] }) {
   const featured = featuredVault(pieces, FEATURED);
 
   return (
-    <section aria-labelledby="vault-title" className={`section ${V.frost}`}>
+    <section aria-labelledby="vault-title" style={themeVars()} className={`section ${V.frost}`}>
       <div className="container-ep">
         <div className={`${V.slate} px-4 pb-10 pt-8 text-white md:px-10 md:pb-12 md:pt-10`}>
           <div className={`mb-6 flex justify-between gap-4 ${V.mono} ${V.iceDim}`}>
@@ -132,9 +132,9 @@ export function Vault({ products }: { products: Product[] }) {
               </h2>
               <p className={`mt-2.5 text-[17px] ${V.iceDim}`}>Original brands. One of each. Never restocked.</p>
             </div>
-            <Link href={vaultHref()} className="group inline-flex h-12 items-center gap-3 rounded-full bg-white pl-6 pr-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#1f3347] transition-colors hover:bg-[#c3d4e4]">
+            <Link href={vaultHref()} className="group inline-flex h-12 items-center gap-3 rounded-full bg-white pl-6 pr-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--v-ink)] transition-colors hover:bg-[var(--v-tile)]">
               Enter the Vault
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#1f3347] text-white transition-transform group-hover:translate-x-0.5" aria-hidden>
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--v-ink)] text-white transition-transform group-hover:translate-x-0.5" aria-hidden>
                 →
               </span>
             </Link>
