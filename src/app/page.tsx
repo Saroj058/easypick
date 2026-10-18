@@ -176,18 +176,14 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* The Vault: original brands and numbered pieces */}
-      <Vault products={products} />
-
-
-      {/* Festival offers: only while a real sale runs. The pieces move along by themselves. */}
+      {/* Pick your offer, under Designer Fits and above the Vault (owner, 18 Oct 2026) */}
       {offers.length > 0 && (
-        <section aria-labelledby="offers-title" className="section overflow-hidden">
+        <section aria-labelledby="pick-offer-title" className="overflow-hidden py-12 md:py-16">
           <div className="container-ep">
             {/* Pick your offer: one stack, every offer fanned out left and right (owner, 18 Oct 2026). */}
-            <div className="mb-20 md:mb-28">
+            <div>
               <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Festival offers</p>
-              <h2 className="mt-2 text-center text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
+              <h2 id="pick-offer-title" className="mt-2 text-center text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
                 Pick your offer.
                 <span className="block text-steel-dark">Same price in store.</span>
               </h2>
@@ -196,6 +192,18 @@ export default async function HomePage() {
               </div>
             </div>
             {/* Then every offer in orbit, written out below it (owner's reference "Orbit"), in place of the old row of marked-down pieces. */}
+          </div>
+        </section>
+      )}
+
+      {/* The Vault: original brands and numbered pieces */}
+      <Vault products={products} />
+
+
+      {/* Festival offers: only while a real sale runs. The pieces move along by themselves. */}
+      {offers.length > 0 && (
+        <section aria-labelledby="offers-title" className="section overflow-hidden">
+          <div className="container-ep">
             {/* The ring, with only its name and the way in set in the curve under the cards (owner, 18 Oct 2026). */}
             <OfferBoard offers={offerList} products={products} today={ktmDay()}>
               <h2 id="offers-title" className="text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
