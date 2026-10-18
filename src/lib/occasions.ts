@@ -4,6 +4,7 @@
 
 import { RACK_CUTOUTS } from "./rack-cutouts";
 import type { Category, Product, Size } from "./types";
+import { isBottom } from "./site";
 
 type Tone = "dark" | "light" | "mixed";
 
@@ -17,54 +18,54 @@ const PLAN = [
     key: "party",
     label: "Party",
     fits: [
-      { key: "party", label: "Night out", note: "Dark, sharp, made for late.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-      { key: "party-house", label: "House party", note: "Easy enough to dance in.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
-      { key: "party-birthday", label: "Birthday", note: "Your day. Dress a bit louder.", slots: [["tees", "co-ords"], ["bottoms"], ["jackets"]], tone: "mixed" },
+      { key: "party", label: "Night out", note: "Dark, sharp, made for late.", slots: [["jackets"], ["tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"]], tone: "dark" },
+      { key: "party-house", label: "House party", note: "Easy enough to dance in.", slots: [["hoodies", "sweatshirts"], ["jeans", "trousers", "joggers", "shorts"], ["accessories"]], tone: "dark" },
+      { key: "party-birthday", label: "Birthday", note: "Your day. Dress a bit louder.", slots: [["tees", "shirts", "polos", "co-ords"], ["jeans", "trousers", "joggers", "shorts"], ["jackets"]], tone: "mixed" },
     ],
   },
   {
     key: "date",
     label: "Date",
     fits: [
-      { key: "date", label: "Dinner", note: "Sharp without trying too hard.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "dark" },
-      { key: "date-coffee", label: "Coffee", note: "Light colours for a daylight date.", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "light" },
-      { key: "date-movie", label: "Movie night", note: "Comfy for the back row.", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
+      { key: "date", label: "Dinner", note: "Sharp without trying too hard.", slots: [["jackets"], ["tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"]], tone: "dark" },
+      { key: "date-coffee", label: "Coffee", note: "Light colours for a daylight date.", slots: [["tees", "shirts", "polos", "hoodies", "sweatshirts"], ["jeans", "trousers", "joggers", "shorts"], ["accessories"]], tone: "light" },
+      { key: "date-movie", label: "Movie night", note: "Comfy for the back row.", slots: [["hoodies", "sweatshirts"], ["jeans", "trousers", "joggers", "shorts"]], tone: "mixed" },
     ],
   },
   {
     key: "college",
     label: "College",
     fits: [
-      { key: "college", label: "Class day", note: "First class to last, no fuss.", slots: [["hoodies", "tees"], ["bottoms"], ["accessories"]], tone: "mixed" },
-      { key: "college-presentation", label: "Presentation", note: "Clean lines, quiet confidence.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-      { key: "college-fest", label: "Fest", note: "Built for a long day out.", slots: [["tees"], ["bottoms"], ["jackets"], ["accessories"]], tone: "dark" },
+      { key: "college", label: "Class day", note: "First class to last, no fuss.", slots: [["hoodies", "sweatshirts", "tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"], ["accessories"]], tone: "mixed" },
+      { key: "college-presentation", label: "Presentation", note: "Clean lines, quiet confidence.", slots: [["jackets"], ["tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"]], tone: "light" },
+      { key: "college-fest", label: "Fest", note: "Built for a long day out.", slots: [["tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"], ["jackets"], ["accessories"]], tone: "dark" },
     ],
   },
   {
     key: "cafe",
     label: "Café",
     fits: [
-      { key: "cafe", label: "Brunch", note: "Fresh, light, unhurried.", slots: [["tees", "co-ords"], ["bottoms"], ["accessories"]], tone: "light" },
-      { key: "cafe-laptop", label: "Laptop day", note: "Comfy for hours at a table.", slots: [["hoodies"], ["bottoms"]], tone: "mixed" },
-      { key: "cafe-evening", label: "Evening", note: "One more layer for when it cools.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "mixed" },
+      { key: "cafe", label: "Brunch", note: "Fresh, light, unhurried.", slots: [["tees", "shirts", "polos", "co-ords"], ["jeans", "trousers", "joggers", "shorts"], ["accessories"]], tone: "light" },
+      { key: "cafe-laptop", label: "Laptop day", note: "Comfy for hours at a table.", slots: [["hoodies", "sweatshirts"], ["jeans", "trousers", "joggers", "shorts"]], tone: "mixed" },
+      { key: "cafe-evening", label: "Evening", note: "One more layer for when it cools.", slots: [["jackets"], ["tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"]], tone: "mixed" },
     ],
   },
   {
     key: "dashain",
     label: "Dashain",
     fits: [
-      { key: "dashain", label: "Tika day", note: "Neat and bright for the family.", slots: [["jackets"], ["tees"], ["bottoms"]], tone: "light" },
-      { key: "dashain-family", label: "Family visit", note: "Smart, but floor-sitting friendly.", slots: [["hoodies", "tees"], ["bottoms"], ["jackets"]], tone: "mixed" },
-      { key: "dashain-travel", label: "Travel home", note: "Easy for the long bus ride home.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "dashain", label: "Tika day", note: "Neat and bright for the family.", slots: [["jackets"], ["tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"]], tone: "light" },
+      { key: "dashain-family", label: "Family visit", note: "Smart, but floor-sitting friendly.", slots: [["hoodies", "sweatshirts", "tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"], ["jackets"]], tone: "mixed" },
+      { key: "dashain-travel", label: "Travel home", note: "Easy for the long bus ride home.", slots: [["hoodies", "sweatshirts"], ["jeans", "trousers", "joggers", "shorts"], ["accessories"]], tone: "dark" },
     ],
   },
   {
     key: "weekend",
     label: "Weekend",
     fits: [
-      { key: "weekend", label: "Easy day", note: "Nothing to think about.", slots: [["tees", "hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-      { key: "weekend-roadtrip", label: "Road trip", note: "Made for the passenger seat.", slots: [["hoodies"], ["bottoms"], ["accessories"]], tone: "mixed" },
-      { key: "weekend-ride", label: "Bike ride", note: "Dark, easy to move in.", slots: [["jackets"], ["tees"], ["bottoms"], ["accessories"]], tone: "dark" },
+      { key: "weekend", label: "Easy day", note: "Nothing to think about.", slots: [["tees", "shirts", "polos", "hoodies", "sweatshirts"], ["jeans", "trousers", "joggers", "shorts"], ["accessories"]], tone: "mixed" },
+      { key: "weekend-roadtrip", label: "Road trip", note: "Made for the passenger seat.", slots: [["hoodies", "sweatshirts"], ["jeans", "trousers", "joggers", "shorts"], ["accessories"]], tone: "mixed" },
+      { key: "weekend-ride", label: "Bike ride", note: "Dark, easy to move in.", slots: [["jackets"], ["tees", "shirts", "polos"], ["jeans", "trousers", "joggers", "shorts"], ["accessories"]], tone: "dark" },
     ],
   },
 ] as const satisfies readonly {
@@ -202,7 +203,7 @@ export function designerFits(products: Product[], saved: SavedLooks = {}): { loo
         const layered = plan.slots.some((cats) => (cats as readonly Category[]).includes("jackets"));
         plan.slots.forEach((cats, slot) => {
           // A co-ord set is top and bottom in one: no second pair of trousers with it.
-          if ((cats as readonly Category[]).includes("bottoms") && pieces.some((x) => x.category === "co-ords")) return;
+          if ((cats as readonly Category[]).some(isBottom) && pieces.some((x) => x.category === "co-ords")) return;
           // Vault pieces are only in a fit when the owner puts them there.
           const options = live.filter((p) => !p.vault && (cats as readonly Category[]).includes(p.category) && !used.has(p.slug));
           if (options.length === 0) return;
@@ -240,7 +241,7 @@ export function swapOptions(products: Product[]): Record<"top" | "bottom" | "lay
 
 /** Which /fit slot a category goes in, for "Build your own fit". */
 export function fitSlot(category: Category): "top" | "bottom" | "layer" | "cap" {
-  if (category === "bottoms") return "bottom";
+  if (isBottom(category)) return "bottom";
   if (category === "jackets") return "layer";
   if (category === "accessories") return "cap";
   return "top";

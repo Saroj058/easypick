@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { FitBuilder, type Fit, type SlotKey } from "@/components/fit-builder";
 import { getProducts } from "@/lib/store";
 import type { Product, Size } from "@/lib/types";
+import { isBottom } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Build a fit",
@@ -11,8 +12,8 @@ export const metadata: Metadata = {
 };
 
 const SLOT_CATS: Record<SlotKey, Product["category"][]> = {
-  top: ["tees", "hoodies"],
-  bottom: ["bottoms"],
+  top: ["tees", "shirts", "polos", "hoodies", "sweatshirts"],
+  bottom: ["jeans", "trousers", "joggers", "shorts"],
   layer: ["jackets"],
   cap: ["accessories"],
 };
@@ -41,7 +42,7 @@ export default async function FitPage({ searchParams }: PageProps<"/fit">) {
   // Nothing shared: start with a basic pairing so the stage isn't empty.
   if (Object.keys(initial).length === 0) {
     const top = live.find((p) => p.category === "hoodies") ?? live.find((p) => p.category === "tees");
-    const bottom = live.find((p) => p.category === "bottoms");
+    const bottom = live.find((p) => p.category === "joggers") ?? live.find((p) => isBottom(p.category));
     initial = {
       ...(top && { top: { slug: top.slug, colour: top.colours[top.colours.length - 1].name, size: null } }),
       ...(bottom && { bottom: { slug: bottom.slug, colour: bottom.colours[0].name, size: null } }),

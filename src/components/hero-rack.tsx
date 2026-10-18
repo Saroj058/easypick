@@ -8,6 +8,7 @@ import type { Category, Product, Size } from "@/lib/types";
 import { HangTag } from "./hang-tag";
 import { ArrowIcon } from "./icons";
 import { GarmentSvg } from "./product-image";
+import { isBottom } from "@/lib/site";
 
 export interface RackPiece {
   product: Product;
@@ -37,9 +38,15 @@ const CUTOUTS = new Set([
 // cover the hanger's shoulders; trousers hang from its clips; a cap hangs from a short hook).
 const fit: Record<Category, { w: string; tuck: string }> = {
   tees: { w: "w-[104%]", tuck: "-mt-[21%]" },
+  shirts: { w: "w-[104%]", tuck: "-mt-[21%]" },
+  polos: { w: "w-[104%]", tuck: "-mt-[21%]" },
   hoodies: { w: "w-[108%]", tuck: "-mt-[27%]" },
+  sweatshirts: { w: "w-[108%]", tuck: "-mt-[25%]" },
   jackets: { w: "w-[108%]", tuck: "-mt-[25%]" },
-  bottoms: { w: "w-[58%]", tuck: "-mt-[7%]" },
+  jeans: { w: "w-[58%]", tuck: "-mt-[7%]" },
+  trousers: { w: "w-[58%]", tuck: "-mt-[7%]" },
+  joggers: { w: "w-[58%]", tuck: "-mt-[7%]" },
+  shorts: { w: "w-[58%]", tuck: "-mt-[7%]" },
   "co-ords": { w: "w-[86%]", tuck: "-mt-[24%]" },
   accessories: { w: "w-[70%]", tuck: "-mt-[2%]" },
 };
@@ -49,7 +56,7 @@ const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 function Hanger({ category }: { category: Category }) {
   // A cap hangs from a short steel hook, not a hanger.
   if (category === "accessories") return <span className="block h-[22px] w-[2px] rounded-full bg-gradient-to-b from-[#8d8d8d] to-[#5c5c5c]" aria-hidden />;
-  const clip = category === "bottoms";
+  const clip = isBottom(category);
   return (
     // eslint-disable-next-line @next/next/no-img-element -- a small cut-out photograph, already the size it is shown at
     <img src={clip ? "/rack/hanger-clip.webp" : "/rack/hanger.webp"} alt="" width={clip ? 569 : 652} height={clip ? 327 : 340} className={`block h-auto ${clip ? "w-[62%]" : "w-[78%]"}`} draggable={false} />

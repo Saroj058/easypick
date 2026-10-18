@@ -3,7 +3,20 @@ import type { Category } from "./types";
 // SKU codes for new products: category code + number, colour code, size, e.g. HOD03-BLA-M.
 // Pure helpers (no database), so the admin action and the tests share them.
 
-export const CATEGORY_CODE: Record<Category, string> = { tees: "TEE", hoodies: "HOD", jackets: "JKT", bottoms: "BTM", "co-ords": "COR", accessories: "ACC" };
+export const CATEGORY_CODE: Record<Category, string> = {
+  tees: "TEE",
+  shirts: "SHT",
+  polos: "POL",
+  hoodies: "HOD",
+  sweatshirts: "SWT",
+  jackets: "JKT",
+  jeans: "JNS",
+  trousers: "TRS",
+  joggers: "JOG",
+  shorts: "SHO",
+  "co-ords": "COR",
+  accessories: "ACC",
+};
 
 /**
  * The next product code for a category after the ones already used: HOD03 when HOD01 and HOD02

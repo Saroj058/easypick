@@ -6,7 +6,7 @@
 import { formatPrice } from "../format";
 import { site } from "../site";
 import type { Product } from "../types";
-import { GREETING, KIND_WORDS, categoryOf, forSelf, smallTalk, acknowledge, applySet, cleanState, question, readMessage, stageOf, type PickAction, type PickState, type Quick } from "./journey";
+import { GREETING, KIND_WORDS, categoriesOf, forSelf, smallTalk, acknowledge, applySet, cleanState, question, readMessage, stageOf, type PickAction, type PickState, type Quick } from "./journey";
 import { GOES_WITH, compare, giftable, recommend, type PickCard } from "./recommend";
 import type { Understanding } from "./ai";
 
@@ -217,8 +217,9 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
   }
 
   if (action === "pair") {
-    const kind = categoryOf(s.kind);
-    const kinds = kind ? GOES_WITH[kind] : undefined;
+    const cats = categoriesOf(s.kind);
+    const kind = cats?.[0];
+    const kinds = cats ? [...new Set(cats.flatMap((c) => GOES_WITH[c]))].filter((c) => !cats.includes(c)) : undefined;
     // Their colour was for the first piece, not for what goes with it.
     const { cards } = recommend(products, { ...s, colour: undefined, budget: undefined }, 3, kinds);
     if (cards.length) {

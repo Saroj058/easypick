@@ -40,11 +40,17 @@ const ALIASES: Record<string, string> = {
 
 const CATEGORY_WORDS: Record<string, string[]> = {
   tees: ["tee", "tees", "t-shirt", "top"],
+  shirts: ["shirt", "shirts", "button", "top"],
+  polos: ["polo", "polos", "collar", "top"],
   hoodies: ["hoodie", "hoodies", "top"],
+  sweatshirts: ["sweatshirt", "sweatshirts", "crewneck", "sweater", "top"],
   jackets: ["jacket", "jackets", "outerwear"],
-  bottoms: ["bottom", "bottoms", "pant", "trouser"],
+  jeans: ["jean", "jeans", "denim", "bottom", "bottoms", "pant"],
+  trousers: ["trouser", "trousers", "chino", "bottom", "bottoms", "pant"],
+  joggers: ["jogger", "joggers", "cargo", "track", "bottom", "bottoms", "pant"],
+  shorts: ["short", "shorts", "bottom", "bottoms"],
   "co-ords": ["co-ord", "set", "matching"],
-  accessories: ["accessory", "accessories"],
+  accessories: ["accessory", "accessories", "cap", "hat"],
 };
 
 const norm = (s: string) =>

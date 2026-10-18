@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { Countdown } from "@/components/countdown";
-import { ProductCard } from "@/components/product-card";
+import { DropKinds } from "@/components/drop-kinds";
+import { toRailPiece } from "@/components/home/rail";
 import { RefreshAt } from "@/components/refresh-at";
 import { ShareDrop } from "@/components/share-drop";
 import { formatDropTime } from "@/lib/format";
@@ -113,18 +114,7 @@ export default async function DropPage({ params }: PageProps<"/drop/[slug]">) {
 
 
         <h2 className="sr-only">The pieces</h2>
-        <ul className="grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
-          {products.map((p, i) => (
-            <li key={p.id}>
-              <ProductCard
-                product={p}
-                priority={i < 2}
-                plate={`${drop.slug}/${String(i + 1).padStart(2, "0")}`}
-                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-              />
-            </li>
-          ))}
-        </ul>
+        <DropKinds pieces={products.map(toRailPiece)} dropName={drop.name} soon={!released} />
 
         {released && !soldOut && upcoming && (
           <section aria-label="Hear about the next drop" className="mt-16 bg-photo p-6 md:p-10">

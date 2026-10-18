@@ -20,8 +20,8 @@ export interface FitPick {
 export type Fit = Partial<Record<SlotKey, FitPick | null>>;
 
 const SLOTS: { key: SlotKey; label: string; cats: Category[]; optional?: boolean }[] = [
-  { key: "top", label: "Top", cats: ["tees", "hoodies"] },
-  { key: "bottom", label: "Bottom", cats: ["bottoms"] },
+  { key: "top", label: "Top", cats: ["tees", "shirts", "polos", "hoodies", "sweatshirts"] },
+  { key: "bottom", label: "Bottom", cats: ["jeans", "trousers", "joggers", "shorts"] },
   { key: "layer", label: "Layer", cats: ["jackets"], optional: true },
   { key: "cap", label: "Cap", cats: ["accessories"], optional: true },
 ];

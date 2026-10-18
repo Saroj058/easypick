@@ -23,7 +23,7 @@ const statuses = [
   { value: "archived", label: "Archived", note: "Hidden, kept for records", dot: "bg-[#55575c]" },
 ];
 
-export function ProductForm({ product, drops }: { product: Product; drops: { slug: string; name: string }[] }) {
+export function ProductForm({ product, drops, offers = [] }: { product: Product; drops: { slug: string; name: string }[]; /** Festival offers that use ticks. */ offers?: { name: string; tag: string }[] }) {
   const [state, action, pending] = useActionState<SaveState, FormData>(saveProduct, { status: "idle" });
   const [preview, setPreview] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -215,6 +215,24 @@ export function ProductForm({ product, drops }: { product: Product; drops: { slu
           <textarea id="story" name="story" maxLength={600} rows={3} defaultValue={product.story ?? ""} className={area} />
         </div>
       </fieldset>
+
+      {offers.length > 0 && (
+        <fieldset className={card}>
+          <legend className="sr-only">Festival offers</legend>
+          <p className={h3} aria-hidden>
+            Festival offers
+          </p>
+          <p className="mt-1 text-[14px] text-[#55575c]">Tick the offers this piece is in. It shows there while it has a sale price.</p>
+          {offers.map((o) => (
+            <label key={o.tag} className="mt-2 flex min-h-11 items-center gap-3 text-[15px]">
+              <input type="hidden" name="offerTagsShown" value={o.tag} />
+              <input type="checkbox" name="offerTag" value={o.tag} defaultChecked={product.tags.includes(o.tag)} className="h-5 w-5 accent-ink" />
+              {o.name}
+              {!product.salePrice && <span className="text-[13px] text-[#6b6d72]">(needs a sale price)</span>}
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       <fieldset className={card}>
         <legend className="sr-only">Trending page</legend>

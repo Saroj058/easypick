@@ -6,6 +6,7 @@ import { ArrowLeft, Copy, ExternalLink } from "lucide-react";
 import { ProductImage } from "@/components/product-image";
 import { duplicateProduct } from "@/app/admin/actions";
 import { allDrops, findProduct, restockDemand, stockHistory } from "@/lib/catalogue";
+import { getOffersForAdmin } from "@/lib/offers";
 import { formatPrice } from "@/lib/format";
 import { SIZE_ORDER } from "@/lib/inventory";
 import { categoryLabels, site } from "@/lib/site";
@@ -33,7 +34,7 @@ export default async function AdminProduct({ params, searchParams }: PageProps<"
   const { added } = await searchParams;
   const product = await findProduct(slug);
   if (!product) notFound();
-  const [demand, history, drops] = await Promise.all([restockDemand(), stockHistory(slug, 25), allDrops()]);
+  const [demand, history, drops, offers] = await Promise.all([restockDemand(), stockHistory(slug, 25), allDrops(), getOffersForAdmin()]);
 
   const front = product.images.find((i) => i.kind === "front") ?? product.images[0];
   const stock = product.variants.reduce((n, v) => n + v.stock, 0);
@@ -96,7 +97,7 @@ export default async function AdminProduct({ params, searchParams }: PageProps<"
           <section className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
             <StockForm product={product} demand={demand} />
           </section>
-          <ProductForm product={product} drops={drops.map((d) => ({ slug: d.slug, name: d.name }))} />
+          <ProductForm product={product} drops={drops.map((d) => ({ slug: d.slug, name: d.name }))} offers={offers.flatMap((o) => (o.tag ? [{ name: o.name, tag: o.tag }] : []))} />
           <section className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
             <StockHistory history={history} />
           </section>

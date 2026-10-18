@@ -13,6 +13,10 @@ import { Vault } from "@/components/home/vault";
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
 import { OffersCarousel } from "@/components/ui/offers-carousel";
+import { OfferCards } from "@/components/offer-cards";
+import { ktmDay } from "@/lib/ktm-day";
+import { liveOffers } from "@/lib/offer-rules";
+import { getOffers } from "@/lib/offers";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { SelfCheckout } from "@/components/self-checkout";
 import { getStoreInfo } from "@/lib/store-info";
@@ -63,7 +67,7 @@ export default async function HomePage() {
   const withPhoto = range.filter((p) => RACK_CUTOUTS.has(p.slug));
   const buyable = (p: (typeof range)[number]) => p.status === "live" && p.variants.some((v) => v.stock > 0);
   const inTurn = (list: typeof withPhoto) => {
-    const kinds = ["hoodies", "tees", "jackets", "bottoms", "co-ords", "accessories"].map((k) => list.filter((p) => p.category === k));
+    const kinds = ["hoodies", "tees", "jackets", "joggers", "shirts", "jeans", "sweatshirts", "polos", "trousers", "shorts", "co-ords", "accessories"].map((k) => list.filter((p) => p.category === k));
     const out: typeof withPhoto = [];
     for (let round = 0; kinds.some((l) => l.length > round); round++) for (const l of kinds) if (l[round]) out.push(l[round]);
     return out;
@@ -185,6 +189,10 @@ export default async function HomePage() {
       {offers.length > 0 && (
         <section aria-labelledby="offers-title" className="section overflow-hidden">
           <div className="container-ep">
+            {/* The named offers running now (owner, 18 Oct 2026), then the marked-down pieces moving along. */}
+            <div className="mb-10">
+              <OfferCards offers={liveOffers(await getOffers(), products, ktmDay())} />
+            </div>
             <OffersCarousel
               eyebrow="Marked down now"
               title="Festival offers"

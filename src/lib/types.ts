@@ -2,7 +2,19 @@
 // data model (products, variants, drops) so the mock layer can be swapped for
 // real API calls without touching pages.
 
-export type Category = "tees" | "hoodies" | "jackets" | "bottoms" | "co-ords" | "accessories";
+export type Category =
+  | "tees"
+  | "shirts"
+  | "polos"
+  | "hoodies"
+  | "sweatshirts"
+  | "jackets"
+  | "jeans"
+  | "trousers"
+  | "joggers"
+  | "shorts"
+  | "co-ords"
+  | "accessories";
 export type Fit = "oversized" | "relaxed" | "regular";
 export type Gender = "men" | "women" | "unisex";
 export type Size = "XS" | "S" | "M" | "L" | "XL" | "XXL" | "ONE";

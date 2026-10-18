@@ -5,7 +5,8 @@
 import { formatPrice } from "../format";
 import { sellable } from "../inventory";
 import type { Category, Product, Size } from "../types";
-import { categoryOf, forSelf, type PickState } from "./journey";
+import { categoriesOf, forSelf, type PickState } from "./journey";
+import { isBottom } from "../site";
 
 /** Colours that read as calm neutrals, for "minimal and clean". */
 const NEUTRAL = /\b(black|white|ivory|bone|cream|stone|sand|ash|charcoal|grey|gray|navy|slate|off-white|ecru|oat)\b/i;
@@ -38,10 +39,16 @@ const isVault = (p: Product) => Boolean(p.vault) || p.tags.includes("vault");
 
 /** What goes with each kind of piece, for "What goes with it?". */
 export const GOES_WITH: Record<Category, Category[]> = {
-  tees: ["bottoms", "jackets"],
-  hoodies: ["bottoms", "accessories"],
-  jackets: ["tees", "bottoms"],
-  bottoms: ["tees", "hoodies"],
+  tees: ["jeans", "joggers", "shorts", "jackets"],
+  shirts: ["trousers", "jeans"],
+  polos: ["trousers", "shorts", "jeans"],
+  hoodies: ["joggers", "jeans", "accessories"],
+  sweatshirts: ["jeans", "trousers", "accessories"],
+  jackets: ["tees", "jeans", "trousers"],
+  jeans: ["tees", "shirts", "hoodies"],
+  trousers: ["shirts", "polos", "tees"],
+  joggers: ["tees", "hoodies"],
+  shorts: ["tees", "polos"],
   "co-ords": ["accessories", "jackets"],
   accessories: ["tees", "hoodies"],
 };
@@ -72,7 +79,7 @@ function styleScore(p: Product, s: PickState): { score: number; why?: string } {
       return { score: 0 };
     case "casual":
       if (p.fit === "relaxed") return { score: 3, why: "Relaxed fit, made for everyday wear." };
-      if (p.category === "tees" || p.category === "bottoms") return { score: 2, why: "An everyday piece they'll reach for often." };
+      if (p.category === "tees" || isBottom(p.category)) return { score: 2, why: "An everyday piece they'll reach for often." };
       return { score: 0 };
     case "premium":
       if (isVault(p)) return { score: 4, why: "From the Vault, our branded pieces." };
@@ -99,7 +106,7 @@ function firstMatch(text: string, re: RegExp): string {
 export function recommend(all: Product[], s: PickState, count = 3, kinds?: Category[]): { cards: PickCard[]; total: number } {
   const shown = new Set(s.shown ?? []);
   // On the shop: only the kind they asked for (or the kinds that go with it), in their colour if they named one.
-  const only = kinds ?? (categoryOf(s.kind) ? [categoryOf(s.kind)!] : undefined);
+  const only = kinds ?? categoriesOf(s.kind);
   const colour = s.colour ? new RegExp(`\\b${s.colour === "grey" ? "gr[ae]y" : s.colour}\\b`, "i") : null;
   const pool = giftable(all).filter((p) => {
     if (only && !only.includes(p.category)) return false;

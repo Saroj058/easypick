@@ -13,9 +13,9 @@ const SECTION_SHOWN = 4;
 
 /** The wall, top to bottom. */
 const BAYS: { name: string; caption: string; kinds: Category[] }[] = [
-  { name: "Tops", caption: "Start on top", kinds: ["tees", "hoodies", "co-ords"] },
-  { name: "Jackets", caption: "Layer up", kinds: ["jackets"] },
-  { name: "Bottoms", caption: "Bottom half", kinds: ["bottoms"] },
+  { name: "Tops", caption: "Start on top", kinds: ["tees", "shirts", "polos", "co-ords"] },
+  { name: "Layers", caption: "Layer up", kinds: ["hoodies", "sweatshirts", "jackets"] },
+  { name: "Bottoms", caption: "Bottom half", kinds: ["jeans", "trousers", "joggers", "shorts"] },
   { name: "Extras", caption: "Finish", kinds: ["accessories"] },
 ];
 

@@ -38,7 +38,7 @@ function piece(slug: string, o: { price: number; fit?: Product["fit"]; category?
 const CATALOGUE = [
   piece("box-hoodie", { price: 2999, fit: "oversized", category: "hoodies", colour: "Charcoal" }),
   piece("plain-tee", { price: 999, fit: "regular", colour: "Ivory" }),
-  piece("relaxed-cargo", { price: 2499, fit: "relaxed", category: "bottoms", colour: "Olive" }),
+  piece("relaxed-cargo", { price: 2499, fit: "relaxed", category: "joggers", colour: "Olive" }),
   piece("brick-overshirt", { price: 3299, fit: "regular", category: "jackets", colour: "Brick" }),
   piece("logo-cap", { price: 799, category: "accessories", sizes: ["ONE"] }),
   piece("vault-runner", { price: 15999, category: "accessories", sizes: ["ONE"], vault: true, tags: ["vault", "nike"] }),
@@ -214,7 +214,7 @@ describe("on the shop, for themselves", () => {
     r = await pressOn(r, "What goes with it?");
     const pairs = r.messages.flatMap((m) => m.cards ?? []);
     expect(pairs.length).toBeGreaterThan(0);
-    expect(pairs.every((c) => c.category === "bottoms" || c.category === "accessories")).toBe(true);
+    expect(pairs.every((c) => ["jeans", "trousers", "joggers", "shorts", "accessories"].includes(c.category))).toBe(true);
   });
 
   it("reads a kind, a colour and a size from one sentence; a saved size skips the question", async () => {

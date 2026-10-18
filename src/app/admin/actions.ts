@@ -26,6 +26,8 @@ import { event, lockOrder, releaseHolds } from "@/lib/orders";
 import { exchangeOnePiece, refundOrderAs } from "@/lib/order-admin";
 import { fulfilmentMethod, stepProblem, type OrderStep } from "@/lib/order-steps";
 import { saveProductPhoto } from "@/lib/photos";
+import { cleanOffers, MAX_OFFERS, type Offer } from "@/lib/offer-rules";
+import { OFFERS_TAG, saveOffers } from "@/lib/offers";
 import { clearLimit, clientIp, hit, isBlocked } from "@/lib/rate-limit";
 import {
   addStaff,
@@ -345,6 +347,12 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
   await updateProduct(slug, (p) => {
     p.name = name;
     p.fit = fit;
+    // Festival offers ticked on the piece: only the offers' own ticks change, other tags stay.
+    if (form.has("offerTagsShown")) {
+      const known = form.getAll("offerTagsShown").map(String);
+      const chosen = form.getAll("offerTag").map(String).filter((t) => known.includes(t));
+      p.tags = [...p.tags.filter((t) => !known.includes(t)), ...chosen];
+    }
     p.gender = gender;
     p.dropSlug = dropSlug;
     p.details = details;
@@ -698,6 +706,39 @@ const isDay = (d: string) => {
   const t = Date.parse(`${d}T00:00:00Z`);
   return /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(t) && new Date(t).toISOString().startsWith(d);
 };
+
+/** Owner: the festival offers (up to three). Each gathers pieces that already have a sale price. */
+export async function saveOffersAction(_prev: SaveState, form: FormData): Promise<SaveState> {
+  const me = await requireOwner();
+  const n = Math.min(MAX_OFFERS, Math.max(0, int(form, "count") || 0));
+  const raw: Offer[] = [];
+  for (let i = 0; i < n; i++) {
+    const name = str(form, `name-${i}`, 40);
+    if (!name) return { status: "error", message: "Give every offer a name, or remove it." };
+    const by = str(form, `by-${i}`);
+    const tag = by === "tag" ? str(form, `tag-${i}`, 30).toLowerCase().replace(/[^a-z0-9-]/g, "") : "";
+    const under = by === "under" ? int(form, `under-${i}`) : NaN;
+    if (by === "tag" && !tag) return { status: "error", message: `Give ${name} a tick name, like dashain-offer.` };
+    if (by === "under" && !(under > 0)) return { status: "error", message: `Give ${name} a price to stay under.` };
+    const endsOn = str(form, `endsOn-${i}`);
+    raw.push({
+      id: str(form, `id-${i}`) || slugify(name).slice(0, 30),
+      name,
+      note: str(form, `note-${i}`, 120),
+      tag: tag || null,
+      under: under > 0 ? under : null,
+      endsOn: /^\d{4}-\d{2}-\d{2}$/.test(endsOn) ? endsOn : null,
+      on: form.get(`on-${i}`) === "on",
+    });
+  }
+  const list = cleanOffers(raw);
+  if (list.length !== raw.length) return { status: "error", message: "Two offers have the same name. Give each its own." };
+  await saveOffers(list);
+  await logStaff(me, "saved offers", null, { count: list.length, running: list.filter((o) => o.on).length });
+  updateTag(OFFERS_TAG);
+  revalidatePath("/", "layout");
+  return { status: "saved", message: "Saved. The shop and home page show them now." };
+}
 
 export async function saveFestivalList(_prev: SaveState, form: FormData): Promise<SaveState> {
   const me = await requireOwner();

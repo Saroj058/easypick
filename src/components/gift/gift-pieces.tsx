@@ -28,9 +28,15 @@ type Kind = Category | "one" | "trending";
 /** A little garment picture for each kind (the neutral stand-ins in public/stand-ins). */
 const KIND_ICON: Record<Kind, string> = {
   tees: "tee",
+  shirts: "pocket-tee",
+  polos: "tee",
   hoodies: "hoodie",
+  sweatshirts: "crewneck",
   jackets: "jacket",
-  bottoms: "cargo",
+  jeans: "jeans",
+  trousers: "cargo",
+  joggers: "jogger",
+  shorts: "shorts",
   "co-ords": "set",
   accessories: "cap",
   one: "cap",

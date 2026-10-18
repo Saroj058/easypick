@@ -10,7 +10,7 @@ import { cameBackInStock, sellable } from "./inventory";
 import { isoTime } from "./iso-time";
 import { notifyEmail, notifySms } from "./notify";
 import { effectiveStatus } from "./product-status";
-import { site } from "./site";
+import { categoryFor, site } from "./site";
 import type { Drop, Product, ProductStatus, Size } from "./types";
 
 // The catalogue in the database: products (one row each) and their colour/size
@@ -37,6 +37,7 @@ export async function loadProducts(db: DB, slugs?: string[]): Promise<Product[]>
     .orderBy(asc(schema.variants.position));
   return rows.map((r) => ({
     ...r.data,
+    category: categoryFor(r.data.category, r.data.name),
     slug: r.slug,
     status: r.status,
     variants: vs

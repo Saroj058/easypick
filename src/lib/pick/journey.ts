@@ -10,6 +10,7 @@
 
 import { formatPrice } from "../format";
 import type { Category, Size } from "../types";
+import { BOTTOMS, TOPS } from "../site";
 
 export const GREETING = "Hey, I'm Pick! 👋 I help people send gifts they'll actually wear.";
 
@@ -264,7 +265,10 @@ export function acknowledge(field: keyof PickState, s: PickState): string {
 export const KIND_WORDS: Record<Kind, string> = { tees: "Tees", hoodies: "Hoodies", jackets: "Jackets", bottoms: "Bottoms", "co-ords": "Co-ords", accessories: "Accessories", any: "Anything" };
 
 /** The catalogue category for a kind ("any" is none). */
-export const categoryOf = (k?: Kind): Category | undefined => (k && k !== "any" ? k : undefined);
+export const categoryOf = (k?: Kind): Category | undefined => (k && k !== "any" && k !== "bottoms" ? k : k === "bottoms" ? "joggers" : undefined);
+/** Every catalogue kind a Pick kind covers: "bottoms" is jeans, trousers, joggers and shorts; tees take shirts and polos too. */
+export const categoriesOf = (k?: Kind): Category[] | undefined =>
+  !k || k === "any" ? undefined : k === "bottoms" ? [...BOTTOMS] : k === "tees" ? [...TOPS] : k === "hoodies" ? ["hoodies", "sweatshirts"] : [k];
 
 /** Applies a quick reply's values to the state, checking every value against the allowed lists. */
 export function applySet(s: PickState, set: NonNullable<Quick["set"]>): { state: PickState; field?: keyof PickState } {

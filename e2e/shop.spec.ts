@@ -84,7 +84,7 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search), the
   await expect(budget).toHaveAttribute("aria-pressed", "false");
   await expect(rail.getByRole("link", { name: "Shop all" }).last()).toHaveAttribute("href", "/shop?size=M");
   // Each section's Show all opens everything of that kind in the shop.
-  await expect(rail.getByRole("link", { name: /^Show all/ }).first()).toHaveAttribute("href", /\/shop\?category=tees,hoodies.*size=M/);
+  await expect(rail.getByRole("link", { name: /^Show all/ }).first()).toHaveAttribute("href", /\/shop\?category=tees.*size=M/);
 
   // The size can be forgotten again.
   await rail.getByRole("button", { name: "My size is M. Change it" }).click();
@@ -253,10 +253,10 @@ test("drop pages: the run, what's left, and the drops list @phone", async ({ pag
 });
 
 test("shop: strips like the rails, one bag on the card in front, no heart (owner, 15 Oct 2026)", async ({ page }) => {
-  // Everything: a strip for each kind, each with "Only …" to see just that kind.
+  // Everything: a strip for each kind, each with its name, count, own search and Show all, as on the rail (owner, 18 Oct 2026).
   await page.goto("/shop");
   await expect(page.getByRole("heading", { level: 2, name: /^Hoodies/ })).toBeVisible();
-  await page.getByRole("link", { name: /^Only hoodies/ }).click();
+  await page.getByRole("link", { name: /^Show all: hoodies/ }).click();
   await expect(page).toHaveURL(/category=hoodies/);
   // One kind: one strip under its big name, with one bag button (on the card in front).
   await expect(page.getByRole("heading", { level: 2, name: /^Hoodies/ })).toBeVisible();

@@ -26,6 +26,7 @@ import { hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { MY_SIZES, setMySize, useMySize } from "@/lib/my-size";
 import { searchProducts } from "@/lib/search";
+import { categoryLabels } from "@/lib/site";
 import type {
   BagLine,
   Category,
@@ -82,10 +83,27 @@ export interface RailSection {
   pieces: RailPiece[];
 }
 
-type Sort = "new" | "price";
+type Sort = "new" | "price" | "price-desc" | "saving";
+const SORTS: { key: Sort; label: string }[] = [
+  { key: "new", label: "Newest" },
+  { key: "price", label: "Cheapest" },
+  { key: "price-desc", label: "Priciest" },
+  { key: "saving", label: "Biggest saving" },
+];
+const FITS = [
+  { key: "oversized", label: "Oversized" },
+  { key: "relaxed", label: "Relaxed" },
+  { key: "regular", label: "Regular" },
+] as const;
+/** The rail's filters for this visit. Everything but the budget and order is optional, so an older saved view still reads. */
 interface View {
   budget: number | null;
   sort: Sort;
+  kinds?: Category[];
+  fit?: string | null;
+  colour?: string | null;
+  sale?: boolean;
+  inSize?: boolean;
 }
 
 const VIEW_KEY = "ep-rail-v2";
@@ -664,7 +682,16 @@ export function RailWall({
   const stored = useSyncExternalStore(subscribeView, readView, () => null);
   const budget =
     stored?.budget && budgets.includes(stored.budget) ? stored.budget : null;
-  const sort: Sort = stored?.sort === "price" ? "price" : "new";
+  const sort: Sort = SORTS.some((x) => x.key === stored?.sort) ? (stored!.sort as Sort) : "new";
+  const kinds = stored?.kinds ?? [];
+  const fitF = stored?.fit ?? null;
+  const colourF = stored?.colour ?? null;
+  const saleF = Boolean(stored?.sale);
+  const inSizeF = Boolean(stored?.inSize);
+  const view: View = { budget, sort, kinds, fit: fitF, colour: colourF, sale: saleF, inSize: inSizeF };
+  const setView = (patch: Partial<View>) => writeView({ ...view, ...patch });
+  /** How many filters are on (the order doesn't count), for the badge on Filter. */
+  const filtersOn = [budget, kinds.length, fitF, colourF, saleF, inSizeF].filter(Boolean).length;
   const [changing, setChanging] = useState(false); // the size question, reopened
   const [filterOpen, setFilterOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -681,10 +708,33 @@ export function RailWall({
   const [nudge, setNudge] = useState(false);
 
   const q = query.trim();
-  const fits = (p: RailPiece) => !budget || p.price < budget;
+  const fits = (p: RailPiece) =>
+    (!budget || p.price < budget) &&
+    (!kinds.length || kinds.includes(p.category)) &&
+    (!fitF || p.fit === fitF) &&
+    (!colourF || p.colours.some((c) => c.name === colourF)) &&
+    (!saleF || Boolean(p.was)) &&
+    (!inSizeF || !mySize || p.colours.some((c) => c.sizes.some((x) => (x.size === mySize || x.size === "ONE") && x.left > 0)));
   const ordered = (list: RailPiece[]) =>
-    sort === "price" ? [...list].sort((a, b) => a.price - b.price) : list;
+    sort === "price"
+      ? [...list].sort((a, b) => a.price - b.price)
+      : sort === "price-desc"
+        ? [...list].sort((a, b) => b.price - a.price)
+        : sort === "saving"
+          ? [...list].sort((a, b) => (b.was ?? b.price) - b.price - ((a.was ?? a.price) - a.price))
+          : list;
   const all = sections.flatMap((s) => s.pieces);
+  // What the filter offers: only kinds and colours that are on the rail, colours most common first.
+  const railKinds = (Object.keys(categoryLabels) as Category[]).filter((k) => all.some((p) => p.category === k));
+  const railColours = [
+    ...all
+      .flatMap((p) => p.colours.map((c) => ({ name: c.name, hex: c.hex })))
+      .reduce((m, c) => m.set(c.name, { ...c, n: (m.get(c.name)?.n ?? 0) + 1 }), new Map<string, { name: string; hex: string; n: number }>())
+      .values(),
+  ]
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 12);
+  const onSale = all.filter((p) => p.was).length;
   // Searching puts every match on one rail; otherwise the wall keeps its sections.
   const found = q ? searchProducts(all.filter(fits), q) : [];
   const wall = q
@@ -875,14 +925,14 @@ export function RailWall({
           placeholder="Search the rail"
           className="order-6 min-w-0 flex-1"
         />
-        {budgets.length > 0 && (
+        {(budgets.length > 0 || all.length > 0) && (
           <button
             type="button"
             onClick={() => setFilterOpen(!filterOpen)}
             aria-label="Filter"
             aria-expanded={filterOpen}
             aria-controls="rail-filter"
-            className={`${box} relative order-7 w-11 shrink-0 gap-2 rounded-full sm:w-auto sm:px-4 ${filterOpen || budget || sort === "price" ? "border-ink" : "border-mist hover:border-ink"}`}
+            className={`${box} relative order-7 w-11 shrink-0 gap-2 rounded-full sm:w-auto sm:px-4 ${filterOpen || filtersOn || sort !== "new" ? "border-ink" : "border-mist hover:border-ink"}`}
           >
             <svg
               width="16"
@@ -898,60 +948,151 @@ export function RailWall({
               <circle cx="8" cy="17" r="2" />
             </svg>
             <span className="hidden sm:inline">Filter</span>
-            {(budget || sort === "price") && (
-              <span
-                aria-hidden
-                className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-ink sm:static"
-              />
+            {filtersOn > 0 ? (
+              <span aria-label={`${filtersOn} on`} className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-ink px-1 font-mono text-[10px] text-paper sm:static">
+                {filtersOn}
+              </span>
+            ) : (
+              sort !== "new" && <span aria-hidden className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-ink sm:static" />
             )}
           </button>
         )}
       </div>
 
       {filterOpen && (
-        <div
-          id="rail-filter"
-          className="flex flex-wrap items-end gap-x-5 gap-y-3 border border-t-0 border-ink p-3"
-        >
-          <div role="group" aria-label="Budget">
-            <p className={`${mono} mb-1.5 text-steel-dark`}>Under Rs</p>
+        <div id="rail-filter" className="flex flex-wrap items-start gap-x-8 gap-y-5 border border-t-0 border-ink p-4">
+          {railKinds.length > 1 && (
+            <div role="group" aria-label="Kind" className="basis-full">
+              <p className={`${mono} mb-2 text-steel-dark`}>Kind</p>
+              <div className="flex flex-wrap gap-1.5">
+                {railKinds.map((k) => {
+                  const on = kinds.includes(k);
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setView({ kinds: on ? kinds.filter((x) => x !== k) : [...kinds, k] })}
+                      className={`h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${on ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}
+                    >
+                      {categoryLabels[k]}
+                      <span className={`ml-1.5 font-mono text-[10px] ${on ? "text-paper/70" : "text-steel-dark"}`}>{all.filter((p) => p.category === k).length}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {budgets.length > 0 && (
+            <div role="group" aria-label="Budget">
+              <p className={`${mono} mb-2 text-steel-dark`}>Under Rs</p>
+              <div className="flex">
+                {budgets.map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    aria-pressed={budget === b}
+                    aria-label={`Under Rs ${b.toLocaleString("en-IN")}`}
+                    onClick={() => setView({ budget: budget === b ? null : b })}
+                    className={`${cell} min-w-11 px-2.5 ${budget === b ? cellOn : cellOff}`}
+                  >
+                    {b.toLocaleString("en-IN")}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div role="group" aria-label="Fit">
+            <p className={`${mono} mb-2 text-steel-dark`}>Fit</p>
             <div className="flex">
-              {budgets.map((b) => (
+              {FITS.map((x) => (
                 <button
-                  key={b}
+                  key={x.key}
                   type="button"
-                  aria-pressed={budget === b}
-                  aria-label={`Under Rs ${b.toLocaleString("en-IN")}`}
-                  onClick={() =>
-                    writeView({ sort, budget: budget === b ? null : b })
-                  }
-                  className={`${cell} min-w-11 px-2.5 ${budget === b ? cellOn : cellOff}`}
+                  aria-pressed={fitF === x.key}
+                  onClick={() => setView({ fit: fitF === x.key ? null : x.key })}
+                  className={`${box} -ml-px px-3 first:ml-0 ${fitF === x.key ? cellOn : cellOff}`}
                 >
-                  {b.toLocaleString("en-IN")}
+                  {x.label}
                 </button>
               ))}
             </div>
           </div>
-          <div role="group" aria-label="Order">
-            <p className={`${mono} mb-1.5 text-steel-dark`}>Order</p>
-            <div className="flex">
-              {(["new", "price"] as const).map((o) => (
+          <div role="group" aria-label="Colour">
+            <p className={`${mono} mb-2 text-steel-dark`}>Colour{colourF ? `: ${colourF}` : ""}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {railColours.map((c) => (
                 <button
-                  key={o}
+                  key={c.name}
                   type="button"
-                  aria-pressed={sort === o}
-                  onClick={() => writeView({ budget, sort: o })}
-                  className={`${box} -ml-px px-3 first:ml-0 ${sort === o ? cellOn : cellOff}`}
+                  aria-pressed={colourF === c.name}
+                  aria-label={c.name}
+                  title={c.name}
+                  onClick={() => setView({ colour: colourF === c.name ? null : c.name })}
+                  className={`grid h-9 w-9 place-items-center rounded-full border transition-colors ${colourF === c.name ? "border-ink" : "border-transparent hover:border-mist"}`}
                 >
-                  {o === "new" ? "Newest" : "Cheapest"}
+                  <span className="h-6 w-6 rounded-full ring-1 ring-black/10" style={{ background: c.hex }} />
                 </button>
               ))}
             </div>
+          </div>
+          <div role="group" aria-label="Only">
+            <div>
+              <p className={`${mono} mb-2 text-steel-dark`}>Only</p>
+              <div className="flex flex-wrap gap-1.5">
+                {onSale > 0 && (
+                  <button
+                    type="button"
+                    aria-pressed={saleF}
+                    onClick={() => setView({ sale: !saleF })}
+                    className={`h-9 rounded-full border px-3.5 text-[13px] font-semibold ${saleF ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}
+                  >
+                    On sale <span className={`ml-1 font-mono text-[10px] ${saleF ? "text-paper/70" : "text-steel-dark"}`}>{onSale}</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  aria-pressed={inSizeF && Boolean(mySize)}
+                  disabled={!mySize}
+                  title={mySize ? undefined : "Pick your size in the bar first"}
+                  onClick={() => setView({ inSize: !inSizeF })}
+                  className={`h-9 rounded-full border px-3.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${inSizeF && mySize ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}
+                >
+                  {mySize ? `In my size (${mySize})` : "In my size"}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div role="group" aria-label="Order">
+            <p className={`${mono} mb-2 text-steel-dark`}>Order</p>
+            <div className="flex flex-wrap">
+              {SORTS.filter((o) => o.key !== "saving" || onSale > 0).map((o) => (
+                <button
+                  key={o.key}
+                  type="button"
+                  aria-pressed={sort === o.key}
+                  onClick={() => setView({ sort: o.key })}
+                  className={`${box} -ml-px px-3 first:ml-0 ${sort === o.key ? cellOn : cellOff}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex basis-full items-center justify-end gap-3 border-t border-mist pt-3">
+            {(filtersOn > 0 || sort !== "new") && (
+              <button type="button" onClick={() => writeView({ budget: null, sort: "new" })} className="h-11 px-1 text-[13px] font-semibold underline underline-offset-4">
+                Reset all
+              </button>
+            )}
+            <button type="button" onClick={() => setFilterOpen(false)} className="h-11 rounded-full bg-ink px-5 text-[13px] font-semibold text-paper">
+              Show {showing}
+            </button>
           </div>
         </div>
       )}
 
-      {(budget || q) && (
+      {(filtersOn > 0 || q) && (
         <p
           role="status"
           className="mt-2 flex min-h-11 flex-wrap items-center gap-x-3 text-[13px] text-steel-dark"
@@ -962,6 +1103,11 @@ export function RailWall({
             </span>
             {q ? ` match "${q}"` : ""}
             {budget ? ` under Rs ${budget.toLocaleString("en-IN")}` : ""}
+            {kinds.length ? ` · ${kinds.map((k) => categoryLabels[k]).join(", ")}` : ""}
+            {fitF ? ` · ${fitF}` : ""}
+            {colourF ? ` · ${colourF}` : ""}
+            {saleF ? " · on sale" : ""}
+            {inSizeF && mySize ? ` · in ${mySize}` : ""}
           </span>
           <button
             type="button"

@@ -1,4 +1,4 @@
-import type { PaymentProvider } from "./types";
+import type { Category, PaymentProvider } from "./types";
 
 // Store facts shown across the site. Values marked TODO are still open decisions
 // in the business plan (location, domain, company registration).
@@ -66,14 +66,72 @@ export const site = {
   },
 } as const;
 
+/** The twelve kinds of piece, in the order the shop shows them (owner, 18 Oct 2026). */
 export const categoryLabels = {
   tees: "Tees",
+  shirts: "Shirts",
+  polos: "Polos",
   hoodies: "Hoodies",
+  sweatshirts: "Sweatshirts",
   jackets: "Jackets",
-  bottoms: "Bottoms",
+  jeans: "Jeans",
+  trousers: "Trousers",
+  joggers: "Joggers & cargo",
+  shorts: "Shorts",
   "co-ords": "Co-ords",
-  accessories: "Accessories",
+  accessories: "Caps & more",
 } as const;
+
+/** A little garment picture for each kind (the neutral stand-ins), as on the gift page. */
+export const KIND_ICON: Record<Category, string> = {
+  tees: "tee",
+  shirts: "pocket-tee",
+  polos: "tee",
+  hoodies: "hoodie",
+  sweatshirts: "crewneck",
+  jackets: "jacket",
+  jeans: "jeans",
+  trousers: "cargo",
+  joggers: "jogger",
+  shorts: "shorts",
+  "co-ords": "set",
+  accessories: "cap",
+};
+
+/** Where a kind sits in an outfit. Outfit logic (fits, Pick, the rail) works on these, not on the twelve kinds. */
+export type Family = "top" | "layer" | "bottom" | "set" | "extra";
+export const FAMILY: Record<Category, Family> = {
+  tees: "top",
+  shirts: "top",
+  polos: "top",
+  hoodies: "layer",
+  sweatshirts: "layer",
+  jackets: "layer",
+  jeans: "bottom",
+  trousers: "bottom",
+  joggers: "bottom",
+  shorts: "bottom",
+  "co-ords": "set",
+  accessories: "extra",
+};
+export const TOPS: Category[] = ["tees", "shirts", "polos"];
+export const BOTTOMS: Category[] = ["jeans", "trousers", "joggers", "shorts"];
+export const isBottom = (c: Category) => FAMILY[c] === "bottom";
+
+/**
+ * The kind a piece belongs to, from an older six-kind record ("bottoms") or its name: data saved
+ * before the twelve kinds still lands somewhere sensible.
+ */
+export function categoryFor(category: string, name: string): Category {
+  const n = name.toLowerCase();
+  if (category === "bottoms") {
+    if (/jean|denim/.test(n)) return "jeans";
+    if (/short/.test(n)) return "shorts";
+    if (/jogger|cargo|track|parachute|sweatpant/.test(n)) return "joggers";
+    return "trousers";
+  }
+  return category in categoryLabels ? (category as Category) : "tees";
+}
 
 export const walletLabels: Record<PaymentProvider, string> = { esewa: "eSewa", khalti: "Khalti", fonepay: "Fonepay" };
 

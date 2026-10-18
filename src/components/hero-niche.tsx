@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/format";
 import type { Category, Product, Size } from "@/lib/types";
 import { HangTag } from "./hang-tag";
 import { ArrowIcon } from "./icons";
+import { isBottom } from "@/lib/site";
 
 // The home page's wardrobe: a hollow niche cut into the white page, built here (no photograph),
 // after the owner's sample picture, in white instead of warm.
@@ -48,10 +49,16 @@ const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 //    the rail.
 const HANG: Record<Category, { width: string; top: string }> = {
   tees: { width: "196%", top: "27%" },
+  shirts: { width: "196%", top: "22%" },
+  polos: { width: "196%", top: "27%" },
   hoodies: { width: "206%", top: "9%" },
+  sweatshirts: { width: "206%", top: "12%" },
   jackets: { width: "200%", top: "15%" },
   "co-ords": { width: "150%", top: "24%" },
-  bottoms: { width: "112%", top: "50%" },
+  jeans: { width: "112%", top: "50%" },
+  trousers: { width: "112%", top: "50%" },
+  joggers: { width: "112%", top: "50%" },
+  shorts: { width: "112%", top: "40%" },
   accessories: { width: "90%", top: "60%" },
 };
 
@@ -182,7 +189,7 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
   const rails: Record<string, NichePiece[]> = { upper: fill(modelled(upper)), lower: fill(modelled(lower)) };
   /** The 3D garments are in and drawn: the flat pictures under them are hidden (their buttons stay, for keyboards and screen readers). */
   const [solid, setSolid] = useState(false);
-  const hung = (["upper", "lower"] as const).map((rail) => rails[rail].map((p, i) => ({ key: `${rail}:${i}`, slug: p.product.slug, long: p.product.category === "bottoms" })));
+  const hung = (["upper", "lower"] as const).map((rail) => rails[rail].map((p, i) => ({ key: `${rail}:${i}`, slug: p.product.slug, long: isBottom(p.product.category) })));
   // Which hanger is picked ("upper:2"), not which product: a piece's twin along the rail stays side-on.
   const [activeKey, setActiveKey] = useState<string>("upper:2");
   const [activeRail, activeIndex] = activeKey.split(":");
@@ -234,7 +241,7 @@ export function HeroNiche({ upper, lower, cap }: { /** Tops, on the first rail. 
             <li key={i} className={`relative flex justify-center transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${on ? "z-10 w-[23cqw]" : "w-[6.6cqw]"}`}>
               <div className="relative w-[7.9cqw] shrink-0 [perspective:700px]">
               <span aria-hidden className="block [filter:drop-shadow(5px_7px_4px_rgba(0,0,0,0.2))]">
-                <Hanger clips={piece?.product.category === "bottoms"} hookOnly={Boolean(hung)} />
+                <Hanger clips={isBottom(piece?.product.category)} hookOnly={Boolean(hung)} />
               </span>
               {piece && (
                 <button

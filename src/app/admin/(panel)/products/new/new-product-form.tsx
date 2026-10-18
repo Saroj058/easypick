@@ -38,7 +38,7 @@ const MEASURES = [
 ] as const;
 // Which measurements matter, by category: tops vs bottoms vs caps.
 const measuresFor = (category: string) =>
-  category === "bottoms" ? ["waist", "length", "inseam"] : category === "accessories" ? [] : ["chest", "length", "sleeve"];
+  category === "shorts" ? ["waist", "length"] : ["jeans", "trousers", "joggers"].includes(category) ? ["waist", "length", "inseam"] : category === "accessories" ? [] : ["chest", "length", "sleeve"];
 const slugOf = (name: string) =>
   name
     .toLowerCase()

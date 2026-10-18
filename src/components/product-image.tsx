@@ -20,7 +20,23 @@ type Garment = {
   back: { seams: string[]; stitch: string[]; dots?: [number, number, number][] };
 };
 
-const garments: Record<Category, Garment> = {
+/** The six drawn shapes; each of the twelve kinds borrows the nearest. */
+const DRAWN_AS: Record<Category, keyof typeof drawn> = {
+  tees: "tees",
+  shirts: "tees",
+  polos: "tees",
+  hoodies: "hoodies",
+  sweatshirts: "hoodies",
+  jackets: "jackets",
+  jeans: "bottoms",
+  trousers: "bottoms",
+  joggers: "bottoms",
+  shorts: "bottoms",
+  "co-ords": "co-ords",
+  accessories: "accessories",
+};
+
+const drawn: Record<"tees" | "hoodies" | "jackets" | "bottoms" | "co-ords" | "accessories", Garment> = {
   tees: {
     body: "M70 40 L100 28 Q120 44 140 28 L170 40 L200 80 L172 96 L166 84 L168 196 Q120 202 72 196 L74 84 L68 96 L40 80 Z",
     shade: "M74 84 L86 92 L84 197 L72 196 Z M166 84 L154 92 L156 197 L168 196 Z",
@@ -122,7 +138,7 @@ export function GarmentSvg({
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const g = garments[category];
+  const g = drawn[DRAWN_AS[category]];
   const d = view === "back" ? g.back : g;
   const c = lineColour(colourHex);
   return (
@@ -147,7 +163,7 @@ export function GarmentSvg({
 // A product with no photo of its own shows a stand-in: a neutral photograph of the same kind of
 // garment (public/stand-ins/<kind>.webp, from scripts/stand-ins.mjs), dyed to the product's colour.
 // The kind is read from the product's name; a kind with no picture falls back to its category's.
-const STAND_INS = new Set(["tee", "pocket-tee", "hoodie", "crewneck", "quarter-zip", "jacket", "jeans", "jogger", "cargo", "cap", "set"]);
+const STAND_INS = new Set(["tee", "pocket-tee", "shorts", "hoodie", "crewneck", "quarter-zip", "jacket", "jeans", "jogger", "cargo", "cap", "set"]);
 const KINDS: [RegExp, string][] = [
   [/\bset\b|co-?ord/, "set"],
   [/bucket hat/, "bucket-hat"],
@@ -168,7 +184,20 @@ const KINDS: [RegExp, string][] = [
   [/jogger|sweatpant|track pant/, "jogger"],
   [/cargo|carpenter|pant|trouser/, "cargo"],
 ];
-const BY_CATEGORY: Record<Category, string> = { tees: "tee", hoodies: "hoodie", jackets: "jacket", bottoms: "cargo", "co-ords": "set", accessories: "cap" };
+const BY_CATEGORY: Record<Category, string> = {
+  tees: "tee",
+  shirts: "pocket-tee",
+  polos: "tee",
+  hoodies: "hoodie",
+  sweatshirts: "crewneck",
+  jackets: "jacket",
+  jeans: "jeans",
+  trousers: "cargo",
+  joggers: "jogger",
+  shorts: "shorts",
+  "co-ords": "set",
+  accessories: "cap",
+};
 /** The stand-in picture for a product with no photo (`/stand-ins/<kind>.webp`), or null when there is none for its kind. */
 export function standInSrc(name: string, category: Category): string | null {
   const kind = standIn(name, category);

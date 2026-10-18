@@ -2,6 +2,7 @@
 // every product then shows the size closest to it. Stored only in this browser.
 
 import type { Category, Measurements, Size } from "./types";
+import { isBottom } from "./site";
 
 export interface FitProfile {
   /** Chest of a favourite top, garment laid flat, armpit to armpit × 2 (cm). */
@@ -57,7 +58,7 @@ export interface SizeMatch {
 
 /** Closest size to the customer's own piece, or null if we can't compare. */
 export function matchSize(category: Category, measurements: Measurements, profile: FitProfile): SizeMatch | null {
-  const on = category === "bottoms" ? "waist" : "chest";
+  const on = isBottom(category) ? "waist" : "chest";
   const mine = profile[on];
   if (!mine || category === "accessories") return null;
 

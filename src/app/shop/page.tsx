@@ -5,11 +5,15 @@ import Link from "next/link";
 import { RecentlyViewed } from "@/components/local-lists";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
-import { DropStrip } from "@/components/drop-strip";
 import { PickChat } from "@/components/gift/pick-chat";
 import { toRailPiece } from "@/components/home/rail";
 import { ShopSearch } from "@/components/shop-search";
-import { categoryLabels } from "@/lib/site";
+import { ShopShelf } from "@/components/shop-shelf";
+import { OfferCards } from "@/components/offer-cards";
+import { ktmDay } from "@/lib/ktm-day";
+import { inOffer, liveOffers, running } from "@/lib/offer-rules";
+import { getOffers } from "@/lib/offers";
+import { categoryLabels, KIND_ICON } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import type { Category, Fit, Product } from "@/lib/types";
 
@@ -40,7 +44,7 @@ const sorts = [
   { key: "price-desc", label: "Price: high to low" },
 ];
 
-type Filters = { q?: string; category?: string; size?: string; colour?: string; price?: string; fit?: string; sort?: string; sale?: string; new?: string; vault?: string; brand?: string; page?: string };
+type Filters = { q?: string; category?: string; size?: string; colour?: string; price?: string; fit?: string; sort?: string; sale?: string; new?: string; vault?: string; brand?: string; offer?: string; page?: string };
 
 /** Pieces per page: enough to browse, small enough for a phone on mobile data. */
 
@@ -73,8 +77,6 @@ function Chip({ active, href: to, children }: { active: boolean; href: string; c
   );
 }
 
-/** A little garment picture for each kind (the neutral stand-ins), as on the gift page. */
-const KIND_ICON: Record<Category, string> = { tees: "tee", hoodies: "hoodie", jackets: "jacket", bottoms: "cargo", "co-ords": "set", accessories: "cap" };
 
 /**
  * A kind of piece, as on the gift page (owner, 17 Oct 2026): a rounded button with a little picture
@@ -115,10 +117,15 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
     new: one(sp.new) === "1" ? "1" : undefined,
     vault: one(sp.vault) === "1" ? "1" : undefined,
     brand: one(sp.brand),
+    offer: one(sp.offer),
     page: one(sp.page),
   };
 
-  const all = await getProducts();
+  const [all, offerList] = await Promise.all([getProducts(), getOffers()]);
+  // Festival offers running today, and the one being looked at (an ended or unknown one is ignored).
+  const offers = liveOffers(offerList, all, ktmDay());
+  const offer = offerList.find((o) => o.id === f.offer && running(o, ktmDay()));
+  if (!offer) f.offer = undefined;
   const colours = Array.from(new Set(all.flatMap((p) => p.colours.map((c) => c.name)))).sort();
   const sizes = ["S", "M", "L", "XL"];
 
@@ -132,6 +139,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
       return words.every((w) => hay.includes(w));
     });
   if (f.sale) list = list.filter((p) => p.salePrice);
+  if (offer) list = list.filter((p) => inOffer(offer, p));
   if (f.new) list = list.filter((p) => p.isNew);
   if (f.vault) list = list.filter((p) => p.vault);
   if (f.brand) list = list.filter((p) => p.brand?.toLowerCase() === f.brand?.toLowerCase());
@@ -149,18 +157,18 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   // Sold out sinks to the bottom, but keeps its page for sharing and search.
   list = [...list].sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
 
-  const active = Boolean(f.q || f.category || f.size || f.colour || f.price || f.fit || f.sale || f.new || f.vault || f.brand);
+  const active = Boolean(f.q || f.category || f.size || f.colour || f.price || f.fit || f.sale || f.new || f.vault || f.brand || f.offer);
   const anyNew = all.some((p) => p.isNew && p.status !== "scheduled");
   const onSale = all.filter((p) => p.salePrice && p.status === "live");
   const bestSaving = onSale.reduce((n, p) => Math.max(n, p.price - (p.salePrice ?? p.price)), 0);
 
   // As the rails and the gift page (owner, 15 Oct 2026): "All" is a strip per kind of piece; one
   // kind chosen (or a search, sale, new, Vault or brand view) is one strip under its big name.
-  const single = kinds.length === 1 || Boolean(f.q || f.sale || f.new || f.vault || f.brand);
+  const single = kinds.length === 1 || Boolean(f.q || f.sale || f.new || f.vault || f.brand || offer);
   const groups = (Object.keys(categoryLabels) as Category[])
     .map((c) => ({ c, pieces: list.filter((p) => p.category === c) }))
     .filter((g) => g.pieces.length > 0);
-  const title = f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.q ? `“${f.q}”` : kinds.length === 1 ? categoryLabels[kinds[0]] : "Every piece";
+  const title = offer ? offer.name : f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.q ? `“${f.q}”` : kinds.length === 1 ? categoryLabels[kinds[0]] : "Every piece";
 
   return (
     <div className="overflow-x-clip">
@@ -168,10 +176,11 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
         {/* One bar, like the home page's Rail: the name on a black tab, the same search button, and Filter (its panel drops below the bar) */}
         <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-t-2xl border border-ink py-2 pr-3">
           <h1 className="display on-dark order-1 -my-2 -ml-px flex items-center self-stretch rounded-tl-[15px] bg-ink px-5 py-3 text-[34px] leading-[0.9] text-paper md:text-[44px]">
-            {f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
+            {/* The kind, offer or view chosen is named large on its shelf below, as on the rail. */}
+            {single ? "Shop" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
           </h1>
           {/* Search: the Rail's round button, opening into a field that searches as they type */}
-          <ShopSearch q={f.q ?? ""} others={{ category: f.category, size: f.size, colour: f.colour, price: f.price, fit: f.fit, sort: f.sort, sale: f.sale, new: f.new, vault: f.vault, brand: f.brand }} />
+          <ShopSearch q={f.q ?? ""} others={{ category: f.category, size: f.size, colour: f.colour, price: f.price, fit: f.fit, sort: f.sort, sale: f.sale, new: f.new, vault: f.vault, brand: f.brand, offer: f.offer }} />
           <details className="group order-2 lg:order-3">
             <summary aria-label="Filter and sort" className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-mist px-4 text-sm font-semibold transition-colors hover:border-ink group-open:border-ink [&::-webkit-details-marker]:hidden">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -245,11 +254,11 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
               role="group"
               aria-label="Category"
             >
-              <KindChip active={!f.category && !f.sale && !f.new} href={href(f, { category: undefined, sale: undefined, new: undefined })} icon={<LayoutGrid aria-hidden className="h-4 w-4" strokeWidth={1.8} />}>
+              <KindChip active={!f.category && !f.sale && !f.new && !f.offer} href={href(f, { category: undefined, sale: undefined, new: undefined, offer: undefined })} icon={<LayoutGrid aria-hidden className="h-4 w-4" strokeWidth={1.8} />}>
                 All
               </KindChip>
               {onSale.length > 0 && (
-                <KindChip active={Boolean(f.sale)} href={href(f, { sale: f.sale ? undefined : "1" })} count={onSale.length} icon={<Tag aria-hidden className="h-4 w-4" strokeWidth={1.8} />}>
+                <KindChip active={Boolean(f.sale || f.offer)} href={href(f, { sale: f.sale || f.offer ? undefined : "1", offer: undefined })} count={onSale.length} icon={<Tag aria-hidden className="h-4 w-4" strokeWidth={1.8} />}>
                   On sale
                 </KindChip>
               )}
@@ -290,6 +299,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
                   ["price", prices.find((x) => x.key === f.price)?.label],
                   ["fit", fits.find((x) => x.key === f.fit)?.label],
                   ["brand", f.brand],
+                  ["offer", offer?.name],
                   ["vault", f.vault && "The Vault"],
                 ] as [keyof Filters, string | undefined][]
               )
@@ -324,6 +334,13 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           )}
         </p>
   
+        {/* Festival offers: on the sale view and each offer's own page, the offers running now side by side. */}
+        {(f.sale || offer) && offers.length > 0 && (
+          <div className="mt-6">
+            <OfferCards offers={offers} active={offer?.id} />
+          </div>
+        )}
+
         {/* Pick, the robot: for themselves first, gifts too; sizes, delivery, swaps and small talk */}
         <div className="mt-12 md:mt-16">
           <PickChat where="shop" />
@@ -333,29 +350,18 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           {!list.length ? (
             <p className="py-24 text-center text-steel-dark">{f.q ? `Nothing matches “${f.q}”. Try another word, or clear the filters.` : "Nothing matches that yet. Try another size or colour."}</p>
           ) : single ? (
-            <section aria-labelledby="shop-one">
-              {/* The name is already on the black tab above: here only for screen readers. */}
-              <h2 id="shop-one" className="sr-only">
-                {title}
-                <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{list.length}</span>
-              </h2>
-              <DropStrip pieces={list.map(toRailPiece)} label={title} tags />
-            </section>
+            <ShopShelf
+              id="one"
+              first
+              label={title}
+              pieces={list.map(toRailPiece)}
+              showAll={kinds.length === 1 || f.sale || f.new ? href(f, { category: undefined, sale: undefined, new: undefined }) : undefined}
+              showAllLabel="Every kind"
+            />
           ) : (
-            <div className="space-y-16 md:space-y-24">
-              {groups.map(({ c, pieces }) => (
-                <section key={c} aria-labelledby={`shop-${c}`}>
-                  <div className="flex items-end justify-between gap-4">
-                    <h2 id={`shop-${c}`} className="display text-[clamp(2.2rem,1.6rem+2.6vw,3.6rem)] leading-[0.88]">
-                      {categoryLabels[c]}
-                      <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{pieces.length}</span>
-                    </h2>
-                    <Link href={href(f, { category: c })} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-ink/25 px-4 text-[13px] font-semibold hover:border-ink">
-                      Only {categoryLabels[c].toLowerCase()} <span aria-hidden>→</span>
-                    </Link>
-                  </div>
-                  <DropStrip pieces={pieces.map(toRailPiece)} label={categoryLabels[c]} tags />
-                </section>
+            <div>
+              {groups.map(({ c, pieces }, i) => (
+                <ShopShelf key={c} id={c} first={i === 0} label={categoryLabels[c]} pieces={pieces.map(toRailPiece)} showAll={href(f, { category: c })} />
               ))}
             </div>
           )}
