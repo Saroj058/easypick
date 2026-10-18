@@ -27,7 +27,7 @@ export function GiftBlock() {
       </span>
 
       {/* The bow, sitting on the strip's top edge where the ribbon starts */}
-      <span aria-hidden className="pointer-events-none absolute left-[58%] top-[4px] z-10 hidden -translate-x-[33px] md:block">
+      <span aria-hidden className="pointer-events-none absolute left-1/2 top-[4px] z-10 hidden -translate-x-1/2 md:block">
         <svg width="76" height="36" viewBox="0 0 56 26" className="transition-transform duration-500 group-hover:scale-110">
           <path d="M28 12C22 2 8 0 6 8s14 8 22 4Z" fill="#f5f5f2" stroke="#0a0a0a" strokeWidth="1.4" />
           <path d="M28 12C34 2 48 0 50 8s-14 8-22 4Z" fill="#f5f5f2" stroke="#0a0a0a" strokeWidth="1.4" />
@@ -39,7 +39,7 @@ export function GiftBlock() {
         {/* The wrap: faint diagonal lines */}
         <span aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[repeating-linear-gradient(135deg,rgba(255,255,255,0.035)_0_2px,transparent_2px_14px)]" />
         {/* The ribbon, down the strip, with its bow at the top */}
-        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[58%] -z-10 hidden w-[10px] bg-paper/90 md:block" />
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 hidden w-[10px] -translate-x-1/2 bg-paper/90 md:block" />
 
         <div className="min-w-0">
           <h2 id="gift-title" className="display text-[26px] leading-none md:text-[30px]">

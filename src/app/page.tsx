@@ -201,7 +201,7 @@ export default async function HomePage() {
 
       {/* Festival offers: only while a real sale runs. The pieces move along by themselves. */}
       {offers.length > 0 && (
-        <section aria-labelledby="offers-title" className="section overflow-hidden">
+        <section aria-labelledby="offers-title" className="section overflow-hidden pb-0 md:pb-0 lg:pb-0">
           <div className="container-ep">
             {/* The ring, with only its name and the way in set in the curve under the cards (owner, 18 Oct 2026). */}
             <OfferBoard offers={offerList} products={products} today={ktmDay()}>
@@ -217,7 +217,7 @@ export default async function HomePage() {
       )}
 
       {/* Buying for someone, just above Our store (owner, 18 Oct 2026). */}
-      <section aria-labelledby="gift-title" className="py-8 md:py-12">
+      <section aria-labelledby="gift-title" className="py-14 md:py-20">
         <div className="container-ep">
           <GiftBlock />
         </div>
