@@ -29,16 +29,16 @@ export default async function AdminDrops({ searchParams }: PageProps<"/admin/dro
   return (
     <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr]">
       <section aria-labelledby="drops-h">
-        <h2 id="drops-h" className="display text-[32px] md:text-[40px]">
+        <h2 id="drops-h" className="text-[36px] font-light leading-none tracking-[-0.02em] md:text-[40px]">
           Drops
         </h2>
-        <ul className="mt-6 divide-y divide-mist border-y border-mist">
+        <ul className="mt-6 divide-y divide-ink/[0.06] rounded-2xl bg-[#f4f4f2] px-4">
           {sorted.map((d) => {
             const pieces = products.filter((p) => p.dropSlug === d.slug);
             const left = pieces.reduce((n, p) => n + p.variants.reduce((m, v) => m + v.stock, 0), 0);
             const upcoming = Date.parse(d.releaseAt) > requestTime();
             return (
-              <li key={d.slug} className={`flex flex-wrap items-baseline justify-between gap-2 py-4 ${editing?.slug === d.slug ? "bg-photo px-3" : ""}`}>
+              <li key={d.slug} className={`flex flex-wrap items-baseline justify-between gap-2 py-4 ${editing?.slug === d.slug ? "-mx-2 rounded-xl bg-white px-3" : ""}`}>
                 <div>
                   <p className="font-semibold">
                     {d.name} {upcoming && <span className="ml-1 rounded-full bg-volt px-2 py-0.5 text-[12px] font-semibold text-ink">Coming</span>}

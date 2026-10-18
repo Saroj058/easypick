@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { exchangeLine, refundOrder, type SaveState } from "@/app/admin/actions";
 import { formatPrice } from "@/lib/format";
 
-const input = "mt-2 h-11 w-full rounded-[2px] border border-mist bg-paper px-3 text-base outline-none focus:border-ink";
+const input = "mt-2 h-11 w-full rounded-xl border border-ink/15 bg-white px-3 text-base outline-none focus:border-ink";
 const label = "block text-sm font-semibold";
 
 function Status({ state }: { state: SaveState }) {
@@ -67,7 +67,7 @@ export function RefundForm({
               name={`qty:${l.i}`}
               value={qty[l.i] ?? 0}
               onChange={(e) => setQty((q) => ({ ...q, [l.i]: Number(e.target.value) }))}
-              className="h-11 w-20 rounded-[2px] border border-mist bg-paper px-2"
+              className="h-11 w-20 rounded-xl border border-ink/15 bg-white px-2"
             >
               {Array.from({ length: l.left + 1 }, (_, n) => (
                 <option key={n} value={n}>
@@ -104,7 +104,7 @@ export function RefundForm({
           card, and the card is blocked once nothing is left. If they&apos;ve already spent some, you can refund at most what&apos;s left.
         </p>
       )}
-      <p className="bg-photo px-4 py-3 text-[14px]">
+      <p className="rounded-2xl bg-[#f4f4f2] px-4 py-3 text-[14px]">
         Refund {formatPrice(value)}
         {toCard > 0 ? ` · ${formatPrice(toCard)} goes back to their gift card by itself` : ""}
         {toWallet > 0 ? ` · refund ${formatPrice(toWallet)} in the eSewa merchant portal first` : ""}

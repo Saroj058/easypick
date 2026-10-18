@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 
 import { changePassword, changeUsername, type AccountState } from "@/app/admin/actions";
 
-const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink aria-[invalid=true]:border-[#d70015]";
+const input = "mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-4 text-base outline-none focus:border-ink aria-[invalid=true]:border-[#d70015]";
 const label = "block text-sm font-semibold";
 
 function Status({ state }: { state: AccountState }) {
@@ -30,7 +30,7 @@ export function UsernameForm({ current }: { current: string }) {
   const [state, action, pending] = useActionState<AccountState, FormData>(changeUsername, { status: "idle" });
   const err = state.status === "error" ? state.field : null;
   return (
-    <form action={action} className="space-y-5 border-t border-mist pt-8" aria-labelledby="u-h">
+    <form action={action} className="space-y-5 rounded-[24px] bg-[#f4f4f2] p-5 md:p-6" aria-labelledby="u-h">
       <h3 id="u-h" className="text-lg font-semibold">
         Username
       </h3>
@@ -68,7 +68,7 @@ export function PasswordForm({ min }: { min: number }) {
   const [show, setShow] = useState(false);
   const err = state.status === "error" ? state.field : null;
   return (
-    <form action={action} className="space-y-5 border-t border-mist pt-8" aria-labelledby="p-h">
+    <form action={action} className="space-y-5 rounded-[24px] bg-[#f4f4f2] p-5 md:p-6" aria-labelledby="p-h">
       <div className="flex items-baseline justify-between">
         <h3 id="p-h" className="text-lg font-semibold">
           Password

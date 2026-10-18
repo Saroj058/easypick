@@ -11,7 +11,7 @@ export default async function AdminAccount() {
   return (
     <div className="max-w-xl space-y-14">
       <div>
-        <h2 className="display text-[32px] md:text-[40px]">Your login</h2>
+        <h2 className="text-[36px] font-light leading-none tracking-[-0.02em] md:text-[40px]">Your login</h2>
         <p className="mt-2 text-steel-dark">
           Signed in as <span className="font-semibold text-ink">{me.username}</span>. Both changes ask for your current password.
         </p>

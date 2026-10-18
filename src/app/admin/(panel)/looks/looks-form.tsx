@@ -12,7 +12,7 @@ export interface PieceOption {
   group: string;
 }
 
-const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
+const input = "mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-4 text-base outline-none focus:border-ink";
 
 export function LooksForm({
   occasions,
@@ -39,7 +39,7 @@ export function LooksForm({
       {occasions.map((o) => {
         const mine = saved[o.key];
         return (
-          <fieldset key={o.key} className="space-y-4 border-t border-mist pt-6">
+          <fieldset key={o.key} className="space-y-4 rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
             <legend className="text-lg font-semibold">{o.label}</legend>
             {[0, 1, 2, 3].map((i) => {
               const current = mine?.pieces[i];

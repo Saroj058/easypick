@@ -24,7 +24,7 @@ export default async function AdminReports({ searchParams }: PageProps<"/admin/r
     <div className="space-y-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="display text-[32px] md:text-[40px]">Reports</h2>
+          <h2 className="text-[36px] font-light leading-none tracking-[-0.02em] md:text-[40px]">Reports</h2>
           <p className="mt-1 text-[14px] text-steel-dark">Sales are what was bought, less refunds, by Kathmandu day of payment. Gift card purchases (and gifts turned into a card) are counted when the card is spent.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -51,7 +51,7 @@ export default async function AdminReports({ searchParams }: PageProps<"/admin/r
           { label: "Pieces", value: r.totals.pieces },
           { label: "Gift cards sold", value: formatPrice(r.totals.cards) },
         ].map((t) => (
-          <li key={t.label} className="bg-photo p-5">
+          <li key={t.label} className="rounded-[22px] bg-[#f4f4f2] p-5">
             <p className="text-[13px] text-steel-dark">{t.label}</p>
             <p className="mt-2 font-mono text-[28px] font-semibold leading-none tabular-nums">{t.value}</p>
           </li>
@@ -135,7 +135,7 @@ export default async function AdminReports({ searchParams }: PageProps<"/admin/r
           {r.slow.length === 0 ? (
             <p className="mt-2 text-[14px] text-steel-dark">Everything live has sold at least once.</p>
           ) : (
-            <ul className="mt-3 divide-y divide-mist border-y border-mist text-[14px]">
+            <ul className="mt-3 divide-y divide-ink/[0.06] rounded-2xl bg-[#f4f4f2] px-4 text-[14px]">
               {r.slow.map((p) => (
                 <li key={p.slug} className="flex justify-between py-2">
                   <Link href={`/admin/products/${p.slug}`} className="hover:underline">

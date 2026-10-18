@@ -4,7 +4,7 @@ import { useActionState } from "react";
 
 import { addStaffAction, type SaveState } from "@/app/admin/actions";
 
-const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
+const input = "mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-4 text-base outline-none focus:border-ink";
 const label = "block text-sm font-semibold";
 
 export function AddStaffForm({ min }: { min: number }) {

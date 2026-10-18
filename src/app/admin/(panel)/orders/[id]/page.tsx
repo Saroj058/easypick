@@ -56,31 +56,54 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
   const windowDays = g ? 14 : 7;
   const pastWindow = requestTime() - Date.parse(o.completedAt ?? o.paidAt ?? o.createdAt) > windowDays * 86_400_000;
   const attempts = o.payments ?? (o.payment ? [o.payment] : []);
+  // Where the order is on its way: paid, packed, handed over, done.
+  const pickup = method === "pickup";
+  const track = ["Paid", "Packed", pickup ? "At the counter" : "Out for delivery", pickup ? "Collected" : "Delivered"];
+  const reached =
+    o.status === "completed" ? 3 : o.status === "ready_for_pickup" || o.status === "out_for_delivery" ? 2 : o.status === "paid" ? (o.packedAt ? 1 : 0) : -1;
 
   return (
-    <div className="max-w-3xl">
-      <Link href="/admin/orders" className="text-[14px] text-steel-dark underline underline-offset-2">
-        All orders
-      </Link>
-      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="font-mono text-[28px] font-semibold md:text-[34px]">{o.number}</h2>
-        <p className="text-[14px] text-steel-dark">
-          {statusLabel(o)} · placed {time.format(new Date(o.createdAt))}
-        </p>
-      </div>
-      <div className="mt-2 flex flex-wrap gap-4 text-[14px]">
-        <Link href={`/order/${o.id}`} target="_blank" className="min-h-11 content-center underline underline-offset-2">
-          Customer&apos;s view ↗
+    <div className="space-y-6">
+      <div>
+        <Link href="/admin/orders" className="text-[13.5px] text-[#55575c] hover:text-ink">
+          ← All orders
         </Link>
-        {goods && (
-          <Link href={`/admin/slip/${o.id}`} target="_blank" className="min-h-11 content-center underline underline-offset-2">
-            Packing slip ↗
-          </Link>
-        )}
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#6b6d72]">Order · placed {time.format(new Date(o.createdAt))}</p>
+            <h1 className="mt-1 font-mono text-[30px] font-semibold leading-none md:text-[36px]">{o.number}</h1>
+            <p className="mt-2 flex flex-wrap gap-1.5">
+              <span className="rounded-full bg-[#f4f4f2] px-3 py-1 text-[13px]">{statusLabel(o)}</span>
+              <span className="rounded-full bg-[#f4f4f2] px-3 py-1 font-mono text-[13px]">{formatPrice(o.total)}</span>
+              {g && <span className="rounded-full bg-ink px-3 py-1 text-[13px] text-paper">Gift</span>}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[13.5px] font-semibold">
+            <Link href={`/order/${o.id}`} target="_blank" className="inline-flex h-10 items-center rounded-full border border-ink/15 bg-white px-4 hover:border-ink">
+              Customer&apos;s view ↗
+            </Link>
+            {goods && (
+              <Link href={`/admin/slip/${o.id}`} target="_blank" className="inline-flex h-10 items-center rounded-full border border-ink/15 bg-white px-4 hover:border-ink">
+                Packing slip ↗
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
 
+      {goods && reached >= 0 && (
+        <ol aria-label="Progress" className="grid grid-cols-4 gap-2">
+          {track.map((t, i) => (
+            <li key={t} aria-current={i === reached ? "step" : undefined} className="min-w-0">
+              <span className={`block h-1.5 rounded-full ${i <= reached ? "bg-ink" : "bg-[#e3e3e0]"}`} aria-hidden />
+              <span className={`mt-2 block truncate text-[12.5px] ${i <= reached ? "font-semibold" : "text-[#8a8c91]"}`}>{t}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
       {o.attention && (
-        <div role="alert" className="mt-6 flex flex-wrap items-center justify-between gap-3 bg-[#fdecee] px-4 py-3 text-[15px] text-[#9b0010]">
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#fdecee] px-5 py-3 text-[15px] text-[#9b0010]">
           <p>{o.attention}</p>
           {owner && (
             <form action={clearAttention}>
@@ -93,7 +116,9 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
         </div>
       )}
 
-      <section aria-label="Next step" className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0 space-y-4">
+      <section aria-label="Next step" className="flex flex-wrap items-center gap-3 rounded-[24px] bg-[#f4f4f2] p-4">
         <NextStep order={o} />
         {owner && o.status === "awaiting_payment" && (
           <form action={cancelUnpaid}>
@@ -105,44 +130,44 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
         )}
       </section>
 
-      <section aria-labelledby="lines-h" className="mt-10 border-t border-mist pt-6">
-        <h3 id="lines-h" className="text-lg font-semibold">
+      <section aria-labelledby="lines-h" className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
+        <h3 id="lines-h" className="text-[17px] font-semibold">
           Pieces
         </h3>
-        <ul className="mt-3 divide-y divide-mist border-y border-mist">
+        <ul className="mt-3 divide-y divide-ink/[0.06] rounded-2xl bg-white px-4">
           {o.lines.map((l, i) => (
             <li key={i} className="flex flex-wrap items-baseline justify-between gap-2 py-3 text-[15px]">
               <span>
                 <Link href={`/admin/products/${l.slug}`} className="font-semibold hover:underline">
                   {l.name}
                 </Link>{" "}
-                <span className="text-steel-dark">
+                <span className="text-[#6b6d72]">
                   · {l.colour} · {sizeText(l.size)}
                   {l.qty > 1 ? ` × ${l.qty}` : ""}
                 </span>{" "}
-                <span className="font-mono text-[12px] text-steel-dark">{l.sku}</span>
+                <span className="font-mono text-[12px] text-[#6b6d72]">{l.sku}</span>
                 {done[i] > 0 && <span className="ml-2 text-[13px] text-[#9b0010]">{done[i]} refunded</span>}
               </span>
               <span className="font-mono tabular-nums">{formatPrice(l.unitPrice * l.qty)}</span>
             </li>
           ))}
         </ul>
-        <dl className="mt-3 space-y-1 text-[14px]">
+        <dl className="mt-4 space-y-1.5 px-1 text-[14px]">
           {o.deliveryFee > 0 && (
             <div className="flex justify-between">
-              <dt className="text-steel-dark">Delivery</dt>
+              <dt className="text-[#6b6d72]">Delivery</dt>
               <dd className="font-mono">{formatPrice(o.deliveryFee)}</dd>
             </div>
           )}
           {(o.wrapFee ?? 0) > 0 && (
             <div className="flex justify-between">
-              <dt className="text-steel-dark">Gift box</dt>
+              <dt className="text-[#6b6d72]">Gift box</dt>
               <dd className="font-mono">{formatPrice(o.wrapFee!)}</dd>
             </div>
           )}
           {o.giftCard && (
             <div className="flex justify-between">
-              <dt className="text-steel-dark">Gift card {o.giftCard.code}</dt>
+              <dt className="text-[#6b6d72]">Gift card {o.giftCard.code}</dt>
               <dd className="font-mono">−{formatPrice(o.giftCard.applied)}</dd>
             </div>
           )}
@@ -153,56 +178,14 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
         </dl>
       </section>
 
-      <section aria-label="Customer and delivery" className="mt-8 grid gap-6 border-t border-mist pt-6 text-[15px] sm:grid-cols-2">
-        <div>
-          <h3 className="text-[13px] text-steel-dark">{g ? "Gift for" : "Customer"}</h3>
-          {g && <p className="mt-1 font-semibold">{g.receiverName}</p>}
-          <p className="mt-1 font-mono">{g ? (g.receiverPhone ?? "no phone") : o.phone}</p>
-          {g && (
-            <p className="mt-1 text-[14px] text-steel-dark">
-              From {g.senderName ?? "someone (anonymous)"} · buyer <span className="font-mono">{o.phone}</span>
-              {g.receiverEmail ? ` · ${g.receiverEmail}` : ""}
-            </p>
-          )}
-        </div>
-        <div>
-          <h3 className="text-[13px] text-steel-dark">{method === "pickup" ? "Pickup" : "Deliver to"}</h3>
-          <p className="mt-1">
-            {g?.receiver?.tryInStore
-              ? "Trying it on in the store"
-              : method === "pickup"
-                ? "At the counter"
-                : address
-                  ? `${address.area}, near ${address.landmark}${address.details ? ` · ${address.details}` : ""}`
-                  : "Address not given yet"}
-          </p>
-          {g?.receiver?.slot && <p className="text-[14px] text-steel-dark">{g.receiver.slot}</p>}
-          {o.rider && (
-            <p className="mt-1 text-[14px]">
-              Rider {o.rider.name} <span className="font-mono">{o.rider.phone}</span>
-            </p>
-          )}
-        </div>
-        {g && (
-          <div className="sm:col-span-2">
-            <h3 className="text-[13px] text-steel-dark">Gift</h3>
-            <p className="mt-1 text-[14px]">
-              {g.wrap === "premium" ? "Premium black box" : "Standard bag + tissue"} · {g.showPrice ? "price may be shown" : "no price inside"} · {g.mode === "pick" ? "they pick the size" : "size chosen by buyer"} · status {g.status}
-              {g.deliverOn ? ` · deliver on ${g.deliverOn}` : ""}
-            </p>
-            {g.message && <p className="mt-2 border-l-2 border-mist pl-3 text-[14px]">&ldquo;{g.message}&rdquo;</p>}
-          </div>
-        )}
-      </section>
-
       {live && goods && exchangeLines.length > 0 && (
-        <div className="mt-10 border-t border-mist pt-8">
+        <div className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
           <ExchangeForm key={(o.events ?? []).length} orderId={o.id} lines={exchangeLines} windowDays={windowDays} pastWindow={pastWindow} canOverride={owner} />
         </div>
       )}
 
       {canRefund && (
-        <div className="mt-10 border-t border-mist pt-8">
+        <div className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
           <RefundForm
             key={(o.refunds ?? []).length}
             orderId={o.id}
@@ -217,8 +200,8 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
       )}
 
       {(o.refunds ?? []).length > 0 && (
-        <section aria-labelledby="ref-h" className="mt-10 border-t border-mist pt-6">
-          <h3 id="ref-h" className="text-lg font-semibold">
+        <section aria-labelledby="ref-h" className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
+          <h3 id="ref-h" className="text-[17px] font-semibold">
             Refunds
           </h3>
           <ul className="mt-3 space-y-2 text-[14px]">
@@ -234,9 +217,54 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
         </section>
       )}
 
+      </div>
+
+      <aside className="space-y-4 lg:sticky lg:top-24" aria-label="Customer, payment and history">
+      <section aria-label="Customer and delivery" className="space-y-5 rounded-[24px] bg-[#f4f4f2] p-5 text-[15px]">
+        <div>
+          <h3 className="text-[13px] text-[#6b6d72]">{g ? "Gift for" : "Customer"}</h3>
+          {g && <p className="mt-1 font-semibold">{g.receiverName}</p>}
+          <p className="mt-1 font-mono">{g ? (g.receiverPhone ?? "no phone") : o.phone}</p>
+          {g && (
+            <p className="mt-1 text-[14px] text-[#6b6d72]">
+              From {g.senderName ?? "someone (anonymous)"} · buyer <span className="font-mono">{o.phone}</span>
+              {g.receiverEmail ? ` · ${g.receiverEmail}` : ""}
+            </p>
+          )}
+        </div>
+        <div>
+          <h3 className="text-[13px] text-[#6b6d72]">{method === "pickup" ? "Pickup" : "Deliver to"}</h3>
+          <p className="mt-1">
+            {g?.receiver?.tryInStore
+              ? "Trying it on in the store"
+              : method === "pickup"
+                ? "At the counter"
+                : address
+                  ? `${address.area}, near ${address.landmark}${address.details ? ` · ${address.details}` : ""}`
+                  : "Address not given yet"}
+          </p>
+          {g?.receiver?.slot && <p className="text-[14px] text-[#6b6d72]">{g.receiver.slot}</p>}
+          {o.rider && (
+            <p className="mt-1 text-[14px]">
+              Rider {o.rider.name} <span className="font-mono">{o.rider.phone}</span>
+            </p>
+          )}
+        </div>
+        {g && (
+          <div>
+            <h3 className="text-[13px] text-[#6b6d72]">Gift</h3>
+            <p className="mt-1 text-[14px]">
+              {g.wrap === "premium" ? "Premium black box" : "Standard bag + tissue"} · {g.showPrice ? "price may be shown" : "no price inside"} · {g.mode === "pick" ? "they pick the size" : "size chosen by buyer"} · status {g.status}
+              {g.deliverOn ? ` · deliver on ${g.deliverOn}` : ""}
+            </p>
+            {g.message && <p className="mt-2 rounded-xl bg-white px-3 py-2 text-[14px]">&ldquo;{g.message}&rdquo;</p>}
+          </div>
+        )}
+      </section>
+
       {attempts.length > 0 && (
-        <section aria-labelledby="pay-h" className="mt-10 border-t border-mist pt-6">
-          <h3 id="pay-h" className="text-lg font-semibold">
+        <section aria-labelledby="pay-h" className="rounded-[24px] bg-[#f4f4f2] p-5">
+          <h3 id="pay-h" className="text-[17px] font-semibold">
             Payment attempts
           </h3>
           <ul className="mt-3 space-y-2 text-[14px]">
@@ -249,7 +277,7 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
                     · paid {a.amount ? formatPrice(a.amount) : ""} {a.gatewayRef ? `(${a.gatewayRef})` : ""}
                   </span>
                 ) : (
-                  <span className="text-steel-dark"> · not completed</span>
+                  <span className="text-[#6b6d72]"> · not completed</span>
                 )}
               </li>
             ))}
@@ -257,21 +285,24 @@ export default async function AdminOrder({ params }: PageProps<"/admin/orders/[i
         </section>
       )}
 
-      <section aria-labelledby="ev-h" className="mt-10 border-t border-mist pt-6">
-        <h3 id="ev-h" className="text-lg font-semibold">
+      <section aria-labelledby="ev-h" className="rounded-[24px] bg-[#f4f4f2] p-5">
+        <h3 id="ev-h" className="text-[17px] font-semibold">
           History
         </h3>
         <ol className="mt-3 space-y-2 text-[14px]">
           {[...(o.events ?? [])].reverse().map((e, i) => (
-            <li key={i} className="flex gap-3">
-              <span className="w-32 shrink-0 text-steel-dark">{time.format(new Date(e.at))}</span>
-              <span>
-                {e.what} <span className="text-steel-dark">· {e.by}</span>
+            <li key={i} className="relative border-l border-ink/10 pb-1 pl-4">
+              <span className={`absolute -left-[4.5px] top-1.5 h-2 w-2 rounded-full ${i === 0 ? "bg-ink" : "bg-[#c4c5c8]"}`} aria-hidden />
+              <span className="block">{e.what}</span>
+              <span className="block text-[12.5px] text-[#6b6d72]">
+                {time.format(new Date(e.at))} · {e.by}
               </span>
             </li>
           ))}
         </ol>
       </section>
+      </aside>
+      </div>
     </div>
   );
 }

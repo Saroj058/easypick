@@ -22,11 +22,11 @@ export default async function HelperProductStock({ params }: PageProps<"/helper/
   const [demand, history] = await Promise.all([restockDemand(), stockHistory(slug, 15)]);
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/helper/stock" className="text-[14px] text-steel-dark underline underline-offset-2">
+      <Link href="/helper/stock" className="text-[13.5px] text-[#55575c] hover:text-ink">
         All stock
       </Link>
-      <h1 className="display mt-3 text-[32px]">{product.name}</h1>
-      <div className="mt-6 space-y-12">
+      <h1 className="mt-3 text-[34px] font-light leading-none tracking-[-0.02em] md:text-[40px]">{product.name}</h1>
+      <div className="mt-6 space-y-4 [&>*]:rounded-[24px] [&>*]:bg-[#f4f4f2] [&>*]:p-5">
         <StockForm product={product} demand={demand} />
         <StockHistory history={history} />
       </div>

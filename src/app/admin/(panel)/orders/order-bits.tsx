@@ -52,7 +52,7 @@ export function deliverOn(o: Order): { text: string; future: boolean } | null {
   return { text: `Deliver on ${deliverDay.format(at)} (${formatBS(at)})`, future: d > ktmDay() };
 }
 
-const small = "h-11 w-full rounded-[2px] border border-mist bg-paper px-3 text-[15px] outline-none focus:border-ink sm:w-40";
+const small = "h-11 w-full rounded-xl border border-ink/15 bg-white px-3 text-[15px] outline-none focus:border-ink sm:w-40";
 
 function Step({ order, step, label }: { order: Order; step: string; label: string }) {
   const rider = step === "ready" && (order.gift?.receiver?.method ?? order.method) === "delivery";

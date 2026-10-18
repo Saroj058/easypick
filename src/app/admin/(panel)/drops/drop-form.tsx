@@ -4,7 +4,7 @@ import { useActionState } from "react";
 
 import { saveDropAction, type SaveState } from "@/app/admin/actions";
 
-const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
+const input = "mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-4 text-base outline-none focus:border-ink";
 const label = "block text-sm font-semibold";
 
 export type DropFormValue = { slug: string; name: string; story: string; releaseAt: string; products: string[] };
@@ -33,7 +33,7 @@ export function DropForm({ initial, products, isNew }: { initial: DropFormValue;
         <label htmlFor="d-story" className={label}>
           Story <span className="font-normal text-steel-dark">(one or two lines for the drop page)</span>
         </label>
-        <textarea id="d-story" name="story" defaultValue={initial.story} rows={3} maxLength={400} className="mt-2 w-full rounded-[2px] border border-mist bg-paper p-4 text-base outline-none focus:border-ink" />
+        <textarea id="d-story" name="story" defaultValue={initial.story} rows={3} maxLength={400} className="mt-2 w-full rounded-xl border border-ink/15 bg-white p-4 text-base outline-none focus:border-ink" />
       </div>
       <div>
         <label htmlFor="d-at" className={label}>

@@ -209,6 +209,36 @@
     }
   }
 
+  /* Admin and helper: the control-room look. Pill buttons in sentence case, ink instead of lime. */
+  .admin-ui .btn {
+    min-height: 44px;
+    padding-inline: 20px;
+    border-radius: 9999px;
+    font-size: 14px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .admin-ui .btn-volt {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .admin-ui .btn-outline {
+    border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+    background: #fff;
+  }
+  @media (hover: hover) {
+    .admin-ui .btn-volt:hover {
+      background: var(--color-graphite);
+    }
+    .admin-ui .btn-outline:hover {
+      border-color: currentColor;
+      background: #fff;
+    }
+  }
+  .admin-ui select {
+    cursor: pointer;
+  }
+
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 12px;

@@ -317,6 +317,23 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
   }
   if (original && !brand) return { status: "error", message: "Add the brand before tagging it Original." };
 
+  // The fuller edit form also sends the basics; older forms don't, and keep what's there.
+  const name = form.has("name") ? str(form, "name", 80) : product.name;
+  if (!name) return { status: "error", message: "Give it a name." };
+  const fit = (form.has("fit") ? str(form, "fit") : product.fit) as Fit;
+  if (!FITS.includes(fit)) return { status: "error", message: "Choose a fit." };
+  const gender = (form.has("gender") ? str(form, "gender") : product.gender) as Gender;
+  if (!GENDERS.includes(gender)) return { status: "error", message: "Choose who it's for." };
+  const dropSlug = form.has("drop") ? str(form, "drop", 20) || null : product.dropSlug;
+  if (dropSlug && dropSlug !== product.dropSlug && !(await allDrops()).some((d) => d.slug === dropSlug)) return { status: "error", message: "That drop doesn't exist any more. Choose another." };
+  const details = form.has("details")
+    ? str(form, "details", 20 * 202)
+        .split("\n")
+        .map((l) => l.trim().slice(0, 200))
+        .filter(Boolean)
+        .slice(0, 20)
+    : product.details;
+
   let photoSrc: string | null = null;
   const photo = form.get("photo");
   if (photo instanceof File && photo.size > 0) {
@@ -326,6 +343,11 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
   }
 
   await updateProduct(slug, (p) => {
+    p.name = name;
+    p.fit = fit;
+    p.gender = gender;
+    p.dropSlug = dropSlug;
+    p.details = details;
     p.price = price;
     p.salePrice = salePrice;
     // First time it goes live: remember when, for "New" (drop pieces use their drop's time).
@@ -341,13 +363,14 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     p.edition = edition;
     p.story = story;
     if (photoSrc) {
-      const front = { src: photoSrc, alt: `${p.name}, front`, kind: "front" as const };
+      const front = { src: photoSrc, alt: `${name}, front`, kind: "front" as const };
       const i = p.images.findIndex((img) => img.kind === "front");
       if (i >= 0) p.images[i] = front;
       else p.images.unshift(front);
     }
   });
   await logStaff(me, "edited product", slug, {
+    name: product.name !== name ? [product.name, name] : undefined,
     price: product.price !== price ? [product.price, price] : undefined,
     salePrice: product.salePrice !== salePrice ? [product.salePrice ?? null, salePrice ?? null] : undefined,
     status: product.status !== status ? [product.status, status] : undefined,
@@ -360,6 +383,60 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
   catalogueChanged();
   updateTag("trending");
   return { status: "saved", message: "Saved." };
+}
+
+/** Owner: one status for several pieces at once (from the Products list). */
+export async function bulkProductStatus(slugs: string[], status: ProductStatus): Promise<SaveState> {
+  const me = await requireOwner();
+  if (!STATUSES.includes(status)) return { status: "error", message: "Choose a status." };
+  const list = [...new Set(slugs.filter((x) => typeof x === "string"))].slice(0, 200);
+  if (!list.length) return { status: "error", message: "Tick at least one piece." };
+  let changed = 0;
+  for (const slug of list) {
+    const before = await findProduct(slug);
+    if (!before || before.status === status) continue;
+    await updateProduct(slug, (p) => {
+      if (status === "live" && !p.liveAt && !p.dropSlug) p.liveAt = new Date().toISOString();
+      p.status = status;
+    });
+    await logStaff(me, "edited product", slug, { status: [before.status, status] });
+    changed++;
+  }
+  if (changed) {
+    catalogueChanged();
+    updateTag("trending");
+  }
+  return { status: "saved", message: changed ? `${changed} ${changed === 1 ? "piece" : "pieces"} changed.` : "Nothing to change." };
+}
+
+/** Owner: a copy of a piece as a hidden draft (same details, colours and sizes; no stock), then opens it. */
+export async function duplicateProduct(form: FormData) {
+  const me = await requireOwner();
+  const from = await findProduct(str(form, "slug"));
+  if (!from) return;
+  const name = `${from.name} copy`.slice(0, 80);
+  let slug = slugify(name);
+  for (let i = 2; await findProduct(slug); i++) slug = slugify(`${name} ${i}`);
+  const db = await getDb();
+  const existing = (await db.select({ sku: schema.variants.sku }).from(schema.variants)).map((r) => r.sku);
+  const code = nextProductCode(from.category, existing);
+  const colourCode = new Map(colourCodes(from.colours.map((c) => c.name)).map((cc, i) => [from.colours[i].name, cc]));
+  await createProduct({
+    ...structuredClone(from),
+    id: randomUUID(),
+    slug,
+    name,
+    status: "draft",
+    liveAt: undefined,
+    isNew: undefined,
+    staffPick: undefined,
+    edition: undefined,
+    images: from.images.map((img) => ({ ...img, alt: img.alt.replace(from.name, name) })),
+    variants: from.variants.map((v) => ({ ...v, sku: `${code}-${colourCode.get(v.colour) ?? "X"}-${v.size}`, stock: 0 })),
+  });
+  await logStaff(me, "added product", slug, { copyOf: from.slug });
+  catalogueChanged();
+  redirect(`/admin/products/${slug}?added=copy`);
 }
 
 const ADJUST_REASONS: StockReason[] = ["received", "count", "damaged", "returned"];

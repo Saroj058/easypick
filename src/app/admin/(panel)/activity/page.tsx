@@ -32,7 +32,7 @@ export default async function AdminActivity({ searchParams }: PageProps<"/admin/
 
   return (
     <div className="max-w-4xl">
-      <h2 className="display text-[32px] md:text-[40px]">Activity</h2>
+      <h2 className="text-[36px] font-light leading-none tracking-[-0.02em] md:text-[40px]">Activity</h2>
       <p className="mt-2 text-steel-dark">Who changed what in the admin: sign-ins, prices, stock, refunds, exchanges. The latest 200.</p>
       <ul className="mt-6 flex flex-wrap gap-2" aria-label="Show">
         {[{ id: undefined as string | undefined, label: "Everyone" }, ...staff.map((s) => ({ id: s.id as string | undefined, label: s.username }))].map((s) => (

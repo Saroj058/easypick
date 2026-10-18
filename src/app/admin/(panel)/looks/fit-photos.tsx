@@ -41,7 +41,7 @@ function FitPhoto({ fit }: { fit: { key: OccasionKey; label: string; photo?: str
   };
   return (
     <li className="flex gap-3 border border-mist p-3">
-      <div className="h-24 w-[77px] shrink-0 overflow-hidden bg-photo">
+      <div className="h-24 w-[77px] shrink-0 overflow-hidden rounded-xl bg-[#f4f4f2]">
         {/* eslint-disable-next-line @next/next/no-img-element -- a small admin preview */}
         {fit.photo ? <img src={fit.photo} alt="" className="h-full w-full object-cover" /> : null}
       </div>

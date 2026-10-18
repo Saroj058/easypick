@@ -12,7 +12,7 @@ export default async function AdminTrending() {
   const { enough, rows, live } = await trendingForAdmin();
   return (
     <div className="max-w-5xl">
-      <h2 className="display text-[32px] md:text-[40px]">Trending</h2>
+      <h2 className="text-[36px] font-light leading-none tracking-[-0.02em] md:text-[40px]">Trending</h2>
       <p className="mt-2 text-steel-dark">
         The public page shows{" "}
         <span className="font-semibold text-ink">{live.mode === "trending" ? `real Trending (${live.items.length} pieces)` : `${live.label} (${live.items.length} pieces)`}</span>.{" "}

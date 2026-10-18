@@ -39,10 +39,10 @@ export default async function HelperOrder({ params }: PageProps<"/helper/order/[
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/helper" className="text-[14px] text-steel-dark underline underline-offset-2">
+      <Link href="/helper" className="text-[13.5px] text-[#55575c] hover:text-ink">
         All orders
       </Link>
-      <p className="mt-3 text-[14px] text-steel-dark">{statusLabel(o)}</p>
+      <p className="mt-3 text-[14px] text-[#6b6d72]">{statusLabel(o)}</p>
       <ul className="mt-2">
         <HelperOrderCard o={o} />
       </ul>
@@ -53,33 +53,33 @@ export default async function HelperOrder({ params }: PageProps<"/helper/order/[
       )}
 
       {live && exchangeLines.length > 0 && (
-        <div className="mt-10 border-t border-mist pt-8">
+        <div className="mt-6 rounded-[24px] bg-[#f4f4f2] p-5">
           <ExchangeForm key={(o.events ?? []).length} orderId={o.id} lines={exchangeLines} windowDays={windowDays} pastWindow={pastWindow} />
-          <p className="mt-3 text-[13px] text-steel-dark">Want money back instead? That&apos;s a refund: ask the owner.</p>
+          <p className="mt-3 text-[13px] text-[#6b6d72]">Want money back instead? That&apos;s a refund: ask the owner.</p>
         </div>
       )}
 
       {o.gift?.message && (
-        <section aria-labelledby="card-h" className="mt-10 border-t border-mist pt-6">
-          <h2 id="card-h" className="text-lg font-semibold">
+        <section aria-labelledby="card-h" className="mt-6 rounded-[24px] bg-[#f4f4f2] p-5">
+          <h2 id="card-h" className="text-[17px] font-semibold">
             Gift card message
           </h2>
-          <p className="mt-2 border-l-2 border-mist pl-3">&ldquo;{o.gift.message}&rdquo;</p>
-          <p className="mt-1 text-[14px] text-steel-dark">From {o.gift.senderName ?? "someone (anonymous)"}. It&apos;s printed on the slip.</p>
+          <p className="mt-2 rounded-xl bg-white px-3 py-2">&ldquo;{o.gift.message}&rdquo;</p>
+          <p className="mt-1 text-[14px] text-[#6b6d72]">From {o.gift.senderName ?? "someone (anonymous)"}. It&apos;s printed on the slip.</p>
         </section>
       )}
 
-      <section aria-labelledby="ev-h" className="mt-10 border-t border-mist pt-6">
-        <h2 id="ev-h" className="text-lg font-semibold">
+      <section aria-labelledby="ev-h" className="mt-6 rounded-[24px] bg-[#f4f4f2] p-5">
+        <h2 id="ev-h" className="text-[17px] font-semibold">
           What&apos;s happened
         </h2>
         <ol className="mt-3 space-y-2 text-[14px]">
           {/* Fulfilment only: refunds and payment details are for the owner. */}
           {[...helperEvents(o.events)].reverse().map((e, i) => (
             <li key={i} className="flex gap-3">
-              <span className="w-28 shrink-0 text-steel-dark">{time.format(new Date(e.at))}</span>
+              <span className="w-28 shrink-0 text-[#6b6d72]">{time.format(new Date(e.at))}</span>
               <span>
-                {e.what} <span className="text-steel-dark">· {e.by}</span>
+                {e.what} <span className="text-[#6b6d72]">· {e.by}</span>
               </span>
             </li>
           ))}

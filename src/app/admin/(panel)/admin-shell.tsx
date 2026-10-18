@@ -146,7 +146,7 @@ export function AdminShell({ role, username, toPack, attention, notices, childre
   );
 
   return (
-    <div className="min-h-dvh bg-[#e9e9e7] text-ink">
+    <div className="admin-ui min-h-dvh bg-[#e9e9e7] text-ink">
       <div className="mx-auto flex max-w-[1680px] gap-4 p-3 md:p-4">
         {/* The sidebar (wide screens) */}
         <aside className="sticky top-4 hidden h-[calc(100dvh-2rem)] w-[232px] shrink-0 flex-col rounded-[28px] bg-white/80 px-3 py-5 shadow-[0_20px_50px_-36px_rgba(0,0,0,0.35)] backdrop-blur lg:flex">

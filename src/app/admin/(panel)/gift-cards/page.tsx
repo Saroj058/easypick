@@ -22,7 +22,7 @@ export default async function AdminGiftCards({ searchParams }: PageProps<"/admin
 
   return (
     <div className="max-w-4xl">
-      <h2 className="display text-[32px] md:text-[40px]">Gift cards</h2>
+      <h2 className="text-[36px] font-light leading-none tracking-[-0.02em] md:text-[40px]">Gift cards</h2>
       <p className="mt-2 text-steel-dark">Find a card by its code or the buyer&apos;s or receiver&apos;s phone. Block a card that was lost or used without permission.</p>
 
       <form role="search" action="/admin/gift-cards" className="mt-6 flex max-w-xl gap-2">
@@ -35,7 +35,7 @@ export default async function AdminGiftCards({ searchParams }: PageProps<"/admin
           type="search"
           defaultValue={q}
           placeholder="EP-XXXX-XXXX or phone"
-          className="h-11 min-w-0 flex-1 rounded-[2px] border border-mist bg-paper px-4 text-base outline-none placeholder:text-steel-dark focus:border-ink"
+          className="h-11 min-w-0 flex-1 rounded-xl border border-ink/15 bg-white px-4 text-base outline-none placeholder:text-steel-dark focus:border-ink"
         />
         <button type="submit" className="btn btn-outline">
           Find

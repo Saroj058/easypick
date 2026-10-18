@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 
 import { signInAdmin, type LoginState } from "@/app/admin/actions";
 
-const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 text-base outline-none focus:border-ink";
+const input = "mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-4 text-base outline-none focus:border-ink";
 
 /** Staff login. `portal` picks where an owner lands (helpers always go to /helper). */
 export function AdminLoginForm({ portal = "admin" }: { portal?: "admin" | "helper" }) {

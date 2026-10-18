@@ -10,7 +10,7 @@ export default async function StockCount() {
   await requireOwner();
   return (
     <div className="max-w-3xl">
-      <h2 className="display text-[32px] md:text-[40px]">Stock count</h2>
+      <h2 className="text-[36px] font-light leading-none tracking-[-0.02em] md:text-[40px]">Stock count</h2>
       <p className="mt-2 text-steel-dark">
         Download the sheet, count what&apos;s really there, fill the &ldquo;counted&rdquo; column, and paste the SKU and counted columns below. Online
         orders placed while you count are kept: pieces held for orders (placed, paid or waiting at the counter) are taken off what you counted,

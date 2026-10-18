@@ -40,19 +40,19 @@ export function StockForm({ product, demand }: { product: Product; demand: Recor
     >
       <input type="hidden" name="slug" value={product.slug} />
       <div>
-        <h3 id="stock-h" className="text-lg font-semibold">
+        <h3 id="stock-h" className="text-[17px] font-semibold">
           Stock
         </h3>
-        <p className="mt-1 text-[14px] text-steel-dark">
+        <p className="mt-1 text-[14px] text-[#6b6d72]">
           Type how many to add (5) or take off (−2) for each size. Online orders take stock off by themselves. When a size goes from 0 to more,
           everyone waiting is told.
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[420px] text-left text-[15px]">
-          <thead className="text-[13px] text-steel-dark">
-            <tr className="border-b border-mist">
-              <th className="py-2 font-normal">Colour</th>
+        <table className="w-full min-w-[420px] border-separate border-spacing-y-1.5 text-left text-[15px]">
+          <thead className="text-[13px] text-[#6b6d72]">
+            <tr>
+              <th className="py-2 pl-4 font-normal">Colour</th>
               {sizes.map((s) => (
                 <th key={s} className="px-1 py-2 text-center font-normal">
                   {s === "ONE" ? "One size" : s}
@@ -62,8 +62,8 @@ export function StockForm({ product, demand }: { product: Product; demand: Recor
           </thead>
           <tbody>
             {product.colours.map((c) => (
-              <tr key={c.name} className="border-b border-mist">
-                <th scope="row" className="py-3 pr-3 font-normal">
+              <tr key={c.name} className="bg-white [&>*:first-child]:rounded-l-2xl [&>*:last-child]:rounded-r-2xl">
+                <th scope="row" className="py-3 pl-4 pr-3 font-normal">
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 shrink-0 rounded-full border border-black/10" style={{ background: c.hex }} aria-hidden />
                     {c.name}
@@ -88,9 +88,9 @@ export function StockForm({ product, demand }: { product: Product; demand: Recor
                         inputMode="numeric"
                         step={1}
                         placeholder="±0"
-                        className="mt-1 h-11 w-16 rounded-[2px] border border-mist text-center font-mono tabular-nums outline-none focus:border-ink"
+                        className="mt-1 h-10 w-16 rounded-xl border border-ink/15 bg-white text-center font-mono tabular-nums outline-none focus:border-ink"
                       />
-                      {asked > 0 && <span className="mt-1 block text-[11px] text-steel-dark">{asked} waiting</span>}
+                      {asked > 0 && <span className="mt-1 block text-[11px] text-[#6b6d72]">{asked} waiting</span>}
                     </td>
                   );
                 })}
@@ -111,14 +111,14 @@ export function StockForm({ product, demand }: { product: Product; demand: Recor
             defaultValue={reason}
             onChange={(e) => setReason(e.target.value)}
             aria-describedby="st-reason-hint"
-            className="mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-3">
+            className="mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-3">
             {reasons.map((r) => (
               <option key={r.value} value={r.value}>
                 {r.label}
               </option>
             ))}
           </select>
-          <p id="st-reason-hint" className="mt-1 text-[13px] text-steel-dark">
+          <p id="st-reason-hint" className="mt-1 text-[13px] text-[#6b6d72]">
             {reason === "count" ? (
               <>
                 For a full recount use the <Link href="/admin/stock" className="underline underline-offset-2">Stock count</Link> page: it keeps pieces held for
@@ -133,16 +133,16 @@ export function StockForm({ product, demand }: { product: Product; demand: Recor
         </div>
         <div>
           <label htmlFor="st-note" className="block text-sm font-semibold">
-            Note <span className="font-normal text-steel-dark">(optional)</span>
+            Note <span className="font-normal text-[#6b6d72]">(optional)</span>
           </label>
-          <input key={state.n} id="st-note" name="note" maxLength={80} defaultValue={state.values?.note} placeholder="e.g. Drop 02 delivery" className="mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4" />
+          <input key={state.n} id="st-note" name="note" maxLength={80} defaultValue={state.values?.note} placeholder="e.g. Drop 02 delivery" className="mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-4" />
         </div>
       </div>
       <div className="flex items-center gap-4">
         <button type="submit" disabled={pending} className="btn btn-ink min-w-40">
           {pending ? "Saving…" : "Update stock"}
         </button>
-        <p role="status" className={`text-[14px] ${state.status === "error" ? "text-[#d70015]" : "text-steel-dark"}`}>
+        <p role="status" className={`text-[14px] ${state.status === "error" ? "text-[#d70015]" : "text-[#6b6d72]"}`}>
           {state.status === "idle" ? "" : state.message}
         </p>
       </div>

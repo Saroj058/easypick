@@ -4,7 +4,7 @@ import { useActionState } from "react";
 
 import { resetStaffPasswordAction, type ResetState } from "@/app/admin/staff-actions";
 
-const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-4 font-mono text-base outline-none focus:border-ink";
+const input = "mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-4 font-mono text-base outline-none focus:border-ink";
 
 /** Owner sets a new password for someone who forgot theirs (or whose password leaked). */
 export function ResetPasswordForm({ id, username, min }: { id: string; username: string; min: number }) {

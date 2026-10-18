@@ -8,7 +8,7 @@ import { formatBS } from "@/lib/nepali-date";
 import { DAY_NAMES, type StoreInfo } from "@/lib/store-state";
 import { StartPointsFields } from "./start-points-fields";
 
-const input = "mt-1 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-3 text-base outline-none focus:border-ink";
+const input = "mt-1 h-12 w-full rounded-xl border border-ink/15 bg-white px-3 text-base outline-none focus:border-ink";
 const lbl = "text-sm font-semibold";
 const hint = "mt-1 text-[12px] text-steel-dark";
 

@@ -6,7 +6,7 @@ import type { Festival } from "@/lib/types";
 import { formatBS } from "@/lib/nepali-date";
 import { saveFestivalList, type SaveState } from "@/app/admin/actions";
 
-const input = "mt-1 h-[52px] w-full rounded-[2px] border border-mist bg-paper px-3 text-base outline-none focus:border-ink";
+const input = "mt-1 h-12 w-full rounded-xl border border-ink/15 bg-white px-3 text-base outline-none focus:border-ink";
 
 type Row = { key: number; name: string; date: string; orderBy: string };
 

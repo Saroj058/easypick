@@ -2,32 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-import { BagIcon, ShopIcon, UserIcon } from "@/components/icons";
-
-const SearchIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" className={className} aria-hidden>
-    <circle cx="11" cy="11" r="6.5" />
-    <path d="m16 16 4 4" />
-  </svg>
-);
+import { Boxes, PackageCheck, Search, UserRound } from "lucide-react";
 
 const tabs = [
-  { href: "/helper", label: "Orders", Icon: BagIcon },
-  { href: "/helper/find", label: "Find", Icon: SearchIcon },
-  { href: "/helper/stock", label: "Stock", Icon: ShopIcon },
-  { href: "/helper/me", label: "Me", Icon: UserIcon },
+  { href: "/helper", label: "Orders", Icon: PackageCheck },
+  { href: "/helper/find", label: "Find", Icon: Search },
+  { href: "/helper/stock", label: "Stock", Icon: Boxes },
+  { href: "/helper/me", label: "Me", Icon: UserRound },
 ];
 
 const isCurrent = (path: string, href: string) =>
   href === "/helper" ? path === "/helper" || path.startsWith("/helper/order") : href === "/helper/stock" ? path.startsWith("/helper/stock") || path.startsWith("/helper/count") : path.startsWith(href);
 
-/** Tabs: across the top on a big screen, a thumb bar at the bottom on a phone. */
-export function HelperNav({ waiting }: { waiting: number }) {
+/** Tabs: pills in the top bar on a big screen, a floating thumb dock on a phone. */
+export function HelperNav({ waiting, dock }: { waiting: number; dock?: boolean }) {
   const path = usePathname();
   return (
-    <nav aria-label="Helper sections" className="fixed inset-x-0 bottom-0 z-40 border-t border-mist bg-paper pb-[env(safe-area-inset-bottom)] md:static md:border-t-0 md:bg-transparent md:pb-0">
-      <ul className="mx-auto grid max-w-xl grid-cols-4 md:mx-0 md:flex md:max-w-none md:gap-2">
+    <nav
+      aria-label="Helper sections"
+      className={dock ? "fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-40 rounded-full bg-white/90 p-1.5 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 backdrop-blur" : ""}
+    >
+      <ul className={dock ? "grid grid-cols-4 gap-1" : "flex gap-1"}>
         {tabs.map(({ href, label, Icon }) => {
           const on = isCurrent(path, href);
           return (
@@ -35,12 +30,16 @@ export function HelperNav({ waiting }: { waiting: number }) {
               <Link
                 href={href}
                 aria-current={on ? "page" : undefined}
-                className={`relative flex min-h-16 flex-col items-center justify-center gap-1 text-[12px] md:min-h-11 md:flex-row md:gap-2 md:border-b-2 md:px-3 md:text-[15px] ${on ? "font-semibold text-ink md:border-ink" : "text-steel-dark md:border-transparent"}`}
+                className={`relative flex items-center justify-center rounded-full transition-colors ${
+                  dock ? "h-14 flex-col gap-0.5 text-[11.5px]" : "h-9 gap-2 px-4 text-[14px]"
+                } ${on ? "bg-ink font-semibold text-paper" : "text-[#55575c] hover:bg-ink/[0.06] hover:text-ink"}`}
               >
-                <Icon className="h-6 w-6 md:h-5 md:w-5" />
+                <Icon className={dock ? "h-5 w-5" : "h-4 w-4"} strokeWidth={1.75} aria-hidden />
                 {label}
                 {href === "/helper" && waiting > 0 && (
-                  <span className="absolute right-[calc(50%-22px)] top-2 grid h-5 min-w-5 place-items-center rounded-full bg-volt px-1 font-mono text-[11px] font-semibold text-ink md:static">
+                  <span
+                    className={`grid h-5 min-w-5 place-items-center rounded-full px-1 font-mono text-[11px] font-semibold ${on ? "bg-paper text-ink" : "bg-ink text-paper"} ${dock ? "absolute right-[calc(50%-24px)] top-1" : ""}`}
+                  >
                     {waiting}
                   </span>
                 )}

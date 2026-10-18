@@ -24,7 +24,7 @@ export function CountForm() {
           spellCheck={false}
           placeholder={"HOD01-BLA-M,4\nHOD01-BLA-L,2\nTEE03-WHI-S,0"}
           aria-describedby="counts-hint"
-          className="w-full rounded-[2px] border border-mist bg-paper p-4 font-mono text-[14px] outline-none placeholder:text-steel-dark focus:border-ink"
+          className="w-full rounded-xl border border-ink/15 bg-white p-4 font-mono text-[14px] outline-none placeholder:text-steel-dark focus:border-ink"
         />
         <p id="counts-hint" className="text-[13px] text-steel-dark">
           One size per line: SKU, a comma (or tab, from a spreadsheet), and every piece in the shop: on the floor, in the back, and packed for orders
@@ -41,7 +41,7 @@ export function CountForm() {
         </p>
       )}
       {state.status === "saved" && (
-        <div role="status" className="bg-photo px-4 py-3 text-[15px]">
+        <div role="status" className="rounded-2xl bg-[#f4f4f2] px-4 py-3 text-[15px]">
           <p>{state.message}</p>
           {state.problems.length > 0 && (
             <ul className="mt-2 list-disc pl-5 text-[14px] text-[#9b0010]">
@@ -54,7 +54,7 @@ export function CountForm() {
       )}
 
       {state.status === "preview" && (
-        <section aria-labelledby="diff-h" className="border-t border-mist pt-6">
+        <section aria-labelledby="diff-h" className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
           <h3 id="diff-h" className="text-lg font-semibold">
             {state.rows.length ? `${state.rows.length} ${state.rows.length === 1 ? "size is" : "sizes are"} different` : "Everything matches"}
           </h3>

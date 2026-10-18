@@ -20,11 +20,11 @@ export default async function AdminStaff() {
   return (
     <div className="max-w-2xl space-y-12">
       <section aria-labelledby="staff-h">
-        <h2 id="staff-h" className="display text-[32px] md:text-[40px]">
+        <h2 id="staff-h" className="text-[36px] font-light leading-none tracking-[-0.02em] md:text-[40px]">
           Staff
         </h2>
         <p className="mt-2 text-steel-dark">Everyone who can sign in to the admin. Each person has their own login, so the activity log shows who did what.</p>
-        <ul className="mt-6 divide-y divide-mist border-y border-mist">
+        <ul className="mt-6 divide-y divide-ink/[0.06] rounded-2xl bg-[#f4f4f2] px-4">
           {list.map((s) => {
             const lastOwner = s.role === "owner" && owners <= 1;
             return (
@@ -62,7 +62,7 @@ export default async function AdminStaff() {
           })}
         </ul>
       </section>
-      <div className="border-t border-mist pt-8">
+      <div className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
         <AddStaffForm min={MIN_PASSWORD} />
       </div>
     </div>

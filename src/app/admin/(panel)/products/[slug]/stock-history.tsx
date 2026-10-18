@@ -18,17 +18,17 @@ const reasonLabel: Record<string, string> = {
 /** Every stock change for a product, newest first: who, why and what it left. */
 export function StockHistory({ history }: { history: Awaited<ReturnType<typeof stockHistory>> }) {
   return (
-    <section aria-labelledby="hist-h" className="border-t border-mist pt-8">
-      <h3 id="hist-h" className="text-lg font-semibold">
+    <section aria-labelledby="hist-h">
+      <h3 id="hist-h" className="text-[17px] font-semibold">
         Stock history
       </h3>
       {history.length === 0 ? (
-        <p className="mt-2 text-[14px] text-steel-dark">No changes recorded yet.</p>
+        <p className="mt-2 text-[14px] text-[#6b6d72]">No changes recorded yet.</p>
       ) : (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[520px] text-left text-[14px]">
-            <thead className="text-[12px] text-steel-dark">
-              <tr className="border-b border-mist">
+            <thead className="text-[12px] text-[#6b6d72]">
+              <tr>
                 <th className="py-2 font-normal">When</th>
                 <th className="py-2 font-normal">Size</th>
                 <th className="py-2 text-right font-normal">Change</th>
@@ -38,15 +38,15 @@ export function StockHistory({ history }: { history: Awaited<ReturnType<typeof s
             </thead>
             <tbody>
               {history.map((h, i) => (
-                <tr key={i} className="border-b border-mist">
-                  <td className="py-2 text-steel-dark">{when.format(new Date(h.at))}</td>
+                <tr key={i} className="border-t border-ink/5">
+                  <td className="py-2 text-[#6b6d72]">{when.format(new Date(h.at))}</td>
                   <td className="py-2 font-mono">{h.sku}</td>
                   <td className={`py-2 text-right font-mono tabular-nums ${h.delta > 0 ? "text-[#1f7a3d]" : ""}`}>{h.delta > 0 ? `+${h.delta}` : h.delta}</td>
                   <td className="py-2 text-right font-mono tabular-nums">{h.stockAfter ?? ""}</td>
                   <td className="py-2 pl-4">
                     {reasonLabel[h.reason] ?? h.reason}
-                    {h.ref ? <span className="text-steel-dark"> · {h.ref}</span> : null}
-                    {h.actor ? <span className="text-steel-dark"> · {h.actor}</span> : null}
+                    {h.ref ? <span className="text-[#6b6d72]"> · {h.ref}</span> : null}
+                    {h.actor ? <span className="text-[#6b6d72]"> · {h.actor}</span> : null}
                   </td>
                 </tr>
               ))}

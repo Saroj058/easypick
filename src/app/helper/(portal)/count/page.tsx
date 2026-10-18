@@ -10,11 +10,11 @@ export default async function HelperCount() {
   await requireStaff("/helper/login");
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/helper/stock" className="text-[14px] text-steel-dark underline underline-offset-2">
+      <Link href="/helper/stock" className="text-[13.5px] text-[#55575c] hover:text-ink">
         Stock
       </Link>
-      <h1 className="display mt-3 text-[32px]">Stock count</h1>
-      <p className="mt-2 text-steel-dark">
+      <h1 className="mt-3 text-[34px] font-light leading-none tracking-[-0.02em] md:text-[40px]">Stock count</h1>
+      <p className="mt-2 text-[#6b6d72]">
         Download the sheet, count what&apos;s on the floor and in the back, fill in &ldquo;counted&rdquo;, then paste the sheet below. You&apos;ll see the
         differences before anything changes.
       </p>

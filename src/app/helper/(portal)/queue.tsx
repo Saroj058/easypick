@@ -24,25 +24,25 @@ export function HelperOrderCard({ o }: { o: Order }) {
   const lines = packLines(o);
   const deliverOn = deliverOnText(o);
   return (
-    <li className={`border p-4 ${o.attention ? "border-[#d70015]" : late ? "border-[#b35c00]" : "border-mist"}`}>
+    <li className={`rounded-[24px] bg-[#f4f4f2] p-4 md:p-5 ${o.attention ? "ring-2 ring-[#d70015]/60" : late ? "ring-2 ring-[#b35c00]/50" : ""}`}>
       <div className="flex items-baseline justify-between gap-3">
         <Link href={`/helper/order/${o.id}`} className="font-mono text-[18px] font-semibold underline-offset-2 hover:underline">
           {o.number}
         </Link>
-        <span className="text-[13px] text-steel-dark">{time.format(new Date(o.paidAt ?? o.createdAt))}</span>
+        <span className="text-[13px] text-[#6b6d72]">{time.format(new Date(o.paidAt ?? o.createdAt))}</span>
       </div>
       {/* The note itself can name refunds or payments; that's for the owner. */}
-      {o.attention && <p className="mt-2 bg-[#fdecee] px-3 py-2 text-[14px] text-[#9b0010]">{HELPER_ATTENTION}</p>}
-      {late && <p className="mt-2 bg-[#fff1e0] px-3 py-2 text-[14px] text-[#7a3e00]">Not collected for 5+ days. Call the customer.</p>}
+      {o.attention && <p className="mt-3 rounded-2xl bg-[#fdecee] px-4 py-2.5 text-[14px] text-[#9b0010]">{HELPER_ATTENTION}</p>}
+      {late && <p className="mt-3 rounded-2xl bg-[#fff1e0] px-4 py-2.5 text-[14px] text-[#7a3e00]">Not collected for 5+ days. Call the customer.</p>}
 
-      <ul className="mt-3 space-y-2">
-        {lines.length === 0 && <li className="text-[14px] text-steel-dark">Nothing left to hand over: every piece was refunded.</li>}
+      <ul className="mt-3 space-y-2.5 rounded-2xl bg-white p-3">
+        {lines.length === 0 && <li className="text-[14px] text-[#6b6d72]">Nothing left to hand over: every piece was refunded.</li>}
         {lines.map((l, i) => (
           <li key={i} className="flex items-start gap-3">
-            <span className="grid h-10 min-w-10 place-items-center rounded-[2px] bg-ink px-2 font-mono text-[15px] font-semibold text-paper">{sizeText(l.size)}</span>
+            <span className="grid h-10 min-w-10 place-items-center rounded-xl bg-ink px-2 font-mono text-[15px] font-semibold text-paper">{sizeText(l.size)}</span>
             <span className="text-[15px] leading-tight">
               <span className="font-semibold">{l.name}</span>
-              <span className="block text-steel-dark">
+              <span className="block text-[#6b6d72]">
                 {l.colour}
                 {l.toPack > 1 ? ` · × ${l.toPack}` : ""} · <span className="font-mono text-[12px]">{l.sku}</span>
                 {l.refunded > 0 && <span className="block text-[13px]">{l.refunded} refunded, don&apos;t pack</span>}
@@ -68,7 +68,7 @@ export function HelperOrderCard({ o }: { o: Order }) {
         ) : (
           <span className="font-mono">{o.phone}</span>
         )}
-        <span className="block text-steel-dark">
+        <span className="block text-[#6b6d72]">
           {g?.receiver?.tryInStore
             ? "Trying it on in the store"
             : method === "pickup"
@@ -80,7 +80,7 @@ export function HelperOrderCard({ o }: { o: Order }) {
         </span>
       </p>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-ink/[0.06] pt-4">
         <NextStep order={o} />
         <Link href={`/admin/slip/${o.id}`} target="_blank" className="min-h-11 content-center text-[14px] underline underline-offset-2">
           Print slip
@@ -94,12 +94,12 @@ export function HelperOrderCard({ o }: { o: Order }) {
 export function Section({ id, title, hint, orders }: { id: string; title: string; hint?: string; orders: Order[] }) {
   return (
     <section aria-labelledby={id}>
-      <h2 id={id} className="flex items-baseline gap-2 text-lg font-semibold">
-        {title} <span className="font-mono text-[14px] text-steel-dark">{orders.length}</span>
+      <h2 id={id} className="flex items-center gap-2 text-[18px] font-semibold">
+        {title} <span className="rounded-full bg-[#f4f4f2] px-2.5 py-0.5 font-mono text-[12.5px] font-normal">{orders.length}</span>
       </h2>
-      {hint && <p className="text-[13px] text-steel-dark">{hint}</p>}
+      {hint && <p className="text-[13px] text-[#6b6d72]">{hint}</p>}
       {orders.length === 0 ? (
-        <p className="mt-2 text-[14px] text-steel-dark">Nothing here.</p>
+        <p className="mt-3 rounded-2xl border border-dashed border-ink/15 px-4 py-5 text-center text-[14px] text-[#6b6d72]">Nothing here.</p>
       ) : (
         <ul className="mt-3 space-y-3">
           {orders.map((o) => (
