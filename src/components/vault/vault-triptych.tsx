@@ -96,7 +96,7 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
                     aria-label={`${slot === 0 ? "Previous" : "Next"}: ${p.brand} ${p.model}`}
                     className="group block w-full cursor-pointer"
                   >
-                    <span className="relative block overflow-hidden bg-[var(--v-tile)] opacity-80 transition-opacity duration-500 group-hover:opacity-100">
+                    <span className="relative block overflow-hidden bg-[var(--v-tile)]">
                       <span aria-hidden className="pointer-events-none absolute inset-0 z-10 bg-[var(--v-slate)]/25 transition-opacity duration-500 group-hover:opacity-0" />
                       <ProductImage image={p.image} category={p.category} colourHex={p.hex} decorative ground="bg-transparent" className="[&_img]:mix-blend-multiply" sizes="220px" />
                     </span>

@@ -260,7 +260,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           </section>
         )}
 
-        {more.length > 0 && (
+        {/* Not on Vault pieces (owner, 18 Oct 2026): each one stands on its own. */}
+        {!product.vault && more.length > 0 && (
           <section className="mt-24" aria-labelledby="more-heading">
             <h2 id="more-heading" className="display text-[28px] md:text-[44px]">
               You may also like

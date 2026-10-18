@@ -6,6 +6,7 @@ import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/co
 import { brandWorld, COLD, themeVars, two, V } from "@/components/vault/look";
 import { ScrollToOpen } from "@/components/vault/scroll-to-open";
 import { VaultBrands } from "@/components/vault/vault-brands";
+import { VaultWatermark } from "@/components/vault/vault-watermark";
 import { VaultInventory } from "@/components/vault/vault-inventory";
 import { VaultSpotlight } from "@/components/vault/vault-spotlight";
 import { VaultTriptych } from "@/components/vault/vault-triptych";
@@ -48,9 +49,11 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   ];
 
   return (
-    <div style={themeVars(world?.theme ?? COLD)} className={`vault min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] transition-colors duration-500 md:pb-0`}>
+    <div style={themeVars(world?.theme ?? COLD)} className={`vault relative isolate min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] transition-colors duration-500 md:pb-0`}>
+      {/* The brand's name, faint and huge, behind everything */}
+      <VaultWatermark text={one?.name ?? "The Vault"} rows={14} />
       {/* The opening, on frost */}
-      <div className="container-ep pt-8 md:pt-12">
+      <div className="container-ep relative pt-8 md:pt-12">
         <div className={`flex items-center justify-between gap-4 ${V.mono} ${V.ink}`}>
           {one ? (
             <Link href={vaultHref()} className="inline-flex min-h-11 items-center gap-2 hover:underline">
@@ -104,8 +107,9 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
       </div>
 
       {/* The panel, slate */}
-      <div className="mx-auto mt-10 max-w-[1320px] md:mt-14 md:px-6">
-        <div className={`${V.slate} px-4 pb-14 pt-8 text-white md:px-12 md:pb-20 md:pt-12`}>
+      <div className="relative mx-auto mt-10 max-w-[1320px] md:mt-14 md:px-6">
+        <div className={`relative isolate overflow-hidden ${V.slate} px-4 pb-14 pt-8 text-white md:px-12 md:pb-20 md:pt-12`}>
+          <VaultWatermark text={one?.name ?? "The Vault"} tone="light" rows={16} />
           <div className={`flex justify-between gap-4 ${V.mono} ${V.iceDim}`}>
             <span>[ Active: {one ? one.name : "all brands"} ]</span>
             <span className="hidden text-right sm:inline">[ New pieces · a few times a month ]</span>
@@ -134,7 +138,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
       </div>
 
       {/* The close: the Vault list, and the small print */}
-      <section aria-labelledby="vault-list" className="container-ep grid gap-8 pb-16 pt-16 md:grid-cols-2 md:items-end md:gap-12 md:pb-24 md:pt-24">
+      <section aria-labelledby="vault-list" className="container-ep relative grid gap-8 pb-16 pt-16 md:grid-cols-2 md:items-end md:gap-12 md:pb-24 md:pt-24">
         <div>
           <p className={`${V.mono} ${V.ink}`}>[ The Vault list ]</p>
           <h2 id="vault-list" className={`display mt-2 text-[clamp(2.4rem,1.8rem+2.4vw,4.4rem)] leading-[0.88] ${V.deep}`}>
