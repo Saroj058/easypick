@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { AlertSignup } from "@/components/alert-signup";
 import { Countdown } from "@/components/countdown";
 import { DropKinds } from "@/components/drop-kinds";
+import { kindsSetting } from "@/lib/settings/categories";
+import { kindView } from "@/lib/settings/categories-rules";
 import { toRailPiece } from "@/components/home/rail";
 import { RefreshAt } from "@/components/refresh-at";
 import { ShareDrop } from "@/components/share-drop";
@@ -28,7 +30,8 @@ export default async function DropPage({ params }: PageProps<"/drop/[slug]">) {
   const drop = await getDrop(slug);
   if (!drop) notFound();
 
-  const [all, { next }] = await Promise.all([getProducts(), getDropTimeline()]);
+  const [all, { next }, kindList] = await Promise.all([getProducts(), getDropTimeline(), kindsSetting.get()]);
+  const kv = kindView(kindList);
   const released = isReleased(drop);
   // Pieces you can still buy come first.
   const products = all.filter((p) => p.dropSlug === drop.slug).sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
@@ -98,7 +101,7 @@ export default async function DropPage({ params }: PageProps<"/drop/[slug]">) {
 
 
         <h2 className="sr-only">The pieces</h2>
-        <DropKinds pieces={products.map(toRailPiece)} dropName={drop.name} soon={!released} />
+        <DropKinds pieces={products.map(toRailPiece)} dropName={drop.name} soon={!released} kindList={kv.order.map((id) => ({ id, name: kv.name(id), picture: kv.picture(id) }))} />
 
         {released && !soldOut && upcoming && (
           <section aria-label="Hear about the next drop" className="mt-16 bg-photo p-6 md:p-10">

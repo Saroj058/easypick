@@ -12,7 +12,9 @@ import { OfferSection } from "@/components/offer-section";
 import { ktmDay } from "@/lib/ktm-day";
 import { inOffer, liveOffers, running } from "@/lib/offer-rules";
 import { getOffers } from "@/lib/offers";
-import { categoryLabels, KIND_ICON } from "@/lib/site";
+import { kindsSetting } from "@/lib/settings/categories";
+import { kindView } from "@/lib/settings/categories-rules";
+import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import type { Category, Fit, Product } from "@/lib/types";
 
@@ -37,7 +39,9 @@ const fits: { key: Fit; label: string }[] = [
   { key: "regular", label: "Regular" },
 ];
 
+// "Featured" is the owner's own shop order (Admin → a piece → More → Place in the shop).
 const sorts = [
+  { key: "featured", label: "Featured" },
   { key: "new", label: "Newest" },
   { key: "price-asc", label: "Price: low to high" },
   { key: "price-desc", label: "Price: high to low" },
@@ -120,7 +124,9 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
     page: one(sp.page),
   };
 
-  const [all, offerList] = await Promise.all([getProducts(), getOffers()]);
+  const [all, offerList, kindList] = await Promise.all([getProducts(), getOffers(), kindsSetting.get()]);
+  // Names, order, pictures and which kinds show, from Admin → Categories.
+  const kv = kindView(kindList);
   // Festival offers running today, and the one being looked at (an ended or unknown one is ignored).
   const offers = liveOffers(offerList, all, ktmDay());
   const offer = offerList.find((o) => o.id === f.offer && running(o, ktmDay()));
@@ -134,7 +140,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   const words = (f.q ?? "").toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length)
     list = list.filter((p) => {
-      const hay = [p.name, p.shortDescription, categoryLabels[p.category], p.fit, p.brand ?? "", ...p.colours.map((c) => c.name), ...(p.tags ?? [])].join(" ").toLowerCase();
+      const hay = [p.name, p.shortDescription, kv.name(p.category), p.fit, p.brand ?? "", ...p.colours.map((c) => c.name), ...(p.tags ?? [])].join(" ").toLowerCase();
       return words.every((w) => hay.includes(w));
     });
   if (f.sale) list = list.filter((p) => p.salePrice);
@@ -153,6 +159,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   if (priceRule) list = list.filter((p) => priceRule.test(priceOf(p)));
   if (f.sort === "price-asc") list = [...list].sort((a, b) => priceOf(a) - priceOf(b));
   else if (f.sort === "price-desc") list = [...list].sort((a, b) => priceOf(b) - priceOf(a));
+  else if (f.sort === "new") list = [...list].sort((a, b) => (b.liveAt ?? "").localeCompare(a.liveAt ?? ""));
   // Sold out sinks to the bottom, but keeps its page for sharing and search.
   list = [...list].sort((a, b) => Number(a.status === "sold_out") - Number(b.status === "sold_out"));
 
@@ -163,10 +170,10 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   // As the rails and the gift page (owner, 15 Oct 2026): "All" is a strip per kind of piece; one
   // kind chosen (or a search, sale, new, Vault or brand view) is one strip under its big name.
   const single = kinds.length === 1 || Boolean(f.q || f.sale || f.new || f.vault || f.brand || offer);
-  const groups = (Object.keys(categoryLabels) as Category[])
+  const groups = kv.order
     .map((c) => ({ c, pieces: list.filter((p) => p.category === c) }))
     .filter((g) => g.pieces.length > 0);
-  const title = offer ? offer.name : f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.q ? `“${f.q}”` : kinds.length === 1 ? categoryLabels[kinds[0]] : "Every piece";
+  const title = offer ? offer.name : f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.q ? `“${f.q}”` : kinds.length === 1 ? kv.name(kinds[0]) : "Every piece";
 
   return (
     <div className="overflow-x-clip">
@@ -175,7 +182,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
         <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2 rounded-t-2xl border border-ink py-2 pr-3">
           <h1 className="display on-dark order-1 -my-2 -ml-px flex items-center self-stretch rounded-tl-[15px] bg-ink px-5 py-3 text-[34px] leading-[0.9] text-paper md:text-[44px]">
             {/* The kind, offer or view chosen is named large on its shelf below, as on the rail. */}
-            {single ? "Shop" : kinds.length ? kinds.map((c) => categoryLabels[c]).join(", ") : "Shop all"}
+            {single ? "Shop" : kinds.length ? kinds.map((c) => kv.name(c)).join(", ") : "Shop all"}
           </h1>
           {/* Search: the Rail's round button, opening into a field that searches as they type */}
           <ShopSearch q={f.q ?? ""} others={{ category: f.category, size: f.size, colour: f.colour, price: f.price, fit: f.fit, sort: f.sort, sale: f.sale, new: f.new, vault: f.vault, brand: f.brand, offer: f.offer }} />
@@ -233,7 +240,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
                 <p className="text-sm font-semibold">Sort</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {sorts.map((s) => (
-                    <Chip key={s.key} active={(f.sort ?? "new") === s.key} href={href(f, { sort: s.key === "new" ? undefined : s.key })}>
+                    <Chip key={s.key} active={(f.sort ?? "featured") === s.key} href={href(f, { sort: s.key === "featured" ? undefined : s.key })}>
                       {s.label}
                     </Chip>
                   ))}
@@ -264,7 +271,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
                   New in
                 </KindChip>
               )}
-              {(Object.keys(categoryLabels) as Category[])
+              {kv.order
                 .filter((c) => f.category === c || all.some((p) => p.category === c && p.status !== "scheduled"))
                 .map((c) => (
                   <KindChip
@@ -274,10 +281,10 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
                     count={all.filter((p) => p.category === c && p.status !== "scheduled").length}
                     icon={
                       // eslint-disable-next-line @next/next/no-img-element -- a tiny garment picture, already compressed
-                      <img src={`/stand-ins/${KIND_ICON[c]}.webp`} alt="" className={`h-6 w-6 object-contain ${f.category === c ? "brightness-[3]" : "opacity-80"}`} />
+                      <img src={kv.picture(c)} alt="" className={`h-6 w-6 object-contain ${f.category === c ? "brightness-[3]" : "opacity-80"}`} />
                     }
                   >
-                    {categoryLabels[c]}
+                    {kv.name(c)}
                   </KindChip>
                 ))}
             </div>
@@ -358,7 +365,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           ) : (
             <div>
               {groups.map(({ c, pieces }, i) => (
-                <ShopShelf key={c} id={c} first={i === 0} label={categoryLabels[c]} pieces={pieces.map(toRailPiece)} showAll={href(f, { category: c })} />
+                <ShopShelf key={c} id={c} first={i === 0} label={kv.name(c)} note={kv.blurb(c)} pieces={pieces.map(toRailPiece)} showAll={href(f, { category: c })} />
               ))}
             </div>
           )}

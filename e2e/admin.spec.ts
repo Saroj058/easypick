@@ -203,3 +203,24 @@ test("the owner edits a piece after it was made: sizes, a colour, measurements, 
   const res = await page.goto(copy);
   expect(res?.status()).toBe(404);
 });
+
+test("the owner renames and hides a category, and the shop follows", async ({ page }) => {
+  await ownerSignIn(page);
+  await page.goto("/admin/categories?tab=edit");
+  await page.getByLabel("hoodies name").fill("Hoodies & zips");
+  const shorts = page.getByRole("listitem").filter({ has: page.getByLabel("shorts name") });
+  await shorts.getByText("Shown").click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved. The shop, drops and rail show it now.")).toBeVisible();
+
+  await page.goto("/shop");
+  const kinds = page.getByRole("group", { name: "Category" });
+  await expect(kinds.getByRole("link", { name: /Hoodies & zips/ })).toBeVisible();
+
+  // Put them back.
+  await page.goto("/admin/categories?tab=edit");
+  await page.getByLabel("hoodies name").fill("Hoodies");
+  await page.getByRole("listitem").filter({ has: page.getByLabel("shorts name") }).getByText("Shown").click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved. The shop, drops and rail show it now.")).toBeVisible();
+});

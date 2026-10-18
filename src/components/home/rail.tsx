@@ -1,6 +1,6 @@
 import { sellable } from "@/lib/inventory";
 import type { HomeSettings } from "@/lib/settings/home-rules";
-import type { Product, Size } from "@/lib/types";
+import type { Category, Product, Size } from "@/lib/types";
 import { RailWall, type RailColour, type RailPiece, type RailSection } from "./rail-wall";
 
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
@@ -50,7 +50,7 @@ export function toRailPiece(p: Product): RailPiece {
   };
 }
 
-export function Rail({ products, settings }: { products: Product[]; settings: Pick<HomeSettings["rail"], "title" | "budgets" | "perSection" | "bays"> }) {
+export function Rail({ products, settings, kinds }: { products: Product[]; settings: Pick<HomeSettings["rail"], "title" | "budgets" | "perSection" | "bays">; /** Names and order from Admin → Categories. */ kinds: { order: Category[]; names: Partial<Record<Category, string>> } }) {
   const { bays: BAYS, budgets: BUDGETS, perSection: SECTION_SHOWN, title } = settings;
   const live = products.filter((p) => p.status === "live").sort((a, b) => (b.liveAt ?? "").localeCompare(a.liveAt ?? ""));
   if (live.length === 0) return null;
@@ -107,6 +107,8 @@ export function Rail({ products, settings }: { products: Product[]; settings: Pi
           budgets={budgets}
           pieces={live.length}
           title={title}
+          kindNames={kinds.names}
+          kindOrder={kinds.order}
         />
       </div>
     </section>

@@ -4,9 +4,11 @@ import { Plus } from "lucide-react";
 
 import { allProducts, restockDemand } from "@/lib/catalogue";
 import { formatPrice } from "@/lib/format";
-import { categoryLabels, FAMILY, KIND_ICON } from "@/lib/site";
+import { kindsSetting } from "@/lib/settings/categories";
+import { kindView } from "@/lib/settings/categories-rules";
+import { FAMILY } from "@/lib/site";
+import { KindsForm } from "./kinds-form";
 import { requireOwner } from "@/lib/staff";
-import type { Category } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Categories" };
 export const dynamic = "force-dynamic";
@@ -15,11 +17,13 @@ const label = "font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#6b6d72
 const FAMILY_LABEL = { top: "Top", layer: "Layer", bottom: "Bottom", set: "Set", extra: "Extra" } as const;
 
 /** The twelve kinds at a glance: how many pieces each has live, its stock, empty sizes, sales and restock asks. */
-export default async function AdminCategories() {
+export default async function AdminCategories({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireOwner();
-  const [products, demand] = await Promise.all([allProducts(), restockDemand()]);
+  const editing = (await searchParams).tab === "edit";
+  const [products, demand, kindList] = await Promise.all([allProducts(), restockDemand(), kindsSetting.getForAdmin()]);
+  const kv = kindView(kindList);
 
-  const kinds = (Object.keys(categoryLabels) as Category[]).map((c) => {
+  const kinds = kv.all.map((c) => {
     const list = products.filter((p) => p.category === c);
     const live = list.filter((p) => p.status === "live");
     const stock = list.reduce((n, p) => n + p.variants.reduce((m, v) => m + v.stock, 0), 0);
@@ -46,9 +50,24 @@ export default async function AdminCategories() {
         </Link>
       </div>
 
+      <nav aria-label="Category views" className="flex w-fit gap-1 rounded-full bg-[#f4f4f2] p-1">
+        {[
+          ["", "Overview"],
+          ["edit", "Names, order and pictures"],
+        ].map(([t, name]) => (
+          <Link key={t} href={t ? `/admin/categories?tab=${t}` : "/admin/categories"} aria-current={(t === "edit") === editing ? "page" : undefined} className={`inline-flex h-9 items-center rounded-full px-4 text-[13.5px] ${(t === "edit") === editing ? "bg-white font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.08)]" : "text-[#55575c] hover:text-ink"}`}>
+            {name}
+          </Link>
+        ))}
+      </nav>
+
+      {editing ? (
+        <KindsForm initial={kindList} />
+      ) : (
+        <>
       {thin.length > 0 && (
         <p className="rounded-2xl bg-[#fff1e0] px-4 py-3 text-[14px] text-[#7a3e00]">
-          Thin on the site: {thin.map((k) => `${categoryLabels[k.c]} (${k.live} live)`).join(", ")}. Six or more live pieces make a kind look full.
+          Thin on the site: {thin.map((k) => `${kv.name(k.c)} (${k.live} live)`).join(", ")}. Six or more live pieces make a kind look full.
         </p>
       )}
 
@@ -60,10 +79,10 @@ export default async function AdminCategories() {
                 <div className="flex items-center gap-3">
                   <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white">
                     {/* eslint-disable-next-line @next/next/no-img-element -- a tiny garment picture */}
-                    <img src={`/stand-ins/${KIND_ICON[k.c]}.webp`} alt="" className="h-9 w-9 object-contain" />
+                    <img src={kv.picture(k.c)} alt="" className="h-9 w-9 object-contain" />
                   </span>
                   <span>
-                    <span className="block text-[17px] font-semibold group-hover:underline">{categoryLabels[k.c]}</span>
+                    <span className="block text-[17px] font-semibold group-hover:underline">{kv.name(k.c)}</span>
                     <span className="text-[12px] text-[#6b6d72]">{FAMILY_LABEL[FAMILY[k.c]]}</span>
                   </span>
                 </div>
@@ -97,6 +116,8 @@ export default async function AdminCategories() {
           </li>
         ))}
       </ul>
+        </>
+      )}
     </div>
   );
 }

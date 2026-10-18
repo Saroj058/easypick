@@ -20,6 +20,7 @@ export function ShopShelf({
   showAllLabel = "Show all",
   soon = false,
   first = false,
+  note,
 }: {
   id: string;
   label: string;
@@ -30,6 +31,8 @@ export function ShopShelf({
   /** A drop still to come: look, don't buy. */
   soon?: boolean;
   first?: boolean;
+  /** A line under its name (Admin → Categories). */
+  note?: string;
 }) {
   const [query, setQuery] = useState("");
   const q = query.trim();
@@ -44,6 +47,7 @@ export function ShopShelf({
             {q ? `${pieces.length}/${every.length}` : every.length}
           </span>
         </h2>
+        {note && <p className="basis-full text-[14px] text-steel-dark sm:order-last">{note}</p>}
         <div className={`flex min-w-0 items-center justify-end gap-3 ${q ? "max-sm:basis-full" : ""} sm:flex-1`}>
           <ExpandingSearchDock value={query} onChange={setQuery} label={`Search ${label.toLowerCase()}`} placeholder={`Search ${label.toLowerCase()}`} className="min-w-0 flex-1" />
           {showAll && (

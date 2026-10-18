@@ -16,7 +16,9 @@ import { vaultPieces } from "@/components/home/vault";
 import { formatDropTime, formatPrice } from "@/lib/format";
 import { posesFor } from "@/lib/poses";
 import { cutoutOf } from "@/lib/rack-cutouts";
-import { categoryLabels, site } from "@/lib/site";
+import { site } from "@/lib/site";
+import { kindsSetting } from "@/lib/settings/categories";
+import { kindView } from "@/lib/settings/categories-rules";
 import { jsonLd as toJsonLd } from "@/lib/json-ld";
 import { getDrop, getProduct, getProducts } from "@/lib/store";
 import type { Size } from "@/lib/types";
@@ -51,7 +53,9 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
   const product = await getProduct(slug);
   if (!product) notFound();
 
-  const [drop, all] = await Promise.all([product.dropSlug ? getDrop(product.dropSlug) : null, getProducts()]);
+  const [drop, all, kindList] = await Promise.all([product.dropSlug ? getDrop(product.dropSlug) : null, getProducts(), kindsSetting.get()]);
+  // The kind as Admin → Categories names it.
+  const kindName = kindView(kindList).name(product.category);
   const related = all.filter((p) => p.slug !== product.slug && p.category === product.category).slice(0, 4);
   const more = related.length ? related : all.filter((p) => p.slug !== product.slug).slice(0, 4);
   // A Vault piece: the brand's other pieces in the Vault (or the whole Vault, if the brand has no others).
@@ -91,7 +95,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Shop", item: `${site.url}/shop` },
-          { "@type": "ListItem", position: 2, name: categoryLabels[product.category], item: `${site.url}/shop?category=${product.category}` },
+          { "@type": "ListItem", position: 2, name: kindName, item: `${site.url}/shop?category=${product.category}` },
           { "@type": "ListItem", position: 3, name: product.name },
         ],
       },
@@ -159,7 +163,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
                 <li aria-hidden>/</li>
                 <li>
                   <Link href={`/shop?category=${product.category}`} className="hover:text-ink hover:underline">
-                    {categoryLabels[product.category]}
+                    {kindName}
                   </Link>
                 </li>
               </ol>
@@ -185,7 +189,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           <div className="border-ink/10 bg-[#f6f6f3] px-4 py-8 md:px-8 lg:border-l lg:px-10 lg:py-6">
             <div className="lg:sticky lg:top-28">
               <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] uppercase tracking-[0.16em] text-steel-dark">
-                {product.brand ? <span>{product.brand}</span> : drop ? <span>{drop.name}</span> : <span>{categoryLabels[product.category]}</span>}
+                {product.brand ? <span>{product.brand}</span> : drop ? <span>{drop.name}</span> : <span>{kindName}</span>}
                 {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
                 {product.edition && (
                   <span className="text-ink">

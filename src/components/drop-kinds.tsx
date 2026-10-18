@@ -3,19 +3,22 @@
 import { LayoutGrid } from "lucide-react";
 import { useState } from "react";
 
-import { categoryLabels, KIND_ICON } from "@/lib/site";
 import type { Category } from "@/lib/types";
 import type { DropPiece } from "./drop-strip";
 import { ShopShelf } from "./shop-shelf";
+
+/** A kind as Admin → Categories names and pictures it. */
+export type KindLook = { id: Category; name: string; picture: string };
 
 /**
  * A drop's pieces the way the shop shows them (owner, 18 Oct 2026): the kinds as rounded buttons
  * with a little garment picture and a count, then a shelf per kind (or just the one chosen), each
  * with the shop's cards, its own search and its count.
  */
-export function DropKinds({ pieces, dropName, soon = false }: { pieces: DropPiece[]; dropName: string; soon?: boolean }) {
+export function DropKinds({ pieces, dropName, soon = false, kindList }: { pieces: DropPiece[]; dropName: string; soon?: boolean; kindList: KindLook[] }) {
+  const look = new Map(kindList.map((k) => [k.id, k]));
   const [kind, setKind] = useState<Category | null>(null);
-  const kinds = (Object.keys(categoryLabels) as Category[]).filter((c) => pieces.some((p) => p.category === c));
+  const kinds = kindList.map((k) => k.id).filter((c) => pieces.some((p) => p.category === c));
   const shown = kind ? kinds.filter((c) => c === kind) : kinds;
 
   const chip = (on: boolean) =>
@@ -41,8 +44,8 @@ export function DropKinds({ pieces, dropName, soon = false }: { pieces: DropPiec
           {kinds.map((c) => (
             <button key={c} type="button" aria-pressed={kind === c} onClick={() => setKind(kind === c ? null : c)} className={chip(kind === c)}>
               {/* eslint-disable-next-line @next/next/no-img-element -- a tiny garment picture, already compressed */}
-              <img src={`/stand-ins/${KIND_ICON[c]}.webp`} alt="" className={`h-6 w-6 object-contain ${kind === c ? "brightness-[3]" : "opacity-80"}`} />
-              {categoryLabels[c]}
+              <img src={look.get(c)?.picture ?? ""} alt="" className={`h-6 w-6 object-contain ${kind === c ? "brightness-[3]" : "opacity-80"}`} />
+              {look.get(c)?.name ?? c}
               <sup aria-hidden className={`font-mono text-[10px] ${kind === c ? "text-paper/70" : "text-steel-dark"}`}>
                 {pieces.filter((p) => p.category === c).length}
               </sup>
@@ -53,7 +56,7 @@ export function DropKinds({ pieces, dropName, soon = false }: { pieces: DropPiec
 
       <div className="mt-10 overflow-x-clip md:mt-14">
         {shown.map((c, i) => (
-          <ShopShelf key={c} id={`drop-${c}`} first={i === 0} label={categoryLabels[c]} pieces={pieces.filter((p) => p.category === c)} soon={soon} />
+          <ShopShelf key={c} id={`drop-${c}`} first={i === 0} label={look.get(c)?.name ?? c} pieces={pieces.filter((p) => p.category === c)} soon={soon} />
         ))}
       </div>
     </div>

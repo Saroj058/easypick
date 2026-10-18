@@ -28,6 +28,8 @@ import { getSavedLooks } from "@/lib/looks";
 import { designerFits } from "@/lib/occasions";
 import { homeSetting } from "@/lib/settings/home";
 import { siteSetting } from "@/lib/settings/site";
+import { kindsSetting } from "@/lib/settings/categories";
+import { kindView } from "@/lib/settings/categories-rules";
 import { socialLinks } from "@/lib/settings/site-rules";
 import type { HomeSection } from "@/lib/settings/home-rules";
 
@@ -57,7 +59,8 @@ const orgLd = {
 };
 
 export default async function HomePage() {
-  const [products, { current, next }, home, siteSettings] = await Promise.all([getProducts(), getDropTimeline(), homeSetting.get(), siteSetting.get()]);
+  const [products, { current, next }, home, siteSettings, kindList] = await Promise.all([getProducts(), getDropTimeline(), homeSetting.get(), siteSetting.get(), kindsSetting.get()]);
+  const kv = kindView(kindList);
   // The organisation's social profiles for search engines (Admin → Site settings).
   const ld = { ...orgLd, "@graph": [{ ...orgLd["@graph"][0], sameAs: socialLinks(siteSettings).map((x) => x.href) }, orgLd["@graph"][1]] };
   // Section order and on/off, as set in Admin → Home page.
@@ -177,7 +180,7 @@ export default async function HomePage() {
       {/* The rail: products first, with quick filters and "My size" */}
       {on("rail") && (
         <div style={at("rail")}>
-          <Rail products={range} settings={home.rail} />
+          <Rail products={range} settings={home.rail} kinds={{ order: kv.order, names: Object.fromEntries(kv.all.map((k) => [k, kv.name(k)])) }} />
         </div>
       )}
 

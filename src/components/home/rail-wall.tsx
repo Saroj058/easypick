@@ -26,7 +26,6 @@ import { hasFit, matchSize } from "@/lib/fit-profile";
 import { formatPrice } from "@/lib/format";
 import { MY_SIZES, setMySize, useMySize } from "@/lib/my-size";
 import { searchProducts } from "@/lib/search";
-import { categoryLabels } from "@/lib/site";
 import type {
   BagLine,
   Category,
@@ -673,12 +672,17 @@ export function RailWall({
   budgets,
   pieces: total,
   title = "The rail",
+  kindNames = {},
+  kindOrder = [],
 }: {
   sections: RailSection[];
   budgets: number[];
   pieces: number;
   /** Its name, set in Admin → Home page. */
   title?: string;
+  /** Names and order of the kinds (Admin → Categories). */
+  kindNames?: Partial<Record<Category, string>>;
+  kindOrder?: Category[];
 }) {
   const mySize = useMySize();
   const bag = useBag();
@@ -728,7 +732,7 @@ export function RailWall({
           : list;
   const all = sections.flatMap((s) => s.pieces);
   // What the filter offers: only kinds and colours that are on the rail, colours most common first.
-  const railKinds = (Object.keys(categoryLabels) as Category[]).filter((k) => all.some((p) => p.category === k));
+  const railKinds = kindOrder.filter((k) => all.some((p) => p.category === k));
   const railColours = [
     ...all
       .flatMap((p) => p.colours.map((c) => ({ name: c.name, hex: c.hex })))
@@ -978,7 +982,7 @@ export function RailWall({
                       onClick={() => setView({ kinds: on ? kinds.filter((x) => x !== k) : [...kinds, k] })}
                       className={`h-9 rounded-full border px-3.5 text-[13px] font-semibold transition-colors ${on ? "border-ink bg-ink text-paper" : "border-mist hover:border-ink"}`}
                     >
-                      {categoryLabels[k]}
+                      {kindNames[k] ?? k}
                       <span className={`ml-1.5 font-mono text-[10px] ${on ? "text-paper/70" : "text-steel-dark"}`}>{all.filter((p) => p.category === k).length}</span>
                     </button>
                   );
@@ -1106,7 +1110,7 @@ export function RailWall({
             </span>
             {q ? ` match "${q}"` : ""}
             {budget ? ` under Rs ${budget.toLocaleString("en-IN")}` : ""}
-            {kinds.length ? ` · ${kinds.map((k) => categoryLabels[k]).join(", ")}` : ""}
+            {kinds.length ? ` · ${kinds.map((k) => kindNames[k] ?? k).join(", ")}` : ""}
             {fitF ? ` · ${fitF}` : ""}
             {colourF ? ` · ${colourF}` : ""}
             {saleF ? " · on sale" : ""}
