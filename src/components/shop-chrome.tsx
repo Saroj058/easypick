@@ -11,8 +11,8 @@ export function ShopChrome({ children }: { children: React.ReactNode }) {
   return path.startsWith("/admin") || path.startsWith("/helper") || path === "/visit/tour" ? null : children;
 }
 
-/** The footer shows on the two pages people land on: home and the shop. (The visit page is one full screen.) */
-const WITH_FOOTER = new Set(["/", "/shop"]);
+/** The footer shows on the home page only (owner, 18 Oct 2026: not on the shop or the drops). The visit page is one full screen. */
+const WITH_FOOTER = new Set(["/"]);
 export function FooterChrome({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   if (WITH_FOOTER.has(path)) return children;

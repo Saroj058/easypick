@@ -285,8 +285,10 @@ test("Buy now remembers a guest's number on this phone, and forgets it when aske
   await expect(page.getByRole("button", { name: "Forget my details" })).toHaveCount(0);
 });
 
-test("footer: one-line drop alert sign-up takes an email or a WhatsApp number", async ({ page }) => {
+test("footer: one-line drop alert sign-up takes an email or a WhatsApp number; only on the home page", async ({ page }) => {
   await page.goto("/shop");
+  await expect(page.getByRole("contentinfo")).toHaveCount(0);
+  await page.goto("/");
   const footer = page.getByRole("contentinfo");
   await expect(async () => {
     await footer.getByLabel("Drop alerts").fill("not-a-number");
@@ -404,4 +406,20 @@ test("Designer Fits play on their own every 10 seconds, and pause", async ({ pag
   await fits.getByRole("button", { name: "Play the fits" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(party.getByRole("radio", { name: "Birthday" })).toHaveAttribute("aria-checked", "true");
+});
+
+test("the arrow keys move the strip in view, with no click first (owner, 18 Oct 2026)", async ({ page }) => {
+  await page.goto("/");
+  const rail = page.getByRole("region", { name: "The rail" });
+  const first = rail.locator("section").first();
+  await first.scrollIntoViewIfNeeded();
+  const centre = first.getByRole("heading", { level: 4 });
+  await expect(centre).toBeVisible();
+  const before = await centre.innerText();
+  await expect(async () => {
+    await page.keyboard.press("ArrowRight");
+    await expect(centre).not.toHaveText(before, { timeout: 1500 });
+  }).toPass();
+  await page.keyboard.press("ArrowLeft");
+  await expect(centre).toHaveText(before);
 });

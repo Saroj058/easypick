@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { formatPrice } from "@/lib/format";
+import { useArrowKeys } from "@/lib/arrow-keys";
 import { useMySize } from "@/lib/my-size";
 import type { BagLine } from "@/lib/types";
 import { PieceControls, type RailPiece } from "./home/rail-wall";
@@ -129,6 +130,8 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
     },
     [n, run],
   );
+  // ← and → move this strip whenever it's the one in view, no click first.
+  useArrowKeys(frame, (d) => go(target.current + d));
 
   useEffect(() => {
     const m = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -230,7 +233,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
           drag.current = null;
           if (g?.locked) go(pos.current);
         }}
-        className={`relative mx-[calc(50%-50vw)] ${tags ? "h-[calc(var(--w)*1.32+84px)]" : "h-[calc(var(--w)*1.32)]"} cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] focus-visible:shadow-[inset_0_0_0_2px_var(--color-ink)] active:cursor-grabbing`}
+        className={`relative mx-[calc(50%-50vw)] ${tags ? "h-[calc(var(--w)*1.32+84px)]" : "h-[calc(var(--w)*1.32)]"} cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] active:cursor-grabbing`}
       >
         {/* The band of light the cards sit on */}
         <div aria-hidden className="absolute inset-x-0 top-1/2 h-[46%] -translate-y-1/2 bg-[linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,0.045)_50%,rgba(0,0,0,0))]" />

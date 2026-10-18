@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
 
+import { useArrowKeys } from "@/lib/arrow-keys";
 import { cn } from "@/lib/utils";
 
 const useIsoLayoutEffect = typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
@@ -168,6 +169,8 @@ export function CoverflowCarousel({
   );
 
   const nudge = React.useCallback((by: number) => settle(clamp(Math.round(targetRef.current) + by)), [clamp, settle]);
+  // ← and → move this carousel whenever it's the one in view, no click first.
+  useArrowKeys(frameRef, nudge);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -267,7 +270,7 @@ export function CoverflowCarousel({
             } else if (event.key === "Enter") onActivate?.(selectedRef.current);
           }}
           // Vertical padding keeps the drop shadows clear of the overflow clip.
-          className="cursor-grab overflow-hidden pb-[calc(2rem+var(--cf-over))] pt-8 outline-none focus-visible:ring-2 focus-visible:ring-ink active:cursor-grabbing"
+          className="cursor-grab overflow-hidden pb-[calc(2rem+var(--cf-over))] pt-8 outline-none active:cursor-grabbing"
           style={{
             perspective: `calc(var(--cf-card) * ${perspective})`,
             // Horizontal drag is ours; the page keeps vertical scrolling.
