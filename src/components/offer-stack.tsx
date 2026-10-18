@@ -3,11 +3,24 @@
 import { AnimatePresence, MotionConfig, motion, useReducedMotion, type PanInfo } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 
 import { useArrowKeys } from "@/lib/arrow-keys";
 import type { OfferSummary } from "@/lib/offer-rules";
 import { site } from "@/lib/site";
+
+/** Wide enough to show the offers either side in full. */
+function useWide() {
+  return useSyncExternalStore(
+    (fn) => {
+      const m = window.matchMedia("(min-width: 640px)");
+      m.addEventListener("change", fn);
+      return () => m.removeEventListener("change", fn);
+    },
+    () => window.matchMedia("(min-width: 640px)").matches,
+    () => true,
+  );
+}
 
 const day = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, day: "numeric", month: "short" });
 
@@ -19,8 +32,8 @@ const SKINS = [
 ];
 
 /**
- * The festival offers as a fanned stack of cards (owner's reference, 18 Oct 2026): the one in
- * front large and sharp, the others tucked behind it, turned a little either side. Arrows, a
+ * The festival offers as a fan of cards (owner's reference, 18 Oct 2026): the one in front large
+ * and sharp, the others shown in full on its left and right, turned a little and set back. Arrows, a
  * swipe, the arrow keys or a tap on a card behind brings the next one to the front. Under it, when
  * it ends, and one button to shop it.
  */
@@ -39,6 +52,7 @@ function Stack({ offers, start }: { offers: OfferSummary[]; start?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const go = (d: number) => setAt((a) => (a + d + n) % n);
   useArrowKeys(box, go);
+  const wide = useWide();
   if (!n) return null;
   const front = offers[at];
 
@@ -53,7 +67,10 @@ function Stack({ offers, start }: { offers: OfferSummary[]; start?: string }) {
     if (d === 0) return { x: 0, rotate: 0, scale: 1, z: 30, opacity: 1 };
     const side = d % 2 === 1 ? 1 : -1;
     const depth = Math.ceil(d / 2);
-    return { x: side * (34 + depth * 14), rotate: side * (5 + depth * 2), scale: 1 - depth * 0.06, z: 30 - d, opacity: 1 - depth * 0.15 };
+    // The owner's ask (18 Oct 2026): the other offers shown in full either side, three at once.
+    return wide
+      ? { x: side * (250 + (depth - 1) * 70), rotate: side * 6, scale: 0.86 - (depth - 1) * 0.06, z: 30 - d, opacity: 1 - (depth - 1) * 0.3 }
+      : { x: side * (122 + (depth - 1) * 30), rotate: side * 7, scale: 0.8 - (depth - 1) * 0.06, z: 30 - d, opacity: 0.9 - (depth - 1) * 0.3 };
   };
 
   return (
@@ -61,14 +78,7 @@ function Stack({ offers, start }: { offers: OfferSummary[]; start?: string }) {
       <p className="sr-only" aria-live="polite">
         {front.offer.name}: {front.count} pieces, up to {front.upTo}% off.
       </p>
-      <div className="relative flex w-full items-center justify-center">
-        {n > 1 && (
-          <button type="button" onClick={() => go(-1)} aria-label="Previous offer" className="absolute left-[calc(50%-190px)] z-40 grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-paper/90 text-ink shadow-[0_6px_18px_-8px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 backdrop-blur transition hover:bg-paper sm:left-[calc(50%-210px)]">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-        )}
+      <div className="relative flex w-full items-center justify-center overflow-x-clip py-4">
         <div className="relative h-[372px] w-[256px] sm:h-[400px] sm:w-[276px]">
           {offers.map(({ offer, count, upTo }, i) => {
             const p = place(i);
@@ -113,13 +123,6 @@ function Stack({ offers, start }: { offers: OfferSummary[]; start?: string }) {
             );
           })}
         </div>
-        {n > 1 && (
-          <button type="button" onClick={() => go(1)} aria-label="Next offer" className="absolute right-[calc(50%-190px)] z-40 grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-paper/90 text-ink shadow-[0_6px_18px_-8px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 backdrop-blur transition hover:bg-paper sm:right-[calc(50%-210px)]">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-        )}
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -131,10 +134,22 @@ function Stack({ offers, start }: { offers: OfferSummary[]; start?: string }) {
         Shop {front.offer.name.toLowerCase().startsWith("under") ? "it" : "the offer"}
       </Link>
       {n > 1 && (
-        <div className="mt-5 flex gap-1.5" aria-hidden>
-          {offers.map((o, i) => (
-            <span key={o.offer.id} className={`h-1.5 rounded-full transition-all duration-300 ${i === at ? "w-6 bg-ink" : "w-1.5 bg-ink/20"}`} />
-          ))}
+        <div className="mt-5 flex items-center gap-4">
+          <button type="button" onClick={() => go(-1)} aria-label="Previous offer" className="grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-paper text-ink ring-1 ring-ink/10 transition hover:ring-ink">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <span className="flex gap-1.5" aria-hidden>
+            {offers.map((o, i) => (
+              <span key={o.offer.id} className={`h-1.5 rounded-full transition-all duration-300 ${i === at ? "w-6 bg-ink" : "w-1.5 bg-ink/20"}`} />
+            ))}
+          </span>
+          <button type="button" onClick={() => go(1)} aria-label="Next offer" className="grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-paper text-ink ring-1 ring-ink/10 transition hover:ring-ink">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
         </div>
       )}
     </div>
