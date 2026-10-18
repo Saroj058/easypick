@@ -21,9 +21,12 @@ function typing(t: EventTarget | null) {
 function score(el: HTMLElement) {
   const r = el.getBoundingClientRect();
   const vh = window.innerHeight;
+  const vw = window.innerWidth;
   const seen = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
-  if (seen < Math.min(120, r.height / 3)) return 0;
-  const middle = Math.abs((r.top + r.bottom) / 2 - vh / 2);
+  const across = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
+  if (seen < Math.min(120, r.height / 3) || across < Math.min(120, r.width / 3)) return 0;
+  // Strips side by side (the offers): the one nearest the middle of the window wins.
+  const middle = Math.abs((r.top + r.bottom) / 2 - vh / 2) + Math.abs((r.left + r.right) / 2 - vw / 2) * 0.5;
   return seen - middle * 0.25;
 }
 

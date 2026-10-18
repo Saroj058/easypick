@@ -728,12 +728,16 @@ export async function saveOffersAction(_prev: SaveState, form: FormData): Promis
     const under = by === "under" ? int(form, `under-${i}`) : NaN;
     if (by === "tag" && !tag) return { status: "error", message: `Give ${name} a tick name, like dashain-offer.` };
     if (by === "under" && !(under > 0)) return { status: "error", message: `Give ${name} a price to stay under.` };
+    const kinds = by === "kinds" ? form.getAll(`kinds-${i}`).map(String) : [];
+    if (by === "kinds" && !kinds.length) return { status: "error", message: `Tick at least one kind for ${name}.` };
     const endsOn = str(form, `endsOn-${i}`);
     raw.push({
       id: str(form, `id-${i}`) || slugify(name).slice(0, 30),
       name,
       note: str(form, `note-${i}`, 120),
+      group: str(form, `group-${i}`, 24),
       tag: tag || null,
+      kinds: (kinds.length ? kinds : null) as Offer["kinds"],
       under: under > 0 ? under : null,
       endsOn: /^\d{4}-\d{2}-\d{2}$/.test(endsOn) ? endsOn : null,
       on: form.get(`on-${i}`) === "on",

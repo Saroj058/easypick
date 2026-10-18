@@ -13,7 +13,7 @@ import { Vault } from "@/components/home/vault";
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
 import { OffersCarousel } from "@/components/ui/offers-carousel";
-import { OfferStack } from "@/components/offer-stack";
+import { OfferStacks } from "@/components/offer-stacks";
 import { ktmDay } from "@/lib/ktm-day";
 import { liveOffers } from "@/lib/offer-rules";
 import { getOffers } from "@/lib/offers";
@@ -165,25 +165,11 @@ export default async function HomePage() {
       {/* The rail: products first, with quick filters and "My size" */}
       <Rail products={range} />
 
-      {/* Designer Fits: just a pointer here; the fits themselves are on /fits */}
-      {looks.length > 0 && (
-        <section aria-labelledby="fits-title" className="py-8 md:py-10">
-          <div className="container-ep">
-            <FitsTeaser looks={looks} />
-          </div>
-        </section>
-      )}
 
 
       {/* The Vault: original brands and numbered pieces */}
       <Vault products={products} />
 
-      {/* Find a gift and gift cards, under The Vault (owner's decision, 7 Oct 2026) */}
-      <section aria-labelledby="gift-title" className="py-6 md:py-8">
-        <div className="container-ep">
-          <GiftBlock />
-        </div>
-      </section>
 
       {/* Festival offers: only while a real sale runs. The pieces move along by themselves. */}
       {offers.length > 0 && (
@@ -197,7 +183,7 @@ export default async function HomePage() {
                 <span className="block text-steel-dark">Same price in store.</span>
               </h2>
               <div className="mt-10">
-                <OfferStack offers={liveOffers(await getOffers(), products, ktmDay())} />
+                <OfferStacks offers={liveOffers(await getOffers(), products, ktmDay())} />
               </div>
             </div>
             <OffersCarousel
@@ -224,6 +210,20 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Designer Fits, then buying for someone, just above Our store (owner, 18 Oct 2026). */}
+      {looks.length > 0 && (
+        <section aria-labelledby="fits-title" className="section">
+          <div className="container-ep">
+            <FitsTeaser looks={looks} />
+          </div>
+        </section>
+      )}
+      <section aria-labelledby="gift-title" className="section pt-0 md:pt-0">
+        <div className="container-ep">
+          <GiftBlock />
+        </div>
+      </section>
 
       {/* Our store: the physical shop */}
       <OurStore info={await getStoreInfo()} />

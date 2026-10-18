@@ -26,7 +26,7 @@ export default async function AdminFestivals() {
           Festival offers
         </h2>
         <p className="mt-1 max-w-2xl text-[14px] text-steel-dark">
-          Up to three named sales, each with its own card on the home page and shop. An offer only gathers pieces that already have a sale price: set the sale
+          Up to nine named sales, in three stacks of cards (left, middle, right) on the home page and shop. An offer only gathers pieces that already have a sale price: set the sale
           price on the piece, and tick the offer there too when the offer uses ticks.
         </p>
         <div className="mt-5">

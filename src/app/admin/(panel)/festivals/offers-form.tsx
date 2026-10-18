@@ -3,17 +3,19 @@
 import { useActionState, useState } from "react";
 
 import { saveOffersAction, type SaveState } from "@/app/admin/actions";
-import { MAX_OFFERS, type Offer } from "@/lib/offer-rules";
+import { MAX_OFFERS, OFFER_GROUPS, type Offer } from "@/lib/offer-rules";
+import { categoryLabels } from "@/lib/site";
+import type { Category } from "@/lib/types";
 
 const input = "mt-1 h-11 w-full rounded-xl border border-ink/15 bg-white px-3 text-[15px] outline-none focus:border-ink";
 const label = "text-[13px] font-semibold";
 
-type Row = Offer & { key: number; by: "tag" | "under" | "all" };
+type Row = Offer & { key: number; by: "tag" | "under" | "kinds" | "all" };
 
 /** Up to three named offers: what they're called, which pieces (a tag, a price ceiling, or every sale piece), until when. */
 export function OffersForm({ initial, counts }: { initial: Offer[]; counts: Record<string, number> }) {
   const [state, action, pending] = useActionState<SaveState, FormData>(saveOffersAction, { status: "idle" });
-  const [rows, setRows] = useState<Row[]>(initial.map((o, i) => ({ ...o, key: i, by: o.tag ? "tag" : o.under ? "under" : "all" })));
+  const [rows, setRows] = useState<Row[]>(initial.map((o, i) => ({ ...o, key: i, by: o.tag ? "tag" : o.kinds?.length ? "kinds" : o.under ? "under" : "all" })));
   const set = (key: number, patch: Partial<Row>) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
   return (
@@ -52,12 +54,25 @@ export function OffersForm({ initial, counts }: { initial: Offer[]; counts: Reco
                 <input id={`on-note-${i}`} name={`note-${i}`} maxLength={120} value={r.note} onChange={(e) => set(r.key, { note: e.target.value })} className={input} />
               </div>
               <div>
+                <label htmlFor={`on-group-${i}`} className={label}>
+                  Stack <span className="font-normal text-steel-dark">(left, middle or right)</span>
+                </label>
+                <select id={`on-group-${i}`} name={`group-${i}`} value={r.group} onChange={(e) => set(r.key, { group: e.target.value })} className={input}>
+                  {OFFER_GROUPS.map((g, n) => (
+                    <option key={g} value={g}>
+                      {g} ({["left", "middle", "right"][n]})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label htmlFor={`on-by-${i}`} className={label}>
                   Which pieces
                 </label>
                 <select id={`on-by-${i}`} name={`by-${i}`} value={r.by} onChange={(e) => set(r.key, { by: e.target.value as Row["by"] })} className={input}>
                   <option value="tag">Ones I tick on the piece</option>
                   <option value="under">On sale under a price</option>
+                  <option value="kinds">On sale, of some kinds</option>
                   <option value="all">Everything on sale</option>
                 </select>
               </div>
@@ -68,6 +83,29 @@ export function OffersForm({ initial, counts }: { initial: Offer[]; counts: Reco
                   </label>
                   <input id={`on-tag-${i}`} name={`tag-${i}`} maxLength={30} value={r.tag ?? ""} onChange={(e) => set(r.key, { tag: e.target.value })} placeholder="dashain-offer" className={`${input} font-mono`} />
                 </div>
+              )}
+              {r.by === "kinds" && (
+                <fieldset className="sm:col-span-2">
+                  <legend className={label}>Kinds</legend>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(Object.keys(categoryLabels) as Category[]).map((k) => {
+                      const on = r.kinds?.includes(k) ?? false;
+                      return (
+                        <label key={k} className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] ${on ? "border-ink bg-ink text-paper" : "border-ink/15 bg-white hover:border-ink"}`}>
+                          <input
+                            type="checkbox"
+                            name={`kinds-${i}`}
+                            value={k}
+                            checked={on}
+                            onChange={(e) => set(r.key, { kinds: e.target.checked ? [...(r.kinds ?? []), k] : (r.kinds ?? []).filter((x) => x !== k) })}
+                            className="sr-only"
+                          />
+                          {categoryLabels[k]}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
               )}
               {r.by === "under" && (
                 <div>
@@ -87,7 +125,7 @@ export function OffersForm({ initial, counts }: { initial: Offer[]; counts: Reco
       {rows.length < MAX_OFFERS && (
         <button
           type="button"
-          onClick={() => setRows((rs) => [...rs, { key: Date.now(), id: "", name: "", note: "", tag: null, under: null, endsOn: null, on: true, by: "tag" }])}
+          onClick={() => setRows((rs) => [...rs, { key: Date.now(), id: "", name: "", note: "", group: OFFER_GROUPS[0], tag: null, kinds: null, under: null, endsOn: null, on: true, by: "tag" }])}
           className="h-10 rounded-full border border-ink/15 bg-white px-4 text-[13.5px] font-semibold hover:border-ink"
         >
           Add an offer

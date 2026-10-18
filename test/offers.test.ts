@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { cleanOffers, DEFAULT_OFFERS, inOffer, liveOffers, running, type Offer } from "@/lib/offer-rules";
+import { cleanOffers, DEFAULT_OFFERS, inOffer, liveOffers, offerStacks, running, type Offer } from "@/lib/offer-rules";
 import { categoryFor, isBottom } from "@/lib/site";
 import type { Product } from "@/lib/types";
 
 const piece = (over: Partial<Product>): Product =>
   ({ id: "x", slug: "x", name: "X", category: "tees", status: "live", price: 2000, tags: [], vault: false, ...over }) as Product;
 
-const dashain: Offer = { id: "dashain", name: "Dashain sale", note: "", tag: "dashain-offer", under: null, endsOn: "2026-10-26", on: true };
-const cheap: Offer = { id: "cheap", name: "Under 1,000", note: "", tag: null, under: 1000, endsOn: null, on: true };
+const dashain: Offer = { id: "dashain", name: "Dashain sale", note: "", group: "Festivals", tag: "dashain-offer", kinds: null, under: null, endsOn: "2026-10-26", on: true };
+const cheap: Offer = { id: "cheap", name: "Under 1,000", note: "", group: "By price", tag: null, kinds: null, under: 1000, endsOn: null, on: true };
 
 describe("festival offers", () => {
   it("gathers live sale pieces by tick or by price, never the Vault or full price", () => {
@@ -32,10 +32,23 @@ describe("festival offers", () => {
     expect(list).toEqual([{ offer: dashain, count: 2, upTo: 50 }]);
   });
 
-  it("cleans what's saved: at most three, unique ids, defaults when nothing usable", () => {
+  it("gathers by kind", () => {
+    const tops: Offer = { ...cheap, id: "tops", under: null, kinds: ["tees", "shirts"] };
+    expect(inOffer(tops, piece({ salePrice: 1500, category: "shirts" }))).toBe(true);
+    expect(inOffer(tops, piece({ salePrice: 1500, category: "jeans" }))).toBe(false);
+  });
+
+  it("cleans what's saved: unique ids, a stack for each, defaults when nothing usable", () => {
     expect(cleanOffers("nope")).toEqual(DEFAULT_OFFERS);
-    const out = cleanOffers([dashain, { ...dashain }, cheap, { ...cheap, id: "c2" }, { ...cheap, id: "c3" }]);
-    expect(out.map((o) => o.id)).toEqual(["dashain", "cheap"]);
+    const out = cleanOffers([dashain, { ...dashain }, cheap, { ...cheap, id: "c2", group: "" }]);
+    expect(out.map((o) => o.id)).toEqual(["dashain", "cheap", "c2"]);
+    expect(out[2].group).toBe("Festivals");
+  });
+
+  it("puts the offers in at most three stacks of three, in the order their groups appear", () => {
+    const s = (id: string, group: string) => ({ offer: { ...cheap, id, group }, count: 1, upTo: 10 });
+    const stacks = offerStacks([s("a", "A"), s("b", "B"), s("c", "A"), s("d", "C"), s("e", "D"), s("f", "A"), s("g", "A")]);
+    expect(stacks.map((x) => [x.group, x.offers.map((y) => y.offer.id).join("")])).toEqual([["A", "acf"], ["B", "b"], ["C", "d"]]);
   });
 });
 
