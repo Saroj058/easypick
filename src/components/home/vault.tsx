@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { formatPrice } from "@/lib/format";
-import { themeVars, V } from "@/components/vault/look";
+import { themeVars, V, type Theme } from "@/components/vault/look";
 import { VaultTile, type TileData } from "@/components/vault/vault-tile";
 import type { Product } from "@/lib/types";
 
@@ -109,7 +109,7 @@ const FEATURED = 5;
  * The Vault on the home page, cold like its own page (owner, 18 Oct 2026): a slate panel on frost,
  * the name and the way in, the brands each with its own "Show all", then five notched ice tiles.
  */
-export function Vault({ products, copy = { title: "The Vault", line: "Original brands. One of each. Never restocked.", button: "Enter the Vault" } }: { products: Product[]; /** Set in Admin → Home page. */ copy?: { title: string; line: string; button: string } }) {
+export function Vault({ products, copy = { title: "The Vault", line: "Original brands. One of each. Never restocked.", button: "Enter the Vault" }, theme }: { products: Product[]; /** Set in Admin → Home page. */ copy?: { title: string; line: string; button: string }; /** The Vault's own colours (Admin → The Vault). */ theme?: Theme }) {
   const pieces = vaultPieces(products);
   if (pieces.length === 0) return <VaultWaiting />;
 
@@ -118,7 +118,7 @@ export function Vault({ products, copy = { title: "The Vault", line: "Original b
   const featured = featuredVault(pieces, FEATURED);
 
   return (
-    <section aria-labelledby="vault-title" style={themeVars()} className={`section ${V.frost}`}>
+    <section aria-labelledby="vault-title" style={themeVars(theme)} className={`section ${V.frost}`}>
       <div className="container-ep">
         <div className={`${V.slate} px-4 pb-10 pt-8 text-white md:px-10 md:pb-12 md:pt-10`}>
           <div className={`mb-6 flex justify-between gap-4 ${V.mono} ${V.iceDim}`}>

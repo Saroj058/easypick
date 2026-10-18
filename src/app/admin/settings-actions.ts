@@ -6,6 +6,7 @@ import { saveProductPhoto } from "@/lib/photos";
 import { kindsSetting } from "@/lib/settings/categories";
 import { homeSetting } from "@/lib/settings/home";
 import { siteSetting } from "@/lib/settings/site";
+import { vaultSetting } from "@/lib/settings/vault";
 import { logStaff, requireOwner } from "@/lib/staff";
 import type { SaveState } from "./actions";
 
@@ -69,4 +70,16 @@ export async function kindPictureAction(_prev: SaveState, form: FormData): Promi
   updateTag(kindsSetting.tag);
   revalidatePath("/", "layout");
   return { status: "saved", message: "Picture saved." };
+}
+
+export async function saveVaultAction(_prev: SaveState, form: FormData): Promise<SaveState> {
+  const me = await requireOwner();
+  const raw = parse(form);
+  if (!raw) return { status: "error", message: "That didn't come through. Try again." };
+  const saved = await vaultSetting.write(raw);
+  await logStaff(me, "saved the Vault", null, { brands: Object.keys(saved.brands).length, featured: saved.featured.length });
+  updateTag(vaultSetting.tag);
+  revalidatePath("/vault");
+  revalidatePath("/");
+  return { status: "saved", message: "Saved. The Vault shows it now." };
 }

@@ -224,3 +224,41 @@ test("the owner renames and hides a category, and the shop follows", async ({ pa
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved. The shop, drops and rail show it now.")).toBeVisible();
 });
+
+test("the owner sets the Vault's colours and words, sees what's hard to read, and the Vault follows", async ({ page }) => {
+  await ownerSignIn(page);
+  await page.goto("/admin/vault");
+  const blue = page.getByRole("region", { name: "The Vault's own blue" });
+  // Retried until the page has loaded enough to take the change.
+  await expect(async () => {
+    await blue.getByLabel("The Vault panel colour").fill("#010101");
+    await blue.getByLabel("The Vault panel colour").fill("#000000");
+    await expect(blue.getByRole("list", { name: "The Vault readability" })).toContainText(/White on panel\s*21:1/, { timeout: 1000 });
+  }).toPass({ timeout: 30_000 });
+  await blue.getByLabel("The Vault quiet text colour").fill("#000000");
+  await expect(blue.getByRole("list", { name: "The Vault readability" }).getByText(/1:1 · hard to read/)).toBeVisible();
+  await blue.getByRole("button", { name: "Back to the first blue" }).click();
+  await expect(blue.getByText(/hard to read/)).toHaveCount(0);
+
+  // A new brand gets its own world, ready to fill in.
+  await page.getByLabel("Add a brand").fill("Stussy");
+  await page.getByRole("button", { name: "Add brand" }).click();
+  await expect(page.getByRole("tab", { name: /Stussy/, selected: true })).toBeVisible();
+  await page.getByLabel("Where it began").fill("Laguna Beach · 1980");
+  await expect(page.getByLabel("Stussy preview").getByText("Stussy").first()).toBeVisible();
+
+  await page.getByLabel("Opening line").fill("Kept cold. One of each, checked by hand.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved. The Vault shows it now.")).toBeVisible();
+
+  await page.goto("/vault");
+  await expect(page.getByText("Kept cold. One of each, checked by hand.")).toBeVisible();
+
+  // Put it back.
+  await page.goto("/admin/vault");
+  await page.getByRole("tab", { name: /Stussy/ }).click();
+  await page.getByRole("button", { name: "Remove Stussy's colours" }).click();
+  await page.getByLabel("Opening line").fill("Original brands, one of each. Checked by hand, never restocked, gone when it's gone.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved. The Vault shows it now.")).toBeVisible();
+});

@@ -29,6 +29,7 @@ import { designerFits } from "@/lib/occasions";
 import { homeSetting } from "@/lib/settings/home";
 import { siteSetting } from "@/lib/settings/site";
 import { kindsSetting } from "@/lib/settings/categories";
+import { vaultSetting } from "@/lib/settings/vault";
 import { kindView } from "@/lib/settings/categories-rules";
 import { socialLinks } from "@/lib/settings/site-rules";
 import type { HomeSection } from "@/lib/settings/home-rules";
@@ -59,7 +60,7 @@ const orgLd = {
 };
 
 export default async function HomePage() {
-  const [products, { current, next }, home, siteSettings, kindList] = await Promise.all([getProducts(), getDropTimeline(), homeSetting.get(), siteSetting.get(), kindsSetting.get()]);
+  const [products, { current, next }, home, siteSettings, kindList, vaultLook] = await Promise.all([getProducts(), getDropTimeline(), homeSetting.get(), siteSetting.get(), kindsSetting.get(), vaultSetting.get()]);
   const kv = kindView(kindList);
   // The organisation's social profiles for search engines (Admin → Site settings).
   const ld = { ...orgLd, "@graph": [{ ...orgLd["@graph"][0], sameAs: socialLinks(siteSettings).map((x) => x.href) }, orgLd["@graph"][1]] };
@@ -217,7 +218,7 @@ export default async function HomePage() {
       {/* The Vault: original brands and numbered pieces */}
       {on("vault") && (
         <div style={at("vault")}>
-          <Vault products={products} copy={home.vault} />
+          <Vault products={products} copy={home.vault} theme={vaultLook.cold} />
         </div>
       )}
 

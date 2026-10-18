@@ -42,7 +42,8 @@ export interface BrandWorld {
   story: string;
 }
 
-const WORLDS: Record<string, BrandWorld> = {
+/** The brand worlds as first written; Admin → The Vault edits them (lib/settings/vault-rules.ts). */
+export const DEFAULT_WORLDS: Record<string, BrandWorld> = {
   nike: {
     theme: { frost: "#d9d9d6", slate: "#26282b", tile: "#cbccc8", deep: "#26282b", ink: "#1a1b1d", dim: "#c7c9cc" },
     origin: "Beaverton, Oregon · 1964",
@@ -81,10 +82,10 @@ const WORLDS: Record<string, BrandWorld> = {
   },
 };
 
-const key = (brand: string) => brand.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+export const brandKey = (brand: string) => brand.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 /** A brand's world, or none (it wears the Vault's cold blue). */
-export const brandWorld = (brand?: string): BrandWorld | null => (brand ? (WORLDS[key(brand)] ?? null) : null);
+export const brandWorld = (brand?: string, worlds: Record<string, BrandWorld> = DEFAULT_WORLDS): BrandWorld | null => (brand ? (worlds[brandKey(brand)] ?? null) : null);
 
 /** The CSS variables for a theme, to put on a wrapper. */
 export function themeVars(t: Theme = COLD): CSSProperties {

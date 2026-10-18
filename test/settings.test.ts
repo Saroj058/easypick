@@ -61,3 +61,34 @@ describe("site settings", () => {
     expect(announcing(DEFAULT_SITE, "2026-10-01")).toBe(false);
   });
 });
+
+describe("vault settings", () => {
+  it("falls back to the first brand worlds and the cold blue", async () => {
+    const { cleanVault, DEFAULT_VAULT } = await import("@/lib/settings/vault-rules");
+    expect(cleanVault(null)).toEqual(DEFAULT_VAULT);
+    expect(Object.keys(cleanVault({}).brands)).toContain("new-balance");
+  });
+
+  it("keeps good colours, drops bad ones, keys brands and caps featured", async () => {
+    const { cleanVault, DEFAULT_VAULT } = await import("@/lib/settings/vault-rules");
+    const v = cleanVault({
+      brands: { "New Balance": { theme: { frost: "#ABCDEF", slate: "red" }, origin: "Boston", line: ["A", "B"], story: "S" }, "Stüssy": { origin: "Laguna" } },
+      cold: { deep: "#000000", ink: "#12345" },
+      featured: ["a", "a", "b", "c", "d", "e", "f", 4],
+    });
+    expect(Object.keys(v.brands)).toEqual(["new-balance", "st-ssy"]);
+    expect(v.brands["new-balance"].theme.frost).toBe("#abcdef");
+    expect(v.brands["new-balance"].theme.slate).toBe(DEFAULT_VAULT.brands["new-balance"].theme.slate);
+    expect(v.brands["st-ssy"].origin).toBe("Laguna");
+    expect(v.cold.deep).toBe("#000000");
+    expect(v.cold.ink).toBe(DEFAULT_VAULT.cold.ink);
+    expect(v.featured).toEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  it("measures contrast like WCAG", async () => {
+    const { contrast, themeChecks, DEFAULT_VAULT } = await import("@/lib/settings/vault-rules");
+    expect(contrast("#ffffff", "#000000")).toBe(21);
+    expect(contrast("#777777", "#777777")).toBe(1);
+    expect(themeChecks(DEFAULT_VAULT.cold)).toHaveLength(5);
+  });
+});

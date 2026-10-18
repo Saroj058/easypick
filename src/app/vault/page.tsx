@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
-import { brandWorld, COLD, themeVars, two, V } from "@/components/vault/look";
+import { brandWorld, themeVars, two, V } from "@/components/vault/look";
 import { ScrollToOpen } from "@/components/vault/scroll-to-open";
 import { VaultBrands } from "@/components/vault/vault-brands";
 import { VaultWatermark } from "@/components/vault/vault-watermark";
@@ -11,6 +11,7 @@ import { VaultInventory } from "@/components/vault/vault-inventory";
 import { VaultSpotlight } from "@/components/vault/vault-spotlight";
 import { VaultTriptych } from "@/components/vault/vault-triptych";
 import { formatPrice } from "@/lib/format";
+import { vaultSetting } from "@/lib/settings/vault";
 import { site, walletList } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 
@@ -29,17 +30,20 @@ export const metadata: Metadata = {
 export default async function VaultPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const wanted = Array.isArray(sp.brand) ? sp.brand[0] : sp.brand;
-  const pieces = vaultPieces(await getProducts());
+  const [all, vs] = await Promise.all([getProducts(), vaultSetting.get()]);
+  const pieces = vaultPieces(all);
   const brands = vaultBrands(pieces);
   const one = wanted ? brands.find((b) => b.name.toLowerCase() === wanted.toLowerCase()) : undefined;
   const list = one ? one.pieces : pieces;
   const sold = pieces.filter((p) => p.status === "sold_out").length;
-  const featured = featuredVault(list, 5).map((p, i) => toTile(p, i));
+  // The pieces the owner put first (Admin → The Vault), then the usual pick.
+  const pinned = vs.featured.flatMap((slug) => list.filter((p) => p.slug === slug));
+  const featured = [...pinned, ...featuredVault(list.filter((p) => !pinned.includes(p)), 5)].slice(0, 5).map((p, i) => toTile(p, i));
   // The spotlight: a different piece from the one the triptych opens on, one that can be bought.
   const spot = featured.slice(1).find((t) => !t.sold) ?? featured.find((t) => !t.sold) ?? featured[0];
   const tiles = list.map((p, i) => toTile(p, i));
   // Each brand wears its own colours and tells its own story; "All" is the Vault's cold blue.
-  const world = brandWorld(one?.name);
+  const world = brandWorld(one?.name, vs.brands);
   const facts = [
     "Original brands",
     "One of each",
@@ -49,7 +53,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   ];
 
   return (
-    <div style={themeVars(world?.theme ?? COLD)} className={`vault relative isolate min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] transition-colors duration-500 md:pb-0`}>
+    <div style={themeVars(world?.theme ?? vs.cold)} className={`vault relative isolate min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] transition-colors duration-500 md:pb-0`}>
       {/* The brand's name, faint and huge, behind everything */}
       <VaultWatermark text={one?.name ?? "The Vault"} rows={14} />
       {/* The opening, on frost */}
@@ -70,7 +74,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         {brands.length > 0 && (
           <div className="mt-6">
             <ScrollToOpen>
-              <VaultBrands total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />
+              <VaultBrands worlds={vs.brands} cold={vs.cold} total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />
             </ScrollToOpen>
           </div>
         )}
@@ -89,7 +93,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
               <p className={`text-[15px] leading-relaxed ${V.ink}`}>{world.story}</p>
             ) : (
               <p className={`${V.mono} leading-[1.7] ${V.ink}`}>
-                {one ? `${one.pieces.length} ${one.pieces.length === 1 ? "piece" : "pieces"} from ${one.name}. One of each.` : "Original brands, one of each. Checked by hand, never restocked, gone when it's gone."}
+                {one ? `${one.pieces.length} ${one.pieces.length === 1 ? "piece" : "pieces"} from ${one.name}. One of each.` : vs.copy.intro}
               </p>
             )}
             {one && (
@@ -124,8 +128,8 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
                 <VaultTriptych
                   key={one?.name ?? "all"}
                   pieces={featured}
-                  left={world ? world.line : ["Not for many.", "For the few."]}
-                  right={world ? ["One of each.", "Never restocked."] : ["Checked by hand.", "Never restocked."]}
+                  left={world ? world.line : vs.copy.left}
+                  right={world ? ["One of each.", "Never restocked."] : vs.copy.right}
                 />
               </div>
               {spot && <VaultSpotlight piece={spot} />}
@@ -142,9 +146,9 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         <div>
           <p className={`${V.mono} ${V.ink}`}>[ The Vault list ]</p>
           <h2 id="vault-list" className={`display mt-2 text-[clamp(2.4rem,1.8rem+2.4vw,4.4rem)] leading-[0.88] ${V.deep}`}>
-            Hear it first.
+            {vs.copy.listTitle}
           </h2>
-          <p className={`mt-3 max-w-[40ch] text-[15px] ${V.ink}`}>One message when a new piece lands. Stop anytime.</p>
+          {vs.copy.listNote && <p className={`mt-3 max-w-[40ch] text-[15px] ${V.ink}`}>{vs.copy.listNote}</p>}
         </div>
         <div>
           <AlertSignup source="vault" note="One message when a new piece lands. Stop anytime." done="You're in. We'll message {to} when a new piece lands." />

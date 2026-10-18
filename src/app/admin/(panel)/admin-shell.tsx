@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Gem,
   Activity,
   BarChart3,
   Bell,
@@ -73,6 +74,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: "/admin/home", label: "Home page", icon: PanelsTopLeft },
       { href: "/admin/drops", label: "Drops", icon: Flame },
       { href: "/admin/looks", label: "Designer Fits", icon: LayoutGrid },
+      { href: "/admin/vault", label: "The Vault", icon: Gem },
       { href: "/admin/festivals", label: "Offers & festivals", icon: CalendarHeart },
       { href: "/admin/trending", label: "Trending", icon: TrendingUp },
     ],

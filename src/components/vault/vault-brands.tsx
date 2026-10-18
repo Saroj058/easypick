@@ -1,17 +1,17 @@
 import Link from "next/link";
 
-import { brandWorld, COLD, themeVars, two } from "./look";
+import { brandWorld, COLD, themeVars, two, type BrandWorld, type Theme } from "./look";
 
 /**
  * The Vault's brands, first thing on the page (owner, 18 Oct 2026): one card each in that brand's
  * own colours, with where it began and how many pieces are here. The one open is lifted and ringed.
  * "All" wears the Vault's own cold blue.
  */
-export function VaultBrands({ brands, active, total }: { brands: { name: string; n: number; href: string }[]; active?: string; total: number }) {
-  const cards = [{ name: "All brands", n: total, href: "/vault", origin: "The whole Vault", theme: COLD, on: !active }].concat(
+export function VaultBrands({ brands, active, total, worlds, cold = COLD }: { brands: { name: string; n: number; href: string }[]; active?: string; total: number; /** Set in Admin → The Vault. */ worlds?: Record<string, BrandWorld>; cold?: Theme }) {
+  const cards = [{ name: "All brands", n: total, href: "/vault", origin: "The whole Vault", theme: cold, on: !active }].concat(
     brands.map((b) => {
-      const w = brandWorld(b.name);
-      return { name: b.name, n: b.n, href: b.href, origin: w?.origin ?? "Original brand", theme: w?.theme ?? COLD, on: active === b.name };
+      const w = brandWorld(b.name, worlds);
+      return { name: b.name, n: b.n, href: b.href, origin: w?.origin ?? "Original brand", theme: w?.theme ?? cold, on: active === b.name };
     }),
   );
   return (
