@@ -53,7 +53,8 @@ function Stack({ offers, start, label }: { offers: OfferSummary[]; start?: strin
     if (d === 0) return { x: 0, rotate: 0, scale: 1, z: 30, opacity: 1 };
     const side = d % 2 === 1 ? 1 : -1;
     const depth = Math.ceil(d / 2);
-    return { x: side * (34 + depth * 14), rotate: side * (5 + depth * 2), scale: 1 - depth * 0.06, z: 30 - d, opacity: 1 - depth * 0.15 };
+    // Every offer in one fan (owner, 18 Oct 2026): the further back, the further out and turned.
+    return { x: side * (30 + depth * 26), rotate: side * (4 + depth * 3), scale: 1 - depth * 0.05, z: 30 - d, opacity: 1 - depth * 0.1 };
   };
 
   return (
@@ -63,7 +64,7 @@ function Stack({ offers, start, label }: { offers: OfferSummary[]; start?: strin
       </p>
       <div className="relative flex w-full items-center justify-center">
         {n > 1 && (
-          <button type="button" onClick={() => go(-1)} aria-label="Previous offer" className="absolute left-[calc(50%-176px)] z-40 grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-paper/90 text-ink shadow-[0_6px_18px_-8px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 backdrop-blur transition hover:bg-paper sm:left-[calc(50%-186px)]">
+          <button type="button" onClick={() => go(-1)} aria-label="Previous offer" className="absolute left-2 z-40 grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-paper/90 text-ink shadow-[0_6px_18px_-8px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 backdrop-blur transition hover:bg-paper sm:left-[calc(50%-330px)]">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
               <path d="M15 18l-6-6 6-6" />
             </svg>
@@ -114,7 +115,7 @@ function Stack({ offers, start, label }: { offers: OfferSummary[]; start?: strin
           })}
         </div>
         {n > 1 && (
-          <button type="button" onClick={() => go(1)} aria-label="Next offer" className="absolute right-[calc(50%-176px)] z-40 grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-paper/90 text-ink shadow-[0_6px_18px_-8px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 backdrop-blur transition hover:bg-paper sm:right-[calc(50%-186px)]">
+          <button type="button" onClick={() => go(1)} aria-label="Next offer" className="absolute right-2 z-40 grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-paper/90 text-ink shadow-[0_6px_18px_-8px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 backdrop-blur transition hover:bg-paper sm:right-[calc(50%-330px)]">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
               <path d="M9 18l6-6-6-6" />
             </svg>
