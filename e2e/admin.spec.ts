@@ -171,3 +171,35 @@ test("the owner edits the home page and the announcement from the admin, and the
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved. The home page shows it now.")).toBeVisible();
 });
+
+test("the owner edits a piece after it was made: sizes, a colour, measurements, its place, then deletes the copy", async ({ page }) => {
+  await ownerSignIn(page);
+  await page.goto("/admin/products/tapered-jogger");
+  await page.getByRole("button", { name: "Duplicate" }).click();
+  await page.waitForURL(/added=copy/, { timeout: 60_000 });
+  const copy = new URL(page.url()).pathname;
+
+  await page.getByRole("navigation", { name: "Product sections" }).getByRole("link", { name: "Colours & sizes" }).click();
+  await page.waitForURL(/tab=variants/);
+  await page.getByRole("button", { name: "+ XXL" }).click();
+  await expect(page.getByText(/Added \d+ sizes? with no stock yet/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove size XXL" })).toBeVisible();
+
+  const colourName = page.getByLabel(/name$/).first();
+  const was = await colourName.inputValue();
+  await colourName.fill(`${was} Two`);
+  await page.getByRole("button", { name: "Save", exact: true }).first().click();
+  await expect(page.getByText(`Renamed to ${was} Two.`)).toBeVisible();
+
+  await page.getByLabel("M Length in cm").fill("101");
+  await page.getByRole("button", { name: "Save measurements" }).click();
+  await expect(page.getByText(/Measurements saved/)).toBeVisible();
+
+  await page.goto(`${copy}?tab=more`);
+  await page.getByRole("button", { name: "Move to the top" }).click();
+  await page.getByLabel(/Type .delete. to confirm/).fill("delete");
+  await page.getByRole("button", { name: /^Delete / }).click();
+  await page.waitForURL(/\/admin\/products$/, { timeout: 60_000 });
+  const res = await page.goto(copy);
+  expect(res?.status()).toBe(404);
+});

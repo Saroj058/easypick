@@ -1,6 +1,7 @@
 /**
- * The pieces that have a cut-out photo for the home page's wardrobe (public/rack/<slug>.webp).
- * A new product needs `node scripts/rack-cutouts.mjs` run, and its slug added here.
+ * The pieces with a cut-out photo made by hand (public/rack/<slug>.webp, by scripts/rack-cutouts.mjs).
+ * Since 18 Oct 2026 a cut-out can also be uploaded per piece in Admin → Photos; cutoutOf() picks
+ * the uploaded one first.
  */
 export const RACK_CUTOUTS = new Set([
   "boxy-pocket-tee",
@@ -15,3 +16,8 @@ export const RACK_CUTOUTS = new Set([
   "washed-co-ord-set",
   "wide-cargo-pant",
 ]);
+
+/** A piece's cut-out photo: the one uploaded in the admin, else the hand-made one, else none. */
+export function cutoutOf(p: { slug: string; cutout?: string }): string | null {
+  return p.cutout ?? (RACK_CUTOUTS.has(p.slug) ? `/rack/${p.slug}.webp` : null);
+}

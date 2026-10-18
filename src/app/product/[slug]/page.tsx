@@ -15,7 +15,7 @@ import { VaultStage } from "@/components/vault-stage";
 import { vaultPieces } from "@/components/home/vault";
 import { formatDropTime, formatPrice } from "@/lib/format";
 import { posesFor } from "@/lib/poses";
-import { RACK_CUTOUTS } from "@/lib/rack-cutouts";
+import { cutoutOf } from "@/lib/rack-cutouts";
 import { categoryLabels, site } from "@/lib/site";
 import { jsonLd as toJsonLd } from "@/lib/json-ld";
 import { getDrop, getProduct, getProducts } from "@/lib/store";
@@ -166,7 +166,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
             </nav>
             <ProductStage
               images={product.images}
-              cutout={RACK_CUTOUTS.has(product.slug) ? `/rack/${product.slug}.webp` : null}
+              cutout={cutoutOf(product)}
               category={product.category}
               colour={product.colours[0]}
               name={product.name}

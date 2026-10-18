@@ -12,7 +12,10 @@ import { SIZE_ORDER } from "@/lib/inventory";
 import { categoryLabels, site } from "@/lib/site";
 import { currentStaff, requireOwner } from "@/lib/staff";
 import { ProductForm } from "./product-form";
+import { MoreTab } from "./more-tab";
+import { PhotosTab } from "./photos-tab";
 import { StockForm } from "./stock-form";
+import { VariantsTab } from "./variants-tab";
 import { StockHistory } from "./stock-history";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +34,17 @@ export async function generateMetadata({ params }: PageProps<"/admin/products/[s
 export default async function AdminProduct({ params, searchParams }: PageProps<"/admin/products/[slug]">) {
   await requireOwner();
   const { slug } = await params;
-  const { added } = await searchParams;
+  const sp = await searchParams;
+  const added = sp.added;
+  // One tab at a time (owner, 18 Oct 2026: "too much in there at once").
+  const TABS = [
+    ["details", "Details"],
+    ["photos", "Photos"],
+    ["variants", "Colours & sizes"],
+    ["stock", "Stock"],
+    ["more", "More"],
+  ] as const;
+  const tab = TABS.some(([t]) => t === sp.tab) ? (sp.tab as (typeof TABS)[number][0]) : "details";
   const product = await findProduct(slug);
   if (!product) notFound();
   const [demand, history, drops, offers] = await Promise.all([restockDemand(), stockHistory(slug, 25), allDrops(), getOffersForAdmin()]);
@@ -88,19 +101,40 @@ export default async function AdminProduct({ params, searchParams }: PageProps<"
             ? "Added as scheduled, not live: its drop hasn't started yet, so it goes on sale when the drop is released."
             : added === "copy"
               ? "Copied as a hidden draft with no stock. Change its name, colours' stock and photo, then set it to Live."
-              : "Added. Add its stock below, then set it to Live when it's ready."}
+              : "Added. Add its stock in the Stock tab, then set it to Live when it's ready."}
         </p>
       )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 space-y-4">
-          <section className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
-            <StockForm product={product} demand={demand} />
-          </section>
-          <ProductForm product={product} drops={drops.map((d) => ({ slug: d.slug, name: d.name }))} offers={offers.flatMap((o) => (o.tag ? [{ name: o.name, tag: o.tag }] : []))} />
-          <section className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
-            <StockHistory history={history} />
-          </section>
+          <nav aria-label="Product sections" className="no-scrollbar flex gap-1 overflow-x-auto rounded-full bg-[#f4f4f2] p-1">
+            {TABS.map(([t, name]) => (
+              <Link
+                key={t}
+                href={t === "details" ? `/admin/products/${product.slug}` : `/admin/products/${product.slug}?tab=${t}`}
+                aria-current={tab === t ? "page" : undefined}
+                scroll={false}
+                className={`inline-flex h-9 shrink-0 items-center rounded-full px-4 text-[13.5px] ${tab === t ? "bg-white font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.08)]" : "text-[#55575c] hover:text-ink"}`}
+              >
+                {name}
+                {t === "photos" && <span className="ml-1.5 font-mono text-[11px] text-[#8a8c91]">{product.images.filter((i) => i.src).length}</span>}
+              </Link>
+            ))}
+          </nav>
+          {tab === "details" && <ProductForm product={product} drops={drops.map((d) => ({ slug: d.slug, name: d.name }))} offers={offers.flatMap((o) => (o.tag ? [{ name: o.name, tag: o.tag }] : []))} />}
+          {tab === "photos" && <PhotosTab slug={product.slug} images={product.images} cutout={product.cutout} />}
+          {tab === "variants" && <VariantsTab product={product} />}
+          {tab === "stock" && (
+            <>
+              <section className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
+                <StockForm product={product} demand={demand} />
+              </section>
+              <section className="rounded-[24px] bg-[#f4f4f2] p-5 md:p-6">
+                <StockHistory history={history} />
+              </section>
+            </>
+          )}
+          {tab === "more" && <MoreTab product={product} kinds={Object.entries(categoryLabels).map(([id, label]) => ({ id, label }))} />}
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24" aria-label="At a glance">

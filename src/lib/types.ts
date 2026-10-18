@@ -43,6 +43,8 @@ export interface ProductImage {
   src: string | null; // null until real photos are uploaded
   alt: string;
   kind: "front" | "back" | "detail" | "model" | "styled";
+  /** The spot that stays in view when the photo is cropped to fit, 0–1 each way (Admin → Photos). */
+  focus?: { x: number; y: number };
 }
 
 export interface Product {
@@ -85,6 +87,8 @@ export interface Product {
   edition?: { no: number; of: number };
   /** A few lines about the piece, shown on its page. */
   story?: string;
+  /** The piece cut out on a clear background, for the home hero and the fits (uploaded in Admin → Photos). */
+  cutout?: string;
 }
 
 export interface Drop {

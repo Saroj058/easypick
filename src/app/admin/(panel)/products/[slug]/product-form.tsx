@@ -1,13 +1,9 @@
 "use client";
 
 import { startTransition, useActionState, useState } from "react";
-import { ImagePlus } from "lucide-react";
-
-import { ProductImage } from "@/components/product-image";
 
 import type { Product } from "@/lib/types";
 import { saveProduct, type SaveState } from "@/app/admin/actions";
-import { shrinkPhotoInput } from "../../resize-photo";
 
 const input = "mt-2 h-12 w-full rounded-xl border border-ink/15 bg-white px-4 text-base outline-none focus:border-ink";
 const area = "mt-2 w-full rounded-xl border border-ink/15 bg-white px-4 py-3 text-base outline-none focus:border-ink";
@@ -25,9 +21,7 @@ const statuses = [
 
 export function ProductForm({ product, drops, offers = [] }: { product: Product; drops: { slug: string; name: string }[]; /** Festival offers that use ticks. */ offers?: { name: string; tag: string }[] }) {
   const [state, action, pending] = useActionState<SaveState, FormData>(saveProduct, { status: "idle" });
-  const [preview, setPreview] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
-  const front = product.images.find((i) => i.kind === "front") ?? product.images[0];
 
   return (
     <form
@@ -43,37 +37,6 @@ export function ProductForm({ product, drops, offers = [] }: { product: Product;
     >
       <input type="hidden" name="slug" value={product.slug} />
 
-      <section aria-labelledby="photo-h" className={`${card} flex flex-wrap items-center gap-5`}>
-        <div className="w-28 shrink-0 overflow-hidden rounded-2xl bg-white">
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element -- local preview of a picked file
-            <img src={preview} alt="New photo preview" className="aspect-[4/5] w-full object-cover" />
-          ) : (
-            <ProductImage image={front} category={product.category} colourHex={product.colours[0]?.hex ?? "#ccc"} decorative sizes="112px" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 id="photo-h" className={h3}>
-            Photo
-          </h3>
-          <p className="mt-1 text-[14px] text-[#55575c]">Flat-lay on a plain light background. JPG, PNG or WebP; big phone photos are shrunk for you. Saved when you press Save.</p>
-          <label className="mt-3 inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border border-ink/15 bg-white px-4 text-[14px] font-semibold hover:border-ink focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink">
-            <ImagePlus className="h-4 w-4" aria-hidden />
-            {preview ? "Pick a different photo" : "Change photo"}
-            <input
-              name="photo"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="sr-only"
-              onChange={async (e) => {
-                // Big phone photos are shrunk here so the upload stays under the hosting limit.
-                const f = await shrinkPhotoInput(e.target);
-                setPreview(f ? URL.createObjectURL(f) : null);
-              }}
-            />
-          </label>
-        </div>
-      </section>
 
       <section aria-labelledby="basics-h" className={`${card} grid gap-4 sm:grid-cols-2`}>
         <h3 id="basics-h" className={`${h3} sm:col-span-2`}>

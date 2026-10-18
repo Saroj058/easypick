@@ -1,5 +1,6 @@
 "use client";
 
+import { cutoutOf } from "@/lib/rack-cutouts";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -56,7 +57,7 @@ export function HeroPiece({ pieces, seconds = 4 }: { pieces: HeroPieceItem[]; /*
           <AnimatePresence mode="wait" initial={false}>
             <motion.img
               key={sel.product.slug}
-              src={`/rack/${sel.product.slug}.webp`}
+              src={cutoutOf(sel.product) ?? `/rack/${sel.product.slug}.webp`}
               alt=""
               draggable={false}
               initial={still ? false : { opacity: 0, y: 14, scale: 0.97 }}
@@ -106,7 +107,7 @@ export function HeroPiece({ pieces, seconds = 4 }: { pieces: HeroPieceItem[]; /*
                 className={`relative flex h-16 w-14 cursor-pointer items-center justify-center rounded-lg p-1.5 transition-[background-color,opacity] duration-200 after:absolute after:inset-x-3 after:bottom-0 after:h-[2px] after:origin-center after:bg-ink after:transition-transform after:duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink md:h-[72px] md:w-[58px] ${on ? "bg-mist after:scale-x-100" : "opacity-60 after:scale-x-0 hover:opacity-100"}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- the piece's own photo, cut out; small and already compressed */}
-                <img src={`/rack/${p.product.slug}.webp`} alt="" draggable={false} loading="lazy" className="max-h-full max-w-full object-contain" />
+                <img src={cutoutOf(p.product) ?? `/rack/${p.product.slug}.webp`} alt="" draggable={false} loading="lazy" className="max-h-full max-w-full object-contain" />
               </button>
             </li>
           );

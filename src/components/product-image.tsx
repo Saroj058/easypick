@@ -234,7 +234,7 @@ export function ProductImage({
   if (image.src) {
     return (
       <div className={`relative aspect-[4/5] overflow-hidden ${ground} ${className}`}>
-        <Image src={image.src} alt={decorative ? "" : image.alt} fill sizes={sizes} priority={priority} className="object-cover" />
+        <Image src={image.src} alt={decorative ? "" : image.alt} fill sizes={sizes} priority={priority} className="object-cover" style={image.focus ? { objectPosition: `${Math.round(image.focus.x * 100)}% ${Math.round(image.focus.y * 100)}%` } : undefined} />
       </div>
     );
   }

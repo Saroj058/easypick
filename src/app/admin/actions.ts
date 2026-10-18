@@ -372,7 +372,10 @@ export async function saveProduct(_prev: SaveState, form: FormData): Promise<Sav
     // Trending: the owner's picks and hides.
     p.staffPick = form.get("staffPick") === "on" || undefined;
     p.hideFromTrending = form.get("hideFromTrending") === "on" || undefined;
-    p.shortDescription = str(form, "shortDescription", 300) || p.shortDescription;
+    // Can be emptied now; an older form that doesn't send it keeps the text.
+    p.shortDescription = form.has("shortDescription") ? str(form, "shortDescription", 300) : p.shortDescription;
+    // A renamed piece's photo descriptions follow its name.
+    if (name !== product.name) p.images = p.images.map((i) => ({ ...i, alt: i.alt.replace(product.name, name) }));
     p.vault = vault || undefined;
     p.brand = brand;
     p.original = original || undefined;

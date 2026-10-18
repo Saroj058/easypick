@@ -21,7 +21,7 @@ import { getStoreInfo } from "@/lib/store-info";
 import { formatDropTime } from "@/lib/format";
 import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
-import { RACK_CUTOUTS } from "@/lib/rack-cutouts";
+import { cutoutOf } from "@/lib/rack-cutouts";
 import { site } from "@/lib/site";
 import { getDropTimeline, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
@@ -71,7 +71,7 @@ export default async function HomePage() {
   // (owner, 9 Oct 2026: all of them, not only what is on sale today; one that is sold out or still
   // to come says so), kinds taken in turn (a hoodie, a tee, a jacket, trousers, …) so the row under
   // it is a mix. What can be bought now comes first.
-  const withPhoto = range.filter((p) => RACK_CUTOUTS.has(p.slug) && (home.hero.showUnavailable || (p.status === "live" && p.variants.some((v) => v.stock > 0))));
+  const withPhoto = range.filter((p) => cutoutOf(p) && (home.hero.showUnavailable || (p.status === "live" && p.variants.some((v) => v.stock > 0))));
   const buyable = (p: (typeof range)[number]) => p.status === "live" && p.variants.some((v) => v.stock > 0);
   const inTurn = (list: typeof withPhoto) => {
     const kinds = home.hero.kinds.map((k) => list.filter((p) => p.category === k));

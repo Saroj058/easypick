@@ -2,7 +2,7 @@
 // Each occasion holds three fits (Party: night out, house party, birthday); a fit is two to
 // four pieces, and its colours lean dark or light to suit it.
 
-import { RACK_CUTOUTS } from "./rack-cutouts";
+import { cutoutOf } from "./rack-cutouts";
 import type { Category, Product, Size } from "./types";
 import { isBottom } from "./site";
 
@@ -159,7 +159,7 @@ function toPiece(p: Product, tone: Tone, role: "top" | "bottom" | "layer" | "cap
     hex: colour.hex,
     image: p.images[0] ?? { src: null, alt: p.name, kind: "front" },
     // The cut-out shows the product's first colour.
-    ...(RACK_CUTOUTS.has(p.slug) && colour.name === p.colours[0]?.name ? { cutout: `/rack/${p.slug}.webp` } : {}),
+    ...(cutoutOf(p) && colour.name === p.colours[0]?.name ? { cutout: cutoutOf(p)! } : {}),
     measurements: p.measurements,
     sizes,
   };

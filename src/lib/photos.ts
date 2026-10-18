@@ -33,13 +33,13 @@ function storage() {
 
 export type PhotoResult = { ok: true; src: string } | { ok: false; message: string };
 
-export async function saveProductPhoto(slug: string, file: File): Promise<PhotoResult> {
+export async function saveProductPhoto(slug: string, file: File, kind = "front"): Promise<PhotoResult> {
   if (!TYPES[file.type]) return { ok: false, message: "The photo must be a JPG, PNG or WebP." };
   if (file.size > MAX_PHOTO_BYTES) return { ok: false, message: "The photo is too big. Pick one under 4 MB." };
   const bytes = Buffer.from(await file.arrayBuffer());
   const type = sniffImage(bytes);
   if (!type) return { ok: false, message: "The photo must be a JPG, PNG or WebP." };
-  const name = `front-${Date.now().toString(36)}.${TYPES[type]}`;
+  const name = `${kind.replace(/[^a-z]/g, "") || "photo"}-${Date.now().toString(36)}.${TYPES[type]}`;
 
   const s = storage();
   if (s) {
