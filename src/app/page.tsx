@@ -12,9 +12,7 @@ import { Vault } from "@/components/home/vault";
 
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
-import { OfferBoard } from "@/components/offer-board";
-import { OfferStack } from "@/components/offer-stack";
-import { liveOffers } from "@/lib/offer-rules";
+import { OfferSection } from "@/components/offer-section";
 import { ktmDay } from "@/lib/ktm-day";
 import { getOffers } from "@/lib/offers";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
@@ -180,7 +178,7 @@ export default async function HomePage() {
       {offers.length > 0 && (
         <section aria-labelledby="pick-offer-title" className="overflow-hidden py-12 md:py-16">
           <div className="container-ep">
-            {/* Pick your offer: one stack, every offer fanned out left and right (owner, 18 Oct 2026). */}
+            {/* Pick your offer: the stack of offers; each opens onto a wheel of its pieces (owner, 18 Oct 2026). */}
             <div>
               <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Festival offers</p>
               <h2 id="pick-offer-title" className="mt-2 text-center text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
@@ -188,7 +186,7 @@ export default async function HomePage() {
                 <span className="block text-steel-dark">Same price in store.</span>
               </h2>
               <div className="mt-10">
-                <OfferStack offers={liveOffers(offerList, products, ktmDay())} label="Festival" />
+                <OfferSection offers={offerList} products={products} today={ktmDay()} />
               </div>
             </div>
           </div>
@@ -199,22 +197,6 @@ export default async function HomePage() {
       <Vault products={products} />
 
 
-      {/* Festival offers: only while a real sale runs. The pieces move along by themselves. */}
-      {offers.length > 0 && (
-        <section aria-labelledby="offers-title" className="section overflow-hidden pb-0 md:pb-0 lg:pb-0">
-          <div className="container-ep">
-            {/* The ring, with only its name and the way in set in the curve under the cards (owner, 18 Oct 2026). */}
-            <OfferBoard offers={offerList} products={products} today={ktmDay()}>
-              <h2 id="offers-title" className="text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
-                Festival offers.
-              </h2>
-              <Link href="/shop?sale=1" className="inline-flex h-11 items-center rounded-full bg-paper px-6 text-[14px] font-semibold text-ink shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 transition hover:ring-ink">
-                See all offers
-              </Link>
-            </OfferBoard>
-          </div>
-        </section>
-      )}
 
       {/* Buying for someone, just above Our store (owner, 18 Oct 2026). */}
       <section aria-labelledby="gift-title" className="py-14 md:py-20">

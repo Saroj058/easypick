@@ -24,19 +24,20 @@ const SKINS = [
  * swipe, the arrow keys or a tap on a card behind brings the next one to the front. Under it, when
  * it ends, and one button to shop it.
  */
-export function OfferStack({ offers, start, label = "Offers" }: { offers: OfferSummary[]; start?: string; /** The stack's name, e.g. "Festivals". */ label?: string }) {
+export function OfferStack({ offers, start, label = "Offers", onOpen }: { offers: OfferSummary[]; start?: string; /** The stack's name, e.g. "Festivals". */ label?: string; /** Tapping the front card opens the offer's products (the wheel). */ onOpen?: (id: string) => void }) {
   return (
     <MotionConfig reducedMotion="user">
-      <Stack offers={offers} start={start} label={label} />
+      <Stack offers={offers} start={start} label={label} onOpen={onOpen} />
     </MotionConfig>
   );
 }
 
-function Stack({ offers, start, label }: { offers: OfferSummary[]; start?: string; label: string }) {
+function Stack({ offers, start, label, onOpen }: { offers: OfferSummary[]; start?: string; label: string; onOpen?: (id: string) => void }) {
   const still = useReducedMotion();
   const n = offers.length;
   const [at, setAt] = useState(() => Math.max(0, offers.findIndex((o) => o.offer.id === start)));
   const box = useRef<HTMLDivElement>(null);
+  const dragged = useRef(false);
   const go = (d: number) => setAt((a) => (a + d + n) % n);
   useArrowKeys(box, go);
   if (!n) return null;
@@ -83,15 +84,32 @@ function Stack({ offers, start, label }: { offers: OfferSummary[]; start?: strin
                 animate={{ x: p.x, rotate: p.rotate, scale: p.scale, opacity: p.opacity }}
                 transition={still ? { duration: 0 } : { type: "spring", stiffness: 260, damping: 28 }}
                 drag={isFront && n > 1 ? "x" : false}
+                onPointerDown={() => (dragged.current = false)}
+                onDragStart={() => (dragged.current = true)}
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.5}
                 onDragEnd={onDragEnd}
-                onClick={() => !isFront && setAt(i)}
+                onClick={() => {
+                  if (!isFront) setAt(i);
+                  else if (onOpen && !dragged.current) onOpen(offer.id);
+                }}
+                onKeyDown={(e) => {
+                  if (isFront && onOpen && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onOpen(offer.id);
+                  }
+                }}
+                role={isFront && onOpen ? "button" : undefined}
+                tabIndex={isFront && onOpen ? 0 : undefined}
+                aria-label={isFront && onOpen ? `Open ${offer.name}: ${count} pieces, up to ${upTo}% off` : undefined}
                 aria-hidden={!isFront}
               >
                 <div className={`on-dark relative flex h-full flex-col overflow-hidden rounded-[22px] p-6 text-paper shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${SKINS[i % SKINS.length]}`}>
                   {/* A soft sheen across the card */}
                   <span aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_60%_at_20%_0%,rgba(255,255,255,0.12),transparent_60%)]" />
+                  {isFront && onOpen && (
+                    <span className="absolute bottom-[78px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-white/15 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-paper/85 backdrop-blur">Tap to open</span>
+                  )}
                   <span className="relative mx-auto flex items-center gap-2 opacity-80">
                     <Image src="/brand/logo.png" alt="" width={611} height={161} className="h-4 w-auto brightness-0 invert" />
                   </span>
@@ -128,9 +146,20 @@ function Stack({ offers, start, label }: { offers: OfferSummary[]; start?: strin
           {front.offer.endsOn ? `Ends ${day.format(new Date(`${front.offer.endsOn}T12:00:00+05:45`))}` : "Running now"} · while stock lasts
         </motion.p>
       </AnimatePresence>
-      <Link href={`/shop?offer=${front.offer.id}`} className="mt-4 inline-flex h-11 items-center rounded-full bg-paper px-6 text-[14px] font-semibold text-ink shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 transition hover:ring-ink">
-        Shop {front.offer.name.toLowerCase().startsWith("under") ? "it" : "the offer"}
-      </Link>
+      {onOpen ? (
+        <div className="mt-4 flex items-center gap-4">
+          <button type="button" onClick={() => onOpen(front.offer.id)} className="inline-flex h-11 cursor-pointer items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-paper transition hover:bg-graphite">
+            Open the offer
+          </button>
+          <Link href={`/shop?offer=${front.offer.id}`} className="text-[14px] font-semibold underline-offset-4 hover:underline">
+            Shop it all
+          </Link>
+        </div>
+      ) : (
+        <Link href={`/shop?offer=${front.offer.id}`} className="mt-4 inline-flex h-11 items-center rounded-full bg-paper px-6 text-[14px] font-semibold text-ink shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 transition hover:ring-ink">
+          Shop {front.offer.name.toLowerCase().startsWith("under") ? "it" : "the offer"}
+        </Link>
+      )}
       {n > 1 && (
         <div className="mt-5 flex gap-1.5" aria-hidden>
           {offers.map((o, i) => (
