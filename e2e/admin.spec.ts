@@ -134,3 +134,40 @@ test("the owner sets a Designer Fits look and the Fits page uses it", async ({ p
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText(/Saved\./)).toBeVisible();
 });
+
+test("the owner edits the home page and the announcement from the admin, and the site follows", async ({ page }) => {
+  await ownerSignIn(page);
+
+  // A home page headline.
+  await page.goto("/admin/home");
+  const track = page.getByRole("region", { name: "Track an order" });
+  await track.getByLabel("Headline").fill("Find your order.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved. The home page shows it now.")).toBeVisible();
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Find your order." })).toBeVisible();
+
+  // The announcement, then closing it.
+  await page.goto("/admin/site");
+  const box = page.getByRole("region", { name: "Announcement" });
+  await box.getByText("Show the announcement").click();
+  await expect(box.getByLabel("Show the announcement")).toBeChecked();
+  await box.getByLabel("Message").fill("Dashain hours: open till 9");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved. Every page shows it now.")).toBeVisible();
+  await page.goto("/shop");
+  await expect(page.getByText("Dashain hours: open till 9")).toBeVisible();
+  await page.getByRole("button", { name: "Close the announcement" }).click();
+  await expect(page.getByText("Dashain hours: open till 9")).toHaveCount(0);
+
+  // Put both back.
+  await page.goto("/admin/site");
+  await page.getByRole("region", { name: "Announcement" }).getByText("Show the announcement").click();
+  await expect(page.getByRole("region", { name: "Announcement" }).getByLabel("Show the announcement")).not.toBeChecked();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved. Every page shows it now.")).toBeVisible();
+  await page.goto("/admin/home");
+  await page.getByRole("region", { name: "Track an order" }).getByLabel("Headline").fill("Track an order.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Saved. The home page shows it now.")).toBeVisible();
+});

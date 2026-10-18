@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { site } from "@/lib/site";
+import { site, walletList } from "@/lib/site";
+import { siteSetting } from "@/lib/settings/site";
+import { socialLinks } from "@/lib/settings/site-rules";
 import { getStoreInfo } from "@/lib/store-info";
 import { FooterAlerts } from "./footer-alerts";
 
@@ -9,7 +11,10 @@ import { FooterAlerts } from "./footer-alerts";
 // Everything else lives in the menu.
 
 export async function SiteFooter() {
-  const info = await getStoreInfo();
+  const [info, settings] = await Promise.all([getStoreInfo(), siteSetting.get()]);
+  // Social links from Admin → Site settings; the Store page's Instagram counts too.
+  const social = socialLinks(settings);
+  if (!social.some((x) => x.name === "Instagram") && info.instagram) social.unshift({ name: "Instagram", href: info.instagram.startsWith("http") ? info.instagram : `https://www.instagram.com/${info.instagram.replace(/^@/, "")}` });
   const cols: { title: string; links: { href: string; label: string; external?: boolean }[] }[] = [
     {
       title: "Shop",
@@ -44,7 +49,18 @@ export async function SiteFooter() {
       <div className="container-ep grid grid-cols-2 gap-x-6 gap-y-10 py-14 md:grid-cols-5 md:py-16">
         <div className="col-span-2 flex flex-col gap-5">
           <Image src="/brand/logo-white.png" alt="Easypick" width={611} height={161} className="h-8 w-auto self-start" />
-          <FooterAlerts />
+          {settings.footer.alertsOn && <FooterAlerts title={settings.footer.alertsTitle} note={settings.footer.alertsNote} />}
+          {social.length > 0 && (
+            <ul aria-label="Follow Easypick" className="flex flex-wrap gap-2">
+              {social.map((x) => (
+                <li key={x.name}>
+                  <a href={x.href} target="_blank" rel="noopener" className="inline-flex h-10 items-center rounded-full border border-paper/25 px-4 text-[13px] font-semibold hover:border-paper">
+                    {x.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {cols.map((c) => (
           <nav key={c.title} aria-label={c.title}>
@@ -82,7 +98,7 @@ export async function SiteFooter() {
               Terms
             </Link>
             <span>
-              Pay with <span className="font-semibold text-paper">eSewa</span>
+              Pay with <span className="font-semibold text-paper">{walletList()}</span>
             </span>
           </p>
         </div>

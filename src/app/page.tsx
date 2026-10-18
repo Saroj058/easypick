@@ -26,6 +26,10 @@ import { site } from "@/lib/site";
 import { getDropTimeline, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
 import { designerFits } from "@/lib/occasions";
+import { homeSetting } from "@/lib/settings/home";
+import { siteSetting } from "@/lib/settings/site";
+import { socialLinks } from "@/lib/settings/site-rules";
+import type { HomeSection } from "@/lib/settings/home-rules";
 
 export const revalidate = 60;
 
@@ -46,14 +50,19 @@ const orgLd = {
       url: site.url,
       logo: `${site.url}/brand/logo.png`,
       slogan: site.tagline,
-      sameAs: [site.social.instagram, site.social.tiktok],
+      sameAs: [] as string[],
     },
     { "@type": "WebSite", name: site.name, url: site.url, publisher: { "@id": `${site.url}/#org` } },
   ],
 };
 
 export default async function HomePage() {
-  const [products, { current, next }] = await Promise.all([getProducts(), getDropTimeline()]);
+  const [products, { current, next }, home, siteSettings] = await Promise.all([getProducts(), getDropTimeline(), homeSetting.get(), siteSetting.get()]);
+  // The organisation's social profiles for search engines (Admin → Site settings).
+  const ld = { ...orgLd, "@graph": [{ ...orgLd["@graph"][0], sameAs: socialLinks(siteSettings).map((x) => x.href) }, orgLd["@graph"][1]] };
+  // Section order and on/off, as set in Admin → Home page.
+  const at = (id: HomeSection) => ({ order: home.sections.findIndex((x) => x.id === id) });
+  const on = (id: HomeSection) => home.sections.find((x) => x.id === id)?.on !== false;
   const drop = current ?? next;
   // Vault pieces have their own section; the shelf and the rail hold the house range.
   const range = products.filter((p) => !p.vault);
@@ -62,10 +71,10 @@ export default async function HomePage() {
   // (owner, 9 Oct 2026: all of them, not only what is on sale today; one that is sold out or still
   // to come says so), kinds taken in turn (a hoodie, a tee, a jacket, trousers, …) so the row under
   // it is a mix. What can be bought now comes first.
-  const withPhoto = range.filter((p) => RACK_CUTOUTS.has(p.slug));
+  const withPhoto = range.filter((p) => RACK_CUTOUTS.has(p.slug) && (home.hero.showUnavailable || (p.status === "live" && p.variants.some((v) => v.stock > 0))));
   const buyable = (p: (typeof range)[number]) => p.status === "live" && p.variants.some((v) => v.stock > 0);
   const inTurn = (list: typeof withPhoto) => {
-    const kinds = ["hoodies", "tees", "jackets", "joggers", "shirts", "jeans", "sweatshirts", "polos", "trousers", "shorts", "co-ords", "accessories"].map((k) => list.filter((p) => p.category === k));
+    const kinds = home.hero.kinds.map((k) => list.filter((p) => p.category === k));
     const out: typeof withPhoto = [];
     for (let round = 0; kinds.some((l) => l.length > round); round++) for (const l of kinds) if (l[round]) out.push(l[round]);
     return out;
@@ -79,22 +88,26 @@ export default async function HomePage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(orgLd)} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
+      <div className="flex flex-col">
       {/* 01 — Hero: one piece and its price tag, the words, and the drop's numbers */}
-      <section aria-labelledby="hero-title" className="bg-paper text-ink">
+      {on("hero") && (
+      <section aria-labelledby="hero-title" style={at("hero")} className="bg-paper text-ink">
         <div className="container-ep grid min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] grid-rows-[auto_1fr_auto] gap-y-8 pb-6 pt-[80px] md:pt-[104px] lg:min-h-svh lg:grid-cols-12 lg:grid-rows-[1fr_auto] lg:gap-x-6 lg:pt-[116px]">
           {/* Stage */}
           <div className="min-w-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:self-center">
             {/* One piece, large, with its price tag hanging beside it; the row under it switches the piece */}
-            <HeroPiece pieces={heroPieces.map((p) => ({ product: p, colour: p.colours[0], note: buyable(p) ? null : p.status === "scheduled" ? "Coming soon" : "Sold out" }))} />
+            <HeroPiece seconds={home.hero.seconds} pieces={heroPieces.map((p) => ({ product: p, colour: p.colours[0], note: buyable(p) ? null : p.status === "scheduled" ? "Coming soon" : "Sold out" }))} />
           </div>
 
           {/* Words */}
           <div className="flex flex-col justify-end lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:justify-center lg:pb-10">
-            <p className="eyebrow flex w-fit items-center gap-2 rounded-[2px] bg-volt px-3 py-1.5 text-ink">
-              <span className="h-1.5 w-1.5 bg-ink" aria-hidden />
-              Pick it. Pay it. Wear it.
-            </p>
+            {home.hero.eyebrow && (
+              <p className="eyebrow flex w-fit items-center gap-2 rounded-[2px] bg-volt px-3 py-1.5 text-ink">
+                <span className="h-1.5 w-1.5 bg-ink" aria-hidden />
+                {home.hero.eyebrow}
+              </p>
+            )}
             <h1 id="hero-title" className="display display-hero mt-4">
               {current ? (
                 <>
@@ -110,26 +123,26 @@ export default async function HomePage() {
                 </>
               ) : (
                 <>
-                  Pick it.
+                  {home.hero.fallback[0]}
                   <br />
-                  Wear it.
+                  {home.hero.fallback[1]}
                 </>
               )}
             </h1>
             {/* Why the store exists, in the owner's words */}
             <div className="mt-6 max-w-[460px]">
               <p className="display text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] leading-[0.95]">
-                Shopping shouldn&apos;t feel like negotiation. <span className="text-steel-dark">That&apos;s why we built Easypick.</span>
+                {home.hero.pitch} <span className="text-steel-dark">{home.hero.pitchQuiet}</span>
               </p>
               <p className="mt-3 text-[15px] leading-relaxed text-ink/75 sm:text-[16px]">
-                Fixed prices. Automated checkout.
+                {home.hero.line1}
                 <br />
-                Same price online and in-store.
+                {home.hero.line2}
               </p>
             </div>
             {/* Visit store, and the two ways to do it: they slide out beside the button on hover or focus (always shown on touch screens). */}
             <div className="group/visit mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <InteractiveHoverButton href="/visit" text="Visit store" tone="light" className="w-full sm:w-auto" />
+              <InteractiveHoverButton href="/visit" text={home.hero.visitLabel} tone="light" className="w-full sm:w-auto" />
               <ul className="flex gap-2 transition-all duration-300 [@media(hover:hover)]:-translate-x-2 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/visit:translate-x-0 [@media(hover:hover)]:group-focus-within/visit:opacity-100 [@media(hover:hover)]:group-hover/visit:translate-x-0 [@media(hover:hover)]:group-hover/visit:opacity-100">
                 {[
                   { href: "/visit", label: "In person" },
@@ -147,7 +160,7 @@ export default async function HomePage() {
               </ul>
             </div>
             {/* The way into the drop, under Visit store */}
-            <FlowButton href={drop ? `/drop/${drop.slug}` : "/drops"} text={drop ? `Shop Drop ${drop.slug}` : "See the drops"} className="mt-3 w-full sm:w-auto sm:self-start" />
+            <FlowButton href={drop ? `/drop/${drop.slug}` : "/drops"} text={drop ? home.hero.dropButton.replace("{n}", drop.slug) : home.hero.noDropButton} className="mt-3 w-full sm:w-auto sm:self-start" />
           </div>
 
           {/* At the end: the drop and its countdown, in the middle. */}
@@ -159,31 +172,36 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* The rail: products first, with quick filters and "My size" */}
-      <Rail products={range} />
+      {on("rail") && (
+        <div style={at("rail")}>
+          <Rail products={range} settings={home.rail} />
+        </div>
+      )}
 
 
 
       {/* Designer Fits: just a pointer here; the fits themselves are on /fits (above the Vault, owner, 18 Oct 2026) */}
-      {looks.length > 0 && (
-        <section aria-labelledby="fits-title" className="py-8 md:py-10">
+      {on("fits") && looks.length > 0 && (
+        <section aria-labelledby="fits-title" style={at("fits")} className="py-8 md:py-10">
           <div className="container-ep">
-            <FitsTeaser looks={looks} />
+            <FitsTeaser looks={looks} title={home.fits.title} button={home.fits.button} />
           </div>
         </section>
       )}
 
       {/* Pick your offer, under Designer Fits and above the Vault (owner, 18 Oct 2026) */}
-      {offers.length > 0 && (
-        <section aria-labelledby="pick-offer-title" className="overflow-hidden py-12 md:py-16">
+      {on("offers") && offers.length > 0 && (
+        <section aria-labelledby="pick-offer-title" style={at("offers")} className="overflow-hidden py-12 md:py-16">
           <div className="container-ep">
             {/* Pick your offer: the stack of offers; each opens onto a wheel of its pieces (owner, 18 Oct 2026). */}
             <div>
-              <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">Festival offers</p>
+              <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">{home.offers.eyebrow}</p>
               <h2 id="pick-offer-title" className="mt-2 text-center text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
-                Pick your offer.
-                <span className="block text-steel-dark">Same price in store.</span>
+                {home.offers.title}
+                <span className="block text-steel-dark">{home.offers.line}</span>
               </h2>
               <div className="mt-10">
                 <OfferSection offers={offerList} products={products} today={ktmDay()} />
@@ -194,36 +212,53 @@ export default async function HomePage() {
       )}
 
       {/* The Vault: original brands and numbered pieces */}
-      <Vault products={products} />
+      {on("vault") && (
+        <div style={at("vault")}>
+          <Vault products={products} copy={home.vault} />
+        </div>
+      )}
 
 
 
       {/* Buying for someone, just above Our store (owner, 18 Oct 2026). */}
-      <section aria-labelledby="gift-title" className="py-14 md:py-20">
-        <div className="container-ep">
-          <GiftBlock />
-        </div>
-      </section>
+      {on("gift") && (
+        <section aria-labelledby="gift-title" style={at("gift")} className="py-14 md:py-20">
+          <div className="container-ep">
+            <GiftBlock copy={home.gift} />
+          </div>
+        </section>
+      )}
 
       {/* Our store: the physical shop */}
-      <OurStore info={await getStoreInfo()} />
+      {on("store") && (
+        <div style={at("store")}>
+          <OurStore info={await getStoreInfo()} />
+        </div>
+      )}
 
       {/* Self-checkout: the kiosk, the steps, and the Nepali line */}
-      <SelfCheckout />
+      {on("checkout") && (
+        <div style={at("checkout")}>
+          <SelfCheckout />
+        </div>
+      )}
 
       {/* Track an order: no account needed */}
-      <section aria-labelledby="track-title" className="border-t border-mist py-7 md:py-8">
+      {on("track") && (
+      <section aria-labelledby="track-title" style={at("track")} className="border-t border-mist py-7 md:py-8">
         <div className="container-ep grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-end lg:gap-10">
           <div className="lg:pb-2.5">
             <h2 id="track-title" className="text-xl font-bold">
-              Track an order.
+              {home.track.title}
             </h2>
-            <p className="text-[13px] text-steel-dark">No account needed.</p>
+            <p className="text-[13px] text-steel-dark">{home.track.line}</p>
           </div>
           <TrackForm compact id="home-track" />
         </div>
       </section>
+      )}
 
+      </div>
       {next && <RefreshAt at={next.releaseAt} />}
       <RevealRoot />
     </>

@@ -23,9 +23,9 @@ export interface HeroPieceItem {
 }
 
 /** How long a piece is shown before the next takes its place. */
-const CHANGE_MS = 4000;
 
-export function HeroPiece({ pieces }: { pieces: HeroPieceItem[] }) {
+export function HeroPiece({ pieces, seconds = 4 }: { pieces: HeroPieceItem[]; /** How long each piece stays (Admin → Home page). */ seconds?: number }) {
+  const CHANGE_MS = seconds * 1000;
   const [slug, setSlug] = useState(pieces[0]?.product.slug ?? null);
   const still = useReducedMotion();
   const sel = pieces.find((p) => p.product.slug === slug) ?? pieces[0];
@@ -41,7 +41,7 @@ export function HeroPiece({ pieces }: { pieces: HeroPieceItem[] }) {
       setSlug(pieces[(at + 1) % pieces.length].product.slug);
     }, CHANGE_MS);
     return () => clearTimeout(timer);
-  }, [slug, held, still, pieces]);
+  }, [slug, held, still, pieces, CHANGE_MS]);
   if (!sel) return null;
   const price = formatPrice(sel.product.salePrice ?? sel.product.price);
 

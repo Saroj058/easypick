@@ -9,7 +9,7 @@ import { ArrowIcon } from "@/components/icons";
  * on top, the line, and the two ways in. Three gift cards peek out of the top edge and rise when
  * the strip is pointed at.
  */
-export function GiftBlock() {
+export function GiftBlock({ copy = { title: "Buying for someone?", line: "You pick the piece. They pick the size. We wrap it and bring it.", send: "Send a gift", cards: "Gift cards" } }: { /** Set in Admin → Home page. */ copy?: { title: string; line: string; send: string; cards: string } }) {
   const door = "inline-flex h-11 items-center gap-2 rounded-full px-5 text-[12.5px] font-semibold uppercase tracking-[0.08em] transition-[background-color,color,scale] duration-200 active:scale-[0.97]";
   return (
     <div className="group relative pt-6">
@@ -43,19 +43,19 @@ export function GiftBlock() {
 
         <div className="min-w-0">
           <h2 id="gift-title" className="display text-[26px] leading-none md:text-[30px]">
-            Buying for someone?
+            {copy.title}
           </h2>
           <p className="mt-1.5 text-[14px] text-paper/70">
-            You pick the piece. <span className="text-paper">They pick the size.</span> We wrap it and bring it.
+            {copy.line}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 md:ml-auto">
           <Link href="/gift" className={`${door} bg-paper text-ink hover:bg-white`}>
-            Send a gift <ArrowIcon className="h-4 w-4" />
+            {copy.send} <ArrowIcon className="h-4 w-4" />
           </Link>
           <Link href="/gift#buy" className={`${door} border border-paper/40 text-paper hover:border-paper hover:bg-paper hover:text-ink`}>
-            Gift cards
+            {copy.cards}
           </Link>
         </div>
       </div>

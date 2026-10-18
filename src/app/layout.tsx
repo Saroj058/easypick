@@ -8,6 +8,10 @@ import { FooterChrome, ShopChrome } from "@/components/shop-chrome";
 import { SiteAnalytics } from "@/components/site-analytics";
 import { SiteFooter } from "@/components/site-footer";
 import { MobileTabBar, SiteHeader } from "@/components/site-header";
+import { Announcement } from "@/components/announcement";
+import { ktmDay } from "@/lib/ktm-day";
+import { siteSetting } from "@/lib/settings/site";
+import { announcing } from "@/lib/settings/site-rules";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -17,7 +21,13 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "600"], v
 const baloo = Baloo_2({ subsets: ["devanagari", "latin"], weight: "700", variable: "--font-baloo-2", display: "swap", preload: false });
 const mukta = Mukta({ subsets: ["devanagari", "latin"], weight: ["400", "600"], variable: "--font-mukta", display: "swap", preload: false });
 
-export const metadata: Metadata = {
+/** The search description comes from Admin → Site settings. */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await siteSetting.get();
+  return { ...metadata, description: settings.seo.description };
+}
+
+const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
     default: `${site.name} — ${site.tagline}`,
@@ -33,7 +43,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const settings = await siteSetting.get();
   return (
     <html lang="en" className={`${barlow.variable} ${inter.variable} ${jetbrains.variable} ${mukta.variable} ${baloo.variable} antialiased`}>
       <body className="flex min-h-dvh flex-col">
@@ -41,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ShopChrome>
             <SiteHeader />
           </ShopChrome>
+          {announcing(settings, ktmDay()) && <Announcement text={settings.announcement.text} link={settings.announcement.link} />}
           <main id="main" className="flex-1">
             {children}
           </main>

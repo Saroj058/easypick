@@ -15,7 +15,9 @@ import {
   Mail,
   Menu,
   Package,
+  PanelsTopLeft,
   Search,
+  Settings2,
   Shirt,
   Store,
   Tags,
@@ -38,36 +40,50 @@ import type { StaffRole } from "@/lib/db/schema";
 // a soft white panel. Phones get the same sidebar as a drawer.
 
 type Item = { href: string; label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; owner?: boolean };
+// Grouped the way the owner thinks about the shop (owner, 18 Oct 2026: "everything on the admin,
+// easy to operate"): the day, selling, what's in stock, what the website shows, and the settings.
 const GROUPS: { title: string; items: Item[] }[] = [
   {
-    title: "Run the shop",
+    title: "Overview",
     items: [
       { href: "/admin", label: "Today", icon: Home },
+      { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Sell",
+    items: [
       { href: "/admin/orders", label: "Orders", icon: ClipboardList },
+      { href: "/admin/customers", label: "Customers", icon: Users },
+      { href: "/admin/gift-cards", label: "Gift cards", icon: Gift },
+      { href: "/admin/alerts", label: "Alerts", icon: Mail },
+    ],
+  },
+  {
+    title: "Catalogue",
+    items: [
       { href: "/admin/products", label: "Products", icon: Shirt },
       { href: "/admin/categories", label: "Categories", icon: Tags },
       { href: "/admin/stock", label: "Stock count", icon: Boxes },
     ],
   },
   {
-    title: "Selling",
+    title: "Storefront",
     items: [
-      { href: "/admin/drops", label: "Drops", icon: Flame, owner: true },
-      { href: "/admin/looks", label: "Looks", icon: LayoutGrid, owner: true },
-      { href: "/admin/trending", label: "Trending", icon: TrendingUp, owner: true },
-      { href: "/admin/gift-cards", label: "Gift cards", icon: Gift, owner: true },
-      { href: "/admin/festivals", label: "Festivals", icon: CalendarHeart, owner: true },
-      { href: "/admin/alerts", label: "Alerts", icon: Mail, owner: true },
+      { href: "/admin/home", label: "Home page", icon: PanelsTopLeft },
+      { href: "/admin/drops", label: "Drops", icon: Flame },
+      { href: "/admin/looks", label: "Designer Fits", icon: LayoutGrid },
+      { href: "/admin/festivals", label: "Offers & festivals", icon: CalendarHeart },
+      { href: "/admin/trending", label: "Trending", icon: TrendingUp },
     ],
   },
   {
-    title: "People & store",
+    title: "Settings",
     items: [
-      { href: "/admin/customers", label: "Customers", icon: Users, owner: true },
-      { href: "/admin/reports", label: "Reports", icon: BarChart3, owner: true },
-      { href: "/admin/store", label: "Store", icon: Store, owner: true },
-      { href: "/admin/staff", label: "Staff", icon: UserCog, owner: true },
-      { href: "/admin/activity", label: "Activity", icon: Activity, owner: true },
+      { href: "/admin/site", label: "Site settings", icon: Settings2 },
+      { href: "/admin/store", label: "Store", icon: Store },
+      { href: "/admin/staff", label: "Staff", icon: UserCog },
+      { href: "/admin/activity", label: "Activity", icon: Activity },
       { href: "/admin/account", label: "Account", icon: Package },
     ],
   },

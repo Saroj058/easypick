@@ -672,10 +672,13 @@ export function RailWall({
   sections,
   budgets,
   pieces: total,
+  title = "The rail",
 }: {
   sections: RailSection[];
   budgets: number[];
   pieces: number;
+  /** Its name, set in Admin → Home page. */
+  title?: string;
 }) {
   const mySize = useMySize();
   const bag = useBag();
@@ -801,7 +804,7 @@ export function RailWall({
           id="rail-title"
           className="display on-dark order-1 -my-2 -ml-px flex items-center self-stretch rounded-tl-[15px] bg-ink px-5 py-3 text-[38px] leading-[0.9] text-paper md:text-[44px]"
         >
-          The rail
+          {title}
         </h2>
         <div className="order-2 ml-auto shrink-0 lg:order-last lg:ml-0">
           <FlowButton href={withSize("/shop")} text="Shop all" solid />

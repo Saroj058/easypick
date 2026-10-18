@@ -5,7 +5,7 @@ import { startTransition, useActionState } from "react";
 import { signUpForAlerts, type AlertState } from "@/app/actions";
 
 /** The footer's one-line drop alert sign-up: a WhatsApp number or an email, then Notify me. */
-export function FooterAlerts() {
+export function FooterAlerts({ title = "Drop alerts", note = "One message on each drop day. Every message has a link to stop." }: { /** Set in Admin → Site settings. */ title?: string; note?: string }) {
   const [state, action, pending] = useActionState<AlertState, FormData>(signUpForAlerts, { status: "idle" });
 
   if (state.status === "done") {
@@ -33,7 +33,7 @@ export function FooterAlerts() {
       noValidate
     >
       <label htmlFor="footer-alert" className="block text-[14px] font-semibold">
-        Drop alerts
+        {title}
       </label>
       <div className="mt-2 flex max-w-sm gap-2">
         <input
@@ -51,7 +51,7 @@ export function FooterAlerts() {
         </button>
       </div>
       <p id="footer-alert-note" role={state.status === "error" ? "alert" : undefined} className={`mt-2 text-[12px] ${state.status === "error" ? "text-error-dark" : "text-paper/60"}`}>
-        {state.status === "error" ? state.message : "One message on each drop day. Every message has a link to stop."}
+        {state.status === "error" ? state.message : note}
       </p>
     </form>
   );

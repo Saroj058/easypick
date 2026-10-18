@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageIntro } from "@/components/page-intro";
-import { site } from "@/lib/site";
+import { siteSetting } from "@/lib/settings/site";
+import { socialLinks } from "@/lib/settings/site-rules";
 
 export const metadata: Metadata = {
   title: "About",
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/about" },
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const social = socialLinks(await siteSetting.get());
   return (
     <>
       <PageIntro dark eyebrow="About" title="Shopping, minus the pressure." />
@@ -31,14 +33,15 @@ export default function AboutPage() {
           </p>
           <p>Someone&apos;s always around if you want a hand. If you don&apos;t, that&apos;s fine too.</p>
         </div>
-        <div className="container-ep mt-12 flex max-w-3xl flex-wrap gap-3">
-          <a href={site.social.instagram} target="_blank" rel="noopener" className="btn btn-ink">
-            Instagram
-          </a>
-          <a href={site.social.tiktok} target="_blank" rel="noopener" className="btn btn-outline">
-            TikTok
-          </a>
-        </div>
+        {social.length > 0 && (
+          <div className="container-ep mt-12 flex max-w-3xl flex-wrap gap-3">
+            {social.map((x, i) => (
+              <a key={x.name} href={x.href} target="_blank" rel="noopener" className={`btn ${i === 0 ? "btn-ink" : "btn-outline"}`}>
+                {x.name}
+              </a>
+            ))}
+          </div>
+        )}
         <p className="container-ep mt-12 max-w-3xl text-steel-dark">
           <Link href="/how-it-works" className="underline">
             How the store works

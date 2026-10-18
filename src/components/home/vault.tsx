@@ -109,7 +109,7 @@ const FEATURED = 5;
  * The Vault on the home page, cold like its own page (owner, 18 Oct 2026): a slate panel on frost,
  * the name and the way in, the brands each with its own "Show all", then five notched ice tiles.
  */
-export function Vault({ products }: { products: Product[] }) {
+export function Vault({ products, copy = { title: "The Vault", line: "Original brands. One of each. Never restocked.", button: "Enter the Vault" } }: { products: Product[]; /** Set in Admin → Home page. */ copy?: { title: string; line: string; button: string } }) {
   const pieces = vaultPieces(products);
   if (pieces.length === 0) return <VaultWaiting />;
 
@@ -128,12 +128,12 @@ export function Vault({ products }: { products: Product[] }) {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <h2 id="vault-title" className="display display-h1">
-                The Vault
+                {copy.title}
               </h2>
-              <p className={`mt-2.5 text-[17px] ${V.iceDim}`}>Original brands. One of each. Never restocked.</p>
+              <p className={`mt-2.5 text-[17px] ${V.iceDim}`}>{copy.line}</p>
             </div>
             <Link href={vaultHref()} className="group inline-flex h-12 items-center gap-3 rounded-full bg-white pl-6 pr-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--v-ink)] transition-colors hover:bg-[var(--v-tile)]">
-              Enter the Vault
+              {copy.button}
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--v-ink)] text-white transition-transform group-hover:translate-x-0.5" aria-hidden>
                 →
               </span>

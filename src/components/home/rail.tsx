@@ -1,23 +1,17 @@
 import { sellable } from "@/lib/inventory";
-import type { Category, Product, Size } from "@/lib/types";
+import type { HomeSettings } from "@/lib/settings/home-rules";
+import type { Product, Size } from "@/lib/types";
 import { RailWall, type RailColour, type RailPiece, type RailSection } from "./rail-wall";
 
-const BUDGETS = [1000, 1500, 2500];
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 /** A section holds three or four pieces; smaller kinds share a section with the next one. */
 const SECTION_MIN = 3;
-const SECTION_SHOWN = 4;
 
 // The rail: the live pieces laid out like the shop wall, in the order an outfit goes on
 // (see rail-wall.tsx for how it looks and works).
 
-/** The wall, top to bottom. */
-const BAYS: { name: string; caption: string; kinds: Category[] }[] = [
-  { name: "Tops", caption: "Start on top", kinds: ["tees", "shirts", "polos", "co-ords"] },
-  { name: "Layers", caption: "Layer up", kinds: ["hoodies", "sweatshirts", "jackets"] },
-  { name: "Bottoms", caption: "Bottom half", kinds: ["jeans", "trousers", "joggers", "shorts"] },
-  { name: "Extras", caption: "Finish", kinds: ["accessories"] },
-];
+// The wall top to bottom (its sections), the budgets and how many pieces a section shows are set in
+// Admin → Home page (lib/settings/home-rules.ts holds the defaults).
 
 /** "Tops", "Bottoms and extras"; three or more kinds on one rail are "The rest of the fit". */
 function listed(names: string[]) {
@@ -56,7 +50,8 @@ export function toRailPiece(p: Product): RailPiece {
   };
 }
 
-export function Rail({ products }: { products: Product[] }) {
+export function Rail({ products, settings }: { products: Product[]; settings: Pick<HomeSettings["rail"], "title" | "budgets" | "perSection" | "bays"> }) {
+  const { bays: BAYS, budgets: BUDGETS, perSection: SECTION_SHOWN, title } = settings;
   const live = products.filter((p) => p.status === "live").sort((a, b) => (b.liveAt ?? "").localeCompare(a.liveAt ?? ""));
   if (live.length === 0) return null;
 
@@ -111,6 +106,7 @@ export function Rail({ products }: { products: Product[] }) {
           sections={sections}
           budgets={budgets}
           pieces={live.length}
+          title={title}
         />
       </div>
     </section>

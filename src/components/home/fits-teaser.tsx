@@ -8,7 +8,7 @@ import type { Look } from "@/lib/occasions";
  * Designer Fits on the home page, as a pointer rather than the whole section: the first fit
  * drawn small, the occasions as chips that open that occasion on /fits, and the way in.
  */
-export function FitsTeaser({ looks }: { looks: Look[] }) {
+export function FitsTeaser({ looks, title = "Designer Fits", button = "See the fits" }: { looks: Look[]; title?: string; button?: string }) {
   const groups = looks.reduce<{ key: string; label: string; n: number }[]>((all, l) => {
     const g = all.find((x) => x.key === l.group);
     if (g) g.n += 1;
@@ -32,7 +32,7 @@ export function FitsTeaser({ looks }: { looks: Look[] }) {
         )}
         <div className="min-w-0">
           <h2 id="fits-title" className="display whitespace-nowrap text-[34px] leading-[0.9] md:text-[40px]">
-            Designer Fits
+            {title}
           </h2>
           <p className="mt-1 text-[14px] text-steel-dark">
             {looks.length} ready fits · {groups.length} occasions
@@ -50,7 +50,7 @@ export function FitsTeaser({ looks }: { looks: Look[] }) {
         ))}
       </ul>
 
-      <FlowButton href="/fits" text="See the fits" className="w-full shrink-0 sm:w-auto sm:self-start xl:self-auto" />
+      <FlowButton href="/fits" text={button} className="w-full shrink-0 sm:w-auto sm:self-start xl:self-auto" />
     </div>
   );
 }
