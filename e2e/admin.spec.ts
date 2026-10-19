@@ -293,3 +293,34 @@ test("the owner opens a drop from its card, takes a piece out, saves, and picks 
   await page.reload();
   await expect(page.getByRole("button", { name: `Take ${name} out` })).toBeVisible();
 });
+
+test("the owner adds a piece on the smart page: typical sizes, a sale price, the Vault and a fit, then deletes it", async ({ page }) => {
+  await ownerSignIn(page);
+  // No photo here: uploads would leave this machine (the photo maths has its own unit tests).
+  await page.goto("/admin/products/new?vault=1");
+  await expect(page.getByRole("heading", { name: "Add a piece" })).toBeVisible();
+  const vault = page.getByRole("checkbox", { name: /The Vault/ });
+  await expect(vault).toBeChecked();
+  // Retried until the page has loaded enough to take typing.
+  await expect(async () => {
+    await page.getByRole("textbox", { name: "Name", exact: true }).fill("E2E Smart Tee");
+    await expect(page.getByText("/product/e2e-smart-tee")).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 30_000 });
+  await page.getByLabel("Category").selectOption("tees");
+  await page.getByLabel("Price (Rs)").fill("1500");
+  await page.getByLabel(/^Sale/).fill("1200");
+  await page.getByRole("button", { name: "Fill typical sizes" }).click();
+  await expect(page.getByLabel("M Chest in cm")).toHaveValue("104");
+  // No stock, so the test piece can be deleted again (a piece with stock can't be).
+  await page.getByRole("combobox", { name: "Brand", exact: true }).fill("Easypick Studio");
+  await page.getByLabel("Add it to a fit").selectOption({ index: 1 });
+  await page.getByRole("button", { name: "Add product" }).click();
+  await page.waitForURL(/\/admin\/products\/e2e-smart-tee/, { timeout: 60_000 });
+  await expect(page.getByText(/Added\./)).toBeVisible();
+  await expect(page.getByText(/didn't go through/)).toHaveCount(0);
+
+  await page.goto("/admin/products/e2e-smart-tee?tab=more");
+  await page.getByLabel(/Type .delete. to confirm/).fill("delete");
+  await page.getByRole("button", { name: /^Delete / }).click();
+  await page.waitForURL(/\/admin\/products$/, { timeout: 60_000 });
+});

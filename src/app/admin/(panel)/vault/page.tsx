@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import { vaultBrands, vaultPieces } from "@/components/home/vault";
 import { allProducts } from "@/lib/catalogue";
@@ -16,7 +18,12 @@ export default async function AdminVault() {
   const pieces = vaultPieces(products);
   return (
     <div className="space-y-6">
-      <PageHead group="Storefront" title="The Vault" lead="Each brand's colours and story, the Vault's own blue, its words, and the pieces it opens on. Pieces join the Vault from their product page (Details → The Vault)." />
+      <PageHead group="Storefront" title="The Vault" lead="Each brand's colours and story, the Vault's own blue, its words, and the pieces it opens on. Pieces join the Vault from their product page (Details → The Vault).">
+        <Link href="/admin/products/new?vault=1" className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-[14px] font-semibold text-paper hover:bg-graphite">
+          <Plus className="h-4 w-4" aria-hidden />
+          Add a Vault piece
+        </Link>
+      </PageHead>
       <VaultForm
         initial={initial}
         brandsHere={vaultBrands(pieces).map((b) => ({ name: b.name, n: b.pieces.length }))}

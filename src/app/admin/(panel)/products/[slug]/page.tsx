@@ -101,7 +101,12 @@ export default async function AdminProduct({ params, searchParams }: PageProps<"
             ? "Added as scheduled, not live: its drop hasn't started yet, so it goes on sale when the drop is released."
             : added === "copy"
               ? "Copied as a hidden draft with no stock. Change its name, colours' stock and photo, then set it to Live."
-              : "Added. Add its stock in the Stock tab, then set it to Live when it's ready."}
+              : "Added. Check it over, then set it to Live when it's ready."}
+        </p>
+      )}
+      {typeof sp.missed === "string" && sp.missed && (
+        <p role="alert" className="rounded-2xl bg-[#fff1e0] px-4 py-3 text-[14px] text-[#7a3e00]">
+          The piece is saved, but {sp.missed.slice(0, 80)} didn&apos;t go through. Add {sp.missed.includes(",") ? "them" : "it"} again from the Photos tab{sp.missed.includes("fit") ? " or Designer Fits" : ""}.
         </p>
       )}
 

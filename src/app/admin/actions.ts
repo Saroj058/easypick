@@ -59,7 +59,7 @@ function catalogueChanged() {
   revalidatePath("/", "layout");
 }
 
-export type SaveState = { status: "idle" } | { status: "saved"; message: string } | { status: "error"; message: string };
+export type SaveState = { status: "idle" } | { status: "saved"; message: string; /** The new piece, when Add a piece stays on the page to upload the rest. */ slug?: string } | { status: "error"; message: string };
 
 // ---------- Staff login ----------
 
@@ -577,6 +577,31 @@ export async function addProduct(_prev: SaveState, form: FormData): Promise<Save
   if (!GENDERS.includes(gender)) return { status: "error", message: "Choose who it's for." };
   const fit = (str(form, "fit") || "regular") as Fit;
   if (!FITS.includes(fit)) return { status: "error", message: "Choose a fit." };
+  // The smart Add a piece page also sends a sale price, search words, the Vault and where it shows.
+  const smart = form.get("stay") === "1";
+  const saleRaw = str(form, "salePrice");
+  const salePrice = saleRaw ? int(form, "salePrice") : undefined;
+  if (salePrice !== undefined && !(salePrice > 0 && salePrice < price)) return { status: "error", message: "The sale price must be lower than the price." };
+  const vault = form.get("vault") === "on";
+  const brand = str(form, "brand", 40) || undefined;
+  const original = vault && form.get("original") === "on";
+  if (original && !brand) return { status: "error", message: "Add the brand before tagging it Original." };
+  let edition: { no: number; of: number } | undefined;
+  if (vault && (str(form, "editionNo") || str(form, "editionOf"))) {
+    const no = int(form, "editionNo");
+    const of = int(form, "editionOf");
+    if (!(no >= 1 && of >= 1 && no <= of)) return { status: "error", message: "Piece number must be between 1 and how many were made." };
+    edition = { no, of };
+  }
+  const tags = [
+    ...new Set([
+      ...str(form, "tags", 300)
+        .split(",")
+        .map((t) => t.trim().toLowerCase().replace(/[^a-z0-9 -]/g, "").slice(0, 30))
+        .filter(Boolean),
+      ...form.getAll("offerTag").map((t) => String(t).toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30)).filter(Boolean),
+    ]),
+  ].slice(0, 20);
 
   let raw: unknown;
   try {
@@ -636,7 +661,8 @@ export async function addProduct(_prev: SaveState, form: FormData): Promise<Save
   if (photo instanceof File && photo.size > 0) {
     const saved = await saveProductPhoto(slug, photo);
     if (!saved.ok) return { status: "error", message: saved.message };
-    images.push({ src: saved.src, alt: `${name}, front`, kind: "front" });
+    const kind = (["front", "back", "detail", "model", "styled"] as const).find((k) => k === str(form, "photoKind")) ?? "front";
+    images.push({ src: saved.src, alt: `${name}, ${kind}`, kind });
   } else {
     images.push({ src: null, alt: `${name}, front`, kind: "front" });
   }
@@ -656,15 +682,17 @@ export async function addProduct(_prev: SaveState, form: FormData): Promise<Save
         .map((l) => l.trim().slice(0, 200))
         .filter(Boolean)
         .slice(0, 20),
-      tags: [],
+      tags: smart ? tags : [],
       colours,
       images,
       price,
+      ...(smart && salePrice ? { salePrice } : {}),
+      ...(smart && vault ? { vault, brand, original, edition, story: str(form, "story", 600) || undefined } : {}),
       measurements,
       variants,
       status: waitsForDrop ? "scheduled" : live ? "live" : "draft",
       ...(live && !dropSlug ? { liveAt: new Date().toISOString() } : {}),
-      showOn: { website: true, kiosk: true },
+      showOn: smart ? { website: form.get("showWebsite") === "on", kiosk: form.get("showKiosk") === "on" } : { website: true, kiosk: true },
     });
   } catch (e) {
     // Someone added a product with the same link or code at the same moment; nothing was saved.
@@ -673,6 +701,7 @@ export async function addProduct(_prev: SaveState, form: FormData): Promise<Save
   }
   await logStaff(me, "added product", slug, { price, live, scheduled: waitsForDrop || undefined });
   catalogueChanged();
+  if (smart) return { status: "saved", message: waitsForDrop ? "scheduled" : "added", slug };
   redirect(`/admin/products/${slug}?added=${waitsForDrop ? "scheduled" : "1"}`);
 }
 

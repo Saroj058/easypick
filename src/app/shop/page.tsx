@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { RecentlyViewed } from "@/components/local-lists";
 import { sellable } from "@/lib/inventory";
-import { PickChat } from "@/components/gift/pick-chat";
+import { PickLazy } from "@/components/gift/pick-lazy";
 import { toRailPiece } from "@/components/home/rail";
 import { ShopSearch } from "@/components/shop-search";
 import { ShopShelf } from "@/components/shop-shelf";
@@ -347,7 +347,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
         {/* Pick, the robot: for themselves first, gifts too; sizes, delivery, swaps and small talk */}
         <div className="mt-12 md:mt-16">
-          <PickChat where="shop" />
+          <PickLazy where="shop" />
         </div>
   
         <div className="mt-6 overflow-x-clip">

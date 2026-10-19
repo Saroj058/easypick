@@ -654,9 +654,14 @@ export function RobotPrototype({
     // Tells the page where he is (0 = left edge, 1 = right), for the bubble over his head.
     if (followRef?.current) {
       const fx = 0.5 + bodyRef.current.position.x / state.viewport.width;
-      followRef.current.style.setProperty("--pick-x", fx.toFixed(4));
-      // Which side has room for something beside him: toward the middle (1 = his right, -1 = his left).
-      followRef.current.style.setProperty("--pick-side", fx < 0.5 ? "1" : "-1");
+      // Only when he has really moved: a style write every frame makes the page re-lay itself out 60 times a second.
+      const last = followRef.current.dataset.pickX;
+      if (!last || Math.abs(Number(last) - fx) > 0.002) {
+        followRef.current.dataset.pickX = fx.toFixed(4);
+        followRef.current.style.setProperty("--pick-x", fx.toFixed(4));
+        // Which side has room for something beside him: toward the middle (1 = his right, -1 = his left).
+        followRef.current.style.setProperty("--pick-side", fx < 0.5 ? "1" : "-1");
+      }
     }
 
     // Contained, it looks where it is going (or, standing still, where the mood points it).
@@ -1218,7 +1223,7 @@ export function RobotCharacter({
   return (
     <div ref={box} className={className}>
       <Canvas
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         frameloop={shown && !covered ? "always" : "never"}
         gl={{ alpha: true, antialias: true }}
         // Far back with a narrow lens: the same size, but no stretching at the sides of a wide band.

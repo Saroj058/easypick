@@ -4,7 +4,7 @@ import Image from "next/image";
 import { BalanceCheck } from "@/components/balance-check";
 import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { GiftCardPicker } from "@/components/gift/gift-card-picker";
-import { PickChat } from "@/components/gift/pick-chat";
+import { PickLazy } from "@/components/gift/pick-lazy";
 import { GiftPieces } from "@/components/gift/gift-pieces";
 import { toRailPiece } from "@/components/home/rail";
 import { ArrowIcon } from "@/components/icons";
@@ -84,7 +84,7 @@ export default async function GiftPage() {
         {/* The pieces, with budget and kind as plain links; Pick, the robot (a gift helper that asks,
             listens and suggests real pieces), right above "Every piece" */}
         <section id="pieces" aria-labelledby="pieces-h" className="scroll-mt-20">
-          <GiftPieces pieces={live.sort((a, b) => priceOf(a) - priceOf(b)).map(toRailPiece)} trending={trending.items.map((i) => i.product.slug)} above={<PickChat />} />
+          <GiftPieces pieces={live.sort((a, b) => priceOf(a) - priceOf(b)).map(toRailPiece)} trending={trending.items.map((i) => i.product.slug)} above={<PickLazy />} />
         </section>
 
         {/* Gift cards: this section is where they are chosen and bought (the form opens over the page) */}
