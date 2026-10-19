@@ -12,11 +12,14 @@ import { site } from "@/lib/site";
 const day = new Intl.DateTimeFormat("en-GB", { timeZone: site.timezone, day: "numeric", month: "short" });
 
 /** Each offer's card, in turn: ink, a deep festival blue, then graphite. */
-const SKINS = [
+export const SKINS = [
   "bg-[linear-gradient(160deg,#2a2a2d_0%,#111113_60%,#0a0a0a_100%)]",
   "bg-[linear-gradient(160deg,#1d4f86_0%,#123257_55%,#0c2340_100%)]",
   "bg-[linear-gradient(160deg,#4a4a4f_0%,#2c2c30_60%,#1c1c1f_100%)]",
 ];
+
+/** One calm spring for the whole offers motion, opening and closing alike (owner, 19 Oct 2026: "like Apple"). */
+export const SPRING = { type: "spring", duration: 0.55, bounce: 0.1 } as const;
 
 /**
  * The festival offers as a fanned stack of cards (owner's reference, 18 Oct 2026): the one in
@@ -104,12 +107,9 @@ function Stack({ offers, start, label, onOpen }: { offers: OfferSummary[]; start
                 aria-label={isFront && onOpen ? `Open ${offer.name}: ${count} pieces, up to ${upTo}% off` : undefined}
                 aria-hidden={!isFront}
               >
-                <div className={`on-dark relative flex h-full flex-col overflow-hidden rounded-[22px] p-6 text-paper shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${SKINS[i % SKINS.length]}`}>
+                <motion.div layoutId={isFront && onOpen ? `offer-${offer.id}` : undefined} transition={SPRING} className={`on-dark relative flex h-full flex-col overflow-hidden rounded-[22px] p-6 text-paper shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${SKINS[i % SKINS.length]}`}>
                   {/* A soft sheen across the card */}
                   <span aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_60%_at_20%_0%,rgba(255,255,255,0.12),transparent_60%)]" />
-                  {isFront && onOpen && (
-                    <span className="absolute bottom-[78px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-white/15 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-paper/85 backdrop-blur">Tap to open</span>
-                  )}
                   <span className="relative mx-auto flex items-center gap-2 opacity-80">
                     <Image src="/brand/logo.png" alt="" width={611} height={161} className="h-4 w-auto brightness-0 invert" />
                   </span>
@@ -127,7 +127,7 @@ function Stack({ offers, start, label, onOpen }: { offers: OfferSummary[]; start
                       <span className="block font-mono text-[15px] font-semibold tabular-nums"># {count}</span>
                     </span>
                   </span>
-                </div>
+                </motion.div>
               </motion.div>
             );
           })}
@@ -143,30 +143,14 @@ function Stack({ offers, start, label, onOpen }: { offers: OfferSummary[]; start
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.p key={front.offer.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className="mt-6 text-[13px] text-steel-dark">
-          {front.offer.endsOn ? `Ends ${day.format(new Date(`${front.offer.endsOn}T12:00:00+05:45`))}` : "Running now"} · while stock lasts
+          {onOpen ? "Tap the card to see its pieces · " : ""}
+          {front.offer.endsOn ? `Ends ${day.format(new Date(`${front.offer.endsOn}T12:00:00+05:45`))}` : "Running now"}
         </motion.p>
       </AnimatePresence>
-      {onOpen ? (
-        <div className="mt-4 flex items-center gap-4">
-          <button type="button" onClick={() => onOpen(front.offer.id)} className="inline-flex h-11 cursor-pointer items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-paper transition hover:bg-graphite">
-            Open the offer
-          </button>
-          <Link href={`/shop?offer=${front.offer.id}`} className="text-[14px] font-semibold underline-offset-4 hover:underline">
-            Shop it all
-          </Link>
-        </div>
-      ) : (
-        <Link href={`/shop?offer=${front.offer.id}`} className="mt-4 inline-flex h-11 items-center rounded-full bg-paper px-6 text-[14px] font-semibold text-ink shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)] ring-1 ring-ink/10 transition hover:ring-ink">
-          Shop {front.offer.name.toLowerCase().startsWith("under") ? "it" : "the offer"}
-        </Link>
-      )}
-      {n > 1 && (
-        <div className="mt-5 flex gap-1.5" aria-hidden>
-          {offers.map((o, i) => (
-            <span key={o.offer.id} className={`h-1.5 rounded-full transition-all duration-300 ${i === at ? "w-6 bg-ink" : "w-1.5 bg-ink/20"}`} />
-          ))}
-        </div>
-      )}
+      {/* The one button: everything in the offer, in the shop. Tapping the card opens its pieces here. */}
+      <Link href={`/shop?offer=${front.offer.id}`} className="mt-4 inline-flex h-11 items-center rounded-full bg-ink px-6 text-[14px] font-semibold text-paper transition hover:bg-graphite">
+        Shop all {front.count} pieces
+      </Link>
     </div>
   );
 }
