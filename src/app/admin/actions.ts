@@ -696,6 +696,8 @@ export async function saveDropAction(_prev: SaveState, form: FormData): Promise<
   await saveDrop({ slug, name, story, releaseAt }, pieces);
   await logStaff(me, isNew ? "created drop" : "saved drop", slug, { releaseAt, pieces: pieces.length });
   catalogueChanged();
+  // A new drop opens on its own page, ready for its pieces.
+  if (isNew) redirect(`/admin/drops?edit=${slug}&saved=1`);
   return { status: "saved", message: `Saved ${name}.` };
 }
 

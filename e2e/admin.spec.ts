@@ -262,3 +262,34 @@ test("the owner sets the Vault's colours and words, sees what's hard to read, an
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved. The Vault shows it now.")).toBeVisible();
 });
+
+test("the owner opens a drop from its card, takes a piece out, saves, and picks it back from photos", async ({ page }) => {
+  await ownerSignIn(page);
+  await page.goto("/admin/drops");
+  await page.locator(`a[href^="/admin/drops?edit="]`).first().click();
+  await expect(page.getByRole("link", { name: "All drops" })).toBeVisible();
+  const tray = page.getByRole("list", { name: "Chosen pieces" });
+  const first = tray.getByRole("button").first();
+  const name = (await first.getAttribute("aria-label"))!.replace(/^Take | out$/g, "");
+  // Retried until the page has loaded enough to take the tap.
+  await expect(async () => {
+    await page.getByRole("button", { name: `Take ${name} out` }).click({ timeout: 1000 });
+    await expect(page.getByRole("button", { name: `Take ${name} out` })).toHaveCount(0, { timeout: 1000 });
+  }).toPass({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Save drop" }).click();
+  await expect(page.getByText(/^Saved /)).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: `Take ${name} out` })).toHaveCount(0);
+
+  // Pick it back from the photos.
+  await page.getByPlaceholder("Search pieces").fill(name);
+  const card = page.locator("button[aria-pressed]").filter({ hasText: name }).filter({ hasText: " left" }).first();
+  await expect(async () => {
+    await card.click({ timeout: 1000 });
+    await expect(card).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
+  }).toPass({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Save drop" }).click();
+  await expect(page.getByText(/^Saved /)).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: `Take ${name} out` })).toBeVisible();
+});

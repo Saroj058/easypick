@@ -9,8 +9,9 @@ import { NewProductForm } from "./new-product-form";
 export const metadata: Metadata = { title: "Add product" };
 export const dynamic = "force-dynamic";
 
-export default async function NewProduct() {
+export default async function NewProduct({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireOwner();
+  const sp = await searchParams;
   const drops = (await allDrops()).map((x) => ({ slug: x.slug, name: x.name }));
   return (
     <div className="space-y-6">
@@ -23,7 +24,7 @@ export default async function NewProduct() {
         <h1 className="mt-1 text-[40px] font-light leading-none tracking-[-0.02em]">Add a piece</h1>
         <p className="mt-2 text-[14px] text-[#55575c]">Five short steps. It starts as a hidden draft unless you put it live.</p>
       </div>
-      <NewProductForm drops={drops} />
+      <NewProductForm drops={drops} preset={{ drop: typeof sp.drop === "string" && drops.some((d) => d.slug === sp.drop) ? sp.drop : "" }} />
     </div>
   );
 }

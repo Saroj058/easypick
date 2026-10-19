@@ -66,7 +66,7 @@ function Step({ n, id, title, note, children }: { n: number; id: string; title: 
   );
 }
 
-export function NewProductForm({ drops }: { drops: { slug: string; name: string }[] }) {
+export function NewProductForm({ drops, preset = { drop: "" } }: { drops: { slug: string; name: string }[]; /** From "Add a new piece to this drop". */ preset?: { drop: string } }) {
   const [state, action, pending] = useActionState<SaveState, FormData>(addProduct, { status: "idle" });
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -174,7 +174,7 @@ export function NewProductForm({ drops }: { drops: { slug: string; name: string 
               <label htmlFor="drop" className={field}>
                 Drop <span className={hint}>(optional)</span>
               </label>
-              <select id="drop" name="drop" defaultValue="" className={input}>
+              <select id="drop" name="drop" defaultValue={preset.drop} className={input}>
                 <option value="">Not part of a drop</option>
                 {drops.map((d) => (
                   <option key={d.slug} value={d.slug}>
