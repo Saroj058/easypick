@@ -17,6 +17,7 @@ const TOPS: Record<Size, Row> = {
 };
 /** Long sleeves (hoodies, sweatshirts, jackets, shirts) are measured to the cuff. */
 const LONG_SLEEVE: Partial<Record<Category, true>> = { hoodies: true, sweatshirts: true, jackets: true, shirts: true };
+const LAYER: Partial<Record<Category, true>> = { hoodies: true, sweatshirts: true, jackets: true };
 const LONG: Record<Size, number> = { XS: 58, S: 60, M: 62, L: 64, XL: 65, XXL: 66, ONE: 0 };
 const BOTTOMS: Record<Size, Row> = {
   XS: { waist: 70, length: 98, inseam: 74 },
@@ -40,7 +41,8 @@ export function typicalSizes(category: Category, fit: Fit, sizes: Size[]): Measu
     else {
       const t = TOPS[s];
       out[s] = {
-        chest: Math.round(t.chest! + 10 * roomy),
+        // Hoodies, sweatshirts and jackets are cut about 6 cm roomier than a tee of the same size.
+        chest: Math.round(t.chest! + 12 * roomy + (LAYER[category] ? 6 : 0)),
         length: Math.round(t.length! + 3 * roomy),
         sleeve: LONG_SLEEVE[category] ? LONG[s] : Math.round(t.sleeve! + 3 * roomy),
       };

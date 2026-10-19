@@ -768,3 +768,51 @@
   outline-offset: 4px;
   border-radius: 2px;
 }
+
+/* Find my size: the height and weight sliders. A thin line, filled to the value (--pct), and a big
+   round thumb that's easy on a phone. */
+.size-range {
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: pan-y;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+}
+.size-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--color-ink) var(--pct), var(--color-mist) var(--pct));
+}
+.size-range::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--color-ink) var(--pct), var(--color-mist) var(--pct));
+}
+.size-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -12px;
+  height: 28px;
+  width: 28px;
+  border-radius: 9999px;
+  background: var(--color-paper);
+  border: 2px solid var(--color-ink);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.18);
+  transition: transform 120ms;
+}
+.size-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+.size-range::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  border-radius: 9999px;
+  background: var(--color-paper);
+  border: 2px solid var(--color-ink);
+}
+.size-range:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+  border-radius: 4px;
+}

@@ -14,7 +14,8 @@ import { SendSheet } from "./gift/gift-pieces";
 import { RestockForm } from "./restock-form";
 import { useMe } from "./session";
 import { ArrowIcon, GiftIcon } from "./icons";
-import { FitFinder, useFitProfile } from "./fit-finder";
+import { useFitProfile } from "./fit-finder";
+import { openSizeFinder } from "./size-finder";
 
 /** Opened from the gift page (?from=gift): the panel only sends. Read in the browser, since the
  *  product pages are built ahead of time and can't see the address. */
@@ -53,11 +54,10 @@ export function BuyPanel(props: Props) {
   const [checked, setChecked] = useState(false);
   const [error, setError] = useState(false);
   const [added, setAdded] = useState(false);
-  const [fitOpen, setFitOpen] = useState(false);
   /** The send-as-gift form, over this page (owner, 15 Oct 2026: no separate page). */
   const [gifting, setGifting] = useState(false);
   const profile = useFitProfile();
-  const match = matchSize(props.category, props.measurements, profile);
+  const match = matchSize(props.category, props.measurements, profile, props.fit);
 
   /** One live check; true when it worked. */
   const load = useCallback(async () => {
@@ -153,12 +153,10 @@ export function BuyPanel(props: Props) {
             <legend className="text-sm font-semibold">Size</legend>
             <button
               type="button"
-              onClick={() => setFitOpen((o) => !o)}
-              aria-expanded={fitOpen}
-              aria-controls={`fit-${slug}`}
-              className="min-h-11 text-[14px] underline underline-offset-2"
+              onClick={() => openSizeFinder({ name, category: props.category, fit: props.fit, measurements: props.measurements })}
+              className="min-h-11 cursor-pointer text-[14px] underline underline-offset-2"
             >
-              {hasFit(profile) ? "Edit my fit" : "Match my size in cm"}
+              {hasFit(profile) ? "Change my size" : "Find my size"}
             </button>
           </div>
           {match && (
@@ -172,11 +170,6 @@ export function BuyPanel(props: Props) {
           )}
           {autoSize && (
             <p className="mb-1 text-[14px] text-steel-dark">We picked your size. Tap another to change it.</p>
-          )}
-          {fitOpen && (
-            <div id={`fit-${slug}`} className="my-4 border border-mist bg-photo p-4">
-              <FitFinder compact onSaved={() => setFitOpen(false)} />
-            </div>
           )}
           <div className="mt-3 grid grid-cols-4 gap-2">
             {sizes.map((s) => {

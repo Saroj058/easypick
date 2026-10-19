@@ -66,10 +66,10 @@ export default function SizeGuidePage() {
       <div className="container-ep pb-24">
         <section aria-labelledby="fit-title" className="bg-photo p-6 md:p-10">
           <h2 id="fit-title" className="display display-h2">
-            Measure once. We match every piece.
+            Find your size once. We match every piece.
           </h2>
           <p className="mt-2 max-w-[52ch] text-steel-dark">
-            Measure a tee or trousers you already love. Every product page then marks the size closest to yours, in cm, not guesswork.
+            Your height and weight, a size you wear in another brand, or a tee you own. Every piece then opens on the size that suits you, worked out from its own measurements.
           </p>
           <div className="mt-8">
             <FitFinder />

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { endAllSessions, endSession, getCurrentUser, requestCode, safeNext, updateUser, verifyCode, type CodeChannel } from "@/lib/auth";
-import type { FitProfile } from "@/lib/fit-profile";
+import { normalizeFit, type FitProfile } from "@/lib/fit-profile";
 import { normaliseNepaliMobile } from "@/lib/format";
 import { syncAccountAlerts } from "@/lib/drop-alerts";
 import { site } from "@/lib/site";
@@ -120,10 +120,10 @@ export async function signOutEverywhere() {
 
 // ---------- Fit profile sync ----------
 
-/** Saves "Your size in cm" to the account so it follows the person to any phone. No-op when signed out. */
+/** Saves their size (Find my size) to the account so it follows them to any phone. No-op when signed out. */
 export async function saveMyFit(fit: FitProfile) {
   const user = await getCurrentUser();
   if (!user) return;
-  const clean = (n: unknown) => (typeof n === "number" && n >= 40 && n <= 200 ? Math.round(n) : undefined);
-  await updateUser(user.id, { fit: { chest: clean(fit.chest), length: clean(fit.length), waist: clean(fit.waist) } });
+  const clean = normalizeFit(fit);
+  await updateUser(user.id, { fit: Object.keys(clean).length ? clean : null });
 }

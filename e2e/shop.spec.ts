@@ -322,24 +322,42 @@ test("shop: search narrows the pieces, keeps the other filters, and Filter opens
   await expect(page.getByRole("link", { name: "Price: low to high" })).toBeVisible();
 });
 
-test("the rail: sizing from measurements is for logged-in customers; a guest is asked to log in", async ({ page }) => {
+test("find my size: opens in the middle from the rail, height and weight give a size, it's saved and the rail uses it", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   const rail = page.locator("section[aria-labelledby=rail-title]");
   await rail.scrollIntoViewIfNeeded();
+  const dialog = page.getByRole("dialog");
   // On a cold dev server the first click can land before the page is interactive: retry it.
   await expect(async () => {
-    await rail.getByRole("button", { name: "Pick from my measurements" }).click();
-    await expect(rail.getByRole("dialog", { name: "Log in to use your size" })).toBeVisible({ timeout: 2000 });
+    await rail.getByRole("button", { name: "Find my size", exact: true }).click();
+    await expect(dialog).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 30_000 });
-  const nudge = rail.getByRole("dialog", { name: "Log in to use your size" });
-  await expect(nudge).toContainText("Log in and save your size to use it.");
-  await expect(nudge.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
-  // No size is marked as "picked from your measurements" for a guest, and the letters still work by hand.
+  // Nothing saved yet: no size is marked as picked for them.
   await expect(rail.locator("[data-fit]")).toHaveCount(0);
-  await nudge.getByRole("button", { name: "Not now" }).click();
-  await expect(nudge).toHaveCount(0);
-  await page.screenshot({ path: "test-results/shots/rail-fit-nudge.png" });
+  await dialog.getByRole("button", { name: /Use my height and weight/ }).click();
+  await dialog.getByRole("slider", { name: "Height" }).fill("170");
+  await dialog.getByRole("slider", { name: "Weight" }).fill("65");
+  await dialog.getByRole("radio", { name: "ft" }).click();
+  await expect(dialog.getByText("5′7″")).toBeVisible();
+  await dialog.getByRole("button", { name: "Next" }).click();
+  await dialog.getByText("Average", { exact: true }).click();
+  await dialog.getByText("Regular", { exact: true }).click();
+  await dialog.getByRole("button", { name: "See my size" }).click();
+  await expect(dialog.locator("[data-size-result]")).toHaveText("M");
+  await dialog.getByRole("button", { name: "Save my size" }).click();
+  await expect(dialog).toHaveCount(0, { timeout: 5000 });
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("ep-fit-v1") ?? "{}"));
+  expect(saved).toMatchObject({ heightCm: 170, weightKg: 65, shape: "average", pref: "regular" });
+  // The rail takes it: their letter, and each piece's own size from its measurements.
+  await rail.getByRole("button", { name: "My size is M. Change it" }).click();
+
+  // Reopened, it starts on the answer; Esc closes it.
+  await rail.getByRole("button", { name: /Your size, from Find my size/ }).click();
+  await expect(dialog.locator("[data-size-result]")).toHaveText("M");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await page.screenshot({ path: "test-results/shots/size-finder.png" });
 });
 
 test("account dashboard: greeting, calm summaries, Edit opens the form; Pick on the shop @phone", async ({ page }) => {

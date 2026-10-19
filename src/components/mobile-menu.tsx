@@ -27,7 +27,7 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/fits", label: "Designer Fits" },
       { href: "/fit", label: "Build a fit" },
-      { href: "/size-guide", label: "Your size in cm" },
+      { href: "/size-guide", label: "Find my size" },
     ],
   },
   {

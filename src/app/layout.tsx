@@ -3,6 +3,7 @@ import { Baloo_2, Barlow_Condensed, Inter, JetBrains_Mono, Mukta } from "next/fo
 
 import { PendingBagAdd } from "@/components/bag-gate";
 import { BuySheets } from "@/components/buy-sheets";
+import { SizeFinderHost } from "@/components/size-finder";
 import { BagProvider } from "@/components/bag-provider";
 import { FooterChrome, ShopChrome } from "@/components/shop-chrome";
 import { SiteAnalytics } from "@/components/site-analytics";
@@ -64,6 +65,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </ShopChrome>
           <PendingBagAdd />
           <BuySheets />
+          <SizeFinderHost />
           <SiteAnalytics />
         </BagProvider>
       </body>

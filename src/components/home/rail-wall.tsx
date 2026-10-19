@@ -6,12 +6,12 @@ import { useState, useSyncExternalStore } from "react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useFitProfile } from "@/components/fit-finder";
+import { openSizeFinder } from "@/components/size-finder";
 import { useBag } from "@/components/bag-provider";
 import { PriceTag } from "@/components/hang-tag";
 import { AddToBag } from "@/components/add-to-bag";
 import { addableFromRail } from "@/lib/addable";
 import { ProductImage } from "@/components/product-image";
-import { useMe } from "@/components/session";
 import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
 import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock";
 import { FlowButton } from "@/components/ui/flow-button";
@@ -184,10 +184,8 @@ export function PieceControls({
   onAdded?: (line: { sku: string; name: string }) => void;
   onBuy: (line: BagLine) => void;
 }) {
-  const saved = useFitProfile();
-  const me = useMe();
-  // Measurements pick the size only for a logged-in customer (they are kept on the account).
-  const profile = me ? saved : {};
+  // Their saved size (Find my size) picks each piece's size, signed in or not.
+  const profile = useFitProfile();
   const [colourName, setColourName] = useState<string | null>(null);
   const [picked, setPicked] = useState<Size | null>(null);
   const [open, setOpen] = useState(false); // the size row
@@ -205,7 +203,7 @@ export function PieceControls({
   // tee isn't always an L in a jacket), else the letter they gave once.
   const fitSize = oneSize
     ? null
-    : (matchSize(piece.category, piece.measurements, profile)?.size ?? null);
+    : (matchSize(piece.category, piece.measurements, profile, piece.fit)?.size ?? null);
   const wanted = fitSize ?? mySize;
   // A size tapped here wins; else their size; else nothing is chosen for them.
   const size = oneSize
@@ -456,12 +454,13 @@ export function PieceControls({
                   );
                 })}
               </div>
-              <Link
-                href="/size-guide"
-                className="mx-auto flex h-11 w-max items-center text-[13px] underline underline-offset-4"
+              <button
+                type="button"
+                onClick={() => openSizeFinder({ name: piece.name, category: piece.category, fit: piece.fit, measurements: piece.measurements })}
+                className="mx-auto flex h-11 w-max cursor-pointer items-center text-[13px] underline underline-offset-4"
               >
-                Compare with one you own
-              </Link>
+                Find my size in this
+              </button>
             </div>
           )}
           {(showCm || peekCm) && !allSizes && (
@@ -482,12 +481,13 @@ export function PieceControls({
                   </div>
                 ))}
               </dl>
-              <Link
-                href="/size-guide"
-                className="mt-1 flex h-11 items-center font-sans text-[13px] underline underline-offset-4"
+              <button
+                type="button"
+                onClick={() => openSizeFinder({ name: piece.name, category: piece.category, fit: piece.fit, measurements: piece.measurements })}
+                className="mt-1 flex h-11 cursor-pointer items-center font-sans text-[13px] underline underline-offset-4"
               >
-                Compare with one you own
-              </Link>
+                Find my size in this
+              </button>
             </div>
           )}
         </div>
@@ -708,11 +708,8 @@ export function RailWall({
   /** The piece being bought in the pop-up. */
   const [buying, setBuying] = useState<BagLine | null>(null);
   const profile = useFitProfile();
-  const me = useMe();
-  /** Logged in with measurements saved: sizes are picked from them, and the bar shows which. */
-  const fitOn = Boolean(me) && hasFit(profile);
-  /** Not logged in and asked for measurement sizing: the small pop-up that says to log in. */
-  const [nudge, setNudge] = useState(false);
+  /** Their size is saved (Find my size): sizes are picked from it, and the bar shows which. */
+  const fitOn = hasFit(profile);
 
   const q = query.trim();
   const fits = (p: RailPiece) =>
@@ -766,7 +763,7 @@ export function RailWall({
   const fitLetter = fitOn
     ? (Object.entries(
         all.reduce<Record<string, number>>((count, piece) => {
-          const size = matchSize(piece.category, piece.measurements, profile)?.size;
+          const size = matchSize(piece.category, piece.measurements, profile, piece.fit)?.size;
           if (size && MY_SIZES.includes(size)) count[size] = (count[size] ?? 0) + 1;
           return count;
         }, {}),
@@ -845,46 +842,13 @@ export function RailWall({
                 </button>
               ))}
             </div>
-            {me ? (
-              <Link
-                href="/size-guide"
-                className="hidden h-11 items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 xl:flex"
-              >
-                {fitOn ? "Picked from your measurements" : "Add your measurements"}
-              </Link>
-            ) : (
-              <div className="relative hidden xl:block">
-                <button
-                  type="button"
-                  onClick={() => setNudge(!nudge)}
-                  aria-expanded={nudge}
-                  aria-controls="rail-fit-nudge"
-                  className="flex h-11 cursor-pointer items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 hover:text-ink"
-                >
-                  Pick from my measurements
-                </button>
-                {nudge && (
-                  <div
-                    id="rail-fit-nudge"
-                    role="dialog"
-                    aria-label="Log in to use your size"
-                    onKeyDown={(e) => e.key === "Escape" && setNudge(false)}
-                    className="absolute left-0 top-full z-30 mt-2 w-[280px] animate-fade-up rounded-2xl border border-ink bg-paper p-4 text-left shadow-[0_18px_30px_-18px_rgba(0,0,0,0.45)]"
-                  >
-                    <p className="text-[15px] font-semibold">Log in and save your size to use it.</p>
-                    <p className="mt-1 text-[13px] text-steel-dark">Then every piece opens on the size your measurements give.</p>
-                    <div className="mt-3 flex items-center gap-3">
-                      <Link href="/login" className="inline-flex h-10 items-center rounded-full bg-ink px-5 text-[12px] font-semibold uppercase tracking-[0.08em] text-paper transition-colors hover:bg-volt hover:text-ink">
-                        Log in
-                      </Link>
-                      <button type="button" onClick={() => setNudge(false)} className="h-10 cursor-pointer text-[13px] underline underline-offset-4">
-                        Not now
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => openSizeFinder()}
+              className="flex h-11 cursor-pointer items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 hover:text-ink"
+            >
+              {fitOn ? "Your size, from Find my size · Change" : "Find my size"}
+            </button>
             {mySize && (
               <button
                 type="button"

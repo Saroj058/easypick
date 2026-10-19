@@ -8,6 +8,7 @@ import { AskWhatsApp } from "@/components/ask-whatsapp";
 import { Countdown } from "@/components/countdown";
 import { DropStrip } from "@/components/drop-strip";
 import { FitFinder } from "@/components/fit-finder";
+import { fitSummary, hasFit } from "@/lib/fit-profile";
 import { toRailPiece } from "@/components/home/rail";
 import { ProductImage } from "@/components/product-image";
 import { ProfileForm } from "@/components/profile-form";
@@ -116,7 +117,7 @@ export default async function AccountPage() {
   const toSpend = usable.reduce((n, c) => n + c.balance, 0);
   const first = user.name?.split(" ")[0];
   const fit = user.fit;
-  const fitLine = fit && (fit.chest || fit.waist) ? [fit.chest && `Chest ${fit.chest}`, fit.length && `Length ${fit.length}`, fit.waist && `Waist ${fit.waist}`].filter(Boolean).join(" · ") + " cm" : null;
+  const fitLine = fit && hasFit(fit) ? fitSummary(fit) : null;
   const ship = user.checkout;
   const shipLine = ship?.method === "delivery" && ship.address ? `Delivery · ${ship.address.area}` : ship?.method === "pickup" ? "Store pickup" : null;
   const phone = user.phone ?? user.contactPhone ?? null;
@@ -287,7 +288,7 @@ export default async function AccountPage() {
               Your size
             </h2>
             <p className="mt-3 text-[15px] font-medium">{fitLine ?? "Not saved yet"}</p>
-            <p className="text-[13px] text-steel-dark">{fitLine ? "Every piece marks the size that fits you." : "Measure a top you love, once."}</p>
+            <p className="text-[13px] text-steel-dark">{fitLine ? "Every piece marks the size that fits you." : "Height and weight, or a size you wear: once."}</p>
             <Edit label={fitLine ? "Edit" : "Add my size"}>
               <FitFinder compact />
             </Edit>

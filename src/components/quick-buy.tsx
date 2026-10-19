@@ -11,6 +11,7 @@ import type { Product, Size, Variant } from "@/lib/types";
 import { addedMessage, showBagToast, useAddToBag } from "./bag-gate";
 import { openBuyNow, openSendGift } from "./buy-sheets";
 import { useFitProfile } from "./fit-finder";
+import { openSizeFinder } from "./size-finder";
 import { BagIcon, HeartIcon } from "./icons";
 import { toggleSaved, useList } from "./saved";
 import { useMe } from "./session";
@@ -30,7 +31,7 @@ function useCardVariant(product: Product): Variant | null {
   const inStock = product.variants.filter(canBuy);
   if (!inStock.length) return null;
   const firstColour = product.colours[0]?.name;
-  const fit = matchSize(product.category, product.measurements, profile)?.size;
+  const fit = matchSize(product.category, product.measurements, profile, product.fit)?.size;
   for (const size of [fit, mySize, "M", "ONE"]) {
     if (!size) continue;
     const v = inStock.find((x) => x.size === size && x.colour === firstColour) ?? inStock.find((x) => x.size === size);
@@ -80,7 +81,7 @@ export function QuickBuy({
   const oneSize = sizes.length === 1 && sizes[0].size === "ONE";
   const colourHex = (c: string) => product.colours.find((x) => x.name === c)?.hex ?? "#ccc";
   // "Your fit: M · 2 cm roomier than yours", from the piece they measured once.
-  const match = hasFit(profile) ? matchSize(product.category, product.measurements, profile) : null;
+  const match = hasFit(profile) ? matchSize(product.category, product.measurements, profile, product.fit) : null;
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -157,9 +158,16 @@ export function QuickBuy({
                     Your fit: <span className="font-semibold text-ink">{match.size}</span> · {describeMatch(match).toLowerCase()}
                   </>
                 ) : (
-                  <Link href="/size-guide" onClick={() => setOpen(false)} className="underline underline-offset-2">
-                    Not sure? Match your size in cm
-                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      openSizeFinder({ name: product.name, category: product.category, fit: product.fit, measurements: product.measurements });
+                    }}
+                    className="cursor-pointer underline underline-offset-2"
+                  >
+                    Not sure? Find my size
+                  </button>
                 )}
               </p>
               <div className="mt-3 grid grid-cols-4 gap-2">
