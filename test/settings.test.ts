@@ -92,3 +92,13 @@ describe("vault settings", () => {
     expect(themeChecks(DEFAULT_VAULT.cold)).toHaveLength(5);
   });
 });
+
+describe("home sections", () => {
+  it("moves an old saved gift-above-store order down beside Track", async () => {
+    const { cleanHome } = await import("@/lib/settings/home-rules");
+    const old = ["hero", "rail", "fits", "offers", "vault", "gift", "store", "checkout", "track"].map((id) => ({ id, on: true }));
+    expect(cleanHome({ sections: old }).sections.map((x) => x.id)).toEqual(["hero", "rail", "fits", "offers", "vault", "store", "checkout", "gift", "track"]);
+    const mine = ["gift", "hero", "rail", "fits", "offers", "vault", "track", "store", "checkout"].map((id) => ({ id, on: true }));
+    expect(cleanHome({ sections: mine }).sections.map((x) => x.id)).toEqual(mine.map((x) => x.id));
+  });
+});

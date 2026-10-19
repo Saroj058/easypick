@@ -6,7 +6,7 @@ import { FitsTeaser } from "@/components/home/fits-teaser";
 import { HeroPiece } from "@/components/hero-piece";
 import { GiftBlock } from "@/components/home/gift-block";
 import { FlowButton } from "@/components/ui/flow-button";
-import { OurStore } from "@/components/home/our-store";
+import { StoreBand } from "@/components/home/store-band";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
 
@@ -16,7 +16,6 @@ import { OfferSection } from "@/components/offer-section";
 import { ktmDay } from "@/lib/ktm-day";
 import { getOffers } from "@/lib/offers";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
-import { SelfCheckout } from "@/components/self-checkout";
 import { getStoreInfo } from "@/lib/store-info";
 import { formatDropTime } from "@/lib/format";
 import { TrackForm } from "@/app/track/track-form";
@@ -224,26 +223,17 @@ export default async function HomePage() {
 
 
 
-      {/* Buying for someone, just above Our store (owner, 18 Oct 2026). */}
+      {/* Buying for someone: one quiet line, by Track an order (owner, 19 Oct 2026). */}
       {on("gift") && (
-        <section aria-labelledby="gift-title" style={at("gift")} className="py-14 md:py-20">
-          <div className="container-ep">
-            <GiftBlock copy={home.gift} />
-          </div>
-        </section>
-      )}
-
-      {/* Our store: the physical shop */}
-      {on("store") && (
-        <div style={at("store")}>
-          <OurStore info={await getStoreInfo()} />
+        <div style={at("gift")}>
+          <GiftBlock copy={home.gift} />
         </div>
       )}
 
-      {/* Self-checkout: the kiosk, the steps, and the Nepali line */}
-      {on("checkout") && (
-        <div style={at("checkout")}>
-          <SelfCheckout />
+      {/* Our store and self-checkout, in one small band (owner, 19 Oct 2026); each half has its own switch. */}
+      {(on("store") || on("checkout")) && (
+        <div style={{ order: Math.min(on("store") ? at("store").order : 99, on("checkout") ? at("checkout").order : 99) }}>
+          <StoreBand info={await getStoreInfo()} store={on("store")} checkout={on("checkout")} />
         </div>
       )}
 

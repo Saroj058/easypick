@@ -6,7 +6,7 @@ import { bool, label, num, numbers, obj, pick, text } from "./clean";
 // show and in what order, and every line of copy on it. The defaults are the page as it was built,
 // so a fresh database shows exactly that. Pure: the admin form, the page and the tests share it.
 
-export const HOME_SECTIONS = ["hero", "rail", "fits", "offers", "vault", "gift", "store", "checkout", "track"] as const;
+export const HOME_SECTIONS = ["hero", "rail", "fits", "offers", "vault", "store", "checkout", "gift", "track"] as const;
 export type HomeSection = (typeof HOME_SECTIONS)[number];
 
 export const SECTION_NAMES: Record<HomeSection, string> = {
@@ -100,6 +100,10 @@ function cleanSections(v: unknown): HomeSettings["sections"] {
     }
   // A section added in code later still appears, at the end, switched on.
   for (const id of HOME_SECTIONS) if (!out.some((x) => x.id === id)) out.push({ id, on: true });
+  // Saved before 19 Oct 2026, the gift strip sat right above Our store; it's now one line by Track.
+  const g = out.findIndex((x) => x.id === "gift");
+  const c = out.findIndex((x) => x.id === "checkout");
+  if (g >= 0 && out[g + 1]?.id === "store" && c > g) out.splice(c, 0, ...out.splice(g, 1));
   return out;
 }
 

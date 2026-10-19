@@ -423,3 +423,14 @@ test("the arrow keys move the strip in view, with no click first (owner, 18 Oct 
   await page.keyboard.press("ArrowLeft");
   await expect(centre).toHaveText(before);
 });
+
+test("home: our store and self-checkout in one small band, and buying for someone as one line", async ({ page }) => {
+  await page.goto("/");
+  const store = page.getByRole("region", { name: "Our store" });
+  await store.scrollIntoViewIfNeeded();
+  await expect(store.getByRole("link", { name: "Walk it in 3D" })).toBeVisible();
+  await expect(store.getByRole("list", { name: "How to pay at the kiosk" }).getByRole("listitem")).toHaveCount(4);
+  const gift = page.getByRole("region", { name: "Buying for someone?" });
+  await expect(gift.getByRole("link", { name: /Send a gift/ })).toHaveAttribute("href", "/gift");
+  expect((await gift.boundingBox())!.height).toBeLessThan(140);
+});
