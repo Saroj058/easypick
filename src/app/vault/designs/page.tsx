@@ -340,7 +340,7 @@ function D10({ ps }: { ps: P[] }) {
         <div className="container-ep relative grid min-h-[420px] items-center md:grid-cols-2">
           <h3 className="display relative z-10 text-[clamp(4rem,2rem+8vw,10rem)] leading-[0.8]">VAULT</h3>
           <Img p={a} ground="bg-transparent" className="w-full max-w-[380px] justify-self-center" />
-          <div className="mt-6 space-y-2 font-mono text-[12px] uppercase tracking-[0.12em] md:absolute md:bottom-0 md:left-0">
+          <div className="mt-6 space-y-2 font-mono text-[12px] uppercase tracking-[0.12em] md:col-span-2">
             <p>Issue {String(ps.length).padStart(2, "0")}</p>
             <p>{a.brand}: {a.name}</p>
             {b && <p>{b.brand}: {b.name}</p>}
