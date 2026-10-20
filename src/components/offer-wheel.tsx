@@ -2,7 +2,7 @@
 
 import { useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ProductImage } from "@/components/product-image";
 import { useArrowKeys } from "@/lib/arrow-keys";
@@ -48,6 +48,8 @@ export function OfferWheel({ items, closing, onClosed, children }: { items: Whee
   const drag = useRef<{ x: number; a: number; moved: boolean } | null>(null);
   const born = useRef(0);
   const closedAt = useRef<number | null>(null);
+  /** The customer has turned it themselves: the "drag to turn" line goes. */
+  const [used, setUsed] = useState(false);
   const radius = useSyncExternalStore(
     (fn) => {
       window.addEventListener("resize", fn);
@@ -115,6 +117,7 @@ export function OfferWheel({ items, closing, onClosed, children }: { items: Whee
   }, [radius, span, still, loops, n]);
 
   useArrowKeys(ring, (d) => {
+    setUsed(true);
     const from = target.current ?? angle.current;
     target.current = Math.round(from / STEP) * STEP - d * STEP;
   });
@@ -137,7 +140,10 @@ export function OfferWheel({ items, closing, onClosed, children }: { items: Whee
         const g = drag.current;
         if (!g) return;
         const dx = e.clientX - g.x;
-        if (Math.abs(dx) > 4) g.moved = true;
+        if (Math.abs(dx) > 4 && !g.moved) {
+          g.moved = true;
+          setUsed(true);
+        }
         angle.current = g.a + (dx / radius) * (180 / Math.PI);
       }}
       onPointerUp={() => {
@@ -183,6 +189,12 @@ export function OfferWheel({ items, closing, onClosed, children }: { items: Whee
           </Link>
         ))}
       </div>
+      {/* How to move it, until they have (owner, 20 Oct 2026) */}
+      {!used && items.length > 1 && (
+        <p aria-hidden className="pointer-events-none absolute inset-x-0 bottom-3 z-[150] flex items-center justify-center gap-1.5 text-[12.5px] font-semibold text-ink/70">
+          <span className="slide-hint-l">←</span> Drag to turn, tap a piece to see it <span className="slide-hint-r">→</span>
+        </p>
+      )}
       {children && <div className="pointer-events-none absolute inset-x-0 bottom-5 z-[200] flex flex-col items-center gap-3 text-center sm:bottom-8 [&_a]:pointer-events-auto [&_button]:pointer-events-auto">{children}</div>}
     </div>
   );

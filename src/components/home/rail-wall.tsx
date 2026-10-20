@@ -617,6 +617,7 @@ function ShelfRow({
         loop={loop}
         initial={start}
         showNavigation
+        hint
         overhang="clamp(56px, 7vw, 72px)"
         label={label}
         onSelect={setActive}
@@ -646,15 +647,8 @@ function ShelfRow({
         )}
       />
 
-      {/* Which piece is at the centre, out of how many. */}
-      <p className="mb-3 text-center font-mono text-[11px] tabular-nums tracking-[0.14em] text-steel-dark">
-        <span className="font-semibold text-ink">
-          {String(Math.min(active, pieces.length - 1) + 1).padStart(2, "0")}
-        </span>{" "}
-        / {String(pieces.length).padStart(2, "0")}
-      </p>
-
-      <div aria-live="polite">
+      {/* Which piece is at the centre, out of how many, is in the carousel's hint (owner, 20 Oct 2026). */}
+      <div aria-live="polite" className="mt-3">
         <PieceControls
           key={piece.id}
           piece={piece}

@@ -816,3 +816,27 @@
   outline-offset: 3px;
   border-radius: 4px;
 }
+
+/* "Swipe for more": the little arrows lean out and back, slowly, so the words read as motion. */
+.slide-hint-l {
+  animation: slide-hint-l 1.6s ease-in-out infinite;
+}
+.slide-hint-r {
+  animation: slide-hint-r 1.6s ease-in-out infinite;
+}
+@keyframes slide-hint-l {
+  50% {
+    transform: translateX(-3px);
+  }
+}
+@keyframes slide-hint-r {
+  50% {
+    transform: translateX(3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide-hint-l,
+  .slide-hint-r {
+    animation: none;
+  }
+}

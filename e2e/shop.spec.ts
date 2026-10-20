@@ -5,7 +5,7 @@ import { randomPhone } from "./helpers";
 test("home, shop and a product page load @phone", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/Easypick/);
-  // The shop is strips, as on the rails: the piece in front links to its page.
+  // One kind in the shop is a grid: a card links to its page.
   await page.goto("/shop?category=hoodies");
   await page.locator('a[href^="/product/"]').first().click();
   await page.waitForURL(/\/product\//);
@@ -259,10 +259,14 @@ test("shop: strips like the rails, one bag on the card in front, no heart (owner
   await expect(page.getByRole("heading", { level: 2, name: /^Hoodies/ })).toBeVisible();
   await page.getByRole("link", { name: /^Show all: hoodies/ }).click();
   await expect(page).toHaveURL(/category=hoodies/);
-  // One kind: one strip under its big name, with one bag button (on the card in front).
+  // Show all: every hoodie at once in rows and columns (owner, 20 Oct 2026), each with quick buy, and the way back.
   await expect(page.getByRole("heading", { level: 2, name: /^Hoodies/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Add .* to bag$/ })).toHaveCount(1);
+  const grid = page.locator("section[aria-labelledby=grid-title] ul");
+  const n = await grid.locator(":scope > li").count();
+  expect(n).toBeGreaterThan(0);
+  await expect(grid.getByRole("button", { name: /^Quick buy: / })).toHaveCount(n);
   await expect(page.getByRole("button", { name: /^Save / })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Every kind/ })).toHaveAttribute("href", "/shop");
 });
 
 test("Buy now remembers a guest's number on this phone, and forgets it when asked", async ({ page }) => {

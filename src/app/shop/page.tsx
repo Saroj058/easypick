@@ -8,6 +8,8 @@ import { PickLazy } from "@/components/gift/pick-lazy";
 import { toRailPiece } from "@/components/home/rail";
 import { ShopSearch } from "@/components/shop-search";
 import { ShopShelf } from "@/components/shop-shelf";
+import { ProductCard } from "@/components/product-card";
+import { QuickBuy } from "@/components/quick-buy";
 import { OfferSection } from "@/components/offer-section";
 import { ktmDay } from "@/lib/ktm-day";
 import { inOffer, liveOffers, running } from "@/lib/offer-rules";
@@ -354,14 +356,30 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           {!list.length ? (
             <p className="py-24 text-center text-steel-dark">{f.q ? `Nothing matches “${f.q}”. Try another word, or clear the filters.` : "Nothing matches that yet. Try another size or colour."}</p>
           ) : single ? (
-            <ShopShelf
-              id="one"
-              first
-              label={title}
-              pieces={list.map(toRailPiece)}
-              showAll={kinds.length === 1 || f.sale || f.new ? href(f, { category: undefined, sale: undefined, new: undefined }) : undefined}
-              showAllLabel="Every kind"
-            />
+            // One kind (from Show all), a search, the sale or an offer: every piece at once, in rows
+            // and columns (owner, 20 Oct 2026: "slide on the shop; Show all opens rows and columns").
+            <section aria-labelledby="grid-title">
+              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+                <h2 id="grid-title" className="display min-w-0 text-[clamp(2.2rem,1.6rem+2.6vw,3.6rem)] leading-[0.86]">
+                  {title}
+                  <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{list.length}</span>
+                </h2>
+                {(kinds.length === 1 || f.sale || f.new) && (
+                  <Link href={href(f, { category: undefined, sale: undefined, new: undefined })} className="inline-flex h-11 items-center gap-2 rounded-full border border-mist px-4 text-[14px] font-semibold transition-colors hover:border-ink">
+                    <span aria-hidden>←</span> Every kind
+                  </Link>
+                )}
+              </div>
+              {kinds.length === 1 && kv.blurb(kinds[0]) && <p className="mt-2 text-[14px] text-steel-dark">{kv.blurb(kinds[0])}</p>}
+              <ul className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 md:grid-cols-3 lg:grid-cols-4">
+                {list.map((p, i) => (
+                  <li key={p.id} className="relative">
+                    <ProductCard product={p} priority={i < 4} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" />
+                    <QuickBuy product={p} className="absolute right-2 top-2 z-10" />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : (
             <div>
               {groups.map(({ c, pieces }, i) => (

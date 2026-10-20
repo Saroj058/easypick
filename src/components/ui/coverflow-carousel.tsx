@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { useArrowKeys } from "@/lib/arrow-keys";
 import { cn } from "@/lib/utils";
+import { playNudge, SlideHint, useFirstView } from "./slide-hint";
 
 const useIsoLayoutEffect = typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
@@ -38,6 +39,8 @@ export interface CoverflowCarouselProps {
   /** The slide at the centre to begin with. */
   initial?: number;
   showNavigation?: boolean;
+  /** Under it: how to move it (swipe / drag / arrows), the arrows and where you are; and one nudge on first view. */
+  hint?: boolean;
   /** Names the carousel for assistive tech. */
   label?: string;
   className?: string;
@@ -65,6 +68,7 @@ export function CoverflowCarousel({
   overhang = "0px",
   initial = 0,
   showNavigation = false,
+  hint = false,
   label = "Carousel",
   className,
   cardClassName,
@@ -81,6 +85,14 @@ export function CoverflowCarousel({
   const selectedRef = React.useRef(initial);
 
   const [selected, setSelected] = React.useState(initial);
+  /** The customer has moved it (for the hint under it). */
+  const [used, setUsed] = React.useState(false);
+  const usedRef = React.useRef(false);
+  const touched = React.useCallback(() => {
+    if (usedRef.current) return;
+    usedRef.current = true;
+    setUsed(true);
+  }, []);
 
   /** Nearest whole card, folded back into 0..count-1. */
   const indexAt = React.useCallback((pos: number) => ((Math.round(pos) % count) + count) % count, [count]);
@@ -168,9 +180,27 @@ export function CoverflowCarousel({
     [clamp, count, loop, settle],
   );
 
-  const nudge = React.useCallback((by: number) => settle(clamp(Math.round(targetRef.current) + by)), [clamp, settle]);
+  const nudge = React.useCallback(
+    (by: number) => {
+      touched();
+      settle(clamp(Math.round(targetRef.current) + by));
+    },
+    [clamp, settle, touched],
+  );
   // ← and → move this carousel whenever it's the one in view, no click first.
   useArrowKeys(frameRef, nudge);
+  // The first time it's in view, it leans toward the next card and back, so it reads as slidable.
+  useFirstView(frameRef, () => {
+    if (!hint || count < 2) return;
+    playNudge(
+      (o) => {
+        if (rafRef.current !== null) return;
+        posRef.current = targetRef.current + o;
+        paint();
+      },
+      () => usedRef.current || dragRef.current !== null,
+    );
+  });
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -193,6 +223,7 @@ export function CoverflowCarousel({
     const now = performance.now();
     const previous = posRef.current;
     drag.moved = Math.max(drag.moved, Math.abs(event.clientX - drag.x));
+    if (drag.moved > 6) touched();
     posRef.current = clamp(drag.pos - (event.clientX - drag.x) / pitch);
     // Cards per second, for the throw.
     drag.v = ((posRef.current - previous) / Math.max(now - drag.t, 1)) * 1000;
@@ -298,7 +329,7 @@ export function CoverflowCarousel({
           </div>
         </div>
 
-        {showNavigation && count > 1 && (
+        {showNavigation && !hint && count > 1 && (
           <>
             <button type="button" aria-label="Previous" onClick={() => nudge(-1)} disabled={!loop && selected === 0} className={`${arrow} left-1 md:left-3`}>
               <ChevronLeft className="size-5" aria-hidden />
@@ -309,6 +340,7 @@ export function CoverflowCarousel({
           </>
         )}
       </div>
+      {hint && <SlideHint at={selected} n={count} used={used} label={label} canPrev={loop || selected > 0} canNext={loop || selected < count - 1} onPrev={() => nudge(-1)} onNext={() => nudge(1)} />}
     </div>
   );
 }

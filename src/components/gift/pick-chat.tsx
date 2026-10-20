@@ -200,12 +200,15 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
         await new Promise((r) => setTimeout(r, Math.max(0, 3000 - (performance.now() - landed))));
       };
       try {
-        const res = await fetch("/api/pick", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ state: known(before.state), ...body }),
-          signal: AbortSignal.timeout(15_000),
-        });
+        const ask = (ms: number) =>
+          fetch("/api/pick", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ state: known(before.state), ...body }),
+            signal: AbortSignal.timeout(ms),
+          });
+        // A slow first answer (the server waking up) gets one quiet second try before he says so.
+        const res = await ask(15_000).catch(() => ask(20_000));
         if (!res.ok) throw new Error(res.status === 429 ? "busy" : "failed");
         await atLeast3s();
         const r = (await res.json()) as PickReply;

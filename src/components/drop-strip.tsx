@@ -16,6 +16,7 @@ import { PriceTag } from "./hang-tag";
 import { ArrowIcon } from "./icons";
 import { ProductImage } from "./product-image";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./ui/sheet";
+import { playNudge, SlideHint, useFirstView } from "./ui/slide-hint";
 
 // A drop's pieces as one long strip (owner's reference, 10 Oct 2026; planned by three agents):
 //  - it runs from one edge of the screen to the other, whatever the screen's width (the page that
@@ -86,6 +87,14 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
   const drag = useRef<{ id: number; x: number; y: number; pos: number; locked: boolean; v: number; t: number; lastX: number } | null>(null);
   const dragged = useRef(false);
   const wheelIdle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** The customer has moved it: the "swipe" words go, the arrows and count stay. */
+  const [used, setUsed] = useState(false);
+  const usedRef = useRef(false);
+  const touched = () => {
+    if (usedRef.current) return;
+    usedRef.current = true;
+    setUsed(true);
+  };
 
   const paint = useCallback(() => {
     for (let k = 0; k < cards.current.length; k++) {
@@ -131,7 +140,21 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
     [n, run],
   );
   // ← and → move this strip whenever it's the one in view, no click first.
-  useArrowKeys(frame, (d) => go(target.current + d));
+  useArrowKeys(frame, (d) => {
+    touched();
+    go(target.current + d);
+  });
+  // The first time it's in view, it leans toward the next card and back: it slides.
+  useFirstView(frame, () => {
+    if (n < 2) return;
+    playNudge(
+      (o) => {
+        pos.current = target.current + o;
+        paint();
+      },
+      () => usedRef.current || drag.current !== null,
+    );
+  });
 
   useEffect(() => {
     const m = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -155,6 +178,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
+      touched();
       const w = cards.current[GHOSTS]?.offsetWidth || 240;
       const to = Math.min(n - 1 + 0.3, Math.max(-0.3, pos.current + e.deltaX / w));
       pos.current = to;
@@ -183,6 +207,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
           const to = e.key === "ArrowRight" ? target.current + 1 : e.key === "ArrowLeft" ? target.current - 1 : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : null;
           if (to === null) return;
           e.preventDefault();
+          touched();
           go(to);
         }}
         onPointerDown={(e) => {
@@ -203,6 +228,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
             }
             g.locked = true;
             dragged.current = true;
+            touched();
             e.currentTarget.setPointerCapture(e.pointerId);
             if (raf.current !== null) cancelAnimationFrame(raf.current);
             raf.current = null;
@@ -295,21 +321,23 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
         })}
       </div>
 
-      {/* How far along the strip: a thin line, in place of arrows */}
-      <div className="mt-5 flex flex-col items-center">
-        {n <= 12 ? (
-          <div aria-hidden className="flex gap-1.5">
-            {pieces.map((p, i) => (
-              <span key={p.id} className={`h-[2px] rounded-full transition-[width,background-color] duration-300 ${i === active ? "w-7 bg-ink" : "w-3 bg-ink/20"}`} />
-            ))}
-          </div>
-        ) : (
-          // Too many for a dash each: say where they are instead.
-          <p aria-hidden className="font-mono text-[11px] tabular-nums tracking-[0.14em] text-steel-dark">
-            <span className="font-semibold text-ink">{String(active + 1).padStart(2, "0")}</span> / {String(n).padStart(2, "0")}
-          </p>
-        )}
-      </div>
+      {/* How to move it, the arrows, and where you are (owner, 20 Oct 2026) */}
+      <SlideHint
+        at={active}
+        n={n}
+        used={used}
+        label={label}
+        canPrev={active > 0}
+        canNext={active < n - 1}
+        onPrev={() => {
+          touched();
+          go(target.current - 1);
+        }}
+        onNext={() => {
+          touched();
+          go(target.current + 1);
+        }}
+      />
 
       {soon ? (
         <div className="mt-4 flex flex-col items-center text-center" aria-live="polite">
