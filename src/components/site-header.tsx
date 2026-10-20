@@ -1,5 +1,7 @@
 "use client";
 
+import { usePath } from "@/lib/use-path";
+
 import { MotionConfig, motion, useMotionValueEvent, useScroll, type Variants } from "framer-motion";
 import { ArrowLeft, Flame, Gem, Gift, House, MapPin, Shirt, ShoppingBag } from "lucide-react";
 import Image from "next/image";
@@ -76,7 +78,9 @@ const sideVariants: Variants = {
 export function SiteHeader() {
   const { count, ready } = useBag();
   const me = useMe();
-  const pathname = usePathname();
+  const pathname = usePath();
+  // What the host reported, for checking the home page's cached copy (see lib/use-path.ts).
+  const rawPath = usePathname();
   const [open, setExpanded] = useScrollCollapse();
 
   // At the very top the header is one full-width bar; once scrolled it splits into floating pills.
@@ -154,7 +158,7 @@ export function SiteHeader() {
   );
 
   return (
-    <header className="pt-[env(safe-area-inset-top)]">
+    <header className="pt-[env(safe-area-inset-top)]" data-raw-path={rawPath}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-2 focus:z-[70] focus:bg-paper focus:px-3 focus:py-2">
         Skip to content
       </a>
@@ -262,7 +266,7 @@ const tabClass = "flex h-14 w-full flex-col items-center justify-center gap-0.5 
 
 /** Bottom tab bar on phones: Shop · Fits · Gift · Bag · Account. The Vault and Visit are in the menu. */
 export function MobileTabBar() {
-  const pathname = usePathname();
+  const pathname = usePath();
   const { count, ready } = useBag();
   const me = useMe();
   const [typing, setTyping] = useState(false);

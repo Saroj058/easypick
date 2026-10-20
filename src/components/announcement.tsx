@@ -1,7 +1,9 @@
 "use client";
 
+import { usePath } from "@/lib/use-path";
+
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+
 import { useSyncExternalStore } from "react";
 
 const KEY = "ep-announce-closed";
@@ -19,7 +21,7 @@ function closedText() {
  * it hides that message on this device; a new message shows again. Not on the staff screens.
  */
 export function Announcement({ text, link }: { text: string; link: string }) {
-  const path = usePathname();
+  const path = usePath();
   const closed = useSyncExternalStore(
     (fn) => {
       window.addEventListener("storage", fn);

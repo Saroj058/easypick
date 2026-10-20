@@ -1,8 +1,10 @@
 "use client";
 
+import { usePath } from "@/lib/use-path";
+
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+
 import { useState } from "react";
 
 import { MenuIcon } from "./icons";
@@ -64,7 +66,7 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
+  const pathname = usePath();
   const me = useMe();
 
   return (

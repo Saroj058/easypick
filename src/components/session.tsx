@@ -1,6 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePath } from "@/lib/use-path";
+
+
 import { useEffect, useRef, useState } from "react";
 
 import type { FitProfile } from "@/lib/fit-profile";
@@ -37,7 +39,7 @@ function load(path: string): Promise<Me | null> {
 
 /** The signed-in person (or null), fetched client-side so pages stay cached. `undefined` while loading. */
 export function useMe() {
-  const path = usePathname();
+  const path = usePath();
   const [me, setMe] = useState<Me | null | undefined>(undefined);
   useEffect(() => {
     let live = true;
