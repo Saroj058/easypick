@@ -174,11 +174,12 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
   // As the rails and the gift page (owner, 15 Oct 2026): "All" is a strip per kind of piece; one
   // kind chosen (or a search, sale, new, Vault or brand view) is one strip under its big name.
-  const single = kinds.length === 1 || Boolean(f.q || f.sale || f.new || f.vault || f.brand || offer);
+  // Any chosen kinds (Show all from a rail section sends several), a size, or a view: the grid (owner, 20 Oct 2026).
+  const single = kinds.length > 0 || Boolean(f.size || f.q || f.sale || f.new || f.vault || f.brand || offer);
   const groups = kv.order
     .map((c) => ({ c, pieces: list.filter((p) => p.category === c) }))
     .filter((g) => g.pieces.length > 0);
-  const title = offer ? offer.name : f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.q ? `“${f.q}”` : kinds.length === 1 ? kv.name(kinds[0]) : "Every piece";
+  const title = offer ? offer.name : f.brand ? f.brand : f.vault ? "The Vault" : f.sale ? "On sale" : f.new ? "New in" : f.q ? `“${f.q}”` : kinds.length ? kinds.map((c) => kv.name(c)).join(", ") : f.size ? `Size ${f.size}` : "Every piece";
 
   return (
     <div className="overflow-x-clip">
@@ -367,8 +368,8 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
                   {title}
                   <span className="ml-2 inline-block pt-1 align-top font-mono text-[13px] font-normal leading-none tracking-[0.08em] text-steel-dark">{list.length}</span>
                 </h2>
-                {(kinds.length === 1 || f.sale || f.new) && (
-                  <Link href={href(f, { category: undefined, sale: undefined, new: undefined })} className="inline-flex h-11 items-center gap-2 rounded-full border border-mist px-4 text-[14px] font-semibold transition-colors hover:border-ink">
+                {(kinds.length > 0 || f.size || f.sale || f.new) && (
+                  <Link href={href(f, { category: undefined, sale: undefined, new: undefined, size: undefined })} className="inline-flex h-11 items-center gap-2 rounded-full border border-mist px-4 text-[14px] font-semibold transition-colors hover:border-ink">
                     <span aria-hidden>←</span> Every kind
                   </Link>
                 )}

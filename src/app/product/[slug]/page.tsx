@@ -276,7 +276,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           </section>
         )}
         <RecordView slug={product.slug} />
-        <RecentlyViewed exclude={product.slug} title="You looked at" />
+        {/* Not on Vault pieces (owner, 20 Oct 2026) */}
+        {!product.vault && <RecentlyViewed exclude={product.slug} title="You looked at" />}
         <TrackView slug={product.slug} />
       </div>
     </>
