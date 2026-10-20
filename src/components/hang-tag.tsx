@@ -13,10 +13,9 @@ export function Barcode({ value, className = "" }: { value: string; className?: 
     return [bar];
   });
   return (
+    // One path for all the bars: a shelf of cards each with a tag stays light.
     <svg viewBox={`0 0 ${x} 20`} preserveAspectRatio="none" className={className} aria-hidden>
-      {bars.map((b) => (
-        <rect key={b.i} x={b.x} y="0" width={b.w} height="20" fill="currentColor" />
-      ))}
+      <path d={bars.map((b) => `M${b.x} 0h${b.w}v20h-${b.w}z`).join("")} fill="currentColor" />
     </svg>
   );
 }

@@ -20,6 +20,9 @@ import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import type { Category, Fit, Product } from "@/lib/types";
 
+/** Only what quick buy reads (sizes, colours, stock, fit): the words and extra photos stay on the server. */
+const forQuickBuy = (p: Product): Product => ({ ...p, details: [], shortDescription: "", tags: [], images: p.images.slice(0, 1), story: undefined, modelNote: undefined });
+
 export const metadata: Metadata = {
   title: "Shop all",
   description: "Oversized tees, hoodies, joggers, jeans and jackets at fixed fair prices. Streetwear in Kathmandu, with live stock by size.",
@@ -375,7 +378,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
                 {list.map((p, i) => (
                   <li key={p.id} className="relative">
                     <ProductCard product={p} priority={i < 4} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" />
-                    <QuickBuy product={p} className="absolute right-2 top-2 z-10" />
+                    <QuickBuy product={forQuickBuy(p)} className="absolute right-2 top-2 z-10" />
                   </li>
                 ))}
               </ul>
