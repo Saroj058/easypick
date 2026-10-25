@@ -258,7 +258,7 @@ export function DropStrip({ pieces, label, soon = false, controls, big = false, 
           drag.current = null;
           if (g?.locked) go(pos.current);
         }}
-        className={`relative mx-[calc(50%-50vw)] h-[calc(var(--w)*1.32)] cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] active:cursor-grabbing`}
+        className={`relative mx-[calc(50%-50vw)] h-[calc(var(--w)*1.32+72px)] cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] active:cursor-grabbing`}
       >
         {/* The band of light the cards sit on */}
         <div aria-hidden className="absolute inset-x-0 top-1/2 h-[46%] -translate-y-1/2 bg-[linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,0.045)_50%,rgba(0,0,0,0))]" />
@@ -268,7 +268,7 @@ export function DropStrip({ pieces, label, soon = false, controls, big = false, 
           const ghost = i < 0 || i >= n;
           const first = look(i - start, false, ghost);
           const style = { transform: first.transform, opacity: Number(first.opacity), filter: first.filter, zIndex: Number(first.zIndex), visibility: Math.abs(i - start) > 9 ? ("hidden" as const) : undefined };
-          const box = `absolute left-1/2 top-1/2 block aspect-[10/11] w-[var(--w)] rounded-[14px] will-change-transform`;
+          const box = `absolute left-1/2 top-[calc(50%-30px)] block aspect-[10/11] w-[var(--w)] rounded-[14px] will-change-transform`;
           if (ghost)
             return (
               <span
@@ -309,8 +309,14 @@ export function DropStrip({ pieces, label, soon = false, controls, big = false, 
                 <ProductImage image={p.image} category={p.category} colourHex={p.colours[0]?.hex ?? "#888888"} decorative priority={Math.abs(i - start) < 2} sizes="(min-width: 1240px) 248px, (min-width: 880px) 20vw, 176px" className={!soon && gone(p) ? "opacity-60 grayscale" : ""} />
               </span>
               </span>
-              {/* The price, on a tag tied to the foot of the card and hanging under it, as on the home rails. */}
             </button>
+            {/* The price, big, right under the card in front (owner, 25 Oct 2026) */}
+            {i === active && (
+              <p aria-hidden className="pointer-events-none absolute inset-x-0 top-full mt-4 flex items-baseline justify-center gap-2.5 whitespace-nowrap font-mono tabular-nums">
+                {p.was && <s className="text-[14px] text-steel-dark">{formatPrice(p.was)}</s>}
+                <span className="text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] font-semibold leading-none tracking-[-0.01em]">{formatPrice(p.price)}</span>
+              </p>
+            )}
             {/* Add to bag: on the card in front, bottom left; it moves with the card */}
             {!soon && i === active && <AddToBag piece={addableFromRail(p)} to={addTo} className="absolute bottom-[2px] left-[2px] z-10" />}
             </div>

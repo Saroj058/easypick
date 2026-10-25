@@ -336,8 +336,6 @@ function SendControls({
   return (
     <div className="flex flex-col items-center text-center">
       <h4 className="text-lg font-semibold">{piece.name}</h4>
-      {/* The price under the name (owner, 25 Oct 2026: no hanging tags on the cards). */}
-      <p className="mt-1 font-mono text-[15px] font-semibold tabular-nums">{formatPrice(piece.price)}</p>
       <p className="mt-1 text-[13px] text-steel-dark">
         {oneSize
           ? "One size. Nothing to guess."

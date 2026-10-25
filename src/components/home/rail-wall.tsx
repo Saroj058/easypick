@@ -261,7 +261,7 @@ export function PieceControls({
         </Link>
       </h4>
       {/* The price on its own line under the name (owner, 25 Oct 2026: not on a hanging tag, not squeezed in with the colours). */}
-      <p className="mt-1.5 flex items-baseline justify-center gap-2.5 font-mono tabular-nums">
+      <p className="sr-only">
         {piece.was && (
           <s className="text-[13px] text-steel-dark">
             <span className="sr-only">was </span>
@@ -646,6 +646,13 @@ function ShelfRow({
             />
             {/* Add to bag: only on the card in front, bottom left */}
             {i === Math.min(active, pieces.length - 1) && <AddToBag piece={addableFromRail(pieces[i])} className="absolute bottom-1 left-1 z-10" />}
+            {/* The price, big, right under the card in front (owner, 25 Oct 2026) */}
+            {i === Math.min(active, pieces.length - 1) && (
+              <p aria-hidden className="pointer-events-none absolute inset-x-0 top-full mt-4 flex items-baseline justify-center gap-2.5 whitespace-nowrap font-mono tabular-nums">
+                {pieces[i].was && <s className="text-[14px] text-steel-dark">{formatPrice(pieces[i].was)}</s>}
+                <span className="text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] font-semibold leading-none tracking-[-0.01em]">{formatPrice(pieces[i].price)}</span>
+              </p>
+            )}
           </>
         )}
       />
