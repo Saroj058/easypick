@@ -21,7 +21,8 @@ export default async function FitsPage() {
 
   return (
     <div className="overflow-x-clip">
-    <div className={looks.length > 0 ? "bg-[#ededeb]" : "container-ep pb-24 pt-10 md:pt-16"}>
+    {/* The header is see-through here on computers, so the page starts under it. */}
+    <div className={looks.length > 0 ? "bg-[#ededeb] md:pt-[88px]" : "container-ep pb-24 pt-10 md:pt-[152px]"}>
       <h1 className="sr-only">Fits</h1>
       {looks.length > 0 ? (
         <section aria-labelledby="occasion-title">

@@ -91,8 +91,8 @@ export function SiteHeader() {
   // The visit page is one full screen of the store with no header at all: just the logo on the
   // left and a small black Back button on the right.
   const visit = pathname === "/visit";
-  // On Drops (computers) the showroom picture runs up behind a see-through header (owner, 25 Oct 2026).
-  const clear = pathname === "/drops";
+  // On Drops, Fits and Gift (computers) the page's picture runs up behind a see-through header (owner, 25 Oct 2026).
+  const clear = pathname === "/drops" || pathname === "/fits" || pathname === "/gift";
   const expanded = open && !visit;
   const flat = atTop && !visit;
 

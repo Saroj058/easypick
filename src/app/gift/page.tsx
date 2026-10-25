@@ -43,7 +43,7 @@ export default async function GiftPage() {
         <Image src="/gift/hero-white-phone.webp" alt="" width={900} height={804} priority sizes="100vw" className="absolute inset-x-0 top-0 h-auto w-full md:hidden" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[36%] to-[#f1f2f5] to-[48%] md:hidden" aria-hidden />
         <Image src="/gift/hero-white.webp" alt="" fill priority sizes="100vw" className="object-cover object-right max-md:hidden" />
-        <div className="container-ep relative flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] items-end pb-6 pt-[84vw] md:min-h-[calc(100svh-88px)] md:items-center md:py-20">
+        <div className="container-ep relative flex min-h-[calc(100svh-72px-56px-env(safe-area-inset-bottom))] items-end pb-6 pt-[84vw] md:min-h-[100svh] md:items-center md:pb-20 md:pt-[108px]">
           <div className="md:max-w-[50%]">
             <p className="index text-ink/60">Gifting, simplified</p>
             <h1 className="display display-h1 mt-3">
