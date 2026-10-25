@@ -260,8 +260,23 @@ export function PieceControls({
           {piece.name}
         </Link>
       </h4>
-      {/* Colour, the price, and whether it comes in their size (owner, 25 Oct 2026: the price here, not on a hanging tag). */}
-      <div className="mt-1 flex min-h-11 flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-steel-dark">
+      {/* The price on its own line under the name (owner, 25 Oct 2026: not on a hanging tag, not squeezed in with the colours). */}
+      <p className="mt-1.5 flex items-baseline justify-center gap-2.5 font-mono tabular-nums">
+        {piece.was && (
+          <s className="text-[13px] text-steel-dark">
+            <span className="sr-only">was </span>
+            {formatPrice(piece.was)}
+          </s>
+        )}
+        <span className="text-[18px] font-semibold tracking-[0.02em]">
+          {piece.was && <span className="sr-only">now </span>}
+          {formatPrice(piece.price)}
+        </span>
+        {piece.was && <span className="bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-paper">−{Math.round((1 - piece.price / piece.was) * 100)}%</span>}
+      </p>
+
+      {/* Colour, and whether it comes in their size. */}
+      <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-steel-dark">
         {piece.colours.length > 1 && (
           <span
             role="radiogroup"
@@ -286,16 +301,6 @@ export function PieceControls({
             ))}
           </span>
         )}
-        <span className="font-mono text-[15px] font-semibold tabular-nums text-ink">
-          {piece.was && (
-            <s className="mr-1.5 text-[12px] font-normal text-steel-dark">
-              <span className="sr-only">was </span>
-              {formatPrice(piece.was)}
-            </s>
-          )}
-          {piece.was && <span className="sr-only">now </span>}
-          {formatPrice(piece.price)}
-        </span>
         {note && (
           <span className={strong ? "font-semibold text-ink" : ""}>{note}</span>
         )}

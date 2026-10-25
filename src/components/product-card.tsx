@@ -109,12 +109,20 @@ export function ProductCard({
           )}
           <h3 className="line-clamp-2 text-[15px] font-semibold decoration-1 underline-offset-4 group-hover:underline">
             {product.name}
-            <span className="sr-only">
-              , {product.salePrice ? "sale price " : ""}
+          </h3>
+          {/* The price on its own line (owner, 25 Oct 2026) */}
+          <p className="mt-1 flex items-baseline gap-2 font-mono tabular-nums">
+            <span className="text-[16px] font-semibold">
+              {product.salePrice && <span className="sr-only">sale price </span>}
               {formatPrice(price)}
             </span>
-          </h3>
-          {/* Colour, stock and the price, on one line (owner, 25 Oct 2026: the price here, not on a hanging tag). */}
+            {product.salePrice && (
+              <s className="text-[12px] text-steel-dark">
+                <span className="sr-only">was </span>
+                {formatPrice(product.price)}
+              </s>
+            )}
+          </p>
           <p className={`mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] ${status.strong ? "font-semibold text-ink" : "text-steel-dark"}`}>
             {dots.length > 1 && (
               <span aria-hidden className="flex gap-1">
@@ -124,18 +132,6 @@ export function ProductCard({
               </span>
             )}
             {status.text}
-            {product.salePrice && (
-              <span className="font-normal text-steel-dark">
-                {" · "}
-                <s>
-                  <span className="sr-only">was </span>
-                  {formatPrice(product.price)}
-                </s>
-              </span>
-            )}
-            <span aria-hidden className="ml-auto pl-2 font-mono text-[14px] font-semibold tabular-nums text-ink">
-              {formatPrice(price)}
-            </span>
           </p>
           {/* Sizes that can be bought online; the rest are struck through. */}
           {row.length > 1 && (
