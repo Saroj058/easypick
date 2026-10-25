@@ -43,14 +43,14 @@ export default async function DropsPage() {
 
   return (
     <div className="overflow-x-clip">
-      {/* The opening: the bright white showroom (the owner's picture, 17 Oct 2026). On wide screens it
+      {/* The opening: the white showroom with the Easypick sign (the owner's picture, 25 Oct 2026). On wide screens it
           fills the screen and the words sit on its empty wall, on the left; on phones the picture
           comes first and the words follow on white. The picture is decoration: every word is text. */}
       <section aria-labelledby="drops-title" className="relative isolate overflow-hidden bg-[#f4f4f2] text-ink">
-        <Image src="/drops/hero-white.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover object-right max-md:hidden" />
+        <Image src="/drops/hero-showroom.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover object-right max-md:hidden" />
         {/* A whisper of white over the empty wall, so the words read */}
         <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(248,248,246,0.85)_0%,rgba(248,248,246,0.55)_32%,rgba(248,248,246,0)_55%)] max-md:hidden" />
-        <Image src="/drops/hero-white-phone.webp" alt="" width={900} height={867} priority sizes="100vw" className="block h-auto w-full md:hidden" />
+        <Image src="/drops/hero-showroom-phone.webp" alt="" width={900} height={865} priority sizes="100vw" className="block h-auto w-full md:hidden" />
 
         <div className="container-ep flex flex-col py-8 md:min-h-[calc(100svh-88px)] md:justify-center md:py-10">
           <div className="w-full md:max-w-[440px]">
