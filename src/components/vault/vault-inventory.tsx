@@ -37,7 +37,7 @@ export function VaultInventory({ tiles, brand }: { tiles: TileData[]; brand?: st
     <section aria-labelledby="vault-inv" className="pb-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h2 id="vault-inv" className="display text-[clamp(2rem,1.4rem+2.4vw,3.4rem)] leading-[0.9] text-white">
-          {brand ? `${brand} inventory` : "Vault inventory"}
+          {brand ? `All of ${brand}` : "Every piece"}
           <span className={`ml-2 inline-block align-top ${V.mono} ${V.iceDim}`}>{two(shown.length)}</span>
         </h2>
         <button type="button" aria-expanded={open} aria-controls="vault-filters" onClick={() => setOpen(!open)} className={pill(open || on)}>

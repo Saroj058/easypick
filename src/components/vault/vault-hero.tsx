@@ -19,7 +19,7 @@ const EVERY = 5000;
  * piece rises in front and changes every few seconds, and as the page scrolls the word and the
  * piece drift apart. Nothing moves for people who ask for less motion.
  */
-export function VaultHero({ title, note, pieces, count, side, figure }: { title: string; note: string; pieces: TileData[]; count: string; side: [string, string]; /** A person standing in front of the word (cut out, see public/vault/); without one, the piece stands there. */ figure?: { src: string; width: number; height: number } }) {
+export function VaultHero({ title, note, pieces, count, side, figure }: { title: string; note: string; pieces: TileData[]; count: string; side: string; /** A person standing in front of the word (cut out, see public/vault/); without one, the piece stands there. */ figure?: { src: string; width: number; height: number } }) {
   const still = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const [at, setAt] = useState(0);
@@ -99,14 +99,11 @@ export function VaultHero({ title, note, pieces, count, side, figure }: { title:
           )}
         </div>
 
-        {/* Bottom: the two ways in on the left; on the right the piece in front and where we are */}
+        {/* Bottom: the way in on the left; on the right the piece in front and where we are */}
         <div className="relative z-20 flex flex-wrap items-end justify-between gap-6">
           <motion.div initial={still ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.9 }} className="flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link href="#inventory" className="inline-flex h-12 items-center bg-[var(--v-deep)] px-7 font-mono text-[12px] font-semibold uppercase tracking-[0.16em] text-[var(--v-frost)] transition-opacity hover:opacity-85">
-              {side[0]}
-            </Link>
-            <Link href="#vault-list" className={`inline-flex min-h-11 items-center ${V.mono} ${V.ink} underline decoration-[var(--v-ink)]/40 underline-offset-[6px] hover:decoration-[var(--v-ink)]`}>
-              {side[1]}
+              {side}
             </Link>
           </motion.div>
           {piece && (

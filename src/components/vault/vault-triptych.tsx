@@ -13,20 +13,21 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const EVERY = 6000;
 
 /**
- * The Vault's opening (after the FRZN reference): three pieces side by side, the middle one large,
- * the two beside it small and quiet; the words set big on either side. Every six seconds, or with
+ * The featured pieces (after the FRZN reference): three side by side, the middle one large, the two
+ * beside it small and quiet; under it, its brand, its name and price. No slogans around it (owner,
+ * 25 Oct 2026: "make this part better"). Every six seconds, or with
  * the arrows, the arrow keys or a tap on a side piece, the next one glides into the middle. It
  * stops while pointed at or focused, and never moves for people who ask for less motion.
  */
-export function VaultTriptych({ pieces, left, right }: { pieces: TileData[]; left: [string, string]; right: [string, string] }) {
+export function VaultTriptych({ pieces }: { pieces: TileData[] }) {
   return (
     <MotionConfig reducedMotion="user">
-      <Triptych pieces={pieces} left={left} right={right} />
+      <Triptych pieces={pieces} />
     </MotionConfig>
   );
 }
 
-function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, string]; right: [string, string] }) {
+function Triptych({ pieces }: { pieces: TileData[] }) {
   const still = useReducedMotion();
   const n = pieces.length;
   const [at, setAt] = useState(0);
@@ -63,20 +64,6 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
       <p className="sr-only" aria-live="polite">
         {centre.brand} {centre.model}, {centre.sold ? "sold" : centre.priceText}. Piece {at + 1} of {n}.
       </p>
-
-      {/* The words, set big above the pieces, either side (they used to run under the middle piece) */}
-      <div aria-hidden className="mx-auto mb-8 hidden max-w-[920px] items-end justify-between gap-8 md:flex">
-        <p className="display text-[clamp(1.6rem,1rem+2vw,2.9rem)] leading-[0.92] text-white">
-          {left[0]}
-          <br />
-          <span className="text-white/60">{left[1]}</span>
-        </p>
-        <p className="display text-right text-[clamp(1.6rem,1rem+2vw,2.9rem)] leading-[0.92] text-white">
-          {right[0]}
-          <br />
-          <span className="text-white/60">{right[1]}</span>
-        </p>
-      </div>
 
       <LayoutGroup>
         <div className="relative mx-auto grid max-w-[920px] grid-cols-[1fr_1.7fr_1fr] items-center gap-0">
@@ -125,13 +112,13 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
       {/* The piece in the middle, and the way through */}
       <div className="mx-auto mt-6 flex max-w-[920px] flex-wrap items-end justify-between gap-4">
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={centre.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35, ease: EASE }} className={`${V.mono} leading-[1.7] ${V.iceDim}`}>
-            <span className="block text-white">{centre.brand}</span>
-            <span className="block">{centre.model}</span>
-            <span className="block text-white tabular-nums">
-              {centre.sold ? "Sold · archive" : centre.priceText}
+          <motion.div key={centre.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.6, ease: EASE }}>
+            <span className={`block ${V.mono} ${V.iceDim}`}>
+              {centre.brand}
               {centre.edition ? ` · No. ${centre.edition}` : ""}
             </span>
+            <span className="display mt-1.5 block text-[clamp(1.6rem,1.2rem+1.4vw,2.4rem)] leading-none text-white">{centre.model}</span>
+            <span className="mt-2 block font-mono text-[15px] tabular-nums text-white">{centre.sold ? "Sold · archive" : centre.priceText}</span>
           </motion.div>
         </AnimatePresence>
         {n > 1 && (

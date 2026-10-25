@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { AlertSignup } from "@/components/alert-signup";
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
 import { brandKey, brandWorld, MONO, themeVars, two, V } from "@/components/vault/look";
 import { ScrollToOpen } from "@/components/vault/scroll-to-open";
@@ -60,7 +59,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         note={world ? `${world.origin}. ${world.line[0]} ${world.line[1]}` : vs.copy.intro}
         pieces={featured}
         count={`${two(brands.length)} brands · ${two(pieces.length)} pieces${sold ? ` · ${two(sold)} sold` : ""}`}
-        side={["Shop the Vault", "Hear it first"]}
+        side="Shop the Vault"
         figure={(one && FIGURES[brandKey(one.name)]) || FIGURES.all}
       />
 
@@ -80,50 +79,27 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         </div>
       </div>
 
-      {/* The panel, black */}
-      <div className="relative mx-auto mt-10 max-w-[1320px] md:mt-14 md:px-6">
-        <div className={`relative isolate overflow-hidden ${V.slate} px-4 pb-14 pt-8 text-white md:px-12 md:pb-20 md:pt-12`}>
-          <div className={`flex justify-between gap-4 ${V.mono} ${V.iceDim}`}>
-            <span>[ Active: {one ? one.name : "all brands"} ]</span>
-            <span className="hidden text-right sm:inline">[ New pieces · a few times a month ]</span>
-          </div>
-
+      {/* The pieces, on the same black, full width (owner, 25 Oct 2026: "make this part better"; no
+          labels or slogans, and no sign-up here: "remove hear it first") */}
+      <div className={`${V.slate} text-white`}>
+        <div className="container-ep pb-16 md:pb-24">
           {pieces.length === 0 ? (
-            <p className={`py-24 text-center text-[17px] ${V.iceDim}`}>The wall is empty for now. Join the list below and we&apos;ll message you when the first pieces arrive.</p>
+            <p className={`py-24 text-center text-[17px] ${V.iceDim}`}>The wall is empty for now. The first pieces arrive soon.</p>
           ) : (
             <>
-              {wanted && !one && <p className={`mt-6 text-[15px] ${V.iceDim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
-              <div className="mt-8 md:mt-10">
-                <VaultTriptych
-                  key={one?.name ?? "all"}
-                  pieces={featured}
-                  left={world ? world.line : vs.copy.left}
-                  right={world ? ["One of each.", "Never restocked."] : vs.copy.right}
-                />
+              {wanted && !one && <p className={`pt-8 text-[15px] ${V.iceDim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
+              <div className="border-t border-white/10 pt-12 md:pt-16">
+                <VaultTriptych key={one?.name ?? "all"} pieces={featured} />
               </div>
-              {spot && <VaultSpotlight piece={spot} />}
-              <div id="inventory" className="scroll-mt-28">
+              <div className="mt-14 border-t border-white/10 md:mt-20">{spot && <VaultSpotlight piece={spot} />}</div>
+              <div id="inventory" className="scroll-mt-28 border-t border-white/10 pt-12 md:pt-16">
                 <VaultInventory tiles={tiles} brand={one?.name} />
               </div>
             </>
           )}
+          <p className={`mt-16 border-t border-white/10 pt-6 text-[12.5px] leading-relaxed ${V.iceDim}`}>Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
         </div>
       </div>
-
-      {/* The close: the Vault list, and the small print */}
-      <section aria-labelledby="vault-list" className="container-ep relative grid gap-8 pb-16 pt-16 md:grid-cols-2 md:items-end md:gap-12 md:pb-24 md:pt-24">
-        <div>
-          <p className={`${V.mono} ${V.ink}`}>[ The Vault list ]</p>
-          <h2 id="vault-list" className={`display mt-2 text-[clamp(2.4rem,1.8rem+2.4vw,4.4rem)] leading-[0.88] ${V.deep}`}>
-            {vs.copy.listTitle}
-          </h2>
-        </div>
-        <div>
-          {/* The owner's note sits once, under the field (it used to show twice). */}
-          <AlertSignup source="vault" note={vs.copy.listNote || "One message when a new piece lands. Stop anytime."} done="You're in. We'll message {to} when a new piece lands." />
-        </div>
-        <p className={`text-[12.5px] leading-relaxed md:col-span-2 ${V.ink}`}>Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
-      </section>
     </div>
   );
 }
