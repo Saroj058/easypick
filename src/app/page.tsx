@@ -5,7 +5,6 @@ import { Countdown } from "@/components/countdown";
 import { FitsTeaser } from "@/components/home/fits-teaser";
 import { HeroPiece } from "@/components/hero-piece";
 import { GiftBlock } from "@/components/home/gift-block";
-import { FlowButton } from "@/components/ui/flow-button";
 import { StoreBand } from "@/components/home/store-band";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
@@ -15,7 +14,6 @@ import { RevealRoot } from "@/components/reveal-root";
 import { OfferSection } from "@/components/offer-section";
 import { ktmDay } from "@/lib/ktm-day";
 import { getOffers } from "@/lib/offers";
-import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 import { getStoreInfo } from "@/lib/store-info";
 import { formatDropTime } from "@/lib/format";
 import { TrackForm } from "@/app/track/track-form";
@@ -132,38 +130,31 @@ export default async function HomePage() {
                 </>
               )}
             </h1>
-            {/* Why the store exists, in the owner's words */}
-            <div className="mt-6 max-w-[460px]">
-              <p className="display text-[clamp(1.6rem,1.2rem+1.6vw,2.4rem)] leading-[0.95]">
-                {home.hero.pitch} <span className="text-steel-dark">{home.hero.pitchQuiet}</span>
+            {/* Why the store exists, in the owner's words: one calm line, then the small print (owner, 25 Oct 2026: "too much clutter"). */}
+            <div className="mt-5 max-w-[440px]">
+              <p className="text-[17px] font-semibold leading-snug sm:text-[19px]">
+                {home.hero.pitch} <span className="font-normal text-steel-dark">{home.hero.pitchQuiet}</span>
               </p>
-              <p className="mt-3 text-[15px] leading-relaxed text-ink/75 sm:text-[16px]">
-                {home.hero.line1}
-                <br />
-                {home.hero.line2}
+              <p className="mt-2 text-[14px] leading-relaxed text-ink/65">
+                {home.hero.line1} {home.hero.line2}
               </p>
             </div>
-            {/* Visit store, and the two ways to do it: they slide out beside the button on hover or focus (always shown on touch screens). */}
-            <div className="group/visit mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <InteractiveHoverButton href="/visit" text={home.hero.visitLabel} tone="light" className="w-full sm:w-auto" />
-              <ul className="flex gap-2 transition-all duration-300 [@media(hover:hover)]:-translate-x-2 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/visit:translate-x-0 [@media(hover:hover)]:group-focus-within/visit:opacity-100 [@media(hover:hover)]:group-hover/visit:translate-x-0 [@media(hover:hover)]:group-hover/visit:opacity-100">
-                {[
-                  { href: "/visit", label: "In person" },
-                  { href: "/visit/tour", label: "Virtual tour" },
-                ].map((o) => (
-                  <li key={o.href} className="flex-1 sm:flex-none">
-                    <Link
-                      href={o.href}
-                      className="flex h-12 items-center justify-center whitespace-nowrap rounded-full border border-ink/40 px-5 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink hover:border-ink hover:bg-ink hover:text-paper"
-                    >
-                      {o.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+            {/* One clear way in (the drop) and a quiet link to the store, on one line. */}
+            <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
+              <Link
+                href={drop ? `/drop/${drop.slug}` : "/drops"}
+                className="group inline-flex h-12 items-center gap-3 rounded-full bg-ink px-7 text-[13px] font-semibold uppercase tracking-[0.08em] text-paper transition-colors hover:bg-ink/85"
+              >
+                {drop ? home.hero.dropButton.replace("{n}", drop.slug) : home.hero.noDropButton}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden className="transition-transform duration-300 group-hover:translate-x-1">
+                  <path d="M2 8h11M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              </Link>
+              <Link href="/visit" className="inline-flex min-h-11 items-center gap-2.5 text-[13px] font-semibold uppercase tracking-[0.08em] underline decoration-ink/30 underline-offset-[6px] hover:decoration-ink">
+                <span className="h-2 w-2 rounded-full bg-[#22c55e]" aria-hidden />
+                {home.hero.visitLabel}
+              </Link>
             </div>
-            {/* The way into the drop, under Visit store */}
-            <FlowButton href={drop ? `/drop/${drop.slug}` : "/drops"} text={drop ? home.hero.dropButton.replace("{n}", drop.slug) : home.hero.noDropButton} className="mt-3 w-full sm:w-auto sm:self-start" />
           </div>
 
           {/* At the end: the drop and its countdown, in the middle. */}

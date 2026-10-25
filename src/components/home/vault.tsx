@@ -1,16 +1,13 @@
 import Link from "next/link";
 
 import { formatPrice } from "@/lib/format";
-import { ProductImage } from "@/components/product-image";
-import type { Theme } from "@/components/vault/look";
-import { L, luxVars, two } from "@/components/vault/lux/tokens";
-import { FadeUp } from "@/components/vault/lux/reveal";
-import type { TileData } from "@/components/vault/vault-tile";
+import { themeVars, V, type Theme } from "@/components/vault/look";
+import { VaultTile, type TileData } from "@/components/vault/vault-tile";
 import type { Product } from "@/lib/types";
 
-// The Vault: original brands and numbered pieces. Luxury since 25 Oct 2026 (owner): one dark ground,
-// ivory text, a serif for display and one brass accent. See components/vault/ for the parts and
-// app/vault/page.tsx for the full page.
+// The Vault: original brands and numbered pieces. Cold since 18 Oct 2026 (owner, from the FRZN
+// reference): a slate panel on frost, pieces on notched ice tiles. See components/vault/ for the parts
+// and app/vault/page.tsx for the full page.
 
 /** "07 / 20" for a numbered piece, else "". */
 function edition(p: Product) {
@@ -31,38 +28,22 @@ export function vaultSizes(p: Product): { size: string; left: boolean }[] {
 /** A stable id for a brand ("Easypick Studio" → "easypick-studio"). */
 export const brandId = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-/** Keyboard focus ring for links on the dark band. */
-const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ede8df]";
-
-/** The one way in: ivory words on a quiet hairline, a brass line that draws across on hover or focus. */
-function WayIn({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link href={href} className={`group relative inline-flex items-center gap-3 pb-2 text-[15px] ${L.ivory} ${FOCUS}`}>
-      {children}
-      <span aria-hidden className={`${L.brass} transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1`}>
-        →
-      </span>
-      <span aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-[#ede8df]/30" />
-      <span aria-hidden className={`absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 ${L.brassBg} transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100 group-focus-visible:scale-x-100`} />
-    </Link>
-  );
-}
-
 /**
- * The same section before the owner has marked any pieces for the Vault: the heading and a line
- * that says so. Nothing here can be bought or mistaken for stock.
+ * The same section before the owner has marked any pieces for the Vault: the heading and an empty
+ * panel that says so. Nothing here can be bought or mistaken for stock.
  */
 function VaultWaiting() {
   return (
-    <section aria-labelledby="vault-title" style={luxVars()} className={`${L.ground} ${L.ivory} ${L.section}`}>
-      <div className={L.wrap}>
-        <p className={`${L.label} ${L.dim}`}>[ The Vault ]</p>
-        <h2 id="vault-title" className={`mt-6 ${L.serif} text-[56px] leading-[0.92] md:text-[96px]`}>
-          The Vault
-        </h2>
-        <p className={`mt-6 max-w-[52ch] text-[16px] leading-[1.5] ${L.dim}`}>Original brands. One of each. The first pieces are on their way.</p>
-        <div className="mt-10">
-          <WayIn href="/alerts">Get the alert</WayIn>
+    <section aria-labelledby="vault-title" style={themeVars()} className={`section ${V.frost}`}>
+      <div className="container-ep">
+        <div className={`${V.slate} px-6 py-14 text-white md:px-12`}>
+          <h2 id="vault-title" className="display display-h1">
+            The Vault
+          </h2>
+          <p className={`mt-2.5 text-[17px] ${V.iceDim}`}>Original brands. One of each. The first pieces are on their way.</p>
+          <Link href="/alerts" className={`mt-6 inline-flex h-11 items-center rounded-full border border-white/40 px-5 ${V.mono} hover:bg-white hover:text-[var(--v-ink)]`}>
+            Get the alert
+          </Link>
         </div>
       </div>
     </section>
@@ -125,102 +106,69 @@ export function featuredVault(pieces: Product[], n: number) {
 const FEATURED = 5;
 
 /**
- * The Vault on the home page, in the Vault's own luxury look (owner, 25 Oct 2026): a full-width
- * dark band, the name in a big serif and the one way in, the brands each with its own "Show all",
- * then five pieces in a calm row (swipe on a phone, all five side by side on a wide screen).
+ * The Vault on the home page, cold like its own page (owner, 18 Oct 2026): a slate panel on frost,
+ * the name and the way in, the brands each with its own "Show all", then five notched ice tiles.
  */
-export function Vault({
-  products,
-  copy = { title: "The Vault", line: "Original brands. One of each. Never restocked.", button: "Enter the Vault" },
-}: {
-  products: Product[];
-  /** Set in Admin → Home page. */
-  copy?: { title: string; line: string; button: string };
-  /** The Vault's own colours (Admin → The Vault). Still accepted, but the home band now always uses the Vault's black ground, so it tints nothing here. */
-  theme?: Theme;
-}) {
+export function Vault({ products, copy = { title: "The Vault", line: "Original brands. One of each. Never restocked.", button: "Enter the Vault" }, theme }: { products: Product[]; /** Set in Admin → Home page. */ copy?: { title: string; line: string; button: string }; /** The Vault's own colours (Admin → The Vault). */ theme?: Theme }) {
   const pieces = vaultPieces(products);
   if (pieces.length === 0) return <VaultWaiting />;
 
   const brands = vaultBrands(pieces);
   // One piece from each brand in turn (what can be bought first), five in all.
-  const featured = featuredVault(pieces, FEATURED).map((p, i) => toTile(p, i));
+  const featured = featuredVault(pieces, FEATURED);
 
   return (
-    <section aria-labelledby="vault-title" style={luxVars()} className={`${L.ground} ${L.ivory} ${L.section}`}>
-      <div className={L.wrap}>
-        <div className="grid gap-12 lg:grid-cols-12 lg:gap-10">
-          {/* The name, the line and the one way in. */}
-          <div className="lg:col-span-7">
-            <div className={`flex items-baseline justify-between gap-4 ${L.label} ${L.dim} lg:justify-start lg:gap-10`}>
-              <span>[ The Vault ]</span>
-              <span className="tabular-nums">{two(pieces.length)} pieces</span>
-            </div>
-            <FadeUp>
-              <h2 id="vault-title" className={`mt-6 ${L.serif} text-[56px] leading-[0.92] md:text-[96px] xl:text-[112px]`}>
+    <section aria-labelledby="vault-title" style={themeVars(theme)} className={`section ${V.frost}`}>
+      <div className="container-ep">
+        <div className={`${V.slate} px-4 pb-10 pt-8 text-white md:px-10 md:pb-12 md:pt-10`}>
+          <div className={`mb-6 flex justify-between gap-4 ${V.mono} ${V.iceDim}`}>
+            <span>[ Easypick · The Vault ]</span>
+            <span>[ {String(pieces.length).padStart(2, "0")} pieces ]</span>
+          </div>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <h2 id="vault-title" className="display display-h1">
                 {copy.title}
               </h2>
-            </FadeUp>
-            <FadeUp delay={0.08}>
-              <p className={`mt-6 max-w-[52ch] text-[16px] leading-[1.5] md:text-[17px] ${L.dim}`}>{copy.line}</p>
-            </FadeUp>
-            <FadeUp delay={0.16} className="mt-10">
-              <WayIn href={vaultHref()}>{copy.button}</WayIn>
-            </FadeUp>
+              <p className={`mt-2.5 text-[17px] ${V.iceDim}`}>{copy.line}</p>
+            </div>
+            <Link href={vaultHref()} className="group inline-flex h-12 items-center gap-3 rounded-full bg-white pl-6 pr-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--v-ink)] transition-colors hover:bg-[var(--v-tile)]">
+              {copy.button}
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--v-ink)] text-white transition-transform group-hover:translate-x-0.5" aria-hidden>
+                →
+              </span>
+            </Link>
           </div>
 
           {/* The brands, each with its own way in. */}
           {brands.length > 0 && (
-            <nav aria-label="Vault brands" className="lg:col-span-4 lg:col-start-9 lg:self-end">
-              <ul className={`border-t ${L.hair}`}>
-                {brands.slice(0, 6).map((b) => {
-                  const count = `${b.pieces.length} ${b.pieces.length === 1 ? "piece" : "pieces"}`;
-                  return (
-                    <li key={b.name} className={`border-b ${L.hair}`}>
-                      <Link href={vaultHref(b.name)} aria-label={`${b.name} · ${count} · Show all`} className={`group flex items-baseline justify-between gap-4 py-4 ${FOCUS}`}>
-                        <span className={`${L.serif} text-[26px] leading-[0.95] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1`}>{b.name}</span>
-                        <span className={`shrink-0 ${L.label} ${L.dim} tabular-nums`}>
-                          {count} <span className="ml-2 group-hover:text-[#ede8df]">Show all →</span>
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+            <nav aria-label="Vault brands" className="no-scrollbar -mx-4 mt-8 flex overflow-x-auto border-y border-white/15 md:mx-0 md:grid md:grid-cols-6">
+              {brands.slice(0, 6).map((b) => (
+                <Link
+                  key={b.name}
+                  href={vaultHref(b.name)}
+                  className="group flex h-[104px] min-w-[150px] shrink-0 flex-col items-center justify-center gap-1 border-r border-white/15 px-2 transition-colors last:border-r-0 hover:bg-white/[0.06] md:min-w-0"
+                >
+                  <span className="text-center font-display text-[24px] uppercase leading-none tracking-[0.04em]">{b.name}</span>
+                  <span className={`font-mono text-[11px] ${V.iceDim}`}>
+                    {b.pieces.length} {b.pieces.length === 1 ? "piece" : "pieces"}
+                  </span>
+                  <span className="mt-1.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.1em] underline-offset-4 group-hover:underline">
+                    Show all <span aria-hidden>→</span>
+                  </span>
+                </Link>
+              ))}
             </nav>
           )}
-        </div>
 
-        {/* Five pieces in a calm row. */}
-        <ul className="no-scrollbar -mx-4 mt-16 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 md:-mx-10 md:mt-24 md:scroll-px-10 md:gap-6 md:px-10 xl:mx-0 xl:grid xl:grid-cols-5 xl:overflow-visible xl:px-0">
-          {featured.map((t, i) => (
-            <li key={t.id} className="w-[64vw] max-w-[280px] shrink-0 snap-start md:w-[30vw] xl:w-auto xl:max-w-none">
-              <FadeUp delay={i * 0.08}>
-                <Link href={`/product/${t.slug}`} aria-label={`${t.name}, ${t.sold ? "sold" : t.priceText}`} className={`group block ${FOCUS}`}>
-                  <div className="overflow-hidden">
-                    <ProductImage
-                      image={t.image}
-                      category={t.category}
-                      colourHex={t.hex}
-                      decorative
-                      priority={i < 2}
-                      sizes="(min-width: 1280px) 18vw, (min-width: 768px) 30vw, 64vw"
-                      ground={L.raised}
-                      className={`transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] ${t.sold ? "opacity-60" : ""}`}
-                    />
-                  </div>
-                  <div className={`mt-4 flex items-baseline justify-between gap-3 border-t pt-3 ${L.hair} ${L.label} ${L.dim} tabular-nums`}>
-                    <span>{two(i + 1)}</span>
-                    {t.edition && <span>No. {t.edition}</span>}
-                  </div>
-                  <p className={`mt-1.5 ${L.label} ${L.dim}`}>{t.brand}</p>
-                  <p className={`mt-2 ${L.serif} text-[24px] leading-[0.95]`}>{t.model}</p>
-                  <p className={`mt-3 text-[15px] tabular-nums ${t.sold ? L.dim : ""}`}>{t.sold ? "Sold" : t.priceText}</p>
-                </Link>
-              </FadeUp>
-            </li>
-          ))}
-        </ul>
+          <ul className="no-scrollbar -mx-4 mt-8 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:px-0">
+            {featured.map((p, i) => (
+              <li key={p.id} className="w-[44vw] max-w-[220px] shrink-0 snap-start md:w-auto md:max-w-none">
+                <VaultTile t={toTile(p, i)} sizes="(min-width: 768px) 18vw, 44vw" priority={i < 2} />
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );

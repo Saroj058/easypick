@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import { AlertSignup } from "@/components/alert-signup";
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
-import PerspectiveTunnelHero from "@/components/ui/perspective-tunnel-hero";
-import { brandWorld } from "@/components/vault/look";
-import { FactsStrip, Grain, SectionIndex } from "@/components/vault/lux/ambience";
-import { BrandIndex } from "@/components/vault/lux/brand-index";
-import { BrandOpening } from "@/components/vault/lux/brand-opening";
-import { TryInStore, VaultList } from "@/components/vault/lux/closing";
-import { VaultCollection } from "@/components/vault/lux/collection";
-import { VaultGallery } from "@/components/vault/lux/gallery";
-import { HowWeCheck } from "@/components/vault/lux/how-we-check";
-import { VaultManifesto } from "@/components/vault/lux/manifesto";
-import { LuxSpotlight } from "@/components/vault/lux/spotlight";
-import { L, luxVars } from "@/components/vault/lux/tokens";
+import { brandWorld, themeVars, two, V } from "@/components/vault/look";
+import { ScrollToOpen } from "@/components/vault/scroll-to-open";
+import { VaultBrands } from "@/components/vault/vault-brands";
+import { VaultWatermark } from "@/components/vault/vault-watermark";
+import { VaultInventory } from "@/components/vault/vault-inventory";
+import { VaultSpotlight } from "@/components/vault/vault-spotlight";
+import { VaultTriptych } from "@/components/vault/vault-triptych";
 import { formatPrice } from "@/lib/format";
 import { vaultSetting } from "@/lib/settings/vault";
 import { site, walletList } from "@/lib/site";
@@ -26,12 +23,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/vault" },
 };
 
-// The Vault, luxury (owner, 25 Oct 2026: "make the vault a better motion graphic page… revamp it
-// full page like a luxury website"; it opens on the perspective tunnel the owner chose). One dark
-// ground, ivory serif type, hairlines. Top to bottom: the tunnel of pieces (or, on a brand's page,
-// that brand's own opening in its own colour), the statement and real numbers, the brands as an
-// index, a pinned gallery of the featured pieces, one piece in the spotlight, everything with
-// filters, how we check, trying on in store, and the Vault list. The parts are in components/vault/lux/.
+// The Vault, cold (owner, 18 Oct 2026, from the FRZN reference): a frost-blue page with the name
+// set big, then a slate panel: three pieces side by side that glide through on their own, one piece
+// floating over the words as you scroll, then everything as notched ice tiles with brand tabs and
+// filters, and the Vault list to close. A brand's own page (?brand=Nike) opens on that brand.
 export default async function VaultPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const wanted = Array.isArray(sp.brand) ? sp.brand[0] : sp.brand;
@@ -44,11 +39,10 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   // The pieces the owner put first (Admin → The Vault), then the usual pick.
   const pinned = vs.featured.flatMap((slug) => list.filter((p) => p.slug === slug));
   const featured = [...pinned, ...featuredVault(list.filter((p) => !pinned.includes(p)), 5)].slice(0, 5).map((p, i) => toTile(p, i));
-  // The spotlight: a different piece from the gallery's first, one that can be bought.
+  // The spotlight: a different piece from the one the triptych opens on, one that can be bought.
   const spot = featured.slice(1).find((t) => !t.sold) ?? featured.find((t) => !t.sold) ?? featured[0];
   const tiles = list.map((p, i) => toTile(p, i));
-  // The tunnel flies through up to nine pieces, buyable first.
-  const tunnel = [...featured, ...featuredVault(list, 9).map((p, i) => toTile(p, i))].filter((t, i, a) => a.findIndex((x) => x.id === t.id) === i).slice(0, 9);
+  // Each brand wears its own colours and tells its own story; "All" is the Vault's cold blue.
   const world = brandWorld(one?.name, vs.brands);
   const facts = [
     "Original brands",
@@ -57,80 +51,110 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
     `Pay with ${walletList()}`,
     `Free delivery over ${formatPrice(site.delivery.freeAbove)}`,
   ];
-  const sections = [
-    { id: "vault-statement", label: "The Vault" },
-    ...(one ? [] : [{ id: "vault-brands", label: "Brands" }]),
-    ...(featured.length > 1 ? [{ id: "vault-gallery", label: "Featured" }] : []),
-    { id: "inventory", label: "Collection" },
-    { id: "vault-check", label: "How we check" },
-    { id: "vault-list-section", label: "The list" },
-  ];
 
   return (
-    <div style={luxVars(world?.theme)} className={`vault relative isolate overflow-x-clip ${L.ground} ${L.ivory} pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0`}>
-      <Grain />
-      <SectionIndex sections={pieces.length ? sections : []} />
-
-      {/* The opening */}
-      {one ? (
-        <BrandOpening name={one.name} world={world} count={one.pieces.length} lead={featured.find((t) => !t.sold) ?? featured[0]} />
-      ) : pieces.length > 0 ? (
-        <PerspectiveTunnelHero pieces={tunnel} eyebrow={`Easypick · ${brands.length} brands · ${pieces.length} pieces`} title={["The", "Vault"]} line="Original brands. One of each. Never restocked." />
-      ) : (
-        <section className={`${L.wrap} pb-16 pt-36`}>
-          <p className={`${L.label} ${L.dim}`}>Easypick</p>
-          <h1 className={`${L.serif} mt-4 text-[clamp(3.4rem,1.8rem+7vw,9rem)] leading-[0.9]`}>The Vault</h1>
-        </section>
-      )}
-
-      {/* The statement, and the real numbers */}
-      <div id="vault-statement" className="scroll-mt-24">
-        <VaultManifesto
-          intro={vs.copy.intro}
-          numbers={
-            one
-              ? [{ label: one.pieces.length === 1 ? "Piece" : "Pieces", value: one.pieces.length }, { label: "Sold", value: one.pieces.filter((p) => p.status === "sold_out").length }]
-              : [{ label: "Brands", value: brands.length }, { label: "Pieces", value: pieces.length }, { label: "Sold", value: sold }]
-          }
-        />
-      </div>
-
-      {pieces.length === 0 ? (
-        <p className={`${L.wrap} pb-24 text-[17px] ${L.dim}`}>The wall is empty for now. Join the list below and we&apos;ll message you when the first pieces arrive.</p>
-      ) : (
-        <>
-          <FactsStrip facts={facts} />
-          {wanted && !one && <p className={`${L.wrap} pt-10 text-[15px] ${L.dim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
-
-          {!one && (
-            <section id="vault-brands" aria-label="Brands" className={`scroll-mt-24 ${L.section} ${L.wrap}`}>
-              <p className={`${L.label} ${L.dim} mb-8`}>[ 03 — The brands ]</p>
-              <BrandIndex
-                total={pieces.length}
-                brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name), origin: brandWorld(b.name, vs.brands)?.origin ?? "", pieces: featuredVault(b.pieces, 3).map((p, i) => toTile(p, i)) }))}
-              />
-            </section>
+    <div style={themeVars(world?.theme ?? vs.cold)} className={`vault relative isolate min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] transition-colors duration-500 md:pb-0`}>
+      {/* The brand's name, faint and huge, behind everything */}
+      <VaultWatermark text={one?.name ?? "The Vault"} rows={14} />
+      {/* The opening, on frost */}
+      <div className="container-ep relative pt-8 md:pt-12">
+        <div className={`flex items-center justify-between gap-4 ${V.mono} ${V.ink}`}>
+          {one ? (
+            <Link href={vaultHref()} className="inline-flex min-h-11 items-center gap-2 hover:underline">
+              <span aria-hidden>←</span> [ The Vault ]
+            </Link>
+          ) : (
+            <span>[ Easypick · The Vault ]</span>
           )}
+          <span className="hidden whitespace-nowrap sm:inline">
+            [ {two(brands.length)} brands · {two(pieces.length)} pieces{sold ? ` · ${two(sold)} sold` : ""} ]
+          </span>
+        </div>
+        {/* The brands first: one card each, in its own colours */}
+        {brands.length > 0 && (
+          <div className="mt-6">
+            <ScrollToOpen>
+              <VaultBrands worlds={vs.brands} cold={vs.cold} total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />
+            </ScrollToOpen>
+          </div>
+        )}
+        <div className="mt-10 grid gap-6 md:mt-14 md:grid-cols-[1fr_minmax(0,34ch)] md:items-end">
+          <div>
+            {world && <p className={`${V.mono} ${V.ink}`}>[ {world.origin} ]</p>}
+            <h1 className={`display mt-2 text-[clamp(3rem,1.6rem+6vw,8rem)] leading-[0.84] ${V.deep}`}>{one ? one.name : "The Vault"}</h1>
+            {world && (
+              <p className={`display mt-3 text-[clamp(1.6rem,1.1rem+1.8vw,2.6rem)] leading-[0.95] ${V.deep}`}>
+                {world.line[0]} <span className="opacity-70">{world.line[1]}</span>
+              </p>
+            )}
+          </div>
+          <div className={`text-left md:text-right`}>
+            {world ? (
+              <p className={`text-[15px] leading-relaxed ${V.ink}`}>{world.story}</p>
+            ) : (
+              <p className={`${V.mono} leading-[1.7] ${V.ink}`}>
+                {one ? `${one.pieces.length} ${one.pieces.length === 1 ? "piece" : "pieces"} from ${one.name}. One of each.` : vs.copy.intro}
+              </p>
+            )}
+            {one && (
+              <p className={`mt-3 ${V.mono} ${V.ink}`}>
+                [ {two(one.pieces.length)} {one.pieces.length === 1 ? "piece" : "pieces"} here · one of each ]
+              </p>
+            )}
+          </div>
+        </div>
+        <ul aria-label="Good to know" className={`no-scrollbar -mx-4 mt-8 flex gap-x-6 overflow-x-auto whitespace-nowrap border-y border-[var(--v-ink)]/15 px-4 py-3 ${V.mono} ${V.ink} md:mx-0 md:flex-wrap md:px-0`}>
+          {facts.map((f) => (
+            <li key={f}>[ {f} ]</li>
+          ))}
+        </ul>
+      </div>
 
-          {featured.length > 1 && (
-            <div id="vault-gallery" className="scroll-mt-24">
-              <VaultGallery key={one?.name ?? "all"} pieces={featured} title={world ? world.line : vs.copy.left} />
-            </div>
+      {/* The panel, slate */}
+      <div className="relative mx-auto mt-10 max-w-[1320px] md:mt-14 md:px-6">
+        <div className={`relative isolate overflow-hidden ${V.slate} px-4 pb-14 pt-8 text-white md:px-12 md:pb-20 md:pt-12`}>
+          <VaultWatermark text={one?.name ?? "The Vault"} tone="light" rows={16} />
+          <div className={`flex justify-between gap-4 ${V.mono} ${V.iceDim}`}>
+            <span>[ Active: {one ? one.name : "all brands"} ]</span>
+            <span className="hidden text-right sm:inline">[ New pieces · a few times a month ]</span>
+          </div>
+
+          {pieces.length === 0 ? (
+            <p className={`py-24 text-center text-[17px] ${V.iceDim}`}>The wall is empty for now. Join the list below and we&apos;ll message you when the first pieces arrive.</p>
+          ) : (
+            <>
+              {wanted && !one && <p className={`mt-6 text-[15px] ${V.iceDim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
+              <div className="mt-8 md:mt-10">
+                <VaultTriptych
+                  key={one?.name ?? "all"}
+                  pieces={featured}
+                  left={world ? world.line : vs.copy.left}
+                  right={world ? ["One of each.", "Never restocked."] : vs.copy.right}
+                />
+              </div>
+              {spot && <VaultSpotlight piece={spot} />}
+              <div id="inventory" className="scroll-mt-28">
+                <VaultInventory tiles={tiles} brand={one?.name} />
+              </div>
+            </>
           )}
-
-          {spot && <LuxSpotlight piece={spot} />}
-
-          <VaultCollection tiles={tiles} brand={one?.name} />
-        </>
-      )}
-
-      <div id="vault-check" className="scroll-mt-24">
-        <HowWeCheck />
+        </div>
       </div>
-      <TryInStore />
-      <div id="vault-list-section" className="scroll-mt-24">
-        <VaultList title={vs.copy.listTitle} note={vs.copy.listNote} />
-      </div>
+
+      {/* The close: the Vault list, and the small print */}
+      <section aria-labelledby="vault-list" className="container-ep relative grid gap-8 pb-16 pt-16 md:grid-cols-2 md:items-end md:gap-12 md:pb-24 md:pt-24">
+        <div>
+          <p className={`${V.mono} ${V.ink}`}>[ The Vault list ]</p>
+          <h2 id="vault-list" className={`display mt-2 text-[clamp(2.4rem,1.8rem+2.4vw,4.4rem)] leading-[0.88] ${V.deep}`}>
+            {vs.copy.listTitle}
+          </h2>
+          {vs.copy.listNote && <p className={`mt-3 max-w-[40ch] text-[15px] ${V.ink}`}>{vs.copy.listNote}</p>}
+        </div>
+        <div>
+          <AlertSignup source="vault" note="One message when a new piece lands. Stop anytime." done="You're in. We'll message {to} when a new piece lands." />
+        </div>
+        <p className={`text-[12.5px] leading-relaxed md:col-span-2 ${V.ink}`}>Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
+      </section>
     </div>
   );
 }
