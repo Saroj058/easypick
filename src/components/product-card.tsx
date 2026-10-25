@@ -3,7 +3,6 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import { sellable } from "@/lib/inventory";
 import type { Product, Size } from "@/lib/types";
-import { MiniTag } from "./hang-tag";
 import { ProductImage } from "./product-image";
 import { addableFromProduct } from "@/lib/addable";
 import { AddToBag } from "./add-to-bag";
@@ -101,11 +100,8 @@ export function ProductCard({
             )}
             {note && <span className={`absolute left-3 top-3 ${product.status === "scheduled" || fresh ? "tag-volt" : "index bg-paper px-2 py-1"}`}>{note}</span>}
           </div>
-          {/* The price tag: tied just above the hem of the photo, hanging down outside the card. */}
-          <MiniTag product={product} className="absolute right-2 top-full z-10 -mt-3 md:right-4" />
         </div>
-        {/* Room on the right for the hanging tag, which carries the price. */}
-        <div className="mt-3 pr-[70px] md:pr-[100px]">
+        <div className="mt-3">
           {plate && (
             <p aria-hidden className="mb-1 font-mono text-[11px] tracking-[0.12em] text-steel-dark">
               {plate}
@@ -118,6 +114,7 @@ export function ProductCard({
               {formatPrice(price)}
             </span>
           </h3>
+          {/* Colour, stock and the price, on one line (owner, 25 Oct 2026: the price here, not on a hanging tag). */}
           <p className={`mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13px] ${status.strong ? "font-semibold text-ink" : "text-steel-dark"}`}>
             {dots.length > 1 && (
               <span aria-hidden className="flex gap-1">
@@ -136,6 +133,9 @@ export function ProductCard({
                 </s>
               </span>
             )}
+            <span aria-hidden className="ml-auto pl-2 font-mono text-[14px] font-semibold tabular-nums text-ink">
+              {formatPrice(price)}
+            </span>
           </p>
           {/* Sizes that can be bought online; the rest are struck through. */}
           {row.length > 1 && (

@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
-import { PriceTag } from "@/components/hang-tag";
 import { ProductImage } from "@/components/product-image";
 import { QuickBuy } from "@/components/quick-buy";
 import { cn } from "@/lib/utils";
@@ -60,12 +59,10 @@ function ItemCard({ item, copy = false }: { item: OfferItem; copy?: boolean }) {
             <ProductImage image={item.image} category={item.category} colourHex={item.hex} decorative sizes="(min-width: 640px) 224px, 62vw" className="transition-transform duration-300 group-hover:scale-[1.03]" />
             <span className="absolute bottom-2 left-2 bg-ink px-2 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-paper">{item.off}% off</span>
           </div>
-          {/* The price, on a tag tied to the bottom of the photo and hanging beside the words. */}
-          <PriceTag price={item.price} sku={item.sku} className="absolute right-2 top-full -mt-3" />
         </div>
-        <h3 className="mt-3 line-clamp-1 pr-[72px] text-[15px] md:pr-[88px] font-semibold decoration-1 underline-offset-4 group-hover:underline">{item.name}</h3>
-        <p className="mt-0.5 line-clamp-1 pr-[72px] text-[13px] text-steel-dark md:pr-[88px]">{item.sub}</p>
-        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 pr-[72px] font-mono tabular-nums md:pr-[88px]">
+        <h3 className="mt-3 line-clamp-1 text-[15px] font-semibold decoration-1 underline-offset-4 group-hover:underline">{item.name}</h3>
+        <p className="mt-0.5 line-clamp-1 text-[13px] text-steel-dark">{item.sub}</p>
+        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 font-mono tabular-nums">
           <span className="text-[16px] font-semibold">
             <span className="sr-only">now </span>
             {item.price}

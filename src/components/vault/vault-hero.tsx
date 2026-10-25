@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -33,9 +33,11 @@ export function VaultHero({ title, note, pieces, count, side, figure }: { title:
   }, [at, still, held, n]);
 
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-  const wordY = useTransform(scrollYProgress, [0, 1], still ? [0, 0] : [0, 140]);
-  const pieceY = useTransform(scrollYProgress, [0, 1], still ? [0, 0] : [0, -90]);
-  const fade = useTransform(scrollYProgress, [0, 0.7], still ? [1, 1] : [1, 0.2]);
+  // Through a soft spring, so the word and the figure glide with the scroll rather than step.
+  const glide = useSpring(scrollYProgress, { stiffness: 70, damping: 26, mass: 0.6 });
+  const wordY = useTransform(glide, [0, 1], still ? [0, 0] : [0, 120]);
+  const pieceY = useTransform(glide, [0, 1], still ? [0, 0] : [0, -70]);
+  const fade = useTransform(glide, [0, 0.7], still ? [1, 1] : [1, 0.25]);
 
   const piece = pieces[at];
   // The word fills the width whatever its length: "THE VAULT" or a brand's name.

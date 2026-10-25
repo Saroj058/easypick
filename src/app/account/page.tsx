@@ -398,7 +398,7 @@ export default async function AccountPage() {
               Shop all →
             </Link>
           </div>
-          <DropStrip pieces={picks} label="Picked for you" tags />
+          <DropStrip pieces={picks} label="Picked for you" />
         </section>
       )}
     </div>

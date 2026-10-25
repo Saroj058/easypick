@@ -116,7 +116,7 @@ export function VaultInventory({ tiles, brand }: { tiles: TileData[]; brand?: st
                 animate={still ? { opacity: 1 } : undefined}
                 exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.2 } }}
                 viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.6, delay: (i % 5) * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.9, delay: (i % 5) * 0.07, ease: [0.16, 1, 0.3, 1] }}
               >
                 <VaultTile t={t} sizes="(min-width: 1024px) 18vw, (min-width: 768px) 30vw, 45vw" priority={i < 2} />
               </motion.li>

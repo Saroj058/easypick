@@ -9,7 +9,6 @@ import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useFitProfile } from "@/components/fit-finder";
 import { openSizeFinder } from "@/components/size-finder";
 import { useBag } from "@/components/bag-provider";
-import { PriceTag } from "@/components/hang-tag";
 import { AddToBag } from "@/components/add-to-bag";
 import { addableFromRail } from "@/lib/addable";
 import { ProductImage } from "@/components/product-image";
@@ -261,14 +260,8 @@ export function PieceControls({
           {piece.name}
         </Link>
       </h4>
-      {/* The price is on the card's hang tag; this says it for screen readers, which the tag is hidden from. */}
-      <p className="sr-only">
-        {piece.was && `was ${formatPrice(piece.was)}, `}
-        {formatPrice(piece.price)}, fixed price
-      </p>
-
-      {/* Colour, and whether it comes in their size. */}
-      <div className="mt-1 flex min-h-11 items-center justify-center gap-2 text-[13px] text-steel-dark">
+      {/* Colour, the price, and whether it comes in their size (owner, 25 Oct 2026: the price here, not on a hanging tag). */}
+      <div className="mt-1 flex min-h-11 flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-steel-dark">
         {piece.colours.length > 1 && (
           <span
             role="radiogroup"
@@ -293,6 +286,16 @@ export function PieceControls({
             ))}
           </span>
         )}
+        <span className="font-mono text-[15px] font-semibold tabular-nums text-ink">
+          {piece.was && (
+            <s className="mr-1.5 text-[12px] font-normal text-steel-dark">
+              <span className="sr-only">was </span>
+              {formatPrice(piece.was)}
+            </s>
+          )}
+          {piece.was && <span className="sr-only">now </span>}
+          {formatPrice(piece.price)}
+        </span>
         {note && (
           <span className={strong ? "font-semibold text-ink" : ""}>{note}</span>
         )}
@@ -638,12 +641,6 @@ function ShelfRow({
             />
             {/* Add to bag: only on the card in front, bottom left */}
             {i === Math.min(active, pieces.length - 1) && <AddToBag piece={addableFromRail(pieces[i])} className="absolute bottom-1 left-1 z-10" />}
-            {/* The price, on a tag tied to the bottom of the card and hanging under it. */}
-            <PriceTag
-              price={formatPrice(pieces[i].price)}
-              sku={pieces[i].colours[0].sizes[0]?.sku ?? pieces[i].id}
-              className="absolute right-3 top-full -mt-3 md:right-4"
-            />
           </>
         )}
       />

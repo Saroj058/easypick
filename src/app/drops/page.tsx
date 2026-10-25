@@ -51,7 +51,8 @@ export default async function DropsPage() {
         <Image src="/drops/hero-showroom.webp" alt="" fill priority sizes="100vw" className="-z-10 object-cover object-right max-md:hidden" />
         {/* A whisper of white over the empty wall, so the words read */}
         <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(248,248,246,0.85)_0%,rgba(248,248,246,0.55)_32%,rgba(248,248,246,0)_55%)] max-md:hidden" />
-        <Image src="/drops/hero-showroom-phone.webp" alt="" width={900} height={865} priority sizes="100vw" className="block h-auto w-full md:hidden" />
+        {/* Phones get the whole picture too, uncut (owner, 25 Oct 2026) */}
+        <Image src="/drops/hero-showroom.webp" alt="" width={1815} height={867} priority sizes="100vw" className="block h-auto w-full md:hidden" />
 
         <div className="container-ep flex flex-col py-8 md:min-h-[100svh] md:justify-center md:pb-10 md:pt-[108px] lg:h-full lg:min-h-0">
           <div className="w-full md:max-w-[440px]">

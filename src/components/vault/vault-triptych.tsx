@@ -45,7 +45,8 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
   const centre = pieces[at];
   const prev = n > 1 ? pieces[(at - 1 + n) % n] : null;
   const next = n > 2 ? pieces[(at + 1) % n] : null;
-  const spring = { type: "spring" as const, stiffness: 140, damping: 22, mass: 0.9 };
+  // One long, soft glide (ease in and out), as premium houses move, never a springy snap (owner, 25 Oct 2026: "smooth").
+  const spring = { duration: 1.1, ease: [0.76, 0, 0.24, 1] as const };
 
   return (
     <div
@@ -94,8 +95,6 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
                     <motion.span
                       layout
                       className="relative block overflow-hidden bg-[var(--v-tile)] shadow-[0_40px_80px_-40px_rgba(15,30,45,0.6)]"
-                      animate={still ? undefined : { y: [0, -6, 0] }}
-                      transition={still ? undefined : { duration: 6, repeat: Infinity, ease: "easeInOut" }}
                     >
                       <span aria-hidden className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(60%_45%_at_50%_0%,rgba(255,255,255,0.55),transparent_70%)]" />
                       <span className={`block transition-transform duration-700 group-hover:scale-[1.03] ${p.sold ? "opacity-50 grayscale" : ""}`}>

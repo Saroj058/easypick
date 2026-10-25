@@ -17,9 +17,10 @@ export function VaultSpotlight({ piece }: { piece: TileData }) {
   const still = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const smooth = useSpring(scrollYProgress, { stiffness: 80, damping: 20 });
-  const y = useTransform(smooth, [0, 1], still ? [0, 0] : [70, -70]);
-  const rotate = useTransform(smooth, [0, 1], still ? [0, 0] : [-5, 4]);
+  // Heavily damped, so the drift glides and never overshoots.
+  const smooth = useSpring(scrollYProgress, { stiffness: 50, damping: 30, mass: 0.8 });
+  const y = useTransform(smooth, [0, 1], still ? [0, 0] : [40, -40]);
+  const rotate = useTransform(smooth, [0, 1], still ? [0, 0] : [-1.5, 1.5]);
   const wordsX = useTransform(smooth, [0, 1], still ? [0, 0] : [-14, 14]);
   const size = piece.sizes.filter((s) => s.left).map((s) => (s.size === "ONE" ? "One size" : s.size));
 
@@ -72,7 +73,7 @@ export function VaultSpotlight({ piece }: { piece: TileData }) {
 
         {/* The piece, floating beside the words */}
         <motion.div style={{ y, rotate }} className="relative mx-auto w-[min(82%,440px)] md:w-full">
-          <motion.div animate={still ? undefined : { y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+          <motion.div>
             <Link href={`/product/${piece.slug}`} tabIndex={-1} aria-hidden className="block">
               <span className="relative block overflow-hidden rounded-[2px] bg-[var(--v-tile)] shadow-[0_60px_90px_-50px_rgba(10,25,40,0.75)]">
                 <span aria-hidden className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(60%_45%_at_50%_0%,rgba(255,255,255,0.5),transparent_70%)]" />

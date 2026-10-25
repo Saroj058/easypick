@@ -12,7 +12,6 @@ import type { BagLine } from "@/lib/types";
 import { PieceControls, type RailPiece } from "./home/rail-wall";
 import { addableFromRail } from "@/lib/addable";
 import { AddToBag } from "./add-to-bag";
-import { PriceTag } from "./hang-tag";
 import { ArrowIcon } from "./icons";
 import { ProductImage } from "./product-image";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./ui/sheet";
@@ -67,7 +66,7 @@ function look(d: number, still: boolean, ghost: boolean) {
   };
 }
 
-export function DropStrip({ pieces, label, soon = false, controls, tags = false, big = false, href = (p) => `/product/${p.slug}`, addTo = "bag" }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode; /** A price tag hangs on every card. */ tags?: boolean; /** Larger cards. */ big?: boolean; /** Where a tap on the centre card goes. */ href?: (piece: DropPiece) => string; /** The centre card's add button: the bag, or (gift page) the gift bag. */ addTo?: "bag" | "gift" }) {
+export function DropStrip({ pieces, label, soon = false, controls, big = false, href = (p) => `/product/${p.slug}`, addTo = "bag" }: { pieces: DropPiece[]; label: string; /** A drop still to come: its pieces can be looked at, not bought. */ soon?: boolean; /** In place of the rail's buying controls under the centre piece (the gift page sends, it doesn't sell). */ controls?: (piece: DropPiece) => React.ReactNode; /** Larger cards. */ big?: boolean; /** Where a tap on the centre card goes. */ href?: (piece: DropPiece) => string; /** The centre card's add button: the bag, or (gift page) the gift bag. */ addTo?: "bag" | "gift" }) {
   const router = useRouter();
   const mySize = useMySize();
   /** The piece being bought in the pop-up (the rail's Buy now, without leaving the page). */
@@ -259,7 +258,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
           drag.current = null;
           if (g?.locked) go(pos.current);
         }}
-        className={`relative mx-[calc(50%-50vw)] ${tags ? "h-[calc(var(--w)*1.32+84px)]" : "h-[calc(var(--w)*1.32)]"} cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] active:cursor-grabbing`}
+        className={`relative mx-[calc(50%-50vw)] h-[calc(var(--w)*1.32)] cursor-grab touch-pan-y select-none overflow-hidden bg-paper outline-none ${big ? "[--w:clamp(204px,24vw,300px)]" : "[--w:clamp(176px,20vw,248px)]"} [mask-image:linear-gradient(90deg,transparent,#000_9%,#000_91%,transparent)] active:cursor-grabbing`}
       >
         {/* The band of light the cards sit on */}
         <div aria-hidden className="absolute inset-x-0 top-1/2 h-[46%] -translate-y-1/2 bg-[linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,0.045)_50%,rgba(0,0,0,0))]" />
@@ -269,8 +268,7 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
           const ghost = i < 0 || i >= n;
           const first = look(i - start, false, ghost);
           const style = { transform: first.transform, opacity: Number(first.opacity), filter: first.filter, zIndex: Number(first.zIndex), visibility: Math.abs(i - start) > 9 ? ("hidden" as const) : undefined };
-          // With tags, the cards sit a little higher so the tag can hang below them.
-          const box = `absolute left-1/2 ${tags ? "top-[calc(50%-36px)]" : "top-1/2"} block aspect-[10/11] w-[var(--w)] rounded-[14px] will-change-transform`;
+          const box = `absolute left-1/2 top-1/2 block aspect-[10/11] w-[var(--w)] rounded-[14px] will-change-transform`;
           if (ghost)
             return (
               <span
@@ -312,7 +310,6 @@ export function DropStrip({ pieces, label, soon = false, controls, tags = false,
               </span>
               </span>
               {/* The price, on a tag tied to the foot of the card and hanging under it, as on the home rails. */}
-              {tags && <PriceTag price={formatPrice(p.price)} sku={p.colours[0]?.sizes[0]?.sku ?? p.id} className="absolute right-3 top-full z-[2] -mt-3 md:right-4" />}
             </button>
             {/* Add to bag: on the card in front, bottom left; it moves with the card */}
             {!soon && i === active && <AddToBag piece={addableFromRail(p)} to={addTo} className="absolute bottom-[2px] left-[2px] z-10" />}

@@ -9,9 +9,7 @@ import { VaultHero } from "@/components/vault/vault-hero";
 import { VaultInventory } from "@/components/vault/vault-inventory";
 import { VaultSpotlight } from "@/components/vault/vault-spotlight";
 import { VaultTriptych } from "@/components/vault/vault-triptych";
-import { formatPrice } from "@/lib/format";
 import { vaultSetting } from "@/lib/settings/vault";
-import { site, walletList } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 
 export const revalidate = 60;
@@ -43,13 +41,6 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   const tiles = list.map((p, i) => toTile(p, i));
   // Each brand wears its own colours and tells its own story; "All" is the Vault's cold blue.
   const world = brandWorld(one?.name, vs.brands);
-  const facts = [
-    "Original brands",
-    "One of each",
-    site.store.address ? "Try it on in our store" : "Try-on in store · opening soon",
-    `Pay with ${walletList()}`,
-    `Free delivery over ${formatPrice(site.delivery.freeAbove)}`,
-  ];
 
   return (
     // Premium, like the big fashion houses (owner, 25 Oct 2026: "make it premium like LV, Gucci"):
@@ -66,7 +57,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         figure={{ src: "/vault/hero-figure.webp", width: 410, height: 925 }}
       />
 
-      {/* The black band: the brand's story on its page, the brands as cards, and the plain facts */}
+      {/* The black band: the brand's story on its page, and the brands as cards (owner, 25 Oct 2026: no list of facts) */}
       <div className={`${V.slate} text-white`}>
         <div className="container-ep py-8 md:py-10">
           {world && (
@@ -79,11 +70,6 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
               <VaultBrands worlds={vs.brands} cold={{ ...MONO, slate: "#ecebe7" }} total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />
             </ScrollToOpen>
           )}
-          <ul aria-label="Good to know" className={`no-scrollbar -mx-4 mt-6 flex gap-x-6 overflow-x-auto whitespace-nowrap border-t border-white/15 px-4 pt-4 ${V.mono} ${V.iceDim} md:mx-0 md:flex-wrap md:px-0`}>
-            {facts.map((f) => (
-              <li key={f}>[ {f} ]</li>
-            ))}
-          </ul>
         </div>
       </div>
 

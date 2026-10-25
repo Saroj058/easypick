@@ -64,7 +64,7 @@ export function ShopShelf({
         </div>
       </div>
       {pieces.length > 0 ? (
-        <DropStrip key={pieces.map((p) => p.id).join(",")} pieces={pieces} label={label} tags soon={soon} />
+        <DropStrip key={pieces.map((p) => p.id).join(",")} pieces={pieces} label={label} soon={soon} />
       ) : (
         <p className="py-16 text-center text-steel-dark">
           Nothing in {label.toLowerCase()} matches &ldquo;{q}&rdquo;.{" "}
