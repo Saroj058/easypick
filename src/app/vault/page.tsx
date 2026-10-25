@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
-import { brandWorld, themeVars, two, V } from "@/components/vault/look";
+import { brandWorld, MONO, themeVars, two, V } from "@/components/vault/look";
 import { ScrollToOpen } from "@/components/vault/scroll-to-open";
 import { VaultBrands } from "@/components/vault/vault-brands";
-import { VaultWatermark } from "@/components/vault/vault-watermark";
+import { VaultHero } from "@/components/vault/vault-hero";
 import { VaultInventory } from "@/components/vault/vault-inventory";
 import { VaultSpotlight } from "@/components/vault/vault-spotlight";
 import { VaultTriptych } from "@/components/vault/vault-triptych";
@@ -53,67 +52,42 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   ];
 
   return (
-    <div style={themeVars(world?.theme ?? vs.cold)} className={`vault relative isolate min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] transition-colors duration-500 md:pb-0`}>
-      {/* The brand's name, faint and huge, behind everything */}
-      <VaultWatermark text={one?.name ?? "The Vault"} rows={14} />
-      {/* The opening, on frost */}
-      <div className="container-ep relative pt-8 md:pt-12">
-        <div className={`flex items-center justify-between gap-4 ${V.mono} ${V.ink}`}>
-          {one ? (
-            <Link href={vaultHref()} className="inline-flex min-h-11 items-center gap-2 hover:underline">
-              <span aria-hidden>←</span> [ The Vault ]
-            </Link>
-          ) : (
-            <span>[ Easypick · The Vault ]</span>
+    // Premium, like the big fashion houses (owner, 25 Oct 2026: "make it premium like LV, Gucci"):
+    // every headline in the thin cut with wide spacing, lots of air, no busy watermark text.
+    <div style={themeVars(MONO)} className={`vault relative isolate min-h-[80svh] overflow-x-clip ${V.frost} pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0 [&_.display]:font-extralight [&_.display]:tracking-[0.04em]`}>
+      {/* The opening, in black and white: the name huge, one piece in front of it (owner, 25 Oct 2026) */}
+      <VaultHero
+        title={one ? one.name : "The Vault"}
+        note={world ? `${world.origin}. ${world.line[0]} ${world.line[1]}` : vs.copy.intro}
+        pieces={featured}
+        count={`${two(brands.length)} brands · ${two(pieces.length)} pieces${sold ? ` · ${two(sold)} sold` : ""}`}
+        side={["Shop the Vault", "Hear it first"]}
+      />
+
+      {/* The black band: the brand's story on its page, the brands as cards, and the plain facts */}
+      <div className={`${V.slate} text-white`}>
+        <div className="container-ep py-8 md:py-10">
+          {world && (
+            <p className={`mb-8 max-w-[62ch] text-[15px] leading-relaxed ${V.iceDim}`}>
+              <span className="text-white">{one?.name}.</span> {world.story}
+            </p>
           )}
-          <span className="hidden whitespace-nowrap sm:inline">
-            [ {two(brands.length)} brands · {two(pieces.length)} pieces{sold ? ` · ${two(sold)} sold` : ""} ]
-          </span>
-        </div>
-        {/* The brands first: one card each, in its own colours */}
-        {brands.length > 0 && (
-          <div className="mt-6">
+          {brands.length > 0 && (
             <ScrollToOpen>
-              <VaultBrands worlds={vs.brands} cold={vs.cold} total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />
+              <VaultBrands worlds={vs.brands} cold={{ ...MONO, slate: "#ecebe7" }} total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />
             </ScrollToOpen>
-          </div>
-        )}
-        <div className="mt-10 grid gap-6 md:mt-14 md:grid-cols-[1fr_minmax(0,34ch)] md:items-end">
-          <div>
-            {world && <p className={`${V.mono} ${V.ink}`}>[ {world.origin} ]</p>}
-            <h1 className={`display mt-2 text-[clamp(3rem,1.6rem+6vw,8rem)] leading-[0.84] ${V.deep}`}>{one ? one.name : "The Vault"}</h1>
-            {world && (
-              <p className={`display mt-3 text-[clamp(1.6rem,1.1rem+1.8vw,2.6rem)] leading-[0.95] ${V.deep}`}>
-                {world.line[0]} <span className="opacity-70">{world.line[1]}</span>
-              </p>
-            )}
-          </div>
-          <div className={`text-left md:text-right`}>
-            {world ? (
-              <p className={`text-[15px] leading-relaxed ${V.ink}`}>{world.story}</p>
-            ) : (
-              <p className={`${V.mono} leading-[1.7] ${V.ink}`}>
-                {one ? `${one.pieces.length} ${one.pieces.length === 1 ? "piece" : "pieces"} from ${one.name}. One of each.` : vs.copy.intro}
-              </p>
-            )}
-            {one && (
-              <p className={`mt-3 ${V.mono} ${V.ink}`}>
-                [ {two(one.pieces.length)} {one.pieces.length === 1 ? "piece" : "pieces"} here · one of each ]
-              </p>
-            )}
-          </div>
+          )}
+          <ul aria-label="Good to know" className={`no-scrollbar -mx-4 mt-6 flex gap-x-6 overflow-x-auto whitespace-nowrap border-t border-white/15 px-4 pt-4 ${V.mono} ${V.iceDim} md:mx-0 md:flex-wrap md:px-0`}>
+            {facts.map((f) => (
+              <li key={f}>[ {f} ]</li>
+            ))}
+          </ul>
         </div>
-        <ul aria-label="Good to know" className={`no-scrollbar -mx-4 mt-8 flex gap-x-6 overflow-x-auto whitespace-nowrap border-y border-[var(--v-ink)]/15 px-4 py-3 ${V.mono} ${V.ink} md:mx-0 md:flex-wrap md:px-0`}>
-          {facts.map((f) => (
-            <li key={f}>[ {f} ]</li>
-          ))}
-        </ul>
       </div>
 
-      {/* The panel, slate */}
+      {/* The panel, black */}
       <div className="relative mx-auto mt-10 max-w-[1320px] md:mt-14 md:px-6">
         <div className={`relative isolate overflow-hidden ${V.slate} px-4 pb-14 pt-8 text-white md:px-12 md:pb-20 md:pt-12`}>
-          <VaultWatermark text={one?.name ?? "The Vault"} tone="light" rows={16} />
           <div className={`flex justify-between gap-4 ${V.mono} ${V.iceDim}`}>
             <span>[ Active: {one ? one.name : "all brands"} ]</span>
             <span className="hidden text-right sm:inline">[ New pieces · a few times a month ]</span>
@@ -148,10 +122,10 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
           <h2 id="vault-list" className={`display mt-2 text-[clamp(2.4rem,1.8rem+2.4vw,4.4rem)] leading-[0.88] ${V.deep}`}>
             {vs.copy.listTitle}
           </h2>
-          {vs.copy.listNote && <p className={`mt-3 max-w-[40ch] text-[15px] ${V.ink}`}>{vs.copy.listNote}</p>}
         </div>
         <div>
-          <AlertSignup source="vault" note="One message when a new piece lands. Stop anytime." done="You're in. We'll message {to} when a new piece lands." />
+          {/* The owner's note sits once, under the field (it used to show twice). */}
+          <AlertSignup source="vault" note={vs.copy.listNote || "One message when a new piece lands. Stop anytime."} done="You're in. We'll message {to} when a new piece lands." />
         </div>
         <p className={`text-[12.5px] leading-relaxed md:col-span-2 ${V.ink}`}>Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
       </section>

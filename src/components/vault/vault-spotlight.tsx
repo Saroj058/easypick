@@ -21,41 +21,22 @@ export function VaultSpotlight({ piece }: { piece: TileData }) {
   const y = useTransform(smooth, [0, 1], still ? [0, 0] : [70, -70]);
   const rotate = useTransform(smooth, [0, 1], still ? [0, 0] : [-5, 4]);
   const wordsX = useTransform(smooth, [0, 1], still ? [0, 0] : [-14, 14]);
-  const wordsX2 = useTransform(smooth, [0, 1], still ? [0, 0] : [14, -14]);
   const size = piece.sizes.filter((s) => s.left).map((s) => (s.size === "ONE" ? "One size" : s.size));
 
+  // Words on one side, the piece on the other, so nothing sits on top of the headline (it used to
+  // hide "it's gone" behind the piece); one line each, no repeated slogans.
   return (
     <section ref={ref} aria-labelledby="vault-spot" className="relative py-16 md:py-24">
-      <div className="relative mx-auto max-w-[1100px]">
-        <motion.h2 id="vault-spot" style={{ x: wordsX }} className="display relative z-0 max-w-[12ch] text-[clamp(2.6rem,1.4rem+5vw,6.4rem)] leading-[0.86] text-white">
-          When it&apos;s gone,
-          <br />
-          <span className="text-white/60">it&apos;s gone.</span>
-        </motion.h2>
-        <p className={`absolute right-0 top-2 hidden max-w-[22ch] text-right ${V.mono} leading-[1.6] ${V.iceDim} md:block`}>
-          One of each.
-          <br />
-          Never restocked.
-          <br />
-          Checked by hand.
-        </p>
+      <div className="relative mx-auto grid max-w-[1100px] items-center gap-10 md:grid-cols-[1fr_minmax(0,440px)] md:gap-14">
+        <div className="relative z-10">
+          <motion.h2 id="vault-spot" style={{ x: wordsX }} className="display max-w-[12ch] text-[clamp(2.6rem,1.4rem+4.4vw,5.6rem)] leading-[0.86] text-white">
+            When it&apos;s gone,
+            <br />
+            <span className="text-white/60">it&apos;s gone.</span>
+          </motion.h2>
 
-        {/* The piece, floating over the words */}
-        <motion.div style={{ y, rotate }} className="relative z-10 mx-auto -mt-[10%] w-[min(78%,460px)] md:-mt-[14%]">
-          <motion.div animate={still ? undefined : { y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
-            <Link href={`/product/${piece.slug}`} tabIndex={-1} aria-hidden className="block">
-              <span className="relative block overflow-hidden rounded-[2px] bg-[var(--v-tile)] shadow-[0_60px_90px_-50px_rgba(10,25,40,0.75)]">
-                <span aria-hidden className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(60%_45%_at_50%_0%,rgba(255,255,255,0.5),transparent_70%)]" />
-                <ProductImage image={piece.image} category={piece.category} colourHex={piece.hex} decorative ground="bg-transparent" className="[&_img]:mix-blend-multiply" sizes="460px" />
-              </span>
-            </Link>
-          </motion.div>
-          <span aria-hidden className="mx-auto mt-6 block h-4 w-[60%] rounded-[50%] bg-black/40 blur-[14px]" />
-        </motion.div>
-
-        <div className="relative z-20 mt-8 grid gap-8 md:-mt-24 md:grid-cols-[1fr_auto] md:items-end">
           {/* The plain facts, as the reference's bracketed notes */}
-          <dl className={`grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 ${V.mono} leading-[1.6] ${V.iceDim}`}>
+          <dl className={`mt-8 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 font-mono text-[12px] uppercase leading-[1.6] tracking-[0.14em] ${V.iceDim}`}>
             <dt>[Brand]</dt>
             <dd className="text-white">{piece.brand}</dd>
             <dt>[Piece]</dt>
@@ -71,8 +52,9 @@ export function VaultSpotlight({ piece }: { piece: TileData }) {
               </>
             )}
           </dl>
+
           {/* The octagon: the way in, with the price */}
-          <Link href={`/product/${piece.slug}`} className="group flex items-center gap-4 justify-self-start md:justify-self-end" aria-label={`View ${piece.brand} ${piece.model}, ${piece.sold ? "sold" : piece.priceText}`}>
+          <Link href={`/product/${piece.slug}`} className="group mt-8 inline-flex items-center gap-4" aria-label={`View ${piece.brand} ${piece.model}, ${piece.sold ? "sold" : piece.priceText}`}>
             <span className="relative grid h-[84px] w-[84px] place-items-center text-white">
               <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:rotate-[22.5deg]" aria-hidden>
                 <polygon points="30,3 70,3 97,30 97,70 70,97 30,97 3,70 3,30" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -88,11 +70,18 @@ export function VaultSpotlight({ piece }: { piece: TileData }) {
           </Link>
         </div>
 
-        <motion.p aria-hidden style={{ x: wordsX2 }} className="display mt-10 text-right text-[clamp(2.2rem,1.2rem+4vw,5.2rem)] leading-[0.86] text-white/90">
-          Not for the crowd.
-          <br />
-          <span className="text-white/60">For the few.</span>
-        </motion.p>
+        {/* The piece, floating beside the words */}
+        <motion.div style={{ y, rotate }} className="relative mx-auto w-[min(82%,440px)] md:w-full">
+          <motion.div animate={still ? undefined : { y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+            <Link href={`/product/${piece.slug}`} tabIndex={-1} aria-hidden className="block">
+              <span className="relative block overflow-hidden rounded-[2px] bg-[var(--v-tile)] shadow-[0_60px_90px_-50px_rgba(10,25,40,0.75)]">
+                <span aria-hidden className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(60%_45%_at_50%_0%,rgba(255,255,255,0.5),transparent_70%)]" />
+                <ProductImage image={piece.image} category={piece.category} colourHex={piece.hex} decorative ground="bg-transparent" className="[&_img]:mix-blend-multiply" sizes="440px" />
+              </span>
+            </Link>
+          </motion.div>
+          <span aria-hidden className="mx-auto mt-6 block h-4 w-[60%] rounded-[50%] bg-black/40 blur-[14px]" />
+        </motion.div>
       </div>
     </section>
   );

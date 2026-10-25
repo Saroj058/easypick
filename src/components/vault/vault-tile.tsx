@@ -51,10 +51,11 @@ export function VaultTile({ t, sizes, priority, onSlate = true }: { t: TileData;
           <span className={`absolute left-3 top-3 rounded-full bg-white/70 px-2 py-0.5 ${V.mono} ${V.ink} backdrop-blur`}>{t.sold ? "Sold" : `No. ${t.edition}`}</span>
         )}
       </span>
+      {/* Easier to read than the old all-mono lines: the model in the display face, the price clear. */}
       <span className={`mt-3 block ${V.mono} leading-[1.6] ${quiet}`}>
-        <span className={`block ${text}`}>{t.brand}</span>
-        <span className={`block truncate ${text} bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-left-bottom bg-no-repeat transition-[background-size] duration-300 group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]`}>{t.model}</span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-x-2.5">
+        <span className="block">{t.brand}</span>
+        <span className={`display mt-0.5 block truncate text-[20px] normal-case leading-[1.05] tracking-normal ${text} bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-left-bottom bg-no-repeat transition-[background-size] duration-300 group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]`}>{t.model}</span>
+        <span className="mt-1.5 flex flex-wrap items-center gap-x-2.5">
           {t.colours.slice(0, 3).map((c) => (
             <span key={c.name} className="flex items-center gap-1">
               <span aria-hidden className="h-2 w-2 rounded-full ring-1 ring-white/50" style={{ background: c.hex }} />
@@ -62,7 +63,7 @@ export function VaultTile({ t, sizes, priority, onSlate = true }: { t: TileData;
             </span>
           ))}
         </span>
-        <span className={`mt-0.5 block tabular-nums ${text}`}>{t.sold ? "Sold · archive" : t.priceText}</span>
+        <span className={`mt-1 block font-mono text-[13px] tabular-nums tracking-[0.06em] ${text}`}>{t.sold ? "Sold · archive" : t.priceText}</span>
         {t.last && <span className="block">{t.last}</span>}
       </span>
     </Link>

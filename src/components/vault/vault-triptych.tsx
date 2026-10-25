@@ -63,6 +63,20 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
         {centre.brand} {centre.model}, {centre.sold ? "sold" : centre.priceText}. Piece {at + 1} of {n}.
       </p>
 
+      {/* The words, set big above the pieces, either side (they used to run under the middle piece) */}
+      <div aria-hidden className="mx-auto mb-8 hidden max-w-[920px] items-end justify-between gap-8 md:flex">
+        <p className="display text-[clamp(1.6rem,1rem+2vw,2.9rem)] leading-[0.92] text-white">
+          {left[0]}
+          <br />
+          <span className="text-white/60">{left[1]}</span>
+        </p>
+        <p className="display text-right text-[clamp(1.6rem,1rem+2vw,2.9rem)] leading-[0.92] text-white">
+          {right[0]}
+          <br />
+          <span className="text-white/60">{right[1]}</span>
+        </p>
+      </div>
+
       <LayoutGroup>
         <div className="relative mx-auto grid max-w-[920px] grid-cols-[1fr_1.7fr_1fr] items-center gap-0">
           {[prev, centre, next].map((p, slot) => {
@@ -106,17 +120,6 @@ function Triptych({ pieces, left, right }: { pieces: TileData[]; left: [string, 
             );
           })}
 
-          {/* The words, set big either side of the middle piece */}
-          <p aria-hidden className="display pointer-events-none absolute bottom-[6%] left-0 z-20 hidden text-right text-[clamp(1.6rem,1rem+2vw,2.9rem)] leading-[0.92] text-white md:block md:w-[33%] md:pr-6">
-            {left[0]}
-            <br />
-            {left[1]}
-          </p>
-          <p aria-hidden className="display pointer-events-none absolute bottom-[6%] right-0 z-20 hidden text-right text-[clamp(1.6rem,1rem+2vw,2.9rem)] leading-[0.92] text-white md:block md:w-[33%]">
-            {right[0]}
-            <br />
-            {right[1]}
-          </p>
         </div>
       </LayoutGroup>
 

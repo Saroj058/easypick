@@ -131,6 +131,10 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           image={product.images[0] ?? { src: null, alt: product.name, kind: "front" }}
           category={product.category}
           hex={product.colours[0].hex}
+          details={product.details}
+          sizes={Array.from(new Set(product.variants.map((v) => v.size)))}
+          colours={product.colours.map((c) => ({ name: c.name, hex: c.hex }))}
+          gallery={product.images.slice(1)}
           siblings={siblings.map((p) => ({ slug: p.slug, name: p.name, image: p.images[0] ?? { src: null, alt: p.name, kind: "front" }, category: p.category, hex: p.colours[0].hex }))}
         >
         <BuyPanel

@@ -32,6 +32,10 @@ export interface Theme {
 /** The Vault's own cold blue: "All" and any brand without a theme of its own. */
 export const COLD: Theme = { frost: "#aec4d8", slate: "#4b6680", tile: "#c3d4e4", deep: "#3d566e", ink: "#1f3347", dim: "#d5e2ee" };
 
+/** Black and white (owner, 25 Oct 2026: "play in that black and white theme with motion graphic"):
+ * warm light grey page, black panel, black type. What the Vault page wears now, brand pages too. */
+export const MONO: Theme = { frost: "#ecebe7", slate: "#121212", tile: "#dedcd7", deep: "#111111", ink: "#111111", dim: "#bdbdbd" };
+
 /** A brand's colours and a few true lines about it. Names describe the pieces; no logos, no slogans. */
 export interface BrandWorld {
   theme: Theme;
