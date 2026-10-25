@@ -63,22 +63,28 @@ export function playNudge(set: (offset: number) => void, stop: () => boolean, by
 export function SlideHint({ at, n, used, onPrev, onNext, canPrev = true, canNext = true, label }: { at: number; n: number; /** The customer has moved it: just the arrows and count. */ used: boolean; onPrev: () => void; onNext: () => void; canPrev?: boolean; canNext?: boolean; label: string }) {
   const touch = useSyncExternalStore(subscribe, coarse, () => false);
   if (n < 2) return null;
-  const arrow = "grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full text-ink transition-[background-color,opacity,scale] hover:bg-ink/5 active:scale-95 disabled:cursor-default disabled:opacity-25";
-  // One small pill: arrows either side of where you are. Until they move it, a quiet word beside it.
+  const arrow = "grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-full text-ink transition-[background-color,opacity] hover:bg-ink/[0.06] disabled:cursor-default disabled:opacity-20 disabled:hover:bg-transparent";
+  // A thin line with a dark bar that moves as the row does, bare arrows at its ends, and where you
+  // are in small numbers. The bar breathes until they first move it.
+  const w = Math.max(100 / n, 8);
+  const left = n > 1 ? (at / (n - 1)) * (100 - w) : 0;
+  const pad = (x: number) => String(x).padStart(2, "0");
   return (
-    <div className="mt-3 flex items-center justify-center gap-3">
-      <div className="flex items-center rounded-full border border-ink/15 bg-paper p-0.5">
-        <button type="button" onClick={onPrev} disabled={!canPrev} aria-label={`Previous in ${label}`} className={arrow}>
-          <ChevronLeft className="h-4 w-4" aria-hidden />
-        </button>
-        <span className="min-w-[52px] text-center font-mono text-[12px] tabular-nums text-ink" aria-live="polite">
-          {at + 1} / {n}
+    <div className="mt-4 flex items-center justify-center gap-2">
+      <button type="button" onClick={onPrev} disabled={!canPrev} aria-label={`Previous in ${label}`} className={arrow}>
+        <ChevronLeft className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
+      </button>
+      <div className="flex items-center gap-3">
+        <span aria-hidden className="relative h-[2px] w-28 overflow-hidden rounded-full bg-ink/10 sm:w-36">
+          <span className={`absolute inset-y-0 rounded-full bg-ink transition-[left] duration-500 ease-out ${used ? "" : "animate-pulse"}`} style={{ width: `${w}%`, left: `${left}%` }} />
         </span>
-        <button type="button" onClick={onNext} disabled={!canNext} aria-label={`Next in ${label}`} className={arrow}>
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </button>
+        <span className="font-mono text-[11px] tabular-nums tracking-[0.06em] text-steel-dark" aria-live="polite" title={touch ? "Swipe for more" : "Drag for more"}>
+          <span className="text-ink">{pad(at + 1)}</span> / {pad(n)}
+        </span>
       </div>
-      {!used && <span className="slide-hint-r text-[12px] text-steel-dark">{touch ? "Swipe for more" : "Drag for more"}</span>}
+      <button type="button" onClick={onNext} disabled={!canNext} aria-label={`Next in ${label}`} className={arrow}>
+        <ChevronRight className="h-[18px] w-[18px]" strokeWidth={1.5} aria-hidden />
+      </button>
     </div>
   );
 }
