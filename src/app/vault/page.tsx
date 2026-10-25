@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AlertSignup } from "@/components/alert-signup";
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
-import { brandWorld, MONO, themeVars, two, V } from "@/components/vault/look";
+import { brandKey, brandWorld, MONO, themeVars, two, V } from "@/components/vault/look";
 import { ScrollToOpen } from "@/components/vault/scroll-to-open";
 import { VaultBrands } from "@/components/vault/vault-brands";
 import { VaultHero } from "@/components/vault/vault-hero";
@@ -13,6 +13,14 @@ import { vaultSetting } from "@/lib/settings/vault";
 import { getProducts } from "@/lib/store";
 
 export const revalidate = 60;
+
+// The person standing in front of the title: the Vault's own, and one per brand as they're made.
+// Made with Higgsfield (owner, 25 Oct 2026): our own pictures, no brand marks on them.
+const FIGURES: Record<string, { src: string; width: number; height: number }> = {
+  all: { src: "/vault/hero-figure.webp", width: 410, height: 925 },
+  nike: { src: "/vault/hero-nike.webp", width: 738, height: 1100 },
+  adidas: { src: "/vault/hero-adidas.webp", width: 326, height: 1100 },
+};
 
 export const metadata: Metadata = {
   title: "The Vault",
@@ -53,8 +61,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         pieces={featured}
         count={`${two(brands.length)} brands · ${two(pieces.length)} pieces${sold ? ` · ${two(sold)} sold` : ""}`}
         side={["Shop the Vault", "Hear it first"]}
-        // Made for the Vault with Higgsfield (owner, 25 Oct 2026): our own picture, no brand on it.
-        figure={{ src: "/vault/hero-figure.webp", width: 410, height: 925 }}
+        figure={(one && FIGURES[brandKey(one.name)]) || FIGURES.all}
       />
 
       {/* The black band: the brand's story on its page, and the brands as cards (owner, 25 Oct 2026: no list of facts) */}

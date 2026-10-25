@@ -46,7 +46,7 @@ export function VaultHero({ title, note, pieces, count, side, figure }: { title:
 
   return (
     <section ref={ref} aria-labelledby="vault-title" className="relative isolate overflow-hidden">
-      <div className="container-ep relative flex min-h-[calc(100svh-88px)] flex-col pb-8 pt-8 md:pb-10 md:pt-12">
+      <div className="container-ep relative flex min-h-[calc(100svh-88px)] flex-col pb-8 pt-8 md:min-h-[100svh] md:pb-10 md:pt-[112px]">
         {/* Top: the note on the left, the count on the right */}
         <div className="flex items-start justify-between gap-6">
           <motion.p initial={still ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.6 }} className={`max-w-[30ch] ${V.mono} leading-[1.9] ${V.ink}`}>
@@ -71,9 +71,10 @@ export function VaultHero({ title, note, pieces, count, side, figure }: { title:
           </motion.h1>
 
           {figure ? (
-            <motion.div style={{ y: pieceY }} className="absolute inset-x-0 bottom-0 top-0 z-10 mx-auto flex w-[min(58vw,340px)] items-center md:w-[min(24vw,380px)]">
-              <motion.div className="w-full" initial={still ? false : { opacity: 0, y: 70 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.3, ease: EASE, delay: 0.45 }}>
-                <Image src={figure.src} alt="" width={figure.width} height={figure.height} priority sizes="(min-width: 768px) 380px, 58vw" className="h-auto max-h-[78svh] w-full object-contain [filter:drop-shadow(0_28px_24px_rgba(0,0,0,0.18))]" />
+            <motion.div style={{ y: pieceY }} className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+              {/* Sized by height, so every figure stands as tall, whatever its width */}
+              <motion.div initial={still ? false : { opacity: 0, y: 70 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.3, ease: EASE, delay: 0.45 }}>
+                <Image src={figure.src} alt="" width={figure.width} height={figure.height} priority sizes="(min-width: 768px) 440px, 70vw" className="h-[min(56svh,520px)] w-auto max-w-[80vw] object-contain md:h-[min(72svh,660px)] [filter:drop-shadow(0_28px_24px_rgba(0,0,0,0.18))]" />
               </motion.div>
             </motion.div>
           ) : (
