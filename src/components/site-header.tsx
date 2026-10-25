@@ -93,8 +93,12 @@ export function SiteHeader() {
   const visit = pathname === "/visit";
   // On Drops, Fits and Gift (computers) the page's picture runs up behind a see-through header (owner, 25 Oct 2026).
   const clear = pathname === "/drops" || pathname === "/fits" || pathname === "/gift";
+  // The Vault is a near-black page whose opening runs up behind the header on every screen (owner, 25 Oct 2026):
+  // no white bar, and at the top a white logo and ivory icons; once scrolled, the usual white pills.
+  const dark = pathname === "/vault";
   const expanded = open && !visit;
   const flat = atTop && !visit;
+  const lit = dark && flat;
 
   // A new page starts at the top, so everything shows (except on the visit page).
   useEffect(() => setExpanded(pathname !== "/visit"), [pathname, setExpanded]);
@@ -148,7 +152,7 @@ export function SiteHeader() {
 
   const account = me ? (
     <Link href="/account" className="flex h-10 w-10 items-center justify-center" aria-label={`Account${me.name ? `, ${me.name}` : ""}`}>
-      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ink font-mono text-[12px] font-semibold uppercase text-paper">
+      <span className={`flex h-7 w-7 items-center justify-center rounded-full font-mono text-[12px] font-semibold uppercase ${lit ? "bg-[#ede8df] text-[#0e0d0c]" : "bg-ink text-paper"}`}>
         {(me.name ?? "E").trim().charAt(0)}
       </span>
     </Link>
@@ -165,7 +169,7 @@ export function SiteHeader() {
         Skip to content
       </a>
       {/* Keeps page content clear of the floating nav. The home hero runs full-bleed under it instead. */}
-      {pathname !== "/" && !visit && <div className={`h-[72px] md:h-[88px] ${clear ? "md:hidden" : ""}`} aria-hidden />}
+      {pathname !== "/" && !visit && !dark && <div className={`h-[72px] md:h-[88px] ${clear ? "md:hidden" : ""}`} aria-hidden />}
 
       {/* Three floating pills: logo · links · actions. Clicks pass through the gaps. */}
       <MotionConfig reducedMotion="user">
@@ -175,7 +179,7 @@ export function SiteHeader() {
           initial={false}
           animate={flat ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className={`pointer-events-none fixed inset-x-0 top-0 z-40 h-[72px] border-b border-mist bg-paper pt-[env(safe-area-inset-top)] md:h-[88px] ${clear ? "md:hidden" : ""}`}
+          className={`pointer-events-none fixed inset-x-0 top-0 z-40 h-[72px] border-b border-mist bg-paper pt-[env(safe-area-inset-top)] md:h-[88px] ${clear ? "md:hidden" : ""} ${dark ? "hidden" : ""}`}
         />
         <div className="pointer-events-none fixed inset-x-0 top-3 z-50 md:top-5">
           <div className="container-ep relative flex items-center justify-between gap-3">
@@ -194,7 +198,7 @@ export function SiteHeader() {
                   </button>
                 )}
                 <Link href="/" aria-label="Easypick home" className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-5`}>
-                  <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
+                  <Image src={lit ? "/brand/logo-white.png" : "/brand/logo.png"} alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
                 </Link>
               </motion.div>
               {/* The visit page: just the logo (it leads home), nothing behind it. */}
@@ -213,7 +217,15 @@ export function SiteHeader() {
                     {primary.map((l) => {
                       const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
                       return (
-                        <DockItem key={l.href} href={l.href} label={l.label} active={active} className={`aspect-square rounded-full ${active ? "bg-ink text-paper" : "bg-mist/60 text-ink hover:bg-mist"}`}>
+                        <DockItem key={l.href} href={l.href} label={l.label} active={active} className={`aspect-square rounded-full transition-colors duration-300 ${
+                            lit
+                              ? active
+                                ? "bg-[#ede8df] text-[#0e0d0c]"
+                                : "bg-white/10 text-[#ede8df] hover:bg-white/20"
+                              : active
+                                ? "bg-ink text-paper"
+                                : "bg-mist/60 text-ink hover:bg-mist"
+                          }`}>
                           <DockLabel className="border-mist bg-ink text-[11px] font-semibold uppercase tracking-[0.08em] text-paper">{l.label}</DockLabel>
                           <DockIcon>
                             <l.icon className="h-full w-full" strokeWidth={1.75} aria-hidden />
@@ -235,7 +247,7 @@ export function SiteHeader() {
               </Link>
             )}
             <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)} className={visit ? "hidden" : undefined}>
-              <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-1.5`}>
+              <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} ${lit ? "text-[#ede8df]" : ""} flex h-12 items-center rounded-full border px-1.5`}>
                 <SearchButton />
                 {account}
                 <Link href="/bag" className="relative flex h-10 w-10 items-center justify-center" aria-label={`Bag, ${ready ? count : 0} items`}>

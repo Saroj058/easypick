@@ -22,6 +22,7 @@ import { kindView } from "@/lib/settings/categories-rules";
 import { jsonLd as toJsonLd } from "@/lib/json-ld";
 import { getDrop, getProduct, getProducts } from "@/lib/store";
 import type { Size } from "@/lib/types";
+import { L, luxVars } from "@/components/vault/lux/tokens";
 
 export const revalidate = 300;
 
@@ -117,9 +118,9 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           label={
             <>
               <span>{product.brand ?? "The Vault"}</span>
-              {product.original && <span className="border border-ink px-1.5 text-ink">Original</span>}
+              {product.original && <span className="border border-[#ede8df]/40 px-1.5 text-[#ede8df]">Original</span>}
               {product.edition && (
-                <span className="text-ink">
+                <span className="text-[#ede8df]">
                   {String(product.edition.no).padStart(2, "0")} / {String(product.edition.of).padStart(2, "0")}
                 </span>
               )}
@@ -257,6 +258,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
         </section>
       )}
 
+      {/* A Vault piece stays on the Vault's dark ground all the way down (owner, 25 Oct 2026). */}
+      <div style={product.vault ? luxVars() : undefined} className={product.vault ? `${L.ground} ${L.ivory}` : undefined}>
       <div className="container-ep pb-24">
         {product.story && (
           <section aria-label="About this piece" className="mx-auto max-w-[820px] pt-12 md:pt-16">
@@ -279,6 +282,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
         {/* Not on Vault pieces (owner, 20 Oct 2026) */}
         {!product.vault && <RecentlyViewed exclude={product.slug} title="You looked at" />}
         <TrackView slug={product.slug} />
+      </div>
       </div>
     </>
   );

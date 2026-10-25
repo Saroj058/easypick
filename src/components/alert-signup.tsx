@@ -10,7 +10,7 @@ import { useMe } from "./session";
  * means email); signed in, their number is already there. Kept to one line on purpose (owner,
  * 17 Oct 2026: "no stress, easy and premium").
  */
-export function AlertSignup({ dark = false, source = "site", note = "One message on drop day. Stop anytime.", done }: { dark?: boolean; source?: string; note?: string; /** What it says once they're in; "{to}" is their number or email, masked. */ done?: string }) {
+export function AlertSignup({ dark = false, lux = false, source = "site", note = "One message on drop day. Stop anytime.", done }: { dark?: boolean; /** The Vault's dark luxury look: square, hairline, ivory, a brass button (owner, 25 Oct 2026). */ lux?: boolean; source?: string; note?: string; /** What it says once they're in; "{to}" is their number or email, masked. */ done?: string }) {
   const [state, action, pending] = useActionState<AlertState, FormData>(signUpForAlerts, { status: "idle" });
   // Signed in: their number or email is already there.
   const me = useMe();
@@ -22,14 +22,14 @@ export function AlertSignup({ dark = false, source = "site", note = "One message
 
   if (state.status === "done") {
     return (
-      <p ref={doneRef} tabIndex={-1} role="status" className="text-lg font-semibold outline-none">
+      <p ref={doneRef} tabIndex={-1} role="status" className={`text-lg font-semibold outline-none ${lux ? "text-[#ede8df]" : ""}`}>
         {done ? done.replace("{to}", state.to) : <>You&apos;re in. One {state.channel === "email" ? "email" : "WhatsApp message"} to {state.to} on drop day, before it opens.</>}
       </p>
     );
   }
 
   const id = `alert-${source}`;
-  const muted = dark ? "text-paper/60" : "text-steel-dark";
+  const muted = lux ? "text-[#ede8df]/65" : dark ? "text-paper/60" : "text-steel-dark";
 
   return (
     <form
@@ -53,7 +53,7 @@ export function AlertSignup({ dark = false, source = "site", note = "One message
         WhatsApp number or email
       </label>
       <div
-        className={`flex items-center gap-1 rounded-full border p-1.5 transition-[border-color,box-shadow] duration-200 ${dark ? "border-paper/30 bg-black/30 backdrop-blur-md focus-within:border-paper/70" : "border-ink/25 bg-paper focus-within:border-ink focus-within:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]"}`}
+        className={`flex items-center gap-1 border p-1.5 transition-[border-color,box-shadow] duration-200 ${lux ? "rounded-[2px] border-[#ede8df]/20 focus-within:border-[#ede8df]/60" : dark ? "rounded-full border-paper/30 bg-black/30 backdrop-blur-md focus-within:border-paper/70" : "rounded-full border-ink/25 bg-paper focus-within:border-ink focus-within:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]"}`}
       >
         <input
           key={`contact-${me?.phone ?? me?.email ?? ""}`}
@@ -65,11 +65,11 @@ export function AlertSignup({ dark = false, source = "site", note = "One message
           required
           aria-invalid={state.status === "error"}
           aria-describedby={`${id}-msg`}
-          className={`h-11 w-full min-w-0 flex-1 scroll-mb-32 bg-transparent px-3.5 text-base outline-none ${dark ? "text-paper placeholder:text-paper/50" : "placeholder:text-steel-dark"}`}
+          className={`h-11 w-full min-w-0 flex-1 scroll-mb-32 bg-transparent px-3.5 text-base outline-none ${lux ? "text-[#ede8df] placeholder:text-[#ede8df]/50" : dark ? "text-paper placeholder:text-paper/50" : "placeholder:text-steel-dark"}`}
         />
         <button
           type="submit"
-          className={`flex h-11 shrink-0 cursor-pointer items-center whitespace-nowrap rounded-full px-5 text-[13px] font-semibold transition-[background-color,scale] duration-200 active:scale-[0.97] disabled:opacity-50 ${dark ? "bg-paper text-ink hover:bg-paper/90" : "bg-ink text-paper hover:bg-ink/85"}`}
+          className={`flex h-11 shrink-0 cursor-pointer items-center whitespace-nowrap px-5 text-[13px] font-semibold transition-[background-color,scale] duration-200 active:scale-[0.97] disabled:opacity-50 ${lux ? "rounded-[2px] bg-[#c9a46a] text-[#0e0d0c] hover:bg-[#d6b47e]" : dark ? "rounded-full bg-paper text-ink hover:bg-paper/90" : "rounded-full bg-ink text-paper hover:bg-ink/85"}`}
           aria-busy={pending}
           disabled={pending}
         >
