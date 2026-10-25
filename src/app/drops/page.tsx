@@ -52,7 +52,7 @@ export default async function DropsPage() {
         <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(248,248,246,0.85)_0%,rgba(248,248,246,0.55)_32%,rgba(248,248,246,0)_55%)] max-md:hidden" />
         <Image src="/drops/hero-showroom-phone.webp" alt="" width={900} height={865} priority sizes="100vw" className="block h-auto w-full md:hidden" />
 
-        <div className="container-ep flex flex-col py-8 md:min-h-[calc(100svh-88px)] md:justify-center md:py-10">
+        <div className="container-ep flex flex-col py-8 md:min-h-[100svh] md:justify-center md:pb-10 md:pt-[108px]">
           <div className="w-full md:max-w-[440px]">
             <p className="index text-ink/60">Every other Friday · 6 PM</p>
             <h1 id="drops-title" className="display mt-3 text-[clamp(4rem,2.6rem+6vw,8rem)] font-extralight leading-[0.82] tracking-[0.02em]">

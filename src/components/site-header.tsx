@@ -91,6 +91,8 @@ export function SiteHeader() {
   // The visit page is one full screen of the store with no header at all: just the logo on the
   // left and a small black Back button on the right.
   const visit = pathname === "/visit";
+  // On Drops (computers) the showroom picture runs up behind a see-through header (owner, 25 Oct 2026).
+  const clear = pathname === "/drops";
   const expanded = open && !visit;
   const flat = atTop && !visit;
 
@@ -163,7 +165,7 @@ export function SiteHeader() {
         Skip to content
       </a>
       {/* Keeps page content clear of the floating nav. The home hero runs full-bleed under it instead. */}
-      {pathname !== "/" && !visit && <div className="h-[72px] md:h-[88px]" aria-hidden />}
+      {pathname !== "/" && !visit && <div className={`h-[72px] md:h-[88px] ${clear ? "md:hidden" : ""}`} aria-hidden />}
 
       {/* Three floating pills: logo · links · actions. Clicks pass through the gaps. */}
       <MotionConfig reducedMotion="user">
@@ -173,7 +175,7 @@ export function SiteHeader() {
           initial={false}
           animate={flat ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[72px] border-b border-mist bg-paper pt-[env(safe-area-inset-top)] md:h-[88px]"
+          className={`pointer-events-none fixed inset-x-0 top-0 z-40 h-[72px] border-b border-mist bg-paper pt-[env(safe-area-inset-top)] md:h-[88px] ${clear ? "md:hidden" : ""}`}
         />
         <div className="pointer-events-none fixed inset-x-0 top-3 z-50 md:top-5">
           <div className="container-ep relative flex items-center justify-between gap-3">
