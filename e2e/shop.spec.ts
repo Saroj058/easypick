@@ -357,7 +357,7 @@ test("find my size: opens in the middle from the rail, height and weight give a 
   await rail.getByRole("button", { name: "My size is M. Change it" }).click();
 
   // Reopened, it starts on the answer; Esc closes it.
-  await rail.getByRole("button", { name: /Your size, from Find my size/ }).click();
+  await rail.getByRole("button", { name: "Change my size" }).click();
   await expect(dialog.locator("[data-size-result]")).toHaveText("M");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);

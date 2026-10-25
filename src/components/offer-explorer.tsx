@@ -54,21 +54,20 @@ export function OfferExplorer({ offers, products, start }: { offers: OfferSummar
             ) : (
               <motion.div key="open" className="mx-auto">
                 {/* The card, grown into the header */}
-                <motion.div layoutId={`offer-${current.offer.id}`} className={`on-dark relative mx-auto max-w-[1100px] overflow-hidden rounded-[22px] text-paper shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${SKINS[index % SKINS.length]}`}>
+                <motion.div layoutId={`offer-${current.offer.id}`} className={`on-dark relative mx-auto max-w-[720px] overflow-hidden rounded-[14px] text-paper shadow-[0_16px_32px_-20px_rgba(0,0,0,0.5)] ring-1 ring-white/10 ${SKINS[index % SKINS.length]}`}>
                   <span aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_60%_at_20%_0%,rgba(255,255,255,0.12),transparent_60%)]" />
-                  <motion.div layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.22, duration: 0.3 } }} exit={{ opacity: 0, transition: { duration: 0.08 } }} className="relative flex flex-wrap items-center gap-x-6 gap-y-3 p-5 sm:p-6">
+                  <motion.div layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.22, duration: 0.3 } }} exit={{ opacity: 0, transition: { duration: 0.08 } }} className="relative flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5">
                     <div className="min-w-0 flex-1">
-                      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-paper/60">
+                      <p className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-paper/60">
                         Up to {current.upTo}% off · {current.count} pieces
                       </p>
-                      <h3 className="display mt-1 text-[clamp(2rem,1.5rem+2vw,3rem)] leading-[0.9]">{current.offer.name}</h3>
-                      {current.offer.note && <p className="mt-1.5 text-[13.5px] text-paper/65">{current.offer.note}</p>}
+                      <h3 className="display mt-0.5 truncate text-[clamp(1.25rem,1.1rem+0.6vw,1.6rem)] leading-none">{current.offer.name}</h3>
                     </div>
-                    <Link href={`/shop?offer=${current.offer.id}`} className="inline-flex h-11 items-center rounded-full bg-paper px-5 text-[14px] font-semibold text-ink transition hover:bg-white">
-                      Shop all {current.count} pieces
+                    <Link href={`/shop?offer=${current.offer.id}`} className="inline-flex h-9 shrink-0 items-center rounded-full bg-paper px-4 text-[13px] font-semibold text-ink transition hover:bg-white">
+                      Shop all
                     </Link>
-                    <button type="button" onClick={() => setClosing(true)} aria-label="Close this offer" className="absolute right-3 top-3 grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-white/10 text-paper transition hover:bg-white/20 sm:static">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                    <button type="button" onClick={() => setClosing(true)} aria-label="Close this offer" className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full bg-white/10 text-paper transition hover:bg-white/20">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                         <path d="M6 6l12 12M18 6L6 18" />
                       </svg>
                     </button>

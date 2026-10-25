@@ -63,31 +63,22 @@ export function playNudge(set: (offset: number) => void, stop: () => boolean, by
 export function SlideHint({ at, n, used, onPrev, onNext, canPrev = true, canNext = true, label }: { at: number; n: number; /** The customer has moved it: just the arrows and count. */ used: boolean; onPrev: () => void; onNext: () => void; canPrev?: boolean; canNext?: boolean; label: string }) {
   const touch = useSyncExternalStore(subscribe, coarse, () => false);
   if (n < 2) return null;
-  const arrow = "grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full border border-ink/15 bg-paper text-ink transition-[border-color,opacity,scale] hover:border-ink active:scale-95 disabled:cursor-default disabled:opacity-30";
+  const arrow = "grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full text-ink transition-[background-color,opacity,scale] hover:bg-ink/5 active:scale-95 disabled:cursor-default disabled:opacity-25";
+  // One small pill: arrows either side of where you are. Until they move it, a quiet word beside it.
   return (
     <div className="mt-3 flex items-center justify-center gap-3">
-      <button type="button" onClick={onPrev} disabled={!canPrev} aria-label={`Previous in ${label}`} className={arrow}>
-        <ChevronLeft className="h-5 w-5" aria-hidden />
-      </button>
-      <p className="min-w-[120px] text-center text-[12.5px] text-steel-dark" aria-live="polite">
-        {!used && (
-          <span className="flex items-center justify-center gap-1.5 font-semibold text-ink">
-            <span aria-hidden className="slide-hint-l">
-              ←
-            </span>
-            {touch ? "Swipe for more" : "Drag, or use the arrows"}
-            <span aria-hidden className="slide-hint-r">
-              →
-            </span>
-          </span>
-        )}
-        <span className="font-mono tabular-nums">
+      <div className="flex items-center rounded-full border border-ink/15 bg-paper p-0.5">
+        <button type="button" onClick={onPrev} disabled={!canPrev} aria-label={`Previous in ${label}`} className={arrow}>
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+        </button>
+        <span className="min-w-[52px] text-center font-mono text-[12px] tabular-nums text-ink" aria-live="polite">
           {at + 1} / {n}
         </span>
-      </p>
-      <button type="button" onClick={onNext} disabled={!canNext} aria-label={`Next in ${label}`} className={arrow}>
-        <ChevronRight className="h-5 w-5" aria-hidden />
-      </button>
+        <button type="button" onClick={onNext} disabled={!canNext} aria-label={`Next in ${label}`} className={arrow}>
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+      {!used && <span className="slide-hint-r text-[12px] text-steel-dark">{touch ? "Swipe for more" : "Drag for more"}</span>}
     </div>
   );
 }

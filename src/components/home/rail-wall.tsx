@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
+import { Ruler } from "lucide-react";
 
 import { CheckoutForm } from "@/app/checkout/checkout-form";
 import { useFitProfile } from "@/components/fit-finder";
@@ -839,9 +840,10 @@ export function RailWall({
             <button
               type="button"
               onClick={() => openSizeFinder()}
-              className="flex h-11 cursor-pointer items-center whitespace-nowrap text-[13px] text-steel-dark underline underline-offset-4 hover:text-ink"
+              className="flex h-9 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-ink/20 px-3.5 text-[12.5px] font-semibold text-ink transition-colors hover:border-ink"
             >
-              {fitOn ? "Your size, from Find my size · Change" : "Find my size"}
+              <Ruler className="h-3.5 w-3.5" aria-hidden />
+              {fitOn ? "Change my size" : "Find my size"}
             </button>
             {mySize && (
               <button
