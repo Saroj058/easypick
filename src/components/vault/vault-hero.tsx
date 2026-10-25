@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -18,7 +19,7 @@ const EVERY = 5000;
  * piece rises in front and changes every few seconds, and as the page scrolls the word and the
  * piece drift apart. Nothing moves for people who ask for less motion.
  */
-export function VaultHero({ title, note, pieces, count, side }: { title: string; note: string; pieces: TileData[]; count: string; side: [string, string] }) {
+export function VaultHero({ title, note, pieces, count, side, figure }: { title: string; note: string; pieces: TileData[]; count: string; side: [string, string]; /** A person standing in front of the word (cut out, see public/vault/); without one, the piece stands there. */ figure?: { src: string; width: number; height: number } }) {
   const still = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const [at, setAt] = useState(0);
@@ -67,7 +68,14 @@ export function VaultHero({ title, note, pieces, count, side }: { title: string;
             ))}
           </motion.h1>
 
-          {piece && (
+          {figure ? (
+            <motion.div style={{ y: pieceY }} className="absolute inset-x-0 bottom-0 top-0 z-10 mx-auto flex w-[min(58vw,340px)] items-center md:w-[min(24vw,380px)]">
+              <motion.div className="w-full" initial={still ? false : { opacity: 0, y: 70 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.3, ease: EASE, delay: 0.45 }}>
+                <Image src={figure.src} alt="" width={figure.width} height={figure.height} priority sizes="(min-width: 768px) 380px, 58vw" className="h-auto max-h-[78svh] w-full object-contain [filter:drop-shadow(0_28px_24px_rgba(0,0,0,0.18))]" />
+              </motion.div>
+            </motion.div>
+          ) : (
+            piece && (
             <motion.div style={{ y: pieceY }} className="absolute inset-x-0 top-1/2 z-10 mx-auto w-[min(62vw,400px)] -translate-y-1/2 md:w-[min(30vw,420px)]" onPointerEnter={() => setHeld(true)} onPointerLeave={() => setHeld(false)}>
               <AnimatePresence mode="popLayout" initial={!still}>
                 <motion.div
@@ -84,6 +92,7 @@ export function VaultHero({ title, note, pieces, count, side }: { title: string;
                 </motion.div>
               </AnimatePresence>
             </motion.div>
+            )
           )}
         </div>
 
@@ -99,14 +108,21 @@ export function VaultHero({ title, note, pieces, count, side }: { title: string;
           </motion.div>
           {piece && (
             <AnimatePresence mode="wait" initial={false}>
-              <motion.p key={piece.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35, ease: EASE }} className={`text-right ${V.mono} leading-[1.9] ${V.ink}`}>
-                {piece.brand} · {piece.model}
-                <br />
-                <span className="tabular-nums">
-                  {piece.sold ? "Sold" : piece.priceText}
-                  {n > 1 && ` · ${String(at + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`}
-                </span>
-              </motion.p>
+              <motion.div key={piece.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35, ease: EASE }} className="flex items-end gap-4" onPointerEnter={() => setHeld(true)} onPointerLeave={() => setHeld(false)}>
+                <p className={`text-right ${V.mono} leading-[1.9] ${V.ink}`}>
+                  {piece.brand} · {piece.model}
+                  <br />
+                  <span className="tabular-nums">
+                    {piece.sold ? "Sold" : piece.priceText}
+                    {n > 1 && ` · ${String(at + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`}
+                  </span>
+                </p>
+                {figure && (
+                  <Link href={`/product/${piece.slug}`} aria-label={`${piece.name}, ${piece.sold ? "sold" : piece.priceText}`} className="block w-[64px] shrink-0 bg-[var(--v-tile)] transition-transform duration-500 hover:-translate-y-1 md:w-[76px]">
+                    <ProductImage image={piece.image} category={piece.category} colourHex={piece.hex} decorative ground="bg-transparent" sizes="76px" />
+                  </Link>
+                )}
+              </motion.div>
             </AnimatePresence>
           )}
         </div>

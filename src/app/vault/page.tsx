@@ -62,6 +62,8 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         pieces={featured}
         count={`${two(brands.length)} brands · ${two(pieces.length)} pieces${sold ? ` · ${two(sold)} sold` : ""}`}
         side={["Shop the Vault", "Hear it first"]}
+        // Made for the Vault with Higgsfield (owner, 25 Oct 2026): our own picture, no brand on it.
+        figure={{ src: "/vault/hero-figure.webp", width: 410, height: 925 }}
       />
 
       {/* The black band: the brand's story on its page, the brands as cards, and the plain facts */}
