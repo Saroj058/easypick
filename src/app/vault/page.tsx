@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
 import { brandKey, brandWorld, MONO, themeVars, two, V } from "@/components/vault/look";
-import { ScrollToOpen } from "@/components/vault/scroll-to-open";
-import { VaultBrands } from "@/components/vault/vault-brands";
+import { VaultBento } from "@/components/vault/vault-bento";
+import { VaultBrandGrid } from "@/components/vault/vault-brand-grid";
 import { VaultHero } from "@/components/vault/vault-hero";
 import { VaultInventory } from "@/components/vault/vault-inventory";
 import { VaultSpotlight } from "@/components/vault/vault-spotlight";
@@ -63,41 +63,50 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         figure={(one && FIGURES[brandKey(one.name)]) || FIGURES.all}
       />
 
-      {/* The black band: the brand's story on its page, and the brands as cards (owner, 25 Oct 2026: no list of facts) */}
-      <div className={`${V.slate} text-white`}>
-        <div className="container-ep py-8 md:py-10">
-          {world && (
-            <p className={`mb-8 max-w-[62ch] text-[15px] leading-relaxed ${V.iceDim}`}>
-              <span className="text-white">{one?.name}.</span> {world.story}
-            </p>
-          )}
-          {brands.length > 0 && (
-            <ScrollToOpen>
-              <VaultBrands worlds={vs.brands} cold={{ ...MONO, slate: "#ecebe7" }} total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />
-            </ScrollToOpen>
-          )}
-        </div>
-      </div>
+      {/* Under the opening, after the "FWD" reference (owner, 26 Oct 2026): rounded panels on the
+          page's grey. A black statement, the real numbers as cards, the brands as numbered cards,
+          then the pieces in one big rounded black panel. */}
+      <div className="pb-4 md:pb-6">
+        <VaultBento
+          statement={world ? `${world.line[0]} ${world.line[1]}` : `${vs.copy.left[0]} ${vs.copy.left[1]}`}
+          sub={world ? world.story : vs.copy.intro}
+          brands={brands.length}
+          pieces={one ? one.pieces.length : pieces.length}
+          sold={one ? one.pieces.filter((p) => p.status === "sold_out").length : sold}
+          figure={(one && FIGURES[brandKey(one.name)]) || FIGURES.all}
+        />
 
-      {/* The pieces, on the same black, full width (owner, 25 Oct 2026: "make this part better"; no
-          labels or slogans, and no sign-up here: "remove hear it first") */}
-      <div className={`${V.slate} text-white`}>
-        <div className="container-ep pb-16 md:pb-24">
-          {pieces.length === 0 ? (
-            <p className={`py-24 text-center text-[17px] ${V.iceDim}`}>The wall is empty for now. The first pieces arrive soon.</p>
-          ) : (
-            <>
-              {wanted && !one && <p className={`pt-8 text-[15px] ${V.iceDim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
-              <div className="border-t border-white/10 pt-12 md:pt-16">
-                <VaultTriptych key={one?.name ?? "all"} pieces={featured} />
-              </div>
-              <div className="mt-14 border-t border-white/10 md:mt-20">{spot && <VaultSpotlight piece={spot} />}</div>
-              <div id="inventory" className="scroll-mt-28 border-t border-white/10 pt-12 md:pt-16">
-                <VaultInventory tiles={tiles} brand={one?.name} />
-              </div>
-            </>
-          )}
-          <p className={`mt-16 border-t border-white/10 pt-6 text-[12.5px] leading-relaxed ${V.iceDim}`}>Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
+        {brands.length > 0 && (
+          <section id="vault-brands" aria-label="Brands" className="scroll-mt-24 px-3 pt-3 md:px-4 md:pt-4">
+            <VaultBrandGrid
+              total={pieces.length}
+              active={one?.name}
+              brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name), origin: brandWorld(b.name, vs.brands)?.origin ?? "Original brand", kinds: Array.from(new Set(b.pieces.map((p) => p.category))).map((k) => k.charAt(0).toUpperCase() + k.slice(1).replace("-", " ")) }))}
+            />
+          </section>
+        )}
+
+        {/* The pieces, in one big rounded black panel */}
+        <div className="px-3 pt-3 md:px-4 md:pt-4">
+          {/* Its headlines in the same bold, tight sans as the cards above */}
+          <div className={`overflow-hidden rounded-[28px] ${V.slate} text-white [&_.display]:!font-sans [&_.display]:!font-semibold [&_.display]:!normal-case [&_.display]:!tracking-[-0.035em]`}>
+            <div className="container-ep pb-16 pt-4 md:pb-24">
+              {pieces.length === 0 ? (
+                <p className={`py-24 text-center text-[17px] ${V.iceDim}`}>The wall is empty for now. The first pieces arrive soon.</p>
+              ) : (
+                <>
+                  {wanted && !one && <p className={`pt-8 text-[15px] ${V.iceDim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
+                  <div className="pt-12 md:pt-16">
+                    <VaultTriptych key={one?.name ?? "all"} pieces={featured} />
+                  </div>
+                  <div className="mt-14 border-t border-white/10 md:mt-20">{spot && <VaultSpotlight piece={spot} />}</div>
+                  <div id="inventory" className="scroll-mt-28 border-t border-white/10 pt-12 md:pt-16">
+                    <VaultInventory tiles={tiles} brand={one?.name} />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
