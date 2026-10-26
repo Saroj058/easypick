@@ -56,17 +56,21 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
       {/* The opening, in black and white: the name huge, one piece in front of it (owner, 25 Oct 2026) */}
       <VaultHero
         title={one ? one.name : "The Vault"}
-        line={world ? `${world.line[0]} ${world.line[1]}` : "one of each."}
-        note={world ? `${world.origin}. ${world.story}` : vs.copy.intro}
+        note={world ? `${world.origin}. ${world.line[0]} ${world.line[1]}` : vs.copy.intro}
         pieces={featured}
         count={`${two(brands.length)} brands · ${two(pieces.length)} pieces${sold ? ` · ${two(sold)} sold` : ""}`}
         side="Shop the Vault"
         figure={(one && FIGURES[brandKey(one.name)]) || FIGURES.all}
       />
 
-      {/* The black band: the brands as cards (the brand's story is in the opening) */}
+      {/* The black band: the brand's story on its page, and the brands as cards (owner, 25 Oct 2026: no list of facts) */}
       <div className={`${V.slate} text-white`}>
         <div className="container-ep py-8 md:py-10">
+          {world && (
+            <p className={`mb-8 max-w-[62ch] text-[15px] leading-relaxed ${V.iceDim}`}>
+              <span className="text-white">{one?.name}.</span> {world.story}
+            </p>
+          )}
           {brands.length > 0 && (
             <ScrollToOpen>
               <VaultBrands worlds={vs.brands} cold={{ ...MONO, slate: "#ecebe7" }} total={pieces.length} active={one?.name} brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name) }))} />

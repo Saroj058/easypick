@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Barlow_Condensed, Instrument_Serif, Inter, JetBrains_Mono, Mukta } from "next/font/google";
+import { Baloo_2, Barlow_Condensed, Inter, JetBrains_Mono, Mukta } from "next/font/google";
 
 import { PendingBagAdd } from "@/components/bag-gate";
 import { BuySheets } from "@/components/buy-sheets";
@@ -19,8 +19,6 @@ import "./globals.css";
 const barlow = Barlow_Condensed({ subsets: ["latin"], weight: ["200", "700"], variable: "--font-barlow", display: "swap" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "600"], variable: "--font-jetbrains", display: "swap" });
-// The Vault's serif, for its opening (owner, 25 Oct 2026, after the "Orra" reference). Not preloaded: only the Vault uses it.
-const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], variable: "--font-instrument", display: "swap", preload: false });
 const baloo = Baloo_2({ subsets: ["devanagari", "latin"], weight: "700", variable: "--font-baloo-2", display: "swap", preload: false });
 const mukta = Mukta({ subsets: ["devanagari", "latin"], weight: ["400", "600"], variable: "--font-mukta", display: "swap", preload: false });
 
@@ -49,7 +47,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await siteSetting.get();
   return (
-    <html lang="en" className={`${barlow.variable} ${inter.variable} ${jetbrains.variable} ${mukta.variable} ${baloo.variable} ${serif.variable} antialiased`}>
+    <html lang="en" className={`${barlow.variable} ${inter.variable} ${jetbrains.variable} ${mukta.variable} ${baloo.variable} antialiased`}>
       <body className="flex min-h-dvh flex-col">
         <BagProvider>
           <ShopChrome>
