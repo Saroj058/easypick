@@ -93,11 +93,8 @@ export function SiteHeader() {
   const visit = pathname === "/visit";
   // On Fits, Gift and the Vault (computers) the page's picture runs up behind a see-through header (owner, 25 Oct 2026).
   const clear = pathname === "/fits" || pathname === "/gift" || pathname === "/vault";
-  // The home page (owner, 26 Oct 2026, after a Zara redesign): a very quiet header. The logo, a thin
-  // search line in the middle, and the account, bag and menu as plain marks; no dock, no pills.
-  const quiet = pathname === "/";
   // Pages whose opening runs full-bleed under the header, with no spacer: the home page, and the
-  // Drops page (which is the old home page, opening the same way).
+  // Drops page (the old home page's drop opening, which runs under it the same way).
   const bleed = pathname === "/" || pathname === "/drops";
   const expanded = open && !visit;
   const flat = atTop && !visit;
@@ -179,7 +176,7 @@ export function SiteHeader() {
         <motion.div
           aria-hidden
           initial={false}
-          animate={flat && !quiet ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
+          animate={flat ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
           className={`pointer-events-none fixed inset-x-0 top-0 z-40 h-[72px] border-b border-mist bg-paper pt-[env(safe-area-inset-top)] md:h-[88px] ${clear ? "md:hidden" : ""}`}
         />
@@ -199,7 +196,7 @@ export function SiteHeader() {
                     <ArrowLeft aria-hidden className="h-[18px] w-[18px] transition-transform duration-200 group-hover:-translate-x-0.5" strokeWidth={1.8} />
                   </button>
                 )}
-                <Link href="/" aria-label="Easypick home" className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${quiet ? "border-transparent" : pillChrome(flat)} flex h-12 items-center rounded-full border px-5`}>
+                <Link href="/" aria-label="Easypick home" className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-5`}>
                   <Image src="/brand/logo.png" alt="Easypick" width={611} height={161} priority className="h-5 w-[76px]" />
                 </Link>
               </motion.div>
@@ -212,17 +209,7 @@ export function SiteHeader() {
             </div>
 
             {/* Links (large screens; phones and tablets use the bottom tab bar): a dock whose icons swell under the pointer. It slides away on the way down the page and comes back on the way up. */}
-            {/* The home page: a thin search line in the middle instead of the dock */}
-            {quiet && (
-              <div className="absolute left-1/2 top-0 hidden -translate-x-1/2 md:block">
-                <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} className={expanded ? "pointer-events-auto" : "pointer-events-none"}>
-                  <button type="button" onClick={() => window.dispatchEvent(new Event("ep-open-search"))} className="flex h-12 w-[min(26vw,320px)] cursor-pointer items-end border-b border-ink/70 pb-2.5 text-left text-[11px] uppercase tracking-[0.18em] text-ink/70 transition-colors hover:border-ink hover:text-ink">
-                    Search
-                  </button>
-                </motion.div>
-              </div>
-            )}
-            {!visit && !quiet && (
+            {!visit && (
               <div className="absolute left-1/2 top-0 hidden -translate-x-1/2 lg:block">
                 <motion.nav aria-label="Main" variants={sideVariants} animate={expanded ? "shown" : "hidden"} inert={!expanded} className={expanded ? "pointer-events-auto" : "pointer-events-none"}>
                   <Dock edge="top" label="Main" panelHeight={48} itemSize={36} magnification={60} distance={110} className={`${pillChrome(flat)} items-start gap-8 rounded-full border bg-transparent px-5 pt-[5px] dark:bg-transparent`}>
@@ -251,11 +238,8 @@ export function SiteHeader() {
               </Link>
             )}
             <motion.div variants={sideVariants} animate={expanded ? "shown" : "hidden"} onFocus={() => setExpanded(true)} className={visit ? "hidden" : undefined}>
-              <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${quiet ? "border-transparent" : pillChrome(flat)} flex h-12 items-center rounded-full border px-1.5`}>
-                {/* On the home page the search line in the middle opens it; on phones its icon stays */}
-                <span className={quiet ? "md:hidden" : "contents"}>
-                  <SearchButton />
-                </span>
+              <div className={`${expanded ? "pointer-events-auto" : "pointer-events-none"} ${pillChrome(flat)} flex h-12 items-center rounded-full border px-1.5`}>
+                <SearchButton />
                 {account}
                 <Link href="/bag" className="relative flex h-10 w-10 items-center justify-center" aria-label={`Bag, ${ready ? count : 0} items`}>
                   <BagIcon className="h-5 w-5" />
@@ -267,7 +251,7 @@ export function SiteHeader() {
                 </Link>
                 <MobileMenu />
                 {/* Large screens: at the top, no menu button; as pills, the smooth dropdown with everything else. */}
-                {(!atTop || quiet) && (
+                {!atTop && (
                   <div className="ml-0.5 mr-0.5 hidden lg:block">
                     <SmoothDropdown items={dropdownItems} activeId={pathname} label="More" />
                   </div>

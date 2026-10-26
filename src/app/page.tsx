@@ -36,7 +36,8 @@ export const revalidate = 60;
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 // The pictures inside the letters, and the four tiles above the rail (owner: "use the current images").
-const WORDS = ["/drops/hero-2.webp", "/visit/door-poster.avif", "/drops/hero-showroom.webp", "/gift/hero-white.webp"];
+// Only the darker pictures, so the letters read crisp (owner, 26 Oct 2026: "make that hero better").
+const WORDS = ["/drops/hero-2.webp", "/visit/store-night-open.avif", "/visit/door-poster.avif", "/visit/store-dusk-open.avif"];
 const TILES: LandingTile[] = [
   { label: "Tees", href: "/shop?category=tees", images: ["/products/oversized-heavy-tee/front.jpg", "/products/boxy-pocket-tee/front.jpg"] },
   { label: "Hoodies", href: "/shop?category=hoodies,sweatshirts", images: ["/products/everyday-hoodie/front.jpg", "/products/brushed-crewneck/front.jpg", "/products/fleece-quarter-zip/front.jpg"] },
@@ -85,7 +86,7 @@ export default async function HomePage() {
           pictures inside the letters, then four tiles. The rail and everything below are as they were. */}
       {on("hero") && (
         <div style={at("hero")}>
-          <LandingHero words={WORDS} tiles={TILES} />
+          <LandingHero words={WORDS} tiles={TILES} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
         </div>
       )}
 
