@@ -841,26 +841,3 @@
     animation: none;
   }
 }
-
-/* The home's tiles, scrolling sideways on their own (owner, 26 Oct 2026). Two copies of the row move
-   by half their width, so the loop has no seam; pointing at it holds it still. */
-@keyframes landing-row {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.landing-row {
-  animation: landing-row 48s linear infinite;
-}
-.landing-row:hover,
-.landing-row:focus-within {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .landing-row {
-    animation: none;
-  }
-}

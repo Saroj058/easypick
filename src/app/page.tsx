@@ -5,7 +5,8 @@ import { GiftBlock } from "@/components/home/gift-block";
 import { StoreBand } from "@/components/home/store-band";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
-import { LandingHero, type LandingTile } from "@/components/landing/landing-hero";
+import { LandingHero } from "@/components/landing/landing-hero";
+import type { ChapterData } from "@/components/landing/landing-chapters";
 
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
@@ -14,8 +15,9 @@ import { ktmDay } from "@/lib/ktm-day";
 import { getOffers } from "@/lib/offers";
 import { getStoreInfo } from "@/lib/store-info";
 import { TrackForm } from "@/app/track/track-form";
+import { formatPrice } from "@/lib/format";
 import { jsonLd } from "@/lib/json-ld";
-import { site } from "@/lib/site";
+import { site, walletList } from "@/lib/site";
 import { getDropTimeline, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
 import { designerFits } from "@/lib/occasions";
@@ -38,11 +40,15 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 // The pictures inside the letters, and the four tiles above the rail (owner: "use the current images").
 // Only the darker pictures, so the letters read crisp (owner, 26 Oct 2026: "make that hero better").
 const WORDS = ["/drops/hero-2.webp", "/visit/store-night-open.avif", "/visit/door-poster.avif", "/visit/store-dusk-open.avif"];
-const TILES: LandingTile[] = [
-  { label: "Tees", href: "/shop?category=tees", images: ["/products/oversized-heavy-tee/front.jpg", "/products/boxy-pocket-tee/front.jpg"] },
-  { label: "Hoodies", href: "/shop?category=hoodies,sweatshirts", images: ["/products/everyday-hoodie/front.jpg", "/products/brushed-crewneck/front.jpg", "/products/fleece-quarter-zip/front.jpg"] },
-  { label: "Jackets", href: "/shop?category=jackets", images: ["/poses/coach-jacket-1.webp", "/products/coach-jacket/front.jpg", "/poses/coach-jacket-2.webp", "/poses/coach-jacket-3.webp"] },
-  { label: "Bottoms", href: "/shop?category=jeans,trousers,joggers,shorts", images: ["/products/relaxed-straight-jean/front.jpg", "/products/tapered-jogger/front.jpg", "/products/wide-cargo-pant/front.jpg"] },
+// What plays after the word, one chapter at a time (owner, 26 Oct 2026: "make it informative"): how
+// Easypick works, each true to the blueprint and the site's settings, with one way to learn more.
+const CHAPTERS: ChapterData[] = [
+  { label: "Fixed prices", title: ["One price.", "*No bargaining.*"], line: "Every piece has its price on the tag. The same online and in the store.", facts: ["Fixed prices", "Same online and in store"], href: "/how-it-works", cta: "How the store works", layout: "left", big: "/drops/hero-showroom.webp", bigAt: "72% 50%", small: "/products/oversized-heavy-tee/front.jpg" },
+  { label: "Self-checkout", title: ["Pick it.", "*Pay it.*"], line: "In the store, take what you like to the kiosk, pay by QR and walk out.", facts: ["Self-checkout kiosk", "Pay by QR", "A helper if you need one"], href: "/visit", cta: "Plan a visit", layout: "right", big: "/visit/door-poster.avif", small: "/visit/store-night-open-tall.avif" },
+  { label: "Drops", title: ["Every other", "*Friday*"], line: "New pieces land every other Friday at 6 PM. When they're gone, they're gone.", facts: ["6 PM, every other Friday", "One message when it lands"], href: "/drops", cta: "See the drops", layout: "left", big: "/drops/hero-2.webp", bigAt: "70% 50%", small: "/poses/coach-jacket-3.webp" },
+  { label: "Your size", title: ["Your size,", "*in cm*"], line: "Every piece shows its real measurements. Tell us your height and weight once, and we pick your size.", facts: ["Measurements in cm", "Find my size in 20 seconds"], href: "/size-guide", cta: "Find my size", layout: "right", big: "/poses/coach-jacket-1.webp", bigAt: "50% 20%", small: "/products/relaxed-straight-jean/front.jpg" },
+  { label: "Delivery", title: ["To your", "*door*"], line: "Delivered across the Valley, or picked up in the store. Swap a size within 7 days, tags on.", facts: [`Pay with ${walletList()}`, `Free delivery over ${formatPrice(site.delivery.freeAbove)}`, "7-day size exchange"], href: "/delivery", cta: "Delivery and returns", layout: "left", big: "/gift/hero-white.webp", bigAt: "85% 50%", small: "/gift-cards/back.webp" },
+  { label: "The Vault", title: ["The", "*Vault*"], line: "Original brands, checked by hand. One of each, never restocked.", facts: ["Original brands", "Checked by hand", "One of each"], href: "/vault", cta: "Enter the Vault", layout: "figure", big: "/drops/hero-2.webp", bigAt: "30% 50%", figure: { src: "/vault/hero-figure.webp", width: 410, height: 925 } },
 ];
 
 const orgLd = {
@@ -86,7 +92,7 @@ export default async function HomePage() {
           pictures inside the letters, then four tiles. The rail and everything below are as they were. */}
       {on("hero") && (
         <div style={at("hero")}>
-          <LandingHero words={WORDS} tiles={TILES} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
+          <LandingHero words={WORDS} chapters={CHAPTERS} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
         </div>
       )}
 

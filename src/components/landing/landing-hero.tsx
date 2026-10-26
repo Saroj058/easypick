@@ -2,52 +2,46 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
+
+import { LandingChapters, type ChapterData } from "./landing-chapters";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const GLIDE = [0.65, 0, 0.35, 1] as const;
 /** How long the word shows before it opens into the tiles, in ms. */
-const WORD_MS = 3400;
+const WORD_MS = 2600;
 
-export interface LandingTile {
-  label: string;
-  href: string;
-  images: string[];
-}
 
 /**
- * The top of the home page, above the rail (owner, 26 Oct 2026, after a Zara redesign; it plays
- * by itself, no scrolling). First EASYPICK, huge in a didone, our darker black-and-white pictures
- * crossfading and drifting inside the letters, with a small line above it and "Kathmandu" under it;
- * a tap skips ahead. Then the word grows away and four tiles rise out of its place at different
- * heights (Tees, Hoodies, Jackets, Bottoms) that then scroll sideways on their own (pausing when
- * pointed at), each changing its picture on its own rhythm, with one
- * quiet line and "Shop all" under them. Everything below (the rail and the rest) is unchanged.
- * People who ask for less motion get the tiles straight away.
+ * The top of the home page, above the rail (owner, 26 Oct 2026; it all plays by itself, no
+ * scrolling). First EASYPICK, huge in a didone, our darker black-and-white pictures crossfading inside
+ * the letters, a small line above and "Kathmandu" under it (a tap skips ahead). Then the collections,
+ * one chapter at a time sliding sideways with depth, after a parallax editorial reference
+ * (landing-chapters.tsx). Everything below (the rail and the rest) is unchanged. People who ask for
+ * less motion go straight to still chapters.
  */
-export function LandingHero({ words, tiles, line }: { words: string[]; tiles: LandingTile[]; /** The small line over the word. */ line: string }) {
+export function LandingHero({ words, chapters, line }: { words: string[]; chapters: ChapterData[]; /** The small line over the word. */ line: string }) {
   const still = useReducedMotion();
-  const [stage, setStage] = useState<"word" | "tiles">("word");
+  const [stage, setStage] = useState<"word" | "chapters">("word");
   useEffect(() => {
     if (still || stage !== "word") return;
-    const t = setTimeout(() => setStage("tiles"), WORD_MS);
+    const t = setTimeout(() => setStage("chapters"), WORD_MS);
     return () => clearTimeout(t);
   }, [still, stage]);
-  const show = still ? "tiles" : stage;
+  const show = still ? "chapters" : stage;
 
   return (
-    <section aria-labelledby="landing-title" className="relative isolate flex min-h-[calc(100svh-56px-env(safe-area-inset-bottom))] flex-col justify-center overflow-hidden bg-white pb-8 pt-[96px] lg:min-h-svh lg:pt-[112px]">
+    <section aria-labelledby="landing-title" className="relative isolate h-[86svh] min-h-[600px] overflow-hidden bg-white md:h-svh md:min-h-[640px]">
       <h1 id="landing-title" className="sr-only">
         Easypick: men&apos;s streetwear in Kathmandu
       </h1>
 
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence initial={false}>
         {show === "word" ? (
           <motion.button
             key="word"
             type="button"
-            onClick={() => setStage("tiles")}
+            onClick={() => setStage("chapters")}
             aria-label="Skip to the collections"
             className="absolute inset-0 isolate cursor-pointer"
             initial={{ opacity: 0 }}
@@ -74,29 +68,8 @@ export function LandingHero({ words, tiles, line }: { words: string[]; tiles: La
             </span>
           </motion.button>
         ) : (
-          <motion.div key="tiles" className="w-full" initial={false}>
-            {/* The tiles, gliding in from the right and then scrolling sideways on their own; two copies make the loop seamless */}
-            <motion.div initial={still ? false : { opacity: 0, x: "30vw" }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 1.2, ease: EASE }} className="overflow-hidden">
-              <div className={`flex w-max ${still ? "" : "landing-row"}`}>
-                {[0, 1].map((copy) => (
-                  <ul key={copy} aria-hidden={copy === 1 || undefined} className="flex shrink-0 items-start gap-4 pr-4 md:gap-[3vw] md:pr-[3vw]">
-                    {tiles.map((t, i) => (
-                      <li key={t.label} className={`w-[44vw] shrink-0 md:w-[21vw] ${["mt-0", "mt-[7vh]", "mt-[2vh]", "mt-[10vh]", "mt-[4vh]", "mt-[8vh]"][i % 6]}`}>
-                        <TileBody t={t} i={i} still={!!still} hidden={copy === 1} />
-                      </li>
-                    ))}
-                  </ul>
-                ))}
-              </div>
-            </motion.div>
-            {/* One quiet line, and the way into everything */}
-            <motion.div initial={still ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.9 }} className="container-ep mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-black/10 pt-5 md:mt-14">
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-[#555]">Fixed prices · Same online and in store</p>
-              <Link href="/shop" className="group inline-flex min-h-11 items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#111]">
-                <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:100%_1px] bg-bottom bg-no-repeat pb-1 transition-[background-size] duration-500 group-hover:bg-[length:0%_1px]">Shop all</span>
-                <span aria-hidden className="transition-transform duration-500 group-hover:translate-x-1">→</span>
-              </Link>
-            </motion.div>
+          <motion.div key="chapters" className="absolute inset-0" initial={still ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+            <LandingChapters chapters={chapters} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -120,31 +93,5 @@ function Drift({ words }: { words: string[] }) {
         </motion.span>
       ))}
     </span>
-  );
-}
-
-/** One tile: its pictures, changing on their own rhythm (each a little out of step), its name, and "Shop" on hover. */
-function TileBody({ t, i, still, hidden }: { t: LandingTile; i: number; still: boolean; /** The second copy in the loop: out of the tab order. */ hidden?: boolean }) {
-  const [at, setAt] = useState(0);
-  const [held, setHeld] = useState(false);
-  useEffect(() => {
-    if (still || held || t.images.length < 2) return;
-    const t1 = setTimeout(() => setAt((a) => (a + 1) % t.images.length), 2000 + i * 450);
-    return () => clearTimeout(t1);
-  }, [at, still, held, i, t.images.length]);
-  return (
-    <Link href={t.href} tabIndex={hidden ? -1 : undefined} onPointerEnter={() => setHeld(true)} onPointerLeave={() => setHeld(false)} onFocus={() => setHeld(true)} onBlur={() => setHeld(false)} className="group block outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#111]">
-      <span className="relative block aspect-[3/4] overflow-hidden bg-[#ececea]">
-        {t.images.map((src, k) => (
-          <Image key={src} src={src} alt="" fill priority={k === 0} sizes="(min-width: 768px) 22vw, 46vw" className={`object-cover grayscale transition-[opacity,transform,filter] duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.05] group-hover:grayscale-0 ${k === at ? "opacity-100" : "opacity-0"}`} />
-        ))}
-        <span aria-hidden className="absolute inset-x-0 bottom-0 translate-y-full bg-white/95 py-2.5 text-center text-[10.5px] font-semibold uppercase tracking-[0.22em] text-[#111] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0 group-focus-visible:translate-y-0">
-          Shop {t.label.toLowerCase()}
-        </span>
-      </span>
-      <motion.span initial={still ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.8 + i * 0.12 }} className="mt-3 block text-center font-[family-name:var(--font-didone)] text-[13px] font-medium uppercase tracking-[0.16em] text-[#111]">
-        {t.label}
-      </motion.span>
-    </Link>
   );
 }
