@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { formatPrice } from "@/lib/format";
 import Image from "next/image";
+import { VaultBrandAccordion } from "@/components/home/vault-brand-accordion";
 import { MONO, themeVars, V, type Theme } from "@/components/vault/look";
 import { VaultTile, type TileData } from "@/components/vault/vault-tile";
 import type { Product } from "@/lib/types";
@@ -158,28 +159,23 @@ export function Vault({ products, copy = { title: "The Vault", line: "Original b
             </div>
           </div>
 
-          {/* The brands: small rounded cards, what each costs from, and the way into its page */}
+          {/* The brands: cards that open one at a time, with their pictures (owner, 26 Oct 2026, after the "Fey" reference) */}
           {brands.length > 0 && (
-            <nav aria-label="Vault brands" className="no-scrollbar -mx-5 mt-9 flex gap-2.5 overflow-x-auto px-5 md:mx-0 md:grid md:grid-cols-3 md:px-0 lg:max-w-[calc(100%-300px)] xl:grid-cols-6">
-              {brands.slice(0, 6).map((b) => {
-                const open = b.pieces.filter((p) => p.status !== "sold_out");
-                const from = open.length ? Math.min(...open.map((p) => p.salePrice ?? p.price)) : null;
-                return (
-                  <Link key={b.name} href={vaultHref(b.name)} className="group flex min-w-[150px] shrink-0 flex-col justify-between gap-5 rounded-[18px] bg-[#1e1e1e] p-4 transition-colors hover:bg-[#2a2a2a] md:min-w-0">
-                    <span>
-                      <span className="block text-[17px] font-semibold leading-tight tracking-[-0.02em]">{b.name}</span>
-                      <span className="mt-0.5 block text-[12px] text-white/60">
-                        {b.pieces.length} {b.pieces.length === 1 ? "piece" : "pieces"}
-                      </span>
-                      {from !== null && <span className="mt-1.5 block whitespace-nowrap text-[13px] font-semibold tabular-nums">From {rs(from)}</span>}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-[12px] font-semibold">
-                      Show all <span aria-hidden className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>
-                    </span>
-                  </Link>
-                );
-              })}
-            </nav>
+            <div className="mt-9 lg:max-w-[calc(100%-300px)]">
+              <VaultBrandAccordion
+                brands={brands.slice(0, 6).map((b) => {
+                  const open = b.pieces.filter((p) => p.status !== "sold_out");
+                  const shown = featuredVault(b.pieces, 3);
+                  return {
+                    name: b.name,
+                    href: vaultHref(b.name),
+                    n: b.pieces.length,
+                    from: open.length ? rs(Math.min(...open.map((p) => p.salePrice ?? p.price))) : "",
+                    pics: shown.map((p) => ({ image: p.images[0] ?? { src: null, alt: p.name, kind: "front" as const }, category: p.category, hex: p.colours[0]?.hex ?? "#2b2b2e", name: p.name })),
+                  };
+                })}
+              />
+            </div>
           )}
 
           <ul className="no-scrollbar -mx-5 mt-8 flex snap-x scroll-px-5 gap-4 overflow-x-auto px-5 md:mx-0 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:px-0">
