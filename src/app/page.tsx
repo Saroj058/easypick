@@ -1,25 +1,48 @@
 import type { Metadata } from "next";
 
-import { LandingChapters, type Chapter } from "@/components/landing/landing-chapters";
+import { FitsTeaser } from "@/components/home/fits-teaser";
+import { GiftBlock } from "@/components/home/gift-block";
+import { StoreBand } from "@/components/home/store-band";
+import { Rail } from "@/components/home/rail";
+import { Vault } from "@/components/home/vault";
 import { LandingHero, type LandingTile } from "@/components/landing/landing-hero";
-import { formatDropTime } from "@/lib/format";
+
+import { RefreshAt } from "@/components/refresh-at";
+import { RevealRoot } from "@/components/reveal-root";
+import { OfferSection } from "@/components/offer-section";
+import { ktmDay } from "@/lib/ktm-day";
+import { getOffers } from "@/lib/offers";
+import { getStoreInfo } from "@/lib/store-info";
+import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
-import { siteSetting } from "@/lib/settings/site";
-import { socialLinks } from "@/lib/settings/site-rules";
 import { site } from "@/lib/site";
-import { getDropTimeline } from "@/lib/store";
+import { getDropTimeline, getProducts } from "@/lib/store";
+import { getSavedLooks } from "@/lib/looks";
+import { designerFits } from "@/lib/occasions";
+import { homeSetting } from "@/lib/settings/home";
+import { siteSetting } from "@/lib/settings/site";
+import { kindsSetting } from "@/lib/settings/categories";
+import { vaultSetting } from "@/lib/settings/vault";
+import { kindView } from "@/lib/settings/categories-rules";
+import { socialLinks } from "@/lib/settings/site-rules";
+import type { HomeSection } from "@/lib/settings/home-rules";
 
 export const revalidate = 60;
 
-// The home page (owner, 26 Oct 2026): image-led, after a Zara redesign and a parallax editorial.
-// EASYPICK huge with our black-and-white pictures inside the letters, opening into four tiles
-// (Tees, Hoodies, Jackets, Bottoms), then the store in six chapters. What was the home page is
-// now the Drops page (app/drops/page.tsx).
+// Concept: "the tag is the store". The page is built from what's printed on an
+// Easypick hang tag: a fixed price, measurements in cm, a SKU. Numbers shown are
+// computed from stock data, never decorative.
 
-export const metadata: Metadata = {
-  title: { absolute: "Easypick: men's streetwear, Kathmandu" },
-  alternates: { canonical: "/" },
-};
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
+// The pictures inside the letters, and the four tiles above the rail (owner: "use the current images").
+const WORDS = ["/drops/hero-2.webp", "/visit/door-poster.avif", "/drops/hero-showroom.webp", "/gift/hero-white.webp"];
+const TILES: LandingTile[] = [
+  { label: "Tees", href: "/shop?category=tees", images: ["/products/oversized-heavy-tee/front.jpg", "/products/boxy-pocket-tee/front.jpg"] },
+  { label: "Hoodies", href: "/shop?category=hoodies,sweatshirts", images: ["/products/everyday-hoodie/front.jpg", "/products/brushed-crewneck/front.jpg", "/products/fleece-quarter-zip/front.jpg"] },
+  { label: "Jackets", href: "/shop?category=jackets", images: ["/poses/coach-jacket-1.webp", "/products/coach-jacket/front.jpg", "/poses/coach-jacket-2.webp", "/poses/coach-jacket-3.webp"] },
+  { label: "Bottoms", href: "/shop?category=jeans,trousers,joggers,shorts", images: ["/products/relaxed-straight-jean/front.jpg", "/products/tapered-jogger/front.jpg", "/products/wide-cargo-pant/front.jpg"] },
+];
 
 const orgLd = {
   "@context": "https://schema.org",
@@ -34,80 +57,116 @@ const orgLd = {
       slogan: site.tagline,
       sameAs: [] as string[],
     },
-    {
-      "@type": "WebSite",
-      name: site.name,
-      url: site.url,
-      publisher: { "@id": `${site.url}/#org` },
-      potentialAction: { "@type": "SearchAction", target: { "@type": "EntryPoint", urlTemplate: `${site.url}/shop?q={search_term_string}` }, "query-input": "required name=search_term_string" },
-    },
+    { "@type": "WebSite", name: site.name, url: site.url, publisher: { "@id": `${site.url}/#org` } },
   ],
 };
 
-// The pictures inside the letters, and the four tiles (owner: "use the current images, everything available").
-const WORDS = ["/drops/hero-2.webp", "/drops/hero-showroom.webp", "/visit/door-poster.avif", "/gift/hero-white.webp"];
-const TILES: LandingTile[] = [
-  { label: "Tees", href: "/shop?category=tees", images: ["/products/oversized-heavy-tee/front.jpg", "/products/boxy-pocket-tee/front.jpg"] },
-  { label: "Hoodies", href: "/shop?category=hoodies,sweatshirts", images: ["/products/everyday-hoodie/front.jpg", "/products/brushed-crewneck/front.jpg", "/products/fleece-quarter-zip/front.jpg"] },
-  { label: "Jackets", href: "/shop?category=jackets", images: ["/poses/coach-jacket-1.webp", "/products/coach-jacket/front.jpg", "/poses/coach-jacket-2.webp", "/poses/coach-jacket-3.webp"] },
-  { label: "Bottoms", href: "/shop?category=jeans,trousers,joggers,shorts", images: ["/products/relaxed-straight-jean/front.jpg", "/products/tapered-jogger/front.jpg", "/products/wide-cargo-pant/front.jpg"] },
-];
-
 export default async function HomePage() {
-  const [{ current, next }, siteSettings] = await Promise.all([getDropTimeline(), siteSetting.get()]);
+  const [products, { next }, home, siteSettings, kindList, vaultLook] = await Promise.all([getProducts(), getDropTimeline(), homeSetting.get(), siteSetting.get(), kindsSetting.get(), vaultSetting.get()]);
+  const kv = kindView(kindList);
   // The organisation's social profiles for search engines (Admin → Site settings).
   const ld = { ...orgLd, "@graph": [{ ...orgLd["@graph"][0], sameAs: socialLinks(siteSettings).map((x) => x.href) }, orgLd["@graph"][1]] };
-  const drop = current ?? next;
+  // Section order and on/off, as set in Admin → Home page.
+  const at = (id: HomeSection) => ({ order: home.sections.findIndex((x) => x.id === id) });
+  const on = (id: HomeSection) => home.sections.find((x) => x.id === id)?.on !== false;
+  // Vault pieces have their own section; the rail holds the house range.
+  const range = products.filter((p) => !p.vault);
 
-  const chapters: Chapter[] = [
-    {
-      title: drop ? [`Drop ${drop.slug}`, current ? "Out now" : formatDropTime(drop.releaseAt).split(",")[0]] : ["The drops", "Every other Friday"],
-      text: drop ? `${drop.name}. New pieces every other Friday at 6 PM, at one fixed price online and in store.` : "New pieces every other Friday at 6 PM, at one fixed price online and in store.",
-      link: { href: "/drops", label: "Shop the drop" },
-      image: "/drops/hero-2.webp",
-      small: "/drops/hero-showroom.webp",
-    },
-    {
-      title: ["Designer", "Fits"],
-      text: "Whole outfits for every occasion, put together for you. Add the fit to your bag in one go.",
-      link: { href: "/fits", label: "See the fits" },
-      image: "/poses/coach-jacket-1.webp",
-      small: "/poses/coach-jacket-3.webp",
-    },
-    {
-      title: ["The", "Vault"],
-      text: "Original brands, checked by hand. One of each, never restocked.",
-      link: { href: "/vault", label: "Enter the Vault" },
-      image: "/vault/hero-figure.webp",
-      figure: { src: "/vault/hero-figure.webp", width: 410, height: 925 },
-    },
-    {
-      title: ["Buy for", "someone"],
-      text: "Send a piece, or a gift card. They pick their own size, or swap it in the store.",
-      link: { href: "/gift", label: "Send a gift" },
-      image: "/gift/hero-white.webp",
-      small: "/gift-cards/back.webp",
-    },
-    {
-      title: ["Try it on", "in store"],
-      text: "Every piece, at the same price as online. Walk the store from here before you come.",
-      link: { href: "/visit", label: "Plan a visit" },
-      image: "/visit/store-night-open-tall.avif",
-      small: "/visit/door-poster.avif",
-    },
-    {
-      title: ["Hear it", "first"],
-      text: "One message when a drop lands. Stop anytime.",
-      image: "/drops/hero-showroom.webp",
-      signup: true,
-    },
-  ];
+  const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
+  const offerList = await getOffers();
+
+  const { looks } = designerFits(products, await getSavedLooks());
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
-      <LandingHero words={WORDS} tiles={TILES} />
-      <LandingChapters chapters={chapters} />
+      <div className="flex flex-col">
+      {/* Above the rail (owner, 26 Oct 2026, after a Zara redesign; plays by itself): EASYPICK with our
+          pictures inside the letters, then four tiles. The rail and everything below are as they were. */}
+      {on("hero") && (
+        <div style={at("hero")}>
+          <LandingHero words={WORDS} tiles={TILES} />
+        </div>
+      )}
+
+      {/* The rail: products first, with quick filters and "My size" */}
+      {on("rail") && (
+        <div style={at("rail")}>
+          <Rail products={range} settings={home.rail} kinds={{ order: kv.order, names: Object.fromEntries(kv.all.map((k) => [k, kv.name(k)])) }} />
+        </div>
+      )}
+
+
+
+      {/* Designer Fits: just a pointer here; the fits themselves are on /fits (above the Vault, owner, 18 Oct 2026) */}
+      {on("fits") && looks.length > 0 && (
+        <section aria-labelledby="fits-title" style={at("fits")} className="py-8 md:py-10">
+          <div className="container-ep">
+            <FitsTeaser looks={looks} title={home.fits.title} button={home.fits.button} />
+          </div>
+        </section>
+      )}
+
+      {/* Pick your offer, under Designer Fits and above the Vault (owner, 18 Oct 2026) */}
+      {on("offers") && offers.length > 0 && (
+        <section aria-labelledby="pick-offer-title" style={at("offers")} className="overflow-hidden py-12 md:py-16">
+          <div className="container-ep">
+            {/* Pick your offer: the stack of offers; each opens onto a wheel of its pieces (owner, 18 Oct 2026). */}
+            <div>
+              <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-steel-dark">{home.offers.eyebrow}</p>
+              <h2 id="pick-offer-title" className="mt-2 text-center text-[clamp(1.9rem,1.4rem+1.8vw,2.8rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
+                {home.offers.title}
+                <span className="block text-steel-dark">{home.offers.line}</span>
+              </h2>
+              <div className="mt-10">
+                <OfferSection offers={offerList} products={products} today={ktmDay()} />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* The Vault: original brands and numbered pieces */}
+      {on("vault") && (
+        <div style={at("vault")}>
+          <Vault products={products} copy={home.vault} theme={vaultLook.cold} />
+        </div>
+      )}
+
+
+
+      {/* Buying for someone: one quiet line, by Track an order (owner, 19 Oct 2026). */}
+      {on("gift") && (
+        <div style={at("gift")}>
+          <GiftBlock copy={home.gift} />
+        </div>
+      )}
+
+      {/* Our store and self-checkout, in one small band (owner, 19 Oct 2026); each half has its own switch. */}
+      {(on("store") || on("checkout")) && (
+        <div style={{ order: Math.min(on("store") ? at("store").order : 99, on("checkout") ? at("checkout").order : 99) }}>
+          <StoreBand info={await getStoreInfo()} store={on("store")} checkout={on("checkout")} />
+        </div>
+      )}
+
+      {/* Track an order: no account needed */}
+      {on("track") && (
+      <section aria-labelledby="track-title" style={at("track")} className="border-t border-mist py-7 md:py-8">
+        <div className="container-ep grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-end lg:gap-10">
+          <div className="lg:pb-2.5">
+            <h2 id="track-title" className="text-xl font-bold">
+              {home.track.title}
+            </h2>
+            <p className="text-[13px] text-steel-dark">{home.track.line}</p>
+          </div>
+          <TrackForm compact id="home-track" />
+        </div>
+      </section>
+      )}
+
+      </div>
+      {next && <RefreshAt at={next.releaseAt} />}
+      <RevealRoot />
     </>
   );
 }

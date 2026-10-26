@@ -72,7 +72,7 @@ test("the owner puts a piece in The Vault and it shows on the home page", async 
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
 
-  await page.goto("/drops");
+  await page.goto("/");
   const section = page.getByRole("region", { name: "The Vault" });
   await expect(section).toBeVisible();
   await expect(section.getByText("07 / 20")).toBeVisible();
@@ -143,8 +143,8 @@ test("the owner edits the home page and the announcement from the admin, and the
   const track = page.getByRole("region", { name: "Track an order" });
   await track.getByLabel("Headline").fill("Find your order.");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved. The Drops page shows it now.")).toBeVisible();
-  await page.goto("/drops");
+  await expect(page.getByText("Saved. The home page shows it now.")).toBeVisible();
+  await page.goto("/");
   await expect(page.getByRole("heading", { name: "Find your order." })).toBeVisible();
 
   // The announcement, then closing it.
@@ -169,7 +169,7 @@ test("the owner edits the home page and the announcement from the admin, and the
   await page.goto("/admin/home");
   await page.getByRole("region", { name: "Track an order" }).getByLabel("Headline").fill("Track an order.");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved. The Drops page shows it now.")).toBeVisible();
+  await expect(page.getByText("Saved. The home page shows it now.")).toBeVisible();
 });
 
 test("the owner edits a piece after it was made: sizes, a colour, measurements, its place, then deletes the copy", async ({ page }) => {
