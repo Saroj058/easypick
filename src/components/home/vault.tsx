@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 import { formatPrice } from "@/lib/format";
-import { themeVars, V, type Theme } from "@/components/vault/look";
+import Image from "next/image";
+import { MONO, themeVars, V, type Theme } from "@/components/vault/look";
 import { VaultTile, type TileData } from "@/components/vault/vault-tile";
 import type { Product } from "@/lib/types";
 
@@ -34,7 +35,7 @@ export const brandId = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/
  */
 function VaultWaiting() {
   return (
-    <section aria-labelledby="vault-title" style={themeVars()} className={`section ${V.frost}`}>
+    <section aria-labelledby="vault-title" style={themeVars(MONO)} className={`section ${V.frost}`}>
       <div className="container-ep">
         <div className={`${V.slate} px-6 py-14 text-white md:px-12`}>
           <h2 id="vault-title" className="display display-h1">
@@ -117,51 +118,71 @@ export function Vault({ products, copy = { title: "The Vault", line: "Original b
   // One piece from each brand in turn (what can be bought first), five in all.
   const featured = featuredVault(pieces, FEATURED);
 
+  const rs = (n: number) => `Rs ${new Intl.NumberFormat("en-IN").format(n)}`;
+  const left = pieces.filter((p) => p.status !== "sold_out");
+
+  // In black and white, like the Vault's own page since 26 Oct 2026 (owner: "make the Vault on the
+  // home screen better as well"): one rounded black panel; the name, its line and the way in, with
+  // the person from the Vault's opening; the brands as small rounded cards with what they cost
+  // from; then five pieces. ("theme" is kept for the caller but no longer tints it.)
+  void theme;
   return (
-    <section aria-labelledby="vault-title" style={themeVars(theme)} className={`section ${V.frost}`}>
-      <div className="container-ep">
-        <div className={`${V.slate} px-4 pb-10 pt-8 text-white md:px-10 md:pb-12 md:pt-10`}>
-          <div className={`mb-6 flex justify-between gap-4 ${V.mono} ${V.iceDim}`}>
-            <span>[ Easypick · The Vault ]</span>
-            <span>[ {String(pieces.length).padStart(2, "0")} pieces ]</span>
-          </div>
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <h2 id="vault-title" className="display display-h1">
-                {copy.title}
-              </h2>
-              <p className={`mt-2.5 text-[17px] ${V.iceDim}`}>{copy.line}</p>
-            </div>
-            <Link href={vaultHref()} className="group inline-flex h-12 items-center gap-3 rounded-full bg-white pl-6 pr-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--v-ink)] transition-colors hover:bg-[var(--v-tile)]">
-              {copy.button}
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--v-ink)] text-white transition-transform group-hover:translate-x-0.5" aria-hidden>
-                →
-              </span>
-            </Link>
+    <section aria-labelledby="vault-title" style={themeVars(MONO)} className="py-10 md:py-14">
+      <div className="px-3 md:px-4">
+        <div className="relative isolate overflow-hidden rounded-[28px] bg-[#111] px-5 pb-8 pt-7 text-white md:px-10 md:pb-12 md:pt-10 [&_.display]:!font-sans [&_.display]:!font-semibold [&_.display]:!normal-case [&_.display]:!tracking-[-0.03em]">
+          {/* The person from the Vault's opening, peeking in on the right */}
+          <Image src="/vault/hero-figure.webp" alt="" width={410} height={925} sizes="260px" className="pointer-events-none absolute -top-6 right-[2%] -z-10 hidden h-[115%] w-auto max-w-none opacity-90 [mask-image:linear-gradient(to_bottom,#000_55%,transparent_92%)] lg:block" />
+
+          <div className="flex justify-between gap-4 font-mono text-[10.5px] uppercase tracking-[0.18em] text-white/60">
+            <span>Easypick · The Vault</span>
+            <span className="lg:hidden">{left.length} available</span>
           </div>
 
-          {/* The brands, each with its own way in. */}
+          <div className="mt-6 max-w-[620px]">
+            <h2 id="vault-title" className="text-[clamp(2.4rem,1.6rem+3.2vw,4.6rem)] font-semibold leading-[0.95] tracking-[-0.04em]">
+              {copy.title}
+            </h2>
+            <p className="mt-3 text-[16px] leading-relaxed text-white/70">{copy.line}</p>
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <Link href={vaultHref()} className="group inline-flex h-12 items-center gap-3 rounded-full bg-white pl-6 pr-1.5 text-[14px] font-semibold text-[#111]">
+                {copy.button}
+                <span aria-hidden className="grid h-9 w-9 place-items-center rounded-full bg-[#111] text-white transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-rotate-45">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </span>
+              </Link>
+              <span className="hidden font-mono text-[11px] uppercase tracking-[0.16em] text-white/60 lg:inline">
+                {left.length} of {pieces.length} available · checked by hand
+              </span>
+            </div>
+          </div>
+
+          {/* The brands: small rounded cards, what each costs from, and the way into its page */}
           {brands.length > 0 && (
-            <nav aria-label="Vault brands" className="no-scrollbar -mx-4 mt-8 flex overflow-x-auto border-y border-white/15 md:mx-0 md:grid md:grid-cols-6">
-              {brands.slice(0, 6).map((b) => (
-                <Link
-                  key={b.name}
-                  href={vaultHref(b.name)}
-                  className="group flex h-[104px] min-w-[150px] shrink-0 flex-col items-center justify-center gap-1 border-r border-white/15 px-2 transition-colors last:border-r-0 hover:bg-white/[0.06] md:min-w-0"
-                >
-                  <span className="text-center font-display text-[24px] uppercase leading-none tracking-[0.04em]">{b.name}</span>
-                  <span className={`font-mono text-[11px] ${V.iceDim}`}>
-                    {b.pieces.length} {b.pieces.length === 1 ? "piece" : "pieces"}
-                  </span>
-                  <span className="mt-1.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.1em] underline-offset-4 group-hover:underline">
-                    Show all <span aria-hidden>→</span>
-                  </span>
-                </Link>
-              ))}
+            <nav aria-label="Vault brands" className="no-scrollbar -mx-5 mt-9 flex gap-2.5 overflow-x-auto px-5 md:mx-0 md:grid md:grid-cols-3 md:px-0 lg:max-w-[calc(100%-300px)] xl:grid-cols-6">
+              {brands.slice(0, 6).map((b) => {
+                const open = b.pieces.filter((p) => p.status !== "sold_out");
+                const from = open.length ? Math.min(...open.map((p) => p.salePrice ?? p.price)) : null;
+                return (
+                  <Link key={b.name} href={vaultHref(b.name)} className="group flex min-w-[150px] shrink-0 flex-col justify-between gap-5 rounded-[18px] bg-[#1e1e1e] p-4 transition-colors hover:bg-[#2a2a2a] md:min-w-0">
+                    <span>
+                      <span className="block text-[17px] font-semibold leading-tight tracking-[-0.02em]">{b.name}</span>
+                      <span className="mt-0.5 block text-[12px] text-white/60">
+                        {b.pieces.length} {b.pieces.length === 1 ? "piece" : "pieces"}
+                      </span>
+                      {from !== null && <span className="mt-1.5 block whitespace-nowrap text-[13px] font-semibold tabular-nums">From {rs(from)}</span>}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[12px] font-semibold">
+                      Show all <span aria-hidden className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+                    </span>
+                  </Link>
+                );
+              })}
             </nav>
           )}
 
-          <ul className="no-scrollbar -mx-4 mt-8 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:px-0">
+          <ul className="no-scrollbar -mx-5 mt-8 flex snap-x scroll-px-5 gap-4 overflow-x-auto px-5 md:mx-0 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:px-0">
             {featured.map((p, i) => (
               <li key={p.id} className="w-[44vw] max-w-[220px] shrink-0 snap-start md:w-auto md:max-w-none">
                 <VaultTile t={toTile(p, i)} sizes="(min-width: 768px) 18vw, 44vw" priority={i < 2} />
