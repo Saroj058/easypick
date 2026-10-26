@@ -2,33 +2,63 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { LandingChapters, type ChapterData } from "./landing-chapters";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const GLIDE = [0.65, 0, 0.35, 1] as const;
-/** How long the word shows before it opens into the tiles, in ms. */
-const WORD_MS = 2600;
+/** How long the word shows before the chapters, in ms. */
+const WORD_MS = 2800;
+/** Set once the word has played: it plays once per visit (until the tab or window is closed). */
+const SEEN = "ep-intro-seen";
+
+// Whether this visit has already seen the word. Unknown on the server and while the page wakes up
+// (so nothing flashes), then read from this tab's session.
+const noop = () => () => {};
+function readSeen(): "seen" | "new" {
+  try {
+    return sessionStorage.getItem(SEEN) ? "seen" : "new";
+  } catch {
+    return "new";
+  }
+}
+function markSeen() {
+  try {
+    sessionStorage.setItem(SEEN, "1");
+  } catch {
+    /* private mode: it simply plays again next time */
+  }
+}
 
 
 /**
  * The top of the home page, above the rail (owner, 26 Oct 2026; it all plays by itself, no
- * scrolling). First EASYPICK, huge in a didone, our darker black-and-white pictures crossfading inside
- * the letters, a small line above and "Kathmandu" under it (a tap skips ahead). Then the collections,
+ * scrolling). First EASYPICK, huge and bold in a didone, our dark black-and-white pictures crossfading
+ * inside the letters, a small line above and "Kathmandu" under it (a tap skips ahead). It plays once
+ * per visit; coming back to the home page during the same visit goes straight to the chapters. Then the collections,
  * one chapter at a time sliding sideways with depth, after a parallax editorial reference
  * (landing-chapters.tsx). Everything below (the rail and the rest) is unchanged. People who ask for
  * less motion go straight to still chapters.
  */
 export function LandingHero({ words, chapters, line }: { words: string[]; chapters: ChapterData[]; /** The small line over the word. */ line: string }) {
   const still = useReducedMotion();
+  const status = useSyncExternalStore(noop, readSeen, () => "unknown" as const);
   const [stage, setStage] = useState<"word" | "chapters">("word");
+  const done = () => {
+    markSeen();
+    setStage("chapters");
+  };
   useEffect(() => {
-    if (still || stage !== "word") return;
-    const t = setTimeout(() => setStage("chapters"), WORD_MS);
+    if (status !== "new" || stage !== "word") return;
+    const t = setTimeout(() => {
+      markSeen();
+      setStage("chapters");
+    }, WORD_MS);
     return () => clearTimeout(t);
-  }, [still, stage]);
-  const show = still ? "chapters" : stage;
+  }, [status, stage]);
+  // The word shows for everyone the first time (still, for people who ask for less motion).
+  const show = status === "unknown" ? null : status === "seen" ? "chapters" : stage;
 
   return (
     <section aria-labelledby="landing-title" className="relative isolate h-[86svh] min-h-[600px] overflow-hidden bg-white md:h-svh md:min-h-[640px]">
@@ -41,12 +71,12 @@ export function LandingHero({ words, chapters, line }: { words: string[]; chapte
           <motion.button
             key="word"
             type="button"
-            onClick={() => setStage("chapters")}
+            onClick={done}
             aria-label="Skip to the collections"
             className="absolute inset-0 isolate cursor-pointer"
-            initial={{ opacity: 0 }}
+            initial={still ? false : { opacity: 0 }}
             animate={{ opacity: 1, transition: { duration: 0.9, ease: EASE } }}
-            exit={{ opacity: 0, scale: 1.35, filter: "blur(6px)", transition: { duration: 0.8, ease: GLIDE } }}
+            exit={still ? { opacity: 0 } : { opacity: 0, scale: 1.35, filter: "blur(6px)", transition: { duration: 0.8, ease: GLIDE } }}
           >
             <Drift words={words} />
             {/* A white sheet with black letters, screened over the pictures: the pictures show only inside the letters */}
@@ -54,10 +84,10 @@ export function LandingHero({ words, chapters, line }: { words: string[]; chapte
               <motion.span initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.4 }} className="mb-[2vw] font-mono text-[10px] uppercase tracking-[0.4em] text-black md:text-[11px]">
                 {line}
               </motion.span>
-              <motion.span initial={{ letterSpacing: "0.04em", opacity: 0 }} animate={{ letterSpacing: "-0.045em", opacity: 1 }} transition={{ duration: 1.6, ease: EASE }} className="hidden whitespace-nowrap font-[family-name:var(--font-didone)] text-[18vw] font-medium leading-none text-black md:block">
+              <motion.span initial={still ? false : { letterSpacing: "0.04em", opacity: 0 }} animate={{ letterSpacing: "-0.045em", opacity: 1 }} transition={{ duration: 1.6, ease: EASE }} className="hidden whitespace-nowrap font-[family-name:var(--font-didone)] text-[18vw] font-bold leading-none text-black md:block">
                 EASYPICK
               </motion.span>
-              <span className="text-center font-[family-name:var(--font-didone)] text-[30vw] font-medium leading-[0.82] tracking-[-0.045em] text-black md:hidden">
+              <span className="text-center font-[family-name:var(--font-didone)] text-[30vw] font-bold leading-[0.82] tracking-[-0.045em] text-black md:hidden">
                 EASY
                 <br />
                 PICK
@@ -67,7 +97,7 @@ export function LandingHero({ words, chapters, line }: { words: string[]; chapte
               </motion.span>
             </span>
           </motion.button>
-        ) : (
+        ) : show === null ? null : (
           <motion.div key="chapters" className="absolute inset-0" initial={still ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
             <LandingChapters chapters={chapters} />
           </motion.div>
@@ -86,10 +116,10 @@ function Drift({ words }: { words: string[] }) {
     return () => clearInterval(t);
   }, [words.length]);
   return (
-    <span className="absolute inset-0 block bg-[#111]">
+    <span className="absolute inset-0 block bg-[#0a0a0a]">
       {words.map((src, i) => (
         <motion.span key={src} className="absolute inset-0 block" initial={false} animate={{ opacity: i === at ? 1 : 0, scale: i === at ? 1.12 : 1.02 }} transition={{ opacity: { duration: 0.8, ease: "easeInOut" }, scale: { duration: 3.4, ease: "linear" } }}>
-          <Image src={src} alt="" fill priority={i === 0} sizes="100vw" className="object-cover grayscale contrast-[1.25] brightness-[0.85]" />
+          <Image src={src} alt="" fill priority={i === 0} sizes="100vw" className="object-cover grayscale contrast-[1.4] brightness-[0.55]" />
         </motion.span>
       ))}
     </span>

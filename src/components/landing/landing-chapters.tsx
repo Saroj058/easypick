@@ -7,8 +7,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-/** How long each chapter stays, in ms. */
-const STAY = 5200;
+/** One beat, as in the reference: a 1.2 s glide and a short rest, so it never stops moving (ms). */
+const STAY = 2300;
 
 export interface ChapterData {
   label: string;
@@ -24,7 +24,7 @@ export interface ChapterData {
   bigAt?: string;
   small?: string;
   figure?: { src: string; width: number; height: number };
-  /** Two or three short facts, true to the store. */
+  /** Two short facts, true to the store (shown on computers). */
   facts: string[];
 }
 
@@ -43,8 +43,8 @@ const useTabHidden = () => useSyncExternalStore(subVis, () => document.hidden, (
 const SLIDE = [0.7, 0, 0.2, 1] as const;
 const layer = (depth: number, still: boolean): Variants => ({
   enter: (d: number) => (still ? { opacity: 0 } : { x: `${d * 100 * depth}vw` }),
-  center: { x: 0, opacity: 1, transition: { duration: still ? 0.4 : 1.2, ease: SLIDE } },
-  exit: (d: number) => (still ? { opacity: 0, transition: { duration: 0.3 } } : { x: `${-d * 100 * depth}vw`, transition: { duration: 1.2, ease: SLIDE } }),
+  center: { x: 0, opacity: 1, transition: { duration: still ? 0.4 : 1.2, ease: SLIDE, delay: still ? 0 : 0.08 } },
+  exit: (d: number) => (still ? { opacity: 0, transition: { duration: 0.3 } } : { x: `${-d * 100 * depth}vw`, transition: { duration: 1.2, ease: SLIDE, delay: 0.08 } }),
 });
 
 /** "The *heavy* tee" → The <em>heavy</em> tee */
@@ -82,9 +82,9 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
 
   useEffect(() => {
     if (paused) return;
-    const t = setTimeout(() => setPage(([p]) => [p + 1, 1]), STAY);
+    const t = setTimeout(() => setPage(([p]) => (wrap(n, p) === n - 1 ? [p - (n - 1), -1] : [p + 1, 1])), STAY);
     return () => clearTimeout(t);
-  }, [page, paused]);
+  }, [page, paused, n]);
 
   return (
     <div
@@ -179,16 +179,16 @@ function Slide({ ch, i, still, dir, first }: { ch: ChapterData; i: number; still
   const fig = ch.layout === "figure";
   // Where things sit. Phones: the words on top, the pictures under them. Computers: side by side.
   const big = fig
-    ? "right-4 top-[38%] h-[44%] w-[46vw] md:left-[8vw] md:right-auto md:top-[20%] md:h-[58%] md:w-[22vw]"
+    ? "left-4 bottom-[14%] h-[34%] w-[44vw] md:bottom-auto md:left-[8vw] md:top-[20%] md:h-[58%] md:w-[22vw]"
     : right
-      ? "right-4 top-[36%] h-[46%] w-[60vw] md:right-[7vw] md:top-[15%] md:h-[72%] md:w-[31vw]"
-      : "right-4 top-[36%] h-[46%] w-[60vw] md:left-[7vw] md:right-auto md:top-[15%] md:h-[72%] md:w-[31vw]";
-  const small = right ? "left-4 top-[58%] h-[24%] w-[34vw] md:left-auto md:right-[33vw] md:top-[56%] md:h-[30%] md:w-[13vw]" : "left-4 top-[58%] h-[24%] w-[34vw] md:left-[33vw] md:top-[58%] md:h-[30%] md:w-[13vw]";
+      ? "left-4 right-4 bottom-[14%] h-[36%] md:left-auto md:bottom-auto md:right-[7vw] md:top-[15%] md:h-[70%] md:w-[30vw]"
+      : "left-4 right-4 bottom-[14%] h-[36%] md:bottom-auto md:left-[7vw] md:right-auto md:top-[15%] md:h-[70%] md:w-[30vw]";
+  const small = right ? "md:right-[32vw] md:top-[58%] md:h-[28%] md:w-[12vw]" : "md:left-[32vw] md:top-[60%] md:h-[28%] md:w-[12vw]";
   const words = fig
-    ? "left-4 right-4 top-[13%] md:left-[34vw] md:right-[6vw] md:top-[20%]"
+    ? "left-4 right-4 top-[12%] md:left-[34vw] md:right-[6vw] md:top-[20%]"
     : right
-      ? "left-4 right-4 top-[13%] md:left-[7vw] md:right-auto md:top-1/2 md:w-[42vw] md:-translate-y-1/2"
-      : "left-4 right-4 top-[13%] md:left-auto md:right-[7vw] md:top-1/2 md:w-[42vw] md:-translate-y-1/2";
+      ? "left-4 right-4 top-[12%] md:left-[8vw] md:right-auto md:top-1/2 md:w-[38vw] md:-translate-y-1/2"
+      : "left-4 right-4 top-[12%] md:left-auto md:right-[8vw] md:top-1/2 md:w-[38vw] md:-translate-y-1/2";
 
   return (
     <>
@@ -200,24 +200,26 @@ function Slide({ ch, i, still, dir, first }: { ch: ChapterData; i: number; still
       </motion.div>
       {/* The small picture (near, fast) */}
       {ch.small && (
-        <motion.div custom={dir} variants={layer(1.25, still)} className={`absolute z-[3] overflow-hidden bg-[#ececea] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.35)] ${small}`}>
-          <Image src={ch.small} alt="" fill sizes="(min-width: 768px) 14vw, 34vw" className="object-cover grayscale" />
+        <motion.div custom={dir} variants={layer(1.25, still)} className={`absolute z-[3] hidden overflow-hidden bg-[#ececea] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.35)] md:block ${small}`}>
+          <motion.div className="h-full w-full" initial={false} animate={still ? undefined : { x: [0, -22], scale: [1.06, 1.06] }} transition={{ duration: STAY / 1000 + 1.2, ease: "linear" }}>
+            <Image src={ch.small} alt="" fill sizes="(min-width: 768px) 14vw, 34vw" className="object-cover grayscale" />
+          </motion.div>
         </motion.div>
       )}
-      {/* The words */}
+      {/* The words (drifting a little while they rest, so it never stops moving) */}
       <motion.div custom={dir} variants={layer(1, still)} className={`absolute z-[2] ${words} ${right ? "" : "md:text-right"}`}>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.3em] text-[#555]">
-          *{String(i + 1).padStart(2, "0")} · {ch.label}
-        </p>
-        <h2 className={`mt-3 font-[family-name:var(--font-didone)] font-normal uppercase leading-[0.86] tracking-[-0.03em] ${fig ? "text-[clamp(3rem,15vw,5rem)] md:text-[11vw]" : "text-[clamp(2.6rem,12vw,4.2rem)] md:text-[6.6vw]"}`}>
-          {ch.title.map((t) => (
-            <Line key={t} text={t} />
-          ))}
-        </h2>
-        <div className={`hidden md:block ${fig ? "md:mt-[32vh] md:max-w-[30vw]" : "md:mt-6"} ${right ? "" : "md:ml-auto md:max-w-[34ch]"}`}>
-          <p className="max-w-[34ch] text-[14px] leading-relaxed text-[#111]/70 md:ml-[inherit]">{ch.line}</p>
-        </div>
-        <InfoRow ch={ch} alignRight={!right && !fig} />
+        <motion.div initial={false} animate={still ? undefined : { x: [0, -14] }} transition={{ duration: STAY / 1000 + 1.2, ease: "linear" }}>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.3em] text-[#555]">
+            *{String(i + 1).padStart(2, "0")} · {ch.label}
+          </p>
+          <h2 className={`mt-3 font-[family-name:var(--font-didone)] font-normal uppercase leading-[0.86] tracking-[-0.03em] ${fig ? "text-[clamp(3rem,15vw,5rem)] md:text-[11vw]" : "text-[clamp(2.6rem,12vw,4.2rem)] md:text-[6.6vw]"}`}>
+            {ch.title.map((t) => (
+              <Line key={t} text={t} />
+            ))}
+          </h2>
+          <p className={`mt-4 max-w-[34ch] text-[13.5px] leading-relaxed text-[#111]/70 md:text-[14.5px] ${fig ? "md:mt-[30vh]" : "md:mt-7"} ${right || fig ? "" : "md:ml-auto"}`}>{ch.line}</p>
+          <InfoRow ch={ch} alignRight={!right && !fig} />
+        </motion.div>
       </motion.div>
       {/* A cut-out person in front of the words (the Vault) */}
       {ch.figure && (
@@ -232,13 +234,10 @@ function Slide({ ch, i, still, dir, first }: { ch: ChapterData; i: number; still
 /** A few facts, and one way to learn more. */
 function InfoRow({ ch, alignRight }: { ch: ChapterData; alignRight: boolean }) {
   return (
-    <div className={`mt-4 flex flex-col gap-3 md:mt-6 ${alignRight ? "md:items-end" : ""}`}>
-      <ul className={`flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[#111]/75 ${alignRight ? "md:justify-end" : ""}`}>
-        {ch.facts.map((f) => (
-          <li key={f} className="flex items-center gap-2">
-            <span aria-hidden className="h-px w-3 bg-[#111]/40" />
-            {f}
-          </li>
+    <div className={`mt-3 flex flex-col gap-4 md:mt-5 ${alignRight ? "md:items-end" : ""}`}>
+      <ul className={`hidden gap-x-5 font-mono text-[10px] uppercase tracking-[0.18em] text-[#111]/55 md:flex ${alignRight ? "md:justify-end" : ""}`}>
+        {ch.facts.slice(0, 2).map((f) => (
+          <li key={f}>{f}</li>
         ))}
       </ul>
       <Link href={ch.href} className="group inline-flex min-h-11 w-fit items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#111]">
