@@ -1,13 +1,13 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
 // How customers know a row of cards slides (owner, 20 Oct 2026: "people get confused whether to
-// slide the cards"): neighbouring cards peek in at the sides; the first time a row comes into view
-// it nudges sideways a little and springs back, once; and under it a short line says what to do
+// slide the cards"): neighbouring cards peek in at the sides, and under it a short line says what to do
 // (swipe on a phone, drag or arrows on a computer) with the arrows themselves and where you are.
-// Once someone has moved it, the words go and only the arrows and the count stay.
+// Once someone has moved it, the words go and only the arrows and the count stay. (The rows used to
+// lean toward the next card on their own the first time; the owner had that removed on 26 Oct 2026.)
 
 const coarse = () => window.matchMedia("(pointer: coarse)").matches;
 const subscribe = (fn: () => void) => {
@@ -15,50 +15,6 @@ const subscribe = (fn: () => void) => {
   m.addEventListener("change", fn);
   return () => m.removeEventListener("change", fn);
 };
-
-/** Calls `fn` once, the first time half of `ref` is on screen. */
-export function useFirstView(ref: React.RefObject<HTMLElement | null>, fn: () => void) {
-  const done = useRef(false);
-  const latest = useRef(fn);
-  useEffect(() => {
-    latest.current = fn;
-  });
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || done.current) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (done.current || !entries.some((e) => e.isIntersecting)) return;
-        done.current = true;
-        io.disconnect();
-        // A beat after it settles into view, so the eye is on it.
-        setTimeout(() => latest.current(), 450);
-      },
-      { threshold: 0.5 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [ref]);
-}
-
-/**
- * The nudge: moves a position a little ahead and back (about 0.9 s), painting each frame. Not for
- * people who asked for less motion. `stop` reports when the customer has taken over meanwhile.
- */
-export function playNudge(set: (offset: number) => void, stop: () => boolean, by = 0.4) {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const t0 = performance.now();
-  const D = 900;
-  const step = (now: number) => {
-    if (stop()) return;
-    const t = Math.min(1, (now - t0) / D);
-    // Out and back on one smooth curve.
-    set(by * Math.sin(Math.PI * t) * (1 - 0.15 * t));
-    if (t < 1) requestAnimationFrame(step);
-    else set(0);
-  };
-  requestAnimationFrame(step);
-}
 
 export function SlideHint({ at, n, used, onPrev, onNext, canPrev = true, canNext = true, label }: { at: number; n: number; /** The customer has moved it: just the arrows and count. */ used: boolean; onPrev: () => void; onNext: () => void; canPrev?: boolean; canNext?: boolean; label: string }) {
   const touch = useSyncExternalStore(subscribe, coarse, () => false);

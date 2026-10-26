@@ -260,15 +260,15 @@ export function PieceControls({
           {piece.name}
         </Link>
       </h4>
-      {/* The price on its own line under the name (owner, 25 Oct 2026: not on a hanging tag, not squeezed in with the colours). */}
-      <p className="sr-only">
+      {/* The price under the name, small and thin (owner, 26 Oct 2026: not big under the card). */}
+      <p className="mt-0.5 flex items-baseline justify-center gap-2 tabular-nums">
         {piece.was && (
-          <s className="text-[13px] text-steel-dark">
+          <s className="text-[12px] font-light text-steel-dark">
             <span className="sr-only">was </span>
             {formatPrice(piece.was)}
           </s>
         )}
-        <span className="text-[18px] font-semibold tracking-[0.02em]">
+        <span className="text-[14px] font-light tracking-[0.02em] text-ink/85">
           {piece.was && <span className="sr-only">now </span>}
           {formatPrice(piece.price)}
         </span>
@@ -627,7 +627,7 @@ function ShelfRow({
         initial={start}
         showNavigation
         hint
-        overhang="clamp(56px, 7vw, 72px)"
+        overhang="12px"
         label={label}
         onSelect={setActive}
         onActivate={(i) => router.push(`/product/${pieces[i].slug}`)}
@@ -646,13 +646,6 @@ function ShelfRow({
             />
             {/* Add to bag: only on the card in front, bottom left */}
             {i === Math.min(active, pieces.length - 1) && <AddToBag piece={addableFromRail(pieces[i])} className="absolute bottom-1 left-1 z-10" />}
-            {/* The price, big, right under the card in front (owner, 25 Oct 2026) */}
-            {i === Math.min(active, pieces.length - 1) && (
-              <p aria-hidden className="pointer-events-none absolute inset-x-0 top-full mt-4 flex items-baseline justify-center gap-2.5 whitespace-nowrap font-mono tabular-nums">
-                {pieces[i].was && <s className="text-[14px] text-steel-dark">{formatPrice(pieces[i].was)}</s>}
-                <span className="text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] font-semibold leading-none tracking-[-0.01em]">{formatPrice(pieces[i].price)}</span>
-              </p>
-            )}
           </>
         )}
       />

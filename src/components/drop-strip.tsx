@@ -15,7 +15,7 @@ import { AddToBag } from "./add-to-bag";
 import { ArrowIcon } from "./icons";
 import { ProductImage } from "./product-image";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./ui/sheet";
-import { playNudge, SlideHint, useFirstView } from "./ui/slide-hint";
+import { SlideHint } from "./ui/slide-hint";
 
 // A drop's pieces as one long strip (owner's reference, 10 Oct 2026; planned by three agents):
 //  - it runs from one edge of the screen to the other, whatever the screen's width (the page that
@@ -142,17 +142,6 @@ export function DropStrip({ pieces, label, soon = false, controls, big = false, 
   useArrowKeys(frame, (d) => {
     touched();
     go(target.current + d);
-  });
-  // The first time it's in view, it leans toward the next card and back: it slides.
-  useFirstView(frame, () => {
-    if (n < 2) return;
-    playNudge(
-      (o) => {
-        pos.current = target.current + o;
-        paint();
-      },
-      () => usedRef.current || drag.current !== null,
-    );
   });
 
   useEffect(() => {
@@ -310,13 +299,6 @@ export function DropStrip({ pieces, label, soon = false, controls, big = false, 
               </span>
               </span>
             </button>
-            {/* The price, big, right under the card in front (owner, 25 Oct 2026) */}
-            {i === active && (
-              <p aria-hidden className="pointer-events-none absolute inset-x-0 top-full mt-4 flex items-baseline justify-center gap-2.5 whitespace-nowrap font-mono tabular-nums">
-                {p.was && <s className="text-[14px] text-steel-dark">{formatPrice(p.was)}</s>}
-                <span className="text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] font-semibold leading-none tracking-[-0.01em]">{formatPrice(p.price)}</span>
-              </p>
-            )}
             {/* Add to bag: on the card in front, bottom left; it moves with the card */}
             {!soon && i === active && <AddToBag piece={addableFromRail(p)} to={addTo} className="absolute bottom-[2px] left-[2px] z-10" />}
             </div>
@@ -345,7 +327,7 @@ export function DropStrip({ pieces, label, soon = false, controls, big = false, 
       {soon ? (
         <div className="mt-4 flex flex-col items-center text-center" aria-live="polite">
           <h4 className="text-lg font-semibold">{piece.name}</h4>
-          <p className="mt-1 font-mono text-[13px] tabular-nums">{formatPrice(piece.price)}</p>
+          <p className="mt-0.5 text-[14px] font-light tabular-nums text-ink/85">{formatPrice(piece.price)}</p>
           <Link href={`/product/${piece.slug}`} className="group mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold uppercase tracking-[0.06em]">
             View piece
             <ArrowIcon className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />

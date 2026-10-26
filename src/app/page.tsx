@@ -17,6 +17,7 @@ import { getStoreInfo } from "@/lib/store-info";
 import { TrackForm } from "@/app/track/track-form";
 import { formatPrice } from "@/lib/format";
 import { jsonLd } from "@/lib/json-ld";
+import { railReel } from "@/lib/rail-reel";
 import { site, walletList } from "@/lib/site";
 import { getDropTimeline, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
@@ -50,14 +51,15 @@ const clock = (t: string) => {
 };
 const CHAPTERS: ChapterData[] = [
   { label: "Fixed prices", title: ["Price shown.", "*No DM.*"], line: "Every tag shows its price, the same online and in the store. Nothing to ask, nothing to bargain.", steps: ["Pick a size", "Buy now", `Pay with ${walletList()}`], href: "/how-it-works", cta: "How the store works", layout: "left", big: "/drops/hero-showroom.webp", bigAt: "72% 50%", small: "/products/oversized-heavy-tee/front.jpg" },
-  { label: "Your size", title: ["Your size,", "*in cm*"], line: "Every piece is measured in cm. Give your height and weight, or a size you already wear, and we pick yours.", steps: ["Height", "Weight", "Your size"], href: "/size-guide", cta: "Find my size", layout: "right", big: "/poses/coach-jacket-3.webp", bigAt: "50% 25%", small: "/products/relaxed-straight-jean/front.jpg" },
-  { label: "Delivery", title: ["To your", "*door*"], line: "Kathmandu the next day, Lalitpur and Bhaktapur in one to two. Or pick it up free in the store.", facts: [`Free over ${formatPrice(site.delivery.freeAbove)}`, "Track it, no account"], href: "/delivery", cta: "Delivery and pickup", layout: "left", big: "/visit/route-static.avif", bigAt: "40% 60%", small: "/rack/hung/everyday-hoodie.webp" },
-  { label: "Exchange", title: ["Seven days", "*to swap*"], line: "Swap for another size within 7 days, tags on, in the store or by rider.", steps: ["Tags on", "Within 7 days", "New size"], href: "/returns", cta: "Returns and exchange", layout: "right", big: "/poses/coach-jacket-2.webp", bigAt: "50% 25%", small: "/rack/hung/brushed-crewneck.webp" },
-  { label: "Designer Fits", title: ["The whole", "*outfit*"], line: "Pick the occasion and your size. The whole fit goes in your bag in one tap.", steps: ["Occasion", "Your size", "Add the fit"], href: "/fits", cta: "See the fits", layout: "left", big: "/poses/coach-jacket-1.webp", bigAt: "50% 25%", small: "/products/washed-co-ord-set/front.jpg" },
-  { label: "Drops", title: ["Every other", "*Friday*"], line: "New pieces land at 6 PM. Leave your WhatsApp or email and we send one message when it lands.", steps: ["Notify me", "6 PM", "One message"], href: "/drops", cta: "See the drops", layout: "right", big: "/visit/store-dusk-closed.avif", bigAt: "50% 50%", small: "/rack/acc/sneakers-clear.webp" },
-  { label: "Gifts", title: ["For", "*someone*"], line: "Send a piece or a gift card. They open it, pick their size, and can swap it within 14 days.", steps: ["Send a piece", "They open it", "They pick a size"], href: "/gift", cta: "Send a gift", layout: "left", big: "/gift/hero-white.webp", bigAt: "80% 50%", small: "/gift-cards/front-5000.webp" },
+  { label: "The rails", title: ["Scroll.", "*Choose.*"], line: "Every piece hangs on a rail, with its price under the name. Slide along, stop on the one you like, take it.", steps: ["Scroll", "Stop", "Choose"], href: "/the-rail", cta: "How the rail works", layout: "right", big: "/rack/hung/everyday-hoodie.webp" },
+  { label: "Your size", title: ["Your size,", "*in cm*"], line: "Every piece is measured in cm. Give your height and weight, or a size you already wear, and we pick yours.", steps: ["Height", "Weight", "Your size"], href: "/size-guide", cta: "Find my size", layout: "left", big: "/poses/coach-jacket-3.webp", bigAt: "50% 25%", small: "/products/relaxed-straight-jean/front.jpg" },
+  { label: "Delivery", title: ["To your", "*door*"], line: "Kathmandu the next day, Lalitpur and Bhaktapur in one to two. Or pick it up free in the store.", facts: [`Free over ${formatPrice(site.delivery.freeAbove)}`, "Track it, no account"], href: "/delivery", cta: "Delivery and pickup", layout: "right", big: "/visit/route-static.avif", bigAt: "40% 60%", small: "/rack/hung/everyday-hoodie.webp" },
+  { label: "Exchange", title: ["Seven days", "*to swap*"], line: "Swap for another size within 7 days, tags on, in the store or by rider.", steps: ["Tags on", "Within 7 days", "New size"], href: "/returns", cta: "Returns and exchange", layout: "left", big: "/poses/coach-jacket-2.webp", bigAt: "50% 25%", small: "/rack/hung/brushed-crewneck.webp" },
+  { label: "Designer Fits", title: ["The whole", "*outfit*"], line: "Pick the occasion and your size. The whole fit goes in your bag in one tap.", steps: ["Occasion", "Your size", "Add the fit"], href: "/fits", cta: "See the fits", layout: "right", big: "/poses/coach-jacket-1.webp", bigAt: "50% 25%", small: "/products/washed-co-ord-set/front.jpg" },
+  { label: "Drops", title: ["Every other", "*Friday*"], line: "New pieces land at 6 PM. Leave your WhatsApp or email and we send one message when it lands.", steps: ["Notify me", "6 PM", "One message"], href: "/drops", cta: "See the drops", layout: "left", big: "/visit/store-dusk-closed.avif", bigAt: "50% 50%", small: "/rack/acc/sneakers-clear.webp" },
+  { label: "Gifts", title: ["For", "*someone*"], line: "Send a piece or a gift card. They open it, pick their size, and can swap it within 14 days.", steps: ["Send a piece", "They open it", "They pick a size"], href: "/gift", cta: "Send a gift", layout: "right", big: "/gift/hero-white.webp", bigAt: "80% 50%", small: "/gift-cards/front-5000.webp" },
   { label: "The Vault", title: ["The", "*Vault*"], line: "Original brands, checked by hand. Rare pairs, mostly one of each, not restocked.", facts: ["Original brands", "Checked by hand"], href: "/vault", cta: "Enter the Vault", layout: "figure", big: "/drops/hero-white.webp", bigAt: "75% 50%", figure: { src: "/vault/hero-figure.webp", width: 410, height: 925 } },
-  { label: "The store", title: ["Pick it.", "*Pay it.*"], line: site.store.address ? `Our store in ${site.store.area}: pick, try and pay yourself at the kiosk.` : `Our store in ${site.store.area}, opening soon: pick, try and pay yourself at the kiosk.`, facts: [site.store.address ? site.store.area : "Opening soon", `${clock(site.store.hours.open)} to ${clock(site.store.hours.close)}, daily`], href: "/how-it-works", cta: "How the store works", layout: "right", big: "/visit/store-dawn-open.avif", bigAt: "50% 55%", small: "/rack/hung/coach-jacket.webp" },
+  { label: "The store", title: ["Pick it.", "*Pay it.*"], line: site.store.address ? `Our store in ${site.store.area}: pick, try and pay yourself at the kiosk.` : `Our store in ${site.store.area}, opening soon: pick, try and pay yourself at the kiosk.`, facts: [site.store.address ? site.store.area : "Opening soon", `${clock(site.store.hours.open)} to ${clock(site.store.hours.close)}, daily`], href: "/how-it-works", cta: "How the store works", layout: "left", big: "/visit/store-dawn-open.avif", bigAt: "50% 55%", small: "/rack/hung/coach-jacket.webp" },
 ];
 
 const orgLd = {
@@ -101,7 +103,7 @@ export default async function HomePage() {
           pictures inside the letters, then four tiles. The rail and everything below are as they were. */}
       {on("hero") && (
         <div style={at("hero")}>
-          <LandingHero words={WORDS} chapters={CHAPTERS} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
+          <LandingHero words={WORDS} chapters={CHAPTERS.map((c) => (c.href === "/the-rail" ? { ...c, reel: railReel(products) } : c))} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
         </div>
       )}
 

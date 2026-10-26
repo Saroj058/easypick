@@ -5,7 +5,7 @@ import * as React from "react";
 
 import { useArrowKeys } from "@/lib/arrow-keys";
 import { cn } from "@/lib/utils";
-import { playNudge, SlideHint, useFirstView } from "./slide-hint";
+import { SlideHint } from "./slide-hint";
 
 const useIsoLayoutEffect = typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
@@ -39,7 +39,7 @@ export interface CoverflowCarouselProps {
   /** The slide at the centre to begin with. */
   initial?: number;
   showNavigation?: boolean;
-  /** Under it: how to move it (swipe / drag / arrows), the arrows and where you are; and one nudge on first view. */
+  /** Under it: how to move it (swipe / drag / arrows), the arrows and where you are. */
   hint?: boolean;
   /** Names the carousel for assistive tech. */
   label?: string;
@@ -189,18 +189,6 @@ export function CoverflowCarousel({
   );
   // ← and → move this carousel whenever it's the one in view, no click first.
   useArrowKeys(frameRef, nudge);
-  // The first time it's in view, it leans toward the next card and back, so it reads as slidable.
-  useFirstView(frameRef, () => {
-    if (!hint || count < 2) return;
-    playNudge(
-      (o) => {
-        if (rafRef.current !== null) return;
-        posRef.current = targetRef.current + o;
-        paint();
-      },
-      () => usedRef.current || dragRef.current !== null,
-    );
-  });
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;

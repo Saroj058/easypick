@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { RailDemo, type ReelCard } from "./rail-demo";
+
 const EASE = [0.16, 1, 0.3, 1] as const;
 /** The sideways glide, as in the reference (a short delay, then 1.2 s), in ms. */
 const GLIDE = 1280;
@@ -27,6 +29,8 @@ export interface ChapterData {
   steps?: [string, string, string];
   /** Or two short facts, true to the store. */
   facts?: [string, string];
+  /** The rail chapter: real pieces that slide along a rail in place of the big picture. */
+  reel?: ReelCard[];
 }
 
 const wrap = (n: number, i: number) => ((i % n) + n) % n;
@@ -205,7 +209,10 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
   const fig = ch.layout === "figure";
   const life = (GLIDE + rest) / 1000 + 1.2;
   // Where things sit. Phones: the words on top, one picture under them. Computers: side by side.
-  const big = fig
+  const reel = ch.reel?.length ? ch.reel : null;
+  const big = reel
+    ? "left-0 right-0 bottom-[12%] h-[32%] md:bottom-auto md:left-auto md:right-[3vw] md:top-[16%] md:h-[66%] md:w-[44vw]"
+    : fig
     ? "left-4 bottom-[13%] h-[26%] w-[44vw] md:bottom-auto md:left-[8vw] md:top-[20%] md:h-[58%] md:w-[22vw]"
     : right
       ? "left-4 right-4 bottom-[13%] h-[26%] md:left-auto md:bottom-auto md:right-[7vw] md:top-[15%] md:h-[70%] md:w-[30vw]"
@@ -222,13 +229,20 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
   return (
     <>
       {/* The big picture (far, slow) */}
-      <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] overflow-hidden bg-[#ececea] will-change-transform ${big}`}>
-        <motion.div className="h-full w-full" initial={false} animate={still ? undefined : { scale: [1.02, 1.08] }} transition={{ duration: life, ease: "linear" }}>
-          <Image src={ch.big} alt="" fill priority={first} sizes={SIZES.big} className="object-cover grayscale" style={{ objectPosition: ch.bigAt ?? "50% 50%" }} />
+      {reel ? (
+        // The rail chapter: the rail itself, playing, where the picture would be
+        <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] will-change-transform ${big}`}>
+          <RailDemo reel={reel} />
         </motion.div>
-      </motion.div>
+      ) : (
+        <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] overflow-hidden bg-[#ececea] will-change-transform ${big}`}>
+          <motion.div className="h-full w-full" initial={false} animate={still ? undefined : { scale: [1.02, 1.08] }} transition={{ duration: life, ease: "linear" }}>
+            <Image src={ch.big} alt="" fill priority={first} sizes={SIZES.big} className="object-cover grayscale" style={{ objectPosition: ch.bigAt ?? "50% 50%" }} />
+          </motion.div>
+        </motion.div>
+      )}
       {/* The small picture (near, fast; computers only) */}
-      {ch.small && (
+      {ch.small && !reel && (
         <motion.div custom={dir} variants={layer(1.25, still)} className={`absolute z-[3] hidden overflow-hidden bg-[#ececea] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.35)] will-change-transform md:block ${small}`}>
           <motion.div className="h-full w-full" initial={false} animate={still ? undefined : { x: [0, -22], scale: [1.06, 1.06] }} transition={{ duration: life, ease: "linear" }}>
             <Image src={ch.small} alt="" fill sizes={SIZES.small} className="object-cover grayscale" />

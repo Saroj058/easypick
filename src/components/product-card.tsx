@@ -110,14 +110,14 @@ export function ProductCard({
           <h3 className="line-clamp-2 text-[15px] font-semibold decoration-1 underline-offset-4 group-hover:underline">
             {product.name}
           </h3>
-          {/* The price on its own line (owner, 25 Oct 2026) */}
-          <p className="mt-1 flex items-baseline gap-2 font-mono tabular-nums">
-            <span className="text-[16px] font-semibold">
+          {/* The price on its own line under the name, small and thin (owner, 26 Oct 2026) */}
+          <p className="mt-0.5 flex items-baseline gap-2 tabular-nums">
+            <span className="text-[14px] font-light text-ink/85">
               {product.salePrice && <span className="sr-only">sale price </span>}
               {formatPrice(price)}
             </span>
             {product.salePrice && (
-              <s className="text-[12px] text-steel-dark">
+              <s className="text-[12px] font-light text-steel-dark">
                 <span className="sr-only">was </span>
                 {formatPrice(product.price)}
               </s>
