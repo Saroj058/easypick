@@ -29,11 +29,24 @@ function Rise({ children, className = "", delay = 0 }: { children: React.ReactNo
 
 /**
  * Under the Vault's opening, after the "FWD" reference (owner, 26 Oct 2026): a rounded black panel
- * with one line set large in the middle, then a row of rounded cards: a few words, the real numbers
- * (brands, pieces, one of each) each with its round arrow, and a card with the person from the
- * opening. Only true numbers; nothing invented.
+ * with one line set large in the middle, then a row of rounded cards that are shortcuts, practical
+ * first (owner: "practical"): how buying here works, then what's still available, what's under a
+ * price, what's down to its last one, each opening the pieces already filtered, and trying it on in
+ * the store. Only true numbers; nothing invented.
  */
-export function VaultBento({ statement, sub, brands, pieces, sold, figure }: { statement: string; sub: string; brands: number; pieces: number; sold: number; figure?: { src: string; width: number; height: number } }) {
+export function VaultBento({ statement, sub, available, under, last, base, figure }: {
+  statement: string;
+  sub: string;
+  /** Pieces that can still be bought. */
+  available: number;
+  /** A price step and how many are under it, when there are enough pieces for one. */
+  under: { cap: number; n: number } | null;
+  /** Pieces down to their last one. */
+  last: number;
+  /** The page these shortcuts filter: "/vault" or a brand's page. */
+  base: string;
+  figure?: { src: string; width: number; height: number };
+}) {
   const two = (n: number) => String(n).padStart(2, "0");
   return (
     <div className="space-y-3 px-3 md:space-y-4 md:px-4">
@@ -47,45 +60,62 @@ export function VaultBento({ statement, sub, brands, pieces, sold, figure }: { s
         </Rise>
       </section>
 
-      {/* The cards: a few words, the numbers, the person */}
+      {/* The cards: how buying works, then shortcuts into the pieces, then the store */}
       <div className="grid gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-[1.35fr_1fr_1fr_1fr]">
         <Rise className="flex flex-col justify-between rounded-[28px] bg-white p-7 md:min-h-[300px]">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-[#666]">Easypick · The Vault</p>
-          <div>
-            <p className="mt-10 text-[clamp(1.6rem,1.2rem+1.2vw,2.3rem)] font-semibold leading-[1.02] tracking-[-0.03em] text-[#111]">
-              Built to stand out.
-              <br />
-              Kept to be remembered.
-            </p>
-            <p className="mt-4 max-w-[38ch] text-[13px] leading-relaxed text-[#666]">Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
-          </div>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-[#666]">Buying from the Vault</p>
+          <ul className="mt-8 space-y-3.5 text-[#111]">
+            {[
+              ["Checked by hand", "Looked over inside and out; the invoice is kept."],
+              ["One of each", "Most pieces come in once and are never restocked."],
+              ["7-day size exchange", "Unworn, with the tags on."],
+            ].map(([t, d]) => (
+              <li key={t} className="border-t border-black/10 pt-3.5">
+                <span className="block text-[17px] font-semibold tracking-[-0.02em]">{t}</span>
+                <span className="mt-0.5 block text-[13px] text-[#666]">{d}</span>
+              </li>
+            ))}
+          </ul>
         </Rise>
 
         <Rise delay={0.08}>
-          <Link href="#inventory" className="group relative flex h-full min-h-[260px] flex-col justify-between overflow-hidden rounded-[28px] bg-[#111] p-7 text-white">
+          <Link href={`${base}${base.includes("?") ? "&" : "?"}left=1#inventory`} className="group relative flex h-full min-h-[260px] flex-col justify-between overflow-hidden rounded-[28px] bg-[#111] p-7 text-white">
             <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(255,255,255,0.28),rgba(255,255,255,0.04)_45%,transparent_70%)]" />
             <span className="relative">
-              <span className="block text-[clamp(3rem,2.4rem+2vw,4.4rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums">{two(pieces)}</span>
-              <span className="mt-2 block text-[15px] text-white/80">Pieces in the Vault</span>
+              <span className="block text-[clamp(3rem,2.4rem+2vw,4.4rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums">{two(available)}</span>
+              <span className="mt-2 block text-[15px] text-white/80">Still available</span>
             </span>
             <span className="relative flex items-end justify-between gap-4">
-              <span className="max-w-[22ch] text-[12.5px] leading-snug text-white/60">{sold ? `${sold} already gone. ` : ""}Every one checked by hand.</span>
+              <span className="max-w-[22ch] text-[12.5px] leading-snug text-white/60">See only what you can buy today.</span>
               <ArrowDot dark />
             </span>
           </Link>
         </Rise>
 
         <Rise delay={0.16}>
-          <Link href="#vault-brands" className="group flex h-full min-h-[260px] flex-col justify-between rounded-[28px] bg-white p-7 text-[#111]">
-            <span>
-              <span className="block text-[clamp(3rem,2.4rem+2vw,4.4rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums">{two(brands)}</span>
-              <span className="mt-2 block text-[15px] text-[#444]">Original brands</span>
-            </span>
-            <span className="flex items-end justify-between gap-4">
-              <span className="max-w-[22ch] text-[12.5px] leading-snug text-[#666]">Each with its own story and its own page.</span>
-              <ArrowDot />
-            </span>
-          </Link>
+          {under ? (
+            <Link href={`${base}${base.includes("?") ? "&" : "?"}under=${under.cap}#inventory`} className="group flex h-full min-h-[260px] flex-col justify-between rounded-[28px] bg-white p-7 text-[#111]">
+              <span>
+                <span className="block text-[clamp(3rem,2.4rem+2vw,4.4rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums">{two(under.n)}</span>
+                <span className="mt-2 block text-[15px] text-[#444]">Under Rs {new Intl.NumberFormat("en-IN").format(under.cap)}</span>
+              </span>
+              <span className="flex items-end justify-between gap-4">
+                <span className="max-w-[22ch] text-[12.5px] leading-snug text-[#666]">{last ? `${last} down to the last one.` : "Original pieces, fixed prices."}</span>
+                <ArrowDot />
+              </span>
+            </Link>
+          ) : (
+            <Link href={`${base}${base.includes("?") ? "&" : "?"}last=1#inventory`} className="group flex h-full min-h-[260px] flex-col justify-between rounded-[28px] bg-white p-7 text-[#111]">
+              <span>
+                <span className="block text-[clamp(3rem,2.4rem+2vw,4.4rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums">{two(last)}</span>
+                <span className="mt-2 block text-[15px] text-[#444]">Last ones</span>
+              </span>
+              <span className="flex items-end justify-between gap-4">
+                <span className="max-w-[22ch] text-[12.5px] leading-snug text-[#666]">One left in its size, then gone.</span>
+                <ArrowDot />
+              </span>
+            </Link>
+          )}
         </Rise>
 
         <Rise delay={0.24}>
@@ -93,17 +123,18 @@ export function VaultBento({ statement, sub, brands, pieces, sold, figure }: { s
             {figure && (
               <Image src={figure.src} alt="" width={figure.width} height={figure.height} sizes="300px" className="pointer-events-none absolute -bottom-24 right-[-10%] h-[150%] w-auto max-w-none object-contain opacity-95 transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]" />
             )}
-            <span className="relative">
-              <span className="block text-[clamp(3rem,2.4rem+2vw,4.4rem)] font-semibold leading-none tracking-[-0.04em]">01</span>
-              <span className="mt-2 block text-[15px] text-[#444]">Of each. Never restocked.</span>
+            <span className="relative max-w-[12ch]">
+              <span className="block text-[clamp(1.6rem,1.3rem+1vw,2.2rem)] font-semibold leading-[1.02] tracking-[-0.03em]">Try it on first</span>
+              <span className="mt-2 block text-[13px] text-[#444]">Every Vault piece, in our Kathmandu store.</span>
             </span>
             <span className="relative flex items-end justify-between gap-4">
-              <span className="max-w-[16ch] text-[12.5px] leading-snug text-[#555]">Try it on in our store.</span>
+              <span className="max-w-[16ch] text-[12.5px] leading-snug text-[#555]">Plan a visit</span>
               <ArrowDot />
             </span>
           </Link>
         </Rise>
       </div>
+      <p className="px-2 text-[12px] leading-relaxed text-[#666]">Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
     </div>
   );
 }

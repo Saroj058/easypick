@@ -3,32 +3,53 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useMemo, useState } from "react";
 
-import { two, V } from "./look";
+import { priceStep, two, V } from "./look";
 import { VaultTile, type TileData } from "./vault-tile";
 
 const SORTS = { new: "Newest", low: "Price, low", high: "Price, high" } as const;
 type Sort = keyof typeof SORTS;
 const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 
+/** What a link can open the inventory on: /vault?left=1, ?under=5000 or ?last=1 (the cards at the top). */
+export interface InventoryStart {
+  avail?: boolean;
+  under?: number;
+  last?: boolean;
+}
+
 /**
- * Everything in the Vault, or in one brand (after the reference's "inventory"; the brands are picked
- * at the top of the page): a size, "still available" and an order, all at once, with the
- * tiles sliding into their new places. Sold pieces stay at the end as the archive.
+ * Everything in the Vault, or in one brand. Practical first (owner, 26 Oct 2026: "practical"): the
+ * filters sit in plain view in one row (sizes, still available, under a price, last ones, and the
+ * order), and a link can open it already filtered. The tiles slide into their new places; sold
+ * pieces stay at the end as the archive.
  */
-export function VaultInventory({ tiles, brand }: { tiles: TileData[]; brand?: string }) {
+export function VaultInventory({ tiles, brand, start = {} }: { tiles: TileData[]; brand?: string; start?: InventoryStart }) {
   const still = useReducedMotion();
   const [size, setSize] = useState<string | null>(null);
-  const [avail, setAvail] = useState(false);
+  const [avail, setAvail] = useState(Boolean(start.avail));
+  const [under, setUnder] = useState<number | null>(start.under ?? null);
+  const [last, setLast] = useState(Boolean(start.last));
   const [sort, setSort] = useState<Sort>("new");
-  const [open, setOpen] = useState(false);
 
   const sizes = useMemo(() => SIZE_ORDER.filter((s) => tiles.some((t) => t.sizes.some((x) => x.size === s))), [tiles]);
+  // A price step that means something here: the round thousand nearest the middle price.
+  const cap = useMemo(() => priceStep(tiles.filter((t) => !t.sold).map((t) => t.price)), [tiles]);
+  const anyLast = tiles.some((t) => t.last);
   const shown = useMemo(() => {
-    const out = tiles.filter((t) => (!avail || !t.sold) && (!size || t.sizes.some((x) => x.size === size && x.left)));
+    const out = tiles.filter((t) => (!avail || !t.sold) && (!size || t.sizes.some((x) => x.size === size && x.left)) && (!under || (!t.sold && t.price <= under)) && (!last || Boolean(t.last)));
     const by: Record<Sort, (a: TileData, b: TileData) => number> = { new: (a, b) => a.order - b.order, low: (a, b) => a.price - b.price, high: (a, b) => b.price - a.price };
     return out.sort((a, b) => Number(a.sold) - Number(b.sold) || by[sort](a, b));
-  }, [tiles, avail, size, sort]);
-  const on = Boolean(size || avail || sort !== "new");
+  }, [tiles, avail, size, under, last, sort]);
+  const on = Boolean(size || avail || under || last || sort !== "new");
+  const reset = () => {
+    setSize(null);
+    setAvail(false);
+    setUnder(null);
+    setLast(false);
+    setSort("new");
+  };
+  // What emptied the list, said plainly.
+  const why = [size && `in ${size === "ONE" ? "one size" : size}`, under && `under ${new Intl.NumberFormat("en-IN").format(under)}`, last && "down to the last one"].filter(Boolean).join(", ");
 
   const pill = (active: boolean) =>
     `inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 ${V.mono} transition-colors ${active ? "border-white bg-white text-[var(--v-ink)]" : "border-white/30 text-white hover:border-white"}`;
@@ -40,70 +61,57 @@ export function VaultInventory({ tiles, brand }: { tiles: TileData[]; brand?: st
           {brand ? `All of ${brand}` : "Every piece"}
           <span className={`ml-2 inline-block align-top ${V.mono} ${V.iceDim}`}>{two(shown.length)}</span>
         </h2>
-        <button type="button" aria-expanded={open} aria-controls="vault-filters" onClick={() => setOpen(!open)} className={pill(open || on)}>
-          Filters{on ? " · on" : ""}
-        </button>
+        {on && (
+          <button type="button" onClick={reset} className={`min-h-11 ${V.mono} text-white underline underline-offset-4`}>
+            Clear all
+          </button>
+        )}
       </div>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            id="vault-filters"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="mt-4 flex flex-wrap items-end gap-x-8 gap-y-4 border-t border-white/15 pt-4">
-              {sizes.length > 0 && (
-                <div role="group" aria-label="Size">
-                  <p className={`mb-2 ${V.mono} ${V.iceDim}`}>[Size]</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {sizes.map((s) => (
-                      <button key={s} type="button" aria-pressed={size === s} onClick={() => setSize(size === s ? null : s)} className={pill(size === s)}>
-                        {s === "ONE" ? "One size" : s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div role="group" aria-label="Show">
-                <p className={`mb-2 ${V.mono} ${V.iceDim}`}>[Show]</p>
-                <button type="button" aria-pressed={avail} onClick={() => setAvail(!avail)} className={pill(avail)}>
-                  Still available
-                </button>
-              </div>
-              <div role="group" aria-label="Order">
-                <p className={`mb-2 ${V.mono} ${V.iceDim}`}>[Order]</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(Object.keys(SORTS) as Sort[]).map((k) => (
-                    <button key={k} type="button" aria-pressed={sort === k} onClick={() => setSort(k)} className={pill(sort === k)}>
-                      {SORTS[k]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {on && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSize(null);
-                    setAvail(false);
-                    setSort("new");
-                  }}
-                  className={`h-10 ${V.mono} text-white underline underline-offset-4`}
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-          </motion.div>
+      {/* The filters, in plain view: one row that swipes on a phone */}
+      <div className="no-scrollbar -mx-4 mt-5 flex items-center gap-1.5 overflow-x-auto border-y border-white/15 px-4 py-3 md:mx-0 md:flex-wrap md:px-0">
+        {sizes.length > 1 && (
+          <div role="group" aria-label="Size" className="flex shrink-0 gap-1.5">
+            {sizes.map((s) => (
+              <button key={s} type="button" aria-pressed={size === s} onClick={() => setSize(size === s ? null : s)} className={pill(size === s)}>
+                {s === "ONE" ? "One size" : s}
+              </button>
+            ))}
+          </div>
         )}
-      </AnimatePresence>
+        <span aria-hidden className="mx-1.5 h-6 w-px shrink-0 bg-white/20" />
+        <div role="group" aria-label="Show" className="flex shrink-0 gap-1.5">
+          <button type="button" aria-pressed={avail} onClick={() => setAvail(!avail)} className={pill(avail)}>
+            Still available
+          </button>
+          {cap && (
+            <button type="button" aria-pressed={under === cap} onClick={() => setUnder(under === cap ? null : cap)} className={pill(under === cap)}>
+              Under Rs {new Intl.NumberFormat("en-IN").format(cap)}
+            </button>
+          )}
+          {anyLast && (
+            <button type="button" aria-pressed={last} onClick={() => setLast(!last)} className={pill(last)}>
+              Last ones
+            </button>
+          )}
+        </div>
+        <span aria-hidden className="mx-1.5 h-6 w-px shrink-0 bg-white/20" />
+        <div role="group" aria-label="Order" className="flex shrink-0 gap-1.5">
+          {(Object.keys(SORTS) as Sort[]).map((k) => (
+            <button key={k} type="button" aria-pressed={sort === k} onClick={() => setSort(k)} className={pill(sort === k)}>
+              {SORTS[k]}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {shown.length === 0 ? (
-        <p className={`mt-12 text-[15px] ${V.iceDim}`}>Nothing in that size right now. Join the list below to hear when the next piece lands.</p>
+        <p className={`mt-12 text-[15px] ${V.iceDim}`}>
+          Nothing {why || "here"} right now.{" "}
+          <button type="button" onClick={reset} className="text-white underline underline-offset-4">
+            Show everything
+          </button>
+        </p>
       ) : (
         <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 md:gap-x-5 lg:grid-cols-5">
           <AnimatePresence initial={false} mode="popLayout">

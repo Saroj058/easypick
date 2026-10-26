@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
-import { brandKey, brandWorld, MONO, themeVars, two, V } from "@/components/vault/look";
+import { brandKey, brandWorld, MONO, priceStep, themeVars, two, V } from "@/components/vault/look";
 import { VaultBento } from "@/components/vault/vault-bento";
 import { VaultBrandGrid } from "@/components/vault/vault-brand-grid";
 import { VaultHero } from "@/components/vault/vault-hero";
@@ -46,6 +46,11 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   // The spotlight: a different piece from the one the triptych opens on, one that can be bought.
   const spot = featured.slice(1).find((t) => !t.sold) ?? featured.find((t) => !t.sold) ?? featured[0];
   const tiles = list.map((p, i) => toTile(p, i));
+  // The shortcuts at the top open the pieces already filtered: ?left=1, ?under=5000, ?last=1.
+  const cap = priceStep(tiles.filter((t) => !t.sold).map((t) => t.price));
+  const pick = (k: string) => (Array.isArray(sp[k]) ? sp[k][0] : sp[k]);
+  const under = Number(pick("under"));
+  const start = { avail: pick("left") === "1", under: under > 0 ? under : undefined, last: pick("last") === "1" };
   // Each brand wears its own colours and tells its own story; "All" is the Vault's cold blue.
   const world = brandWorld(one?.name, vs.brands);
 
@@ -70,9 +75,10 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
         <VaultBento
           statement={world ? `${world.line[0]} ${world.line[1]}` : `${vs.copy.left[0]} ${vs.copy.left[1]}`}
           sub={world ? world.story : vs.copy.intro}
-          brands={brands.length}
-          pieces={one ? one.pieces.length : pieces.length}
-          sold={one ? one.pieces.filter((p) => p.status === "sold_out").length : sold}
+          available={tiles.filter((t) => !t.sold).length}
+          under={cap ? { cap, n: tiles.filter((t) => !t.sold && t.price <= cap).length } : null}
+          last={tiles.filter((t) => t.last).length}
+          base={vaultHref(one?.name)}
           figure={(one && FIGURES[brandKey(one.name)]) || FIGURES.all}
         />
 
@@ -81,7 +87,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
             <VaultBrandGrid
               total={pieces.length}
               active={one?.name}
-              brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name), origin: brandWorld(b.name, vs.brands)?.origin ?? "Original brand", kinds: Array.from(new Set(b.pieces.map((p) => p.category))).map((k) => k.charAt(0).toUpperCase() + k.slice(1).replace("-", " ")) }))}
+              brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name), origin: brandWorld(b.name, vs.brands)?.origin ?? "Original brand", from: Math.min(...b.pieces.filter((p) => p.status !== "sold_out").map((p) => p.salePrice ?? p.price)), left: b.pieces.filter((p) => p.status !== "sold_out").length, kinds: Array.from(new Set(b.pieces.map((p) => p.category))).map((k) => k.charAt(0).toUpperCase() + k.slice(1).replace("-", " ")) }))}
             />
           </section>
         )}
@@ -101,7 +107,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
                   </div>
                   <div className="mt-14 border-t border-white/10 md:mt-20">{spot && <VaultSpotlight piece={spot} />}</div>
                   <div id="inventory" className="scroll-mt-28 border-t border-white/10 pt-12 md:pt-16">
-                    <VaultInventory tiles={tiles} brand={one?.name} />
+                    <VaultInventory key={`${start.avail}-${start.under}-${start.last}`} tiles={tiles} brand={one?.name} start={start} />
                   </div>
                 </>
               )}

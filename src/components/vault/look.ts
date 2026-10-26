@@ -100,3 +100,9 @@ export function themeVars(t: Theme = COLD): CSSProperties {
 export const NOTCH = "[clip-path:polygon(0_0,calc(100%-18px)_0,100%_18px,100%_100%,18px_100%,0_calc(100%-18px))]";
 
 export const two = (n: number) => String(n).padStart(2, "0");
+
+/** A price step that means something in a set of pieces: the round thousand nearest the middle price (none for fewer than three). */
+export function priceStep(prices: number[]): number | null {
+  const p = [...prices].sort((a, b) => a - b);
+  return p.length > 2 ? Math.max(1000, Math.round(p[Math.floor(p.length / 2)] / 1000) * 1000) : null;
+}
