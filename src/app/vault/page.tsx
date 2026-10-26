@@ -74,7 +74,7 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
       <div className="pb-4 md:pb-6">
         <VaultBento
           statement={world ? `${world.line[0]} ${world.line[1]}` : `${vs.copy.left[0]} ${vs.copy.left[1]}`}
-          sub={world ? world.story : vs.copy.intro}
+          sub={world ? world.story : "Every piece comes in with its invoice and is looked over by hand before it reaches the wall."}
           available={tiles.filter((t) => !t.sold).length}
           under={cap ? { cap, n: tiles.filter((t) => !t.sold && t.price <= cap).length } : null}
           last={tiles.filter((t) => t.last).length}
