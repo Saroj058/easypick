@@ -65,6 +65,16 @@ export function LandingHero({ words, chapters, line }: { words: string[]; chapte
       <h1 id="landing-title" className="sr-only">
         Easypick: men&apos;s streetwear in Kathmandu
       </h1>
+      {/* In the page's first HTML (before it knows whether the word has played), the chapters as plain links, for search engines */}
+      {show === null && (
+        <ul className="sr-only">
+          {chapters.map((c) => (
+            <li key={c.label}>
+              <a href={c.href}>{`${c.label}: ${c.line}`}</a>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <AnimatePresence initial={false}>
         {show === "word" ? (
@@ -72,7 +82,7 @@ export function LandingHero({ words, chapters, line }: { words: string[]; chapte
             key="word"
             type="button"
             onClick={done}
-            aria-label="Skip to the collections"
+            aria-label="Skip the intro"
             className="absolute inset-0 isolate cursor-pointer"
             initial={still ? false : { opacity: 0 }}
             animate={{ opacity: 1, transition: { duration: 0.9, ease: EASE } }}
