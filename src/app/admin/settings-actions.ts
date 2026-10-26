@@ -27,10 +27,10 @@ export async function saveHomeAction(_prev: SaveState, form: FormData): Promise<
   const raw = parse(form);
   if (!raw) return { status: "error", message: "That didn't come through. Try again." };
   const saved = await homeSetting.write(raw);
-  await logStaff(me, "saved the home page", null, { sections: saved.sections.filter((s) => s.on).map((s) => s.id).join(", ") });
+  await logStaff(me, "saved the Drops page", null, { sections: saved.sections.filter((s) => s.on).map((s) => s.id).join(", ") });
   updateTag(homeSetting.tag);
-  revalidatePath("/");
-  return { status: "saved", message: "Saved. The home page shows it now." };
+  revalidatePath("/drops");
+  return { status: "saved", message: "Saved. The Drops page shows it now." };
 }
 
 export async function saveSiteAction(_prev: SaveState, form: FormData): Promise<SaveState> {
@@ -81,5 +81,6 @@ export async function saveVaultAction(_prev: SaveState, form: FormData): Promise
   updateTag(vaultSetting.tag);
   revalidatePath("/vault");
   revalidatePath("/");
+  revalidatePath("/drops");
   return { status: "saved", message: "Saved. The Vault shows it now." };
 }

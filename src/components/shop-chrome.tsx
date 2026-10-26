@@ -14,7 +14,7 @@ export function ShopChrome({ children }: { children: React.ReactNode }) {
 }
 
 /** The footer shows on the home page only (owner, 18 Oct 2026: not on the shop or the drops). The visit page is one full screen. */
-const WITH_FOOTER = new Set(["/"]);
+const WITH_FOOTER = new Set(["/", "/drops"]);
 export function FooterChrome({ children }: { children: React.ReactNode }) {
   const path = usePath();
   if (WITH_FOOTER.has(path)) return children;

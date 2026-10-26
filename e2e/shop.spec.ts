@@ -16,7 +16,7 @@ test("home, shop and a product page load @phone", async ({ page }) => {
 });
 
 test("home: the rail (cover-flow rows, size asked once, buy or bag, search), then Designer Fits @phone", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/drops");
   const rail = page.getByRole("region", { name: "The rail" });
   // Laid out in sections; each is a cover-flow with one piece at the centre and its details underneath.
   const first = rail.locator("section").first();
@@ -47,14 +47,14 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search), the
   await expect(pay.getByText(/Everyday Hoodie · .* · M · Rs/)).toBeVisible();
   await expect(pay.getByLabel("Mobile number")).toBeVisible();
   await expect(pay.getByRole("button", { name: /^Pay Rs/ })).toBeVisible();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/drops$/);
   await page.keyboard.press("Escape");
   await expect(pay).toHaveCount(0);
   // ...and the bag on the card in front (only that one has it) adds it in the size now known, without leaving.
   await expect(first.getByRole("button", { name: /^Add .* to bag$/ })).toHaveCount(1);
   await first.getByRole("button", { name: "Add Everyday Hoodie to bag" }).click();
   await expect(page.getByText(/Added Everyday Hoodie \(.*, M\) to your bag\./)).toBeVisible();
-  await expect(page).toHaveURL(/\/$/); // no login wall, no leaving the page
+  await expect(page).toHaveURL(/\/drops$/); // no login wall, no leaving the page
   // A second tap takes it out of the bag; a third puts it back.
   await first.getByRole("button", { name: "Remove Everyday Hoodie from bag" }).click();
   await expect(page.getByText("Removed Everyday Hoodie from your bag.")).toBeVisible();
@@ -173,7 +173,7 @@ test("track an order page rejects wrong details", async ({ page }) => {
 });
 
 test("track an order from the home page @phone", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/drops");
   const track = page.getByRole("region", { name: "Track an order." });
   await track.scrollIntoViewIfNeeded();
   await track.getByLabel("Order number").fill("EP-9999999");
@@ -238,11 +238,9 @@ test("drop alerts: sign up by email, then stop with the link @phone", async ({ p
   await expect(page.getByText(/doesn't match a sign-up/)).toBeVisible();
 });
 
-test("drop pages: the run, no count of what's left, and the drops list @phone", async ({ page, request }) => {
-  await page.goto("/drops");
-  await expect(page.getByRole("heading", { name: "Out now" })).toBeVisible();
-  await page.getByRole("link", { name: /Drop 01/ }).first().click();
-  await expect(page).toHaveURL(/\/drop\/01$/);
+test("drop pages: the run, no count of what's left @phone", async ({ page, request }) => {
+  // The old list of drops is gone (owner, 26 Oct 2026); each drop keeps its own page.
+  await page.goto("/drop/01");
   await expect(page.getByRole("heading", { level: 1, name: "Drop 01" })).toBeVisible();
   // No "… of … left" count on a drop (owner, 18 Oct 2026).
   await expect(page.getByText(/\d+ of \d+ left/)).toHaveCount(0);
@@ -328,7 +326,7 @@ test("shop: search narrows the pieces, keeps the other filters, and Filter opens
 
 test("find my size: opens in the middle from the rail, height and weight give a size, it's saved and the rail uses it", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto("/drops");
   const rail = page.locator("section[aria-labelledby=rail-title]");
   await rail.scrollIntoViewIfNeeded();
   const dialog = page.getByRole("dialog");
@@ -431,7 +429,7 @@ test("Designer Fits play on their own every 10 seconds, and pause", async ({ pag
 });
 
 test("the arrow keys move the strip in view, with no click first (owner, 18 Oct 2026)", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/drops");
   const rail = page.getByRole("region", { name: "The rail" });
   const first = rail.locator("section").first();
   await first.scrollIntoViewIfNeeded();
@@ -446,12 +444,12 @@ test("the arrow keys move the strip in view, with no click first (owner, 18 Oct 
   await expect(centre).toHaveText(before);
 });
 
-test("home: our store and self-checkout in one small band, and buying for someone as one line", async ({ page }) => {
-  await page.goto("/");
-  const store = page.getByRole("region", { name: "Our store" });
-  await store.scrollIntoViewIfNeeded();
-  await expect(store.getByRole("link", { name: "Walk it in 3D" })).toBeVisible();
-  await expect(store.getByRole("list", { name: "How to pay at the kiosk" }).getByRole("listitem")).toHaveCount(4);
+test("drops page: the notify-me band where the store band was, and buying for someone as one line", async ({ page }) => {
+  await page.goto("/drops");
+  // The old Drops page's "notify me", as it was (owner, 26 Oct 2026)
+  const notify = page.getByRole("region", { name: "Drops" });
+  await notify.scrollIntoViewIfNeeded();
+  await expect(notify.getByLabel("WhatsApp number or email")).toBeVisible();
   const gift = page.getByRole("region", { name: "Buying for someone?" });
   await expect(gift.getByRole("link", { name: /Send a gift/ })).toHaveAttribute("href", "/gift");
   expect((await gift.boundingBox())!.height).toBeLessThan(140);

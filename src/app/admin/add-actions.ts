@@ -45,6 +45,7 @@ export async function addToLookAction(slug: string, colour: string, key: string)
   await logStaff(me, "added a piece to a fit", slug, { fit: key });
   updateTag(LOOKS_TAG);
   revalidatePath("/");
+  revalidatePath("/drops");
   revalidatePath("/fits");
   return {
     ok: true,

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Barlow_Condensed, Inter, JetBrains_Mono, Mukta } from "next/font/google";
+import { Baloo_2, Barlow_Condensed, Bodoni_Moda, Inter, JetBrains_Mono, Mukta } from "next/font/google";
 
 import { PendingBagAdd } from "@/components/bag-gate";
 import { BuySheets } from "@/components/buy-sheets";
@@ -19,6 +19,8 @@ import "./globals.css";
 const barlow = Barlow_Condensed({ subsets: ["latin"], weight: ["200", "700"], variable: "--font-barlow", display: "swap" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "600"], variable: "--font-jetbrains", display: "swap" });
+// The home page's wordmark, a didone (owner, 26 Oct 2026, after a Zara redesign). Only the home uses it.
+const bodoni = Bodoni_Moda({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-bodoni", display: "swap", preload: false });
 const baloo = Baloo_2({ subsets: ["devanagari", "latin"], weight: "700", variable: "--font-baloo-2", display: "swap", preload: false });
 const mukta = Mukta({ subsets: ["devanagari", "latin"], weight: ["400", "600"], variable: "--font-mukta", display: "swap", preload: false });
 
@@ -47,7 +49,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await siteSetting.get();
   return (
-    <html lang="en" className={`${barlow.variable} ${inter.variable} ${jetbrains.variable} ${mukta.variable} ${baloo.variable} antialiased`}>
+    <html lang="en" className={`${barlow.variable} ${inter.variable} ${jetbrains.variable} ${mukta.variable} ${baloo.variable} ${bodoni.variable} antialiased`}>
       <body className="flex min-h-dvh flex-col">
         <BagProvider>
           <ShopChrome>

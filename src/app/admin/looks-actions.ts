@@ -36,6 +36,7 @@ export async function saveLooksForm(_prev: SaveState, form: FormData): Promise<S
   await logStaff(me, "saved looks", null, { set: Object.keys(looks) });
   updateTag(LOOKS_TAG);
   revalidatePath("/");
+  revalidatePath("/drops");
   revalidatePath("/fits");
   return { status: "saved", message: "Saved. The Fits page shows these looks." };
 }

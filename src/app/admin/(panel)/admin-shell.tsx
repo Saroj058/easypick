@@ -71,7 +71,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "Storefront",
     items: [
-      { href: "/admin/home", label: "Home page", icon: PanelsTopLeft },
+      { href: "/admin/home", label: "Drops page", icon: PanelsTopLeft },
       { href: "/admin/drops", label: "Drops", icon: Flame },
       { href: "/admin/looks", label: "Designer Fits", icon: LayoutGrid },
       { href: "/admin/vault", label: "The Vault", icon: Gem },
