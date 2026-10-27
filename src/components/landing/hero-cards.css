@@ -269,11 +269,70 @@
   .hc-c { width: 44px; height: 44px; }
   .hc-link { margin-top: 22px; }
   .hc-objwrap { left: auto; right: 4px; margin-left: 0; bottom: 6px; }
-  .hc-objwrap .hc-obj { transform: scale(0.5); transform-origin: 100% 100%; }
+  .hc-objwrap .hc-obj { transform: scale(0.44); transform-origin: 100% 100%; }
   .hc-bubble, .hc-string { display: none; }
   .hc-objwrap { right: 14px; }
   .hc-watch:not(.hc-film) { width: 190px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hc *, .hc *::before, .hc *::after { transition-duration: 0.01ms !important; transition-delay: 0s !important; animation: none !important; }
+}
+
+/* ---- Premium layer (owner, 27 Oct 2026: "make it even better, premium") ---- */
+/* A fine film grain over the hero, so it reads like a photograph */
+.hc::after { content: ""; position: absolute; inset: 0; z-index: 30; pointer-events: none; opacity: 0.07; mix-blend-mode: multiply; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* The usual way, one quiet italic line above the title, crossed out as the card explains */
+.hc-bubble { display: none; }
+.hc-usual { margin: 14px 0 -2px; font-family: var(--font-didone); font-style: italic; font-size: 18px; color: var(--hc-muted); opacity: 0; transition: opacity 0.6s 0.5s; }
+.hc-on .hc-usual { opacity: 1; }
+.hc-usual s { text-decoration: none; position: relative; color: var(--hc-ink); }
+.hc-usual s::after { content: ""; position: absolute; left: -2px; right: -2px; top: 56%; height: 1.5px; background: var(--hc-ink); transform: scaleX(0); transform-origin: left; transition: transform 0.7s var(--hc-glide); }
+.hc-usual.hc-struck s::after { transform: scaleX(1); }
+
+/* The promises: three columns, each a small icon and a hairline that fills as it lights */
+.hc-beats { display: grid; grid-template-columns: repeat(3, minmax(0, 150px)); gap: 24px; align-items: start; }
+.hc-link { display: none; }
+.hc-beat { width: auto; align-items: flex-start; text-align: left; gap: 8px; padding-top: 16px; position: relative; font-size: 15px; }
+.hc-beat::before, .hc-beat::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1.5px; background: var(--hc-line); }
+.hc-beat::after { background: var(--hc-ink); transform: scaleX(0); transform-origin: left; transition: transform 0.9s var(--hc-glide); }
+.hc-beat.hc-lit::after { transform: scaleX(1); }
+.hc-c, .hc-lit .hc-c { width: auto; height: auto; border: 0; background: none; display: block; transform: none; color: #b8b7b2; transition: color 0.5s; }
+.hc-beat.hc-lit .hc-c { color: var(--hc-ink); }
+.hc-c .hc-ic { width: 22px; height: 22px; }
+.hc-beat small { margin-top: -4px; }
+
+/* The photo: crisp, revealed with a wipe, slowly settling while the card plays */
+.hc-photo { opacity: 1; clip-path: inset(0 0 0 0); transition: clip-path 1.2s var(--hc-glide), transform 1s var(--hc-glide), opacity 0.8s; }
+.hc-photo img { filter: grayscale(1) contrast(1.08); scale: 1.1; transition: scale 14s linear; }
+.hc-on .hc-photo img { scale: 1; }
+.hc-photo::after { background: linear-gradient(90deg, var(--hc-ground) 0%, rgba(243, 242, 239, 0) 24%); }
+.hc-photo.hc-dark { opacity: 0.85; }
+.hc-enter .hc-photo, .hc-enter.hc-back .hc-photo { transform: none; opacity: 1; clip-path: inset(0 0 0 100%); }
+.hc-enter.hc-back .hc-photo { clip-path: inset(0 100% 0 0); }
+
+/* The piece floats, and on computers leans toward the mouse */
+.hc-tilt { animation: hc-float 6s ease-in-out infinite; }
+@keyframes hc-float { 50% { translate: 0 -8px; } }
+@media (hover: hover) and (min-width: 768px) {
+  .hc-tilt { transform: perspective(1000px) rotateY(calc(var(--mx, 0) * 10deg)) rotateX(calc(var(--my, 0) * -8deg)); transition: transform 0.6s var(--hc-soft); }
+}
+
+/* Watch: a dark glass button; the film in a slim frame */
+.hc-watch { background: rgba(17, 17, 17, 0.9); color: #fff; backdrop-filter: blur(10px); }
+.hc-pill small { color: rgba(255, 255, 255, 0.6); }
+.hc-watch.hc-film { background: #111; border-radius: 14px; box-shadow: 0 50px 90px -30px rgba(0, 0, 0, 0.5), 0 0 0 3px #111; }
+
+@media (max-width: 767px) {
+  .hc-usual { font-size: 15px; margin-top: 10px; }
+  .hc-beats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+  .hc-beat { font-size: 13px; padding-top: 12px; }
+  .hc-c .hc-ic { width: 18px; height: 18px; }
+  .hc-photo { opacity: 0.6; }
+  .hc-photo::after { background: linear-gradient(180deg, var(--hc-ground) 0%, rgba(243, 242, 239, 0) 40%); }
+  .hc-enter .hc-photo, .hc-enter.hc-back .hc-photo { clip-path: inset(100% 0 0 0); }
+  .hc-watch.hc-film { border-radius: 0; box-shadow: none; }
+}
+@media (max-width: 767px) and (max-height: 760px) {
+  .hc-usual { display: none; }
 }

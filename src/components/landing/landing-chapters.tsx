@@ -195,6 +195,13 @@ export function LandingChapters({ chapters, showcase }: { chapters: ChapterData[
       aria-roledescription="carousel"
       aria-label="How Easypick works"
       className="hc"
+      // The card's piece leans a little toward the mouse (computers).
+      onPointerMove={(e) => {
+        if (e.pointerType !== "mouse" || still) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        e.currentTarget.style.setProperty("--mx", ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
+        e.currentTarget.style.setProperty("--my", ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
+      }}
       onKeyDown={(e) => {
         if ((e.target as HTMLElement).closest("[role=dialog]")) return;
         if (e.key === "ArrowRight") go(shown.i + 1, 1);
@@ -384,6 +391,10 @@ function Card({
         <p className="hc-label">
           {String(index + 1).padStart(2, "0")} — {ch.label}
         </p>
+        {/* The usual way of shopping, crossed out as the card explains (one quiet line, not a bubble) */}
+        <p className={`hc-usual ${s >= 1 ? "hc-struck" : ""}`}>
+          Usually: <s>{ch.bubble}</s>
+        </p>
         <h2 className="hc-title">
           <span className="hc-ln">
             <span>
@@ -409,13 +420,11 @@ function Card({
         </Link>
       </div>
 
-      <div aria-hidden className={`hc-bubble ${landed || !live ? "hc-show" : ""} ${s >= 1 ? "hc-struck" : ""}`}>
-        <span>{ch.bubble}</span>
-      </div>
-
       <div aria-hidden className="hc-objwrap">
         <div className={`hc-obj ${s >= 1 ? "hc-s1" : ""} ${s >= 2 ? "hc-s2" : ""} ${s >= 3 ? "hc-s3" : ""}`}>
-          <Machine kind={ch.kind} s={s} showcase={showcase} />
+          <div className="hc-tilt">
+            <Machine kind={ch.kind} s={s} showcase={showcase} />
+          </div>
         </div>
       </div>
 
