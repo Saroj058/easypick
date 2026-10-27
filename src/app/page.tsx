@@ -47,7 +47,7 @@ const WORDS = ["/drops/hero-2.webp", "/visit/store-night-open.avif", "/visit/doo
 const CHAPTERS: ChapterData[] = [
   { label: "Meet Easypick", title: ["Shopping,", "made *simple*."], line: "A men's streetwear store in Kathmandu, built around everyday style, fixed prices and a simpler way to shop.", facts: ["Men's streetwear", "Online and in store"], href: "/about", cta: "Our story", layout: "left", big: "/story/storefront.webp", bigAt: "40% 50%", small: "/story/man-backpack.webp" },
   { label: "Why Easypick", title: ["The price", "is the *price*."], line: "No bargaining. No awkward asking. Clear prices, good clothes, and time to shop at your own pace.", facts: ["Price on every tag", "Same online and in store"], href: "/how-it-works", cta: "How the store works", layout: "right", big: "/story/tees-rail.webp", bigAt: "40% 50%", small: "/story/hang-tag.webp" },
-  { label: "How it works", title: ["Pick it.", "Pay it.", "*Wear it.*"], line: site.store.address ? "Online, Buy now and pay with eSewa. In the store, try it on, pay at the kiosk and walk out." : "Online, Buy now and pay with eSewa. In the store (opening soon), try it on, pay at the kiosk and walk out.", steps: ["Choose", "Pay", "Wear it"], href: "/how-it-works", cta: "How it works", layout: "left", big: "/story/phone.webp", scene: { kind: "steps" } },
+  { label: "How it works", title: ["Pick it.", "Pay it.", "*Wear it.*"], line: "Online, Buy now and pay with eSewa. In the store, try it on, pay at the kiosk and walk out.", steps: ["Choose", "Pay", "Wear it"], href: "/how-it-works", cta: "How it works", layout: "left", big: "/story/phone.webp", scene: { kind: "steps" } },
   { label: "The Rail", title: ["Find your", "next", "*favourite*."], line: "Everyday pieces on one rail per kind. Swipe along, stop on one, pick your size and buy.", steps: ["Swipe", "Pick a size", "Buy now"], href: "/the-rail", cta: "Explore the rail", layout: "right", big: "/story/rails.webp" },
   { label: "The Pick", title: ["Your style.", "Your *choice*."], line: "Pick a top, a bottom and a layer, see the total, and take the whole fit in one go.", steps: ["Pick a top", "Add a bottom", "Take the fit"], href: "/fit", cta: "Build your fit", layout: "left", big: "/story/flatlay-cargo.webp", scene: { kind: "pick" } },
   { label: "The Gift", title: ["Good taste", "makes a", "good *gift*."], line: "Choose a piece or a gift card, add a message and send it. They pick their size, and can swap within 14 days.", steps: ["Choose", "Add a message", "Send it"], href: "/gift", cta: "Send a gift", layout: "right", big: "/story/gift-box.webp", scene: { kind: "gift" } },
@@ -94,7 +94,11 @@ export default async function HomePage() {
   const lessonPieces = range.filter((p) => p.status === "live" && p.images[0]?.src && p.variants.some((v) => v.stock > 0)).slice(0, 7).map(toRailPiece);
   const tee = products.find((p) => p.slug === "oversized-heavy-tee")?.measurements.M;
   const marks = Object.entries(tee ?? {}).filter(([k, v]) => typeof v === "number" && ["chest", "length", "sleeve"].includes(k)) as [string, number][];
+  // The store's state comes from Admin → Visit, the same as the store line further down.
+  const storeInfo = await getStoreInfo();
   const story = CHAPTERS.map((c) =>
+    c.label === "How it works" && !storeInfo.opened ? { ...c, line: c.line.replace("In the store,", "In the store (opening soon),") } : c,
+  ).map((c) =>
     c.href === "/the-rail" && lessonPieces.length >= 3 ? { ...c, lesson: lessonPieces, beat: 8600 } : c.scene?.kind === "fits" ? (marks.length ? { ...c, scene: { kind: "fits" as const, marks } } : { ...c, scene: undefined }) : c,
   );
 
@@ -166,7 +170,7 @@ export default async function HomePage() {
       {/* Our store and self-checkout, in one small band (owner, 19 Oct 2026); each half has its own switch. */}
       {(on("store") || on("checkout")) && (
         <div style={{ order: Math.min(on("store") ? at("store").order : 99, on("checkout") ? at("checkout").order : 99) }}>
-          <StoreBand info={await getStoreInfo()} store={on("store")} checkout={on("checkout")} />
+          <StoreBand info={storeInfo} store={on("store")} checkout={on("checkout")} />
         </div>
       )}
 
