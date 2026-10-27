@@ -41,6 +41,8 @@ export interface ChapterData {
   scene?: SceneData;
   /** How long this chapter stays, glide included, when not the usual beat (ms). */
   beat?: number;
+  /** A recording of the real site in use, played in a phone over the big picture (public/story/video). */
+  video?: { src: string; poster: string; rate: number };
 }
 
 const wrap = (n: number, i: number) => ((i % n) + n) % n;
@@ -178,8 +180,13 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
   // Where things sit. Phones: the words on top, one picture under them. Computers: side by side.
   const reel = ch.reel?.length ? ch.reel : null;
   const lesson = ch.lesson?.length ? ch.lesson : null;
-  const big = lesson
-    ? "left-0 right-0 bottom-[6%] top-[37%] md:bottom-auto md:left-auto md:right-[3vw] md:top-[9%] md:h-[84%] md:w-[46vw]"
+  const video = ch.video ?? null;
+  // The lesson and the recordings need the room: on phones they take the lower part of the screen.
+  const tall = Boolean(lesson || video);
+  const big = tall
+    ? right || fig
+      ? "left-0 right-0 bottom-[6%] top-[37%] md:bottom-auto md:left-auto md:right-[3vw] md:top-[9%] md:h-[84%] md:w-[46vw]"
+      : "left-0 right-0 bottom-[6%] top-[37%] md:bottom-auto md:left-[3vw] md:right-auto md:top-[9%] md:h-[84%] md:w-[46vw]"
     : reel
     ? "left-0 right-0 bottom-[12%] h-[32%] md:bottom-auto md:left-auto md:right-[3vw] md:top-[16%] md:h-[66%] md:w-[44vw]"
     : fig
@@ -199,7 +206,13 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
   return (
     <>
       {/* The big picture (far, slow) */}
-      {lesson ? (
+      {video ? (
+        // The real site, recorded while it is used, in a phone over the card's picture
+        <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] overflow-hidden bg-[#ececea] will-change-transform ${big}`}>
+          <Image src={ch.big} alt="" fill sizes={SIZES.big} className="object-cover opacity-70 grayscale" style={{ objectPosition: ch.bigAt ?? "50% 50%" }} />
+          <Recording video={video} still={still} />
+        </motion.div>
+      ) : lesson ? (
         // The rail chapter: the real rail card, taught by a hand, where the picture would be
         <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] will-change-transform ${big}`}>
           <div className="h-full w-full origin-top max-md:scale-[0.8]">
@@ -223,7 +236,7 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
         </motion.div>
       )}
       {/* The small picture (near, fast; computers only) */}
-      {ch.small && !reel && !lesson && !ch.scene && (
+      {ch.small && !reel && !tall && !ch.scene && (
         <motion.div custom={dir} variants={layer(1.25, still)} className={`absolute z-[3] hidden overflow-hidden bg-[#ececea] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.35)] will-change-transform md:block ${small}`}>
           <motion.div className="h-full w-full" initial={false} animate={still ? undefined : { x: [0, -22], scale: [1.06, 1.06] }} transition={{ duration: life, ease: "linear" }}>
             <Image src={ch.small} alt="" fill sizes={SIZES.small} className="object-cover grayscale" />
@@ -246,10 +259,10 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
         </h2>
         <div className={`max-w-[36ch] ${end ? "md:ml-auto" : ""} ${fig ? "md:mt-[28vh]" : ""}`}>
           {/* On a phone the rail lesson needs the room: its own captions say the steps */}
-          <motion.p variants={item(3, still)} className={`mt-4 text-[13.5px] leading-relaxed text-[#111]/75 md:mt-7 md:text-[14.5px] ${lesson ? "max-md:hidden" : ""}`}>
+          <motion.p variants={item(3, still)} className={`mt-4 text-[13.5px] leading-relaxed text-[#111]/75 md:mt-7 md:text-[14.5px] ${tall ? "max-md:hidden" : ""}`}>
             {ch.line}
           </motion.p>
-          <motion.div variants={item(4, still)} className={lesson ? "max-md:hidden" : ""}>
+          <motion.div variants={item(4, still)} className={tall ? "max-md:hidden" : ""}>
             <Info ch={ch} />
           </motion.div>
           <motion.div variants={item(5, still)}>
@@ -293,5 +306,23 @@ function Info({ ch }: { ch: ChapterData }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** A recording in a phone: plays once from the start as the card lands, a little faster than life. */
+function Recording({ video, still }: { video: NonNullable<ChapterData["video"]>; still: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v || still) return;
+    v.playbackRate = video.rate;
+    // The card has just arrived: start from the beginning, once it has nearly landed.
+    const t = window.setTimeout(() => void v.play().catch(() => {}), 500);
+    return () => window.clearTimeout(t);
+  }, [video.rate, still]);
+  return (
+    <div className="absolute inset-y-[5%] left-1/2 aspect-[586/1268] -translate-x-1/2 rounded-[30px] bg-[#111] p-[5px] shadow-[0_30px_60px_-24px_rgba(0,0,0,0.55)]">
+      <video ref={ref} src={video.src} poster={video.poster} muted playsInline preload="metadata" className="h-full w-full rounded-[25px] bg-white object-cover object-top" aria-hidden />
+    </div>
   );
 }

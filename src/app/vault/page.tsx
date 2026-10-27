@@ -72,6 +72,30 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
           page's grey. A black statement, the real numbers as cards, the brands as numbered cards,
           then the pieces in one big rounded black panel. */}
       <div className="pb-4 md:pb-6">
+        {/* The brands first, then every piece, then buying from the Vault (owner, 27 Oct 2026) */}
+        {brands.length > 0 && (
+          <section id="vault-brands" aria-label="Brands" className="scroll-mt-24 px-3 pt-3 md:px-4 md:pt-4">
+            <p className="px-2 pb-3 text-[12px] leading-relaxed text-[#666]">Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
+            <VaultBrandGrid
+              total={pieces.length}
+              active={one?.name}
+              brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name), origin: brandWorld(b.name, vs.brands)?.origin ?? "Original brand", from: Math.min(...b.pieces.filter((p) => p.status !== "sold_out").map((p) => p.salePrice ?? p.price)), left: b.pieces.filter((p) => p.status !== "sold_out").length, kinds: Array.from(new Set(b.pieces.map((p) => p.category))).map((k) => k.charAt(0).toUpperCase() + k.slice(1).replace("-", " ")) }))}
+            />
+          </section>
+        )}
+        {/* Every piece, under the brands */}
+        {pieces.length > 0 && (
+          <div className="px-3 pt-3 md:px-4 md:pt-4">
+            <div className={`overflow-hidden rounded-[28px] ${V.slate} text-white [&_.display]:!font-sans [&_.display]:!font-semibold [&_.display]:!normal-case [&_.display]:!tracking-[-0.035em]`}>
+              <div className="container-ep pb-16 pt-4 md:pb-24">
+                {wanted && !one && <p className={`pt-8 text-[15px] ${V.iceDim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
+                <div id="inventory" className="scroll-mt-28 pt-12 md:pt-16">
+                  <VaultInventory key={`${start.avail}-${start.under}-${start.last}`} tiles={tiles} brand={one?.name} start={start} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <VaultBento
           statement={world ? `${world.line[0]} ${world.line[1]}` : `${vs.copy.left[0]} ${vs.copy.left[1]}`}
           sub={world ? world.story : "Every piece comes in with its invoice and is looked over by hand before it reaches the wall."}
@@ -82,15 +106,6 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
           figure={(one && FIGURES[brandKey(one.name)]) || FIGURES.all}
         />
 
-        {brands.length > 0 && (
-          <section id="vault-brands" aria-label="Brands" className="scroll-mt-24 px-3 pt-3 md:px-4 md:pt-4">
-            <VaultBrandGrid
-              total={pieces.length}
-              active={one?.name}
-              brands={brands.map((b) => ({ name: b.name, n: b.pieces.length, href: vaultHref(b.name), origin: brandWorld(b.name, vs.brands)?.origin ?? "Original brand", from: Math.min(...b.pieces.filter((p) => p.status !== "sold_out").map((p) => p.salePrice ?? p.price)), left: b.pieces.filter((p) => p.status !== "sold_out").length, kinds: Array.from(new Set(b.pieces.map((p) => p.category))).map((k) => k.charAt(0).toUpperCase() + k.slice(1).replace("-", " ")) }))}
-            />
-          </section>
-        )}
 
         {/* The pieces, in one big rounded black panel */}
         <div className="px-3 pt-3 md:px-4 md:pt-4">
@@ -101,14 +116,10 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
                 <p className={`py-24 text-center text-[17px] ${V.iceDim}`}>The wall is empty for now. The first pieces arrive soon.</p>
               ) : (
                 <>
-                  {wanted && !one && <p className={`pt-8 text-[15px] ${V.iceDim}`}>Nothing from &ldquo;{wanted}&rdquo; right now. Here&apos;s the rest of the Vault.</p>}
                   <div className="pt-12 md:pt-16">
                     <VaultTriptych key={one?.name ?? "all"} pieces={featured} />
                   </div>
                   <div className="mt-14 border-t border-white/10 md:mt-20">{spot && <VaultSpotlight piece={spot} />}</div>
-                  <div id="inventory" className="scroll-mt-28 border-t border-white/10 pt-12 md:pt-16">
-                    <VaultInventory key={`${start.avail}-${start.under}-${start.last}`} tiles={tiles} brand={one?.name} start={start} />
-                  </div>
                 </>
               )}
             </div>

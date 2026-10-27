@@ -39,20 +39,26 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 // The pictures inside the letters, and the four tiles above the rail (owner: "use the current images").
 // Only the darker pictures, so the letters read crisp (owner, 26 Oct 2026: "make that hero better").
 const WORDS = ["/drops/hero-2.webp", "/visit/store-night-open.avif", "/visit/door-poster.avif", "/visit/store-dusk-open.avif"];
-// What plays after the word (owner, 27 Oct 2026: their ten cards, planned with ten agents, their own
-// names kept): what Easypick is, why, how shopping works, then the rail (taught on the real rail
-// card), The Pick, The Gift, The Fits, The Vault, to your door, and the close. Each card moves as it
-// says; every fact is checked against the code, and what isn't built (the store's address, Reserve &
-// Try, cash on delivery) is not promised.
+// What plays after the word (owner, 27 Oct 2026: their cards, their names; "show how shopping, gifts,
+// gift cards, Pick, the Vault, the fits and the drops work, recorded on the real site"). The how-to
+// cards play a recording of the site in use (public/story/video, made on a test copy: no real orders),
+// a little faster than life; each stays as long as its clip. Every fact is checked against the code.
+/** A recording: how long it runs (s), played at up to 2× so it never drags. */
+const clip = (name: string, seconds: number) => {
+  const rate = Math.min(2, Math.max(1, seconds / 6.5));
+  return { video: { src: `/story/video/${name}.webm`, poster: `/story/video/${name}.webp`, rate }, beat: Math.round((seconds / rate) * 1000 + 1600) };
+};
 const CHAPTERS: ChapterData[] = [
   { label: "Meet Easypick", title: ["Shopping,", "made *simple*."], line: "A men's streetwear store in Kathmandu, built around everyday style, fixed prices and a simpler way to shop.", facts: ["Men's streetwear", "Online and in store"], href: "/about", cta: "Our story", layout: "left", big: "/story/storefront.webp", bigAt: "40% 50%", small: "/story/man-backpack.webp" },
   { label: "Why Easypick", title: ["The price", "is the *price*."], line: "No bargaining. No awkward asking. Clear prices, good clothes, and time to shop at your own pace.", facts: ["Price on every tag", "Same online and in store"], href: "/how-it-works", cta: "How the store works", layout: "right", big: "/story/tees-rail.webp", bigAt: "40% 50%", small: "/story/hang-tag.webp" },
-  { label: "How it works", title: ["Pick it.", "Pay it.", "*Wear it.*"], line: "Online, Buy now and pay with eSewa. In the store, try it on, pay at the kiosk and walk out.", steps: ["Choose", "Pay", "Wear it"], href: "/how-it-works", cta: "How it works", layout: "left", big: "/story/phone.webp", scene: { kind: "steps" } },
+  { label: "How shopping works", title: ["Pick it.", "Pay it.", "*Wear it.*"], line: "Swipe the rail, pick your size, tap Buy now, give your number, and pay with eSewa. In the store, pay at the kiosk.", steps: ["Pick a size", "Buy now", "Pay with eSewa"], href: "/how-it-works", cta: "How it works", layout: "left", big: "/story/phone.webp", ...clip("shop", 15.0) },
   { label: "The Rail", title: ["Find your", "next", "*favourite*."], line: "Everyday pieces on one rail per kind. Swipe along, stop on one, pick your size and buy.", steps: ["Swipe", "Pick a size", "Buy now"], href: "/the-rail", cta: "Explore the rail", layout: "right", big: "/story/rails.webp" },
-  { label: "The Pick", title: ["Your style.", "Your *choice*."], line: "Pick a top, a bottom and a layer, see the total, and take the whole fit in one go.", steps: ["Pick a top", "Add a bottom", "Take the fit"], href: "/fit", cta: "Build your fit", layout: "left", big: "/story/flatlay-cargo.webp", scene: { kind: "pick" } },
-  { label: "The Gift", title: ["Good taste", "makes a", "good *gift*."], line: "Choose a piece or a gift card, add a message and send it. They pick their size, and can swap within 14 days.", steps: ["Choose", "Add a message", "Send it"], href: "/gift", cta: "Send a gift", layout: "right", big: "/story/gift-box.webp", scene: { kind: "gift" } },
-  { label: "The Fits", title: ["Know", "your *fit*."], line: "Sizes vary. Every piece is measured in cm, and you can measure a piece you own to compare.", steps: ["Measure yours", "Compare in cm", "Pick your size"], href: "/size-guide", cta: "Find my size", layout: "left", big: "/story/tee-measure.webp", scene: { kind: "fits" } },
-  { label: "The Vault", title: ["Not", "everything", "is *ordinary*."], line: "Original brands and rare pieces, mostly one of each, with every size left shown on the piece.", facts: ["Original brands", "Not restocked"], href: "/vault", cta: "Enter the Vault", layout: "right", big: "/story/vault.webp", scene: { kind: "vault" } },
+  { label: "The Pick", title: ["Your style.", "Your *choice*."], line: "Pick a top, a bottom and a layer. The total adds up as you go, and the whole fit goes in your bag.", steps: ["Pick a top", "Add a bottom", "Take the fit"], href: "/fit", cta: "Build your fit", layout: "left", big: "/story/flatlay-cargo.webp", ...clip("pick", 6.7) },
+  { label: "The Gift", title: ["Good taste", "makes a", "good *gift*."], line: "Choose a piece and send it as a gift. They open it, pick their own size, and can swap within 14 days.", steps: ["Choose a piece", "Send as a gift", "They pick a size"], href: "/gift", cta: "Send a gift", layout: "right", big: "/story/gift-box.webp", ...clip("gift", 5.4) },
+  { label: "Gift cards", title: ["Let them", "*choose*."], line: "Pick a card from Rs 1,000, add their name and pay. It arrives by email, works online and in the store, for 12 months.", steps: ["Pick an amount", "Their name", "Pay"], href: "/gift#buy", cta: "Send a gift card", layout: "left", big: "/story/gift-card.webp", ...clip("giftcards", 7.8) },
+  { label: "The Fits", title: ["Know", "your *fit*."], line: "Your height and weight, a size you wear, or a piece you own: we work out your size, in cm, once.", steps: ["Height and weight", "Your build", "Your size"], href: "/size-guide", cta: "Find my size", layout: "right", big: "/story/tee-measure.webp", ...clip("fits", 12.5) },
+  { label: "The Vault", title: ["Not", "everything", "is *ordinary*."], line: "Original brands and rare pieces, mostly one of each. Choose a brand, see every piece, open the one you want.", steps: ["Choose a brand", "Every piece", "Open one"], href: "/vault", cta: "Enter the Vault", layout: "left", big: "/story/vault.webp", ...clip("vault", 5.1) },
+  { label: "The Drop", title: ["New pieces,", "every *drop*."], line: "Small batches of new pieces, each on its day. Leave your WhatsApp or email and we send one message when it lands.", steps: ["See the drop", "Notify me", "One message"], href: "/drops", cta: "See the drops", layout: "right", big: "/story/store-rails.webp", ...clip("drops", 6.4) },
   { label: "To Your Door", title: ["Your picks.", "Your *place*."], line: "Shop online and pay with eSewa. Kathmandu the next day, Lalitpur and Bhaktapur in one to two, or pick it up free.", steps: ["Buy now", "Pay", "At your door"], href: "/delivery", cta: "Delivery and pickup", layout: "left", big: "/story/door-box.webp", scene: { kind: "door" } },
   { label: "Easypick", title: ["Pick it.", "Pay it.", "*Wear it.*"], line: "Great everyday clothing. Clear prices. A simpler way to shop.", facts: ["Men's streetwear", "Kathmandu"], href: "/shop", cta: "Shop now", layout: "right", big: "/story/bag.webp", scene: { kind: "close" } },
 ];
@@ -97,7 +103,7 @@ export default async function HomePage() {
   // The store's state comes from Admin → Visit, the same as the store line further down.
   const storeInfo = await getStoreInfo();
   const story = CHAPTERS.map((c) =>
-    c.label === "How it works" && !storeInfo.opened ? { ...c, line: c.line.replace("In the store,", "In the store (opening soon),") } : c,
+    c.label === "How shopping works" && !storeInfo.opened ? { ...c, line: c.line.replace("In the store, pay", "In the store (opening soon), pay") } : c,
   ).map((c) =>
     c.href === "/the-rail" && lessonPieces.length >= 3 ? { ...c, lesson: lessonPieces, beat: 8600 } : c.scene?.kind === "fits" ? (marks.length ? { ...c, scene: { kind: "fits" as const, marks } } : { ...c, scene: undefined }) : c,
   );

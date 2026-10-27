@@ -134,7 +134,6 @@ export function VaultBento({ statement, sub, available, under, last, base, figur
           </Link>
         </Rise>
       </div>
-      <p className="px-2 text-[12px] leading-relaxed text-[#666]">Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
     </div>
   );
 }

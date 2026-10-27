@@ -395,6 +395,8 @@ test("account dashboard: greeting, calm summaries, Edit opens the form; Pick on 
 
   // Pick on the shop: for themselves first.
   await page.goto("/shop");
+  // Pick shows only when asked for: the button, then him (owner, 27 Oct 2026).
+  await page.getByRole("button", { name: /Want help\? Ask Pick/ }).click();
   const pick = page.getByRole("region", { name: "Pick, your shopping helper" });
   // The box appears once his walking line is tapped.
   await expect(pick.getByRole("textbox", { name: "Ask Pick" })).toHaveCount(0);
