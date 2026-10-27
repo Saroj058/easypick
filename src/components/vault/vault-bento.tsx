@@ -34,9 +34,21 @@ function Rise({ children, className = "", delay = 0 }: { children: React.ReactNo
  * price, what's down to its last one, each opening the pieces already filtered, and trying it on in
  * the store. Only true numbers; nothing invented.
  */
-export function VaultBento({ statement, sub, available, under, last, base, figure }: {
-  statement: string;
-  sub: string;
+/** About the Vault, on black: right under the opening, above the brands (owner, 27 Oct 2026). */
+export function VaultStatement({ statement, sub }: { statement: string; sub: string }) {
+  return (
+    <section aria-label="The Vault" className="overflow-hidden rounded-[28px] bg-[#0d0d0d] px-6 py-20 text-center text-white md:py-28">
+      <Rise>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-white/60">About the Vault</p>
+        <h2 className="mx-auto mt-5 max-w-[18ch] text-balance text-[clamp(2.2rem,1.4rem+3.4vw,4.6rem)] font-semibold leading-[0.98] tracking-[-0.035em]">{statement}</h2>
+        <p className="mx-auto mt-5 max-w-[46ch] text-[15px] leading-relaxed text-white/65">{sub}</p>
+        <span aria-hidden className="mx-auto mt-10 block h-px w-10 rotate-[25deg] bg-white/70" />
+      </Rise>
+    </section>
+  );
+}
+
+export function VaultBento({ available, under, last, base, figure }: {
   /** Pieces that can still be bought. */
   available: number;
   /** A price step and how many are under it, when there are enough pieces for one. */
@@ -50,16 +62,6 @@ export function VaultBento({ statement, sub, available, under, last, base, figur
   const two = (n: number) => String(n).padStart(2, "0");
   return (
     <div className="space-y-3 px-3 md:space-y-4 md:px-4">
-      {/* The statement, on black */}
-      <section aria-label="The Vault" className="overflow-hidden rounded-[28px] bg-[#0d0d0d] px-6 py-20 text-center text-white md:py-28">
-        <Rise>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-white/60">About the Vault</p>
-          <h2 className="mx-auto mt-5 max-w-[18ch] text-balance text-[clamp(2.2rem,1.4rem+3.4vw,4.6rem)] font-semibold leading-[0.98] tracking-[-0.035em]">{statement}</h2>
-          <p className="mx-auto mt-5 max-w-[46ch] text-[15px] leading-relaxed text-white/65">{sub}</p>
-          <span aria-hidden className="mx-auto mt-10 block h-px w-10 rotate-[25deg] bg-white/70" />
-        </Rise>
-      </section>
-
       {/* The cards: how buying works, then shortcuts into the pieces, then the store */}
       <div className="grid gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-[1.35fr_1fr_1fr_1fr]">
         <Rise className="flex flex-col justify-between rounded-[28px] bg-white p-7 md:min-h-[300px]">

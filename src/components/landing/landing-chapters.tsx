@@ -42,7 +42,7 @@ export interface ChapterData {
   /** How long this chapter stays, glide included, when not the usual beat (ms). */
   beat?: number;
   /** A recording of the real site in use, played in a phone over the big picture (public/story/video). */
-  video?: { src: string; poster: string; rate: number };
+  video?: { src: string; poster: string; rate: number; /** The address shown in the window's bar. */ url: string };
 }
 
 const wrap = (n: number, i: number) => ((i % n) + n) % n;
@@ -309,7 +309,7 @@ function Info({ ch }: { ch: ChapterData }) {
   );
 }
 
-/** A recording in a phone: plays once from the start as the card lands, a little faster than life. */
+/** A recording in a browser window: plays once from the start as the card lands, a little faster than life. */
 function Recording({ video, still }: { video: NonNullable<ChapterData["video"]>; still: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -321,8 +321,20 @@ function Recording({ video, still }: { video: NonNullable<ChapterData["video"]>;
     return () => window.clearTimeout(t);
   }, [video.rate, still]);
   return (
-    <div className="absolute inset-y-[5%] left-1/2 aspect-[586/1268] -translate-x-1/2 rounded-[30px] bg-[#111] p-[5px] shadow-[0_30px_60px_-24px_rgba(0,0,0,0.55)]">
-      <video ref={ref} src={video.src} poster={video.poster} muted playsInline preload="metadata" className="h-full w-full rounded-[25px] bg-white object-cover object-top" aria-hidden />
+    <div className="absolute inset-0 flex items-center justify-center p-3 md:p-6">
+      <div className="w-full max-w-full overflow-hidden rounded-[12px] bg-white shadow-[0_40px_80px_-30px_rgba(0,0,0,0.55),0_0_0_1px_rgba(0,0,0,0.08)]">
+        {/* The window's bar: three dots and the address */}
+        <div className="flex items-center gap-3 border-b border-black/[0.06] bg-[#f4f4f2] px-3 py-2">
+          <span aria-hidden className="flex gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#111]/20" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#111]/20" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#111]/20" />
+          </span>
+          <span className="mx-auto truncate rounded-full bg-white px-3 py-0.5 font-mono text-[10px] tracking-[0.04em] text-[#111]/60 ring-1 ring-black/[0.06]">{video.url}</span>
+          <span aria-hidden className="w-[42px]" />
+        </div>
+        <video ref={ref} src={video.src} poster={video.poster} muted playsInline preload="metadata" className="block aspect-[1120/700] w-full bg-white object-cover" aria-hidden />
+      </div>
     </div>
   );
 }

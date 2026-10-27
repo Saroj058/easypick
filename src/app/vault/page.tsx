@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { featuredVault, toTile, vaultBrands, vaultHref, vaultPieces } from "@/components/home/vault";
 import { brandKey, brandWorld, MONO, priceStep, themeVars, two, V } from "@/components/vault/look";
-import { VaultBento } from "@/components/vault/vault-bento";
+import { VaultBento, VaultStatement } from "@/components/vault/vault-bento";
 import { VaultBrandGrid } from "@/components/vault/vault-brand-grid";
 import { VaultHero } from "@/components/vault/vault-hero";
 import { VaultInventory } from "@/components/vault/vault-inventory";
@@ -72,7 +72,13 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
           page's grey. A black statement, the real numbers as cards, the brands as numbered cards,
           then the pieces in one big rounded black panel. */}
       <div className="pb-4 md:pb-6">
-        {/* The brands first, then every piece, then buying from the Vault (owner, 27 Oct 2026) */}
+        {/* About the Vault, then the brands, then every piece, then buying from the Vault (owner, 27 Oct 2026) */}
+        <div className="px-3 pt-3 md:px-4 md:pt-4">
+          <VaultStatement
+            statement={world ? `${world.line[0]} ${world.line[1]}` : `${vs.copy.left[0]} ${vs.copy.left[1]}`}
+            sub={world ? world.story : "Every piece comes in with its invoice and is looked over by hand before it reaches the wall."}
+          />
+        </div>
         {brands.length > 0 && (
           <section id="vault-brands" aria-label="Brands" className="scroll-mt-24 px-3 pt-3 md:px-4 md:pt-4">
             <p className="px-2 pb-3 text-[12px] leading-relaxed text-[#666]">Brand names describe the pieces. Easypick is an independent store, not an official seller of these brands.</p>
@@ -97,8 +103,6 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
           </div>
         )}
         <VaultBento
-          statement={world ? `${world.line[0]} ${world.line[1]}` : `${vs.copy.left[0]} ${vs.copy.left[1]}`}
-          sub={world ? world.story : "Every piece comes in with its invoice and is looked over by hand before it reaches the wall."}
           available={tiles.filter((t) => !t.sold).length}
           under={cap ? { cap, n: tiles.filter((t) => !t.sold && t.price <= cap).length } : null}
           last={tiles.filter((t) => t.last).length}
