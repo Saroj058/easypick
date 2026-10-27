@@ -177,12 +177,15 @@ export function PieceControls({
   piece,
   mySize,
   onBuy,
+  demo,
 }: {
   piece: RailPiece;
   mySize: string | null;
   /** Unused here now: adding is the card's own bag button. */
   onAdded?: (line: { sku: string; name: string }) => void;
   onBuy: (line: BagLine) => void;
+  /** A self-playing lesson (the home's rail card): the size is chosen by the script, never from their saved size. */
+  demo?: { picked: Size | null };
 }) {
   // Their saved size (Find my size) picks each piece's size, signed in or not.
   const profile = useFitProfile();
@@ -201,7 +204,7 @@ export function PieceControls({
   const anyLeft = inStock.length > 0;
   // Their size for this piece: from their saved measurements when they have them (an L in a
   // tee isn't always an L in a jacket), else the letter they gave once.
-  const fitSize = oneSize
+  const fitSize = oneSize || demo
     ? null
     : (matchSize(piece.category, piece.measurements, profile, piece.fit)?.size ?? null);
   const wanted = fitSize ?? mySize;
@@ -210,8 +213,10 @@ export function PieceControls({
     ? can("ONE")
       ? "ONE"
       : null
-    : can(picked)
-      ? picked
+    : can(demo ? demo.picked : picked)
+      ? demo
+        ? demo.picked
+        : picked
       : can(wanted)
         ? (wanted as Size)
         : null;
@@ -252,7 +257,7 @@ export function PieceControls({
 
   return (
     <div className="mx-auto w-full max-w-[360px] text-center">
-      <h4 className="text-[17px] font-semibold leading-snug">
+      <h4 data-part="info" className="text-[17px] font-semibold leading-snug">
         <Link
           href={`/product/${piece.slug}`}
           className="decoration-1 underline-offset-4 hover:underline"
@@ -311,6 +316,7 @@ export function PieceControls({
         <div
           role="radiogroup"
           aria-label={`Size of ${piece.name}`}
+          data-part="sizes"
           className="mt-1 flex"
         >
           {colour.sizes.map((s) => {
@@ -337,7 +343,7 @@ export function PieceControls({
       )}
 
       {/* Buy now is the way through; the bag is for taking more than one. */}
-      <div className="mt-2 flex gap-1.5">
+      <div data-part="buy" className="mt-2 flex gap-1.5">
         {!oneSize && variant && (
           <button
             type="button"

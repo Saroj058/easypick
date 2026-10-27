@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { FitsTeaser } from "@/components/home/fits-teaser";
 import { GiftBlock } from "@/components/home/gift-block";
 import { StoreBand } from "@/components/home/store-band";
-import { Rail } from "@/components/home/rail";
+import { Rail, toRailPiece } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
 import { LandingHero } from "@/components/landing/landing-hero";
 import type { ChapterData } from "@/components/landing/landing-chapters";
@@ -15,10 +15,8 @@ import { ktmDay } from "@/lib/ktm-day";
 import { getOffers } from "@/lib/offers";
 import { getStoreInfo } from "@/lib/store-info";
 import { TrackForm } from "@/app/track/track-form";
-import { formatPrice } from "@/lib/format";
 import { jsonLd } from "@/lib/json-ld";
-import { railReel } from "@/lib/rail-reel";
-import { site, walletList } from "@/lib/site";
+import { site } from "@/lib/site";
 import { getDropTimeline, getProducts } from "@/lib/store";
 import { getSavedLooks } from "@/lib/looks";
 import { designerFits } from "@/lib/occasions";
@@ -41,27 +39,22 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 // The pictures inside the letters, and the four tiles above the rail (owner: "use the current images").
 // Only the darker pictures, so the letters read crisp (owner, 26 Oct 2026: "make that hero better").
 const WORDS = ["/drops/hero-2.webp", "/visit/store-night-open.avif", "/visit/door-poster.avif", "/visit/store-dusk-open.avif"];
-// What plays after the word, one chapter at a time (owner, 26 Oct 2026: "it is to show what our store
-// actually is, why we opened it, the main features, the products, why us"). The story: who we are, why
-// we opened, what we make, then how it works (the rail, the price, your size, fits), the Vault, gifts,
-// to your door, and the store. Words from the About page and the blueprint; every fact is checked
-// against the code and settings, and things not built yet (Reserve & Try) are not promised.
-const clock = (t: string) => {
-  const h = Number(t.split(":")[0]);
-  return h === 12 ? "12 PM" : h > 12 ? `${h - 12} PM` : `${h} AM`;
-};
+// What plays after the word (owner, 27 Oct 2026: their ten cards, planned with ten agents, their own
+// names kept): what Easypick is, why, how shopping works, then the rail (taught on the real rail
+// card), The Pick, The Gift, The Fits, The Vault, to your door, and the close. Each card moves as it
+// says; every fact is checked against the code, and what isn't built (the store's address, Reserve &
+// Try, cash on delivery) is not promised.
 const CHAPTERS: ChapterData[] = [
-  { label: "Easypick", title: ["Streetwear,", "*Kathmandu*"], line: "A men's streetwear store in Kathmandu, and the same store online: one range, one price, one stock.", facts: ["Men's streetwear", "Online and in store"], href: "/about", cta: "Our story", layout: "left", big: "/drops/hero-showroom.webp", bigAt: "72% 50%", small: "/products/oversized-heavy-tee/front.jpg" },
-  { label: "Why we opened", title: ["Just", "*look*"], line: "Buying clothes here meant a salesperson at your shoulder and a price to argue down. We wanted a store where you can just look.", facts: ["No one at your shoulder", "Nothing to bargain"], href: "/about", cta: "Why Easypick", layout: "right", big: "/visit/store-dawn-open.avif", bigAt: "50% 55%", small: "/products/boxy-pocket-tee/front.jpg" },
-  { label: "What we make", title: ["Good basics", "*that fit*"], line: "Heavy tees, hoodies, jackets, jeans, joggers and caps, cut to wear every day. New pieces every other Friday.", facts: ["Twelve kinds of piece", "New every other Friday"], href: "/shop", cta: "See the range", layout: "left", big: "/poses/coach-jacket-1.webp", bigAt: "50% 25%", small: "/products/washed-co-ord-set/front.jpg" },
-  { label: "The rails", title: ["Scroll.", "*Choose.*"], line: "Every piece hangs on a rail, with its price under the name. Slide along, stop on the one you like, take it.", steps: ["Scroll", "Stop", "Choose"], href: "/the-rail", cta: "How the rail works", layout: "right", big: "/rack/hung/everyday-hoodie.webp" },
-  { label: "Fixed prices", title: ["Price shown.", "*No DM.*"], line: "Every tag shows its price, the same online and in the store. Nothing to ask, nothing to bargain.", steps: ["Pick a size", "Buy now", `Pay with ${walletList()}`], href: "/how-it-works", cta: "How the store works", layout: "left", big: "/drops/hero-white.webp", bigAt: "75% 50%", small: "/products/everyday-hoodie/front.jpg" },
-  { label: "Your size", title: ["Your size,", "*in cm*"], line: "Every piece is measured in cm. Give your height and weight, or a size you already wear, and we pick yours.", steps: ["Height", "Weight", "Your size"], href: "/size-guide", cta: "Find my size", layout: "right", big: "/poses/coach-jacket-3.webp", bigAt: "50% 25%", small: "/products/relaxed-straight-jean/front.jpg" },
-  { label: "Designer Fits", title: ["The whole", "*outfit*"], line: "Pick the occasion and your size. The whole fit goes in your bag in one tap.", steps: ["Occasion", "Your size", "Add the fit"], href: "/fits", cta: "See the fits", layout: "left", big: "/poses/coach-jacket-2.webp", bigAt: "50% 25%", small: "/products/tapered-jogger/front.jpg" },
-  { label: "The Vault", title: ["The", "*Vault*"], line: "Original brands, checked by hand. Rare pairs, mostly one of each, not restocked.", facts: ["Original brands", "Checked by hand"], href: "/vault", cta: "Enter the Vault", layout: "figure", big: "/visit/store-night-closed.avif", bigAt: "30% 50%", figure: { src: "/vault/hero-figure.webp", width: 410, height: 925 } },
-  { label: "Gifts", title: ["For", "*someone*"], line: "Send a piece or a gift card. They open it, pick their size, and can swap it within 14 days.", steps: ["Send a piece", "They open it", "They pick a size"], href: "/gift", cta: "Send a gift", layout: "right", big: "/gift/hero-white.webp", bigAt: "80% 50%", small: "/gift-cards/front-5000.webp" },
-  { label: "Delivery", title: ["To your", "*door*"], line: "Kathmandu the next day, Lalitpur and Bhaktapur in one to two, or pick it up free. Wrong size? Swap it within 7 days.", facts: [`Free over ${formatPrice(site.delivery.freeAbove)}`, "7-day size swap"], href: "/delivery", cta: "Delivery and swaps", layout: "left", big: "/visit/route-static.avif", bigAt: "40% 60%", small: "/rack/hung/everyday-hoodie.webp" },
-  { label: "The store", title: ["Pick it.", "*Pay it.*"], line: site.store.address ? `Our store in ${site.store.area}: pick, try and pay yourself at the kiosk.` : `Our store in ${site.store.area}, opening soon: pick, try and pay yourself at the kiosk.`, facts: [site.store.address ? site.store.area : "Opening soon", `${clock(site.store.hours.open)} to ${clock(site.store.hours.close)}, daily`], href: "/how-it-works", cta: "How the store works", layout: "right", big: "/visit/store-day-open.avif", bigAt: "50% 60%", small: "/rack/hung/coach-jacket.webp" },
+  { label: "Meet Easypick", title: ["Shopping,", "made *simple*."], line: "A men's streetwear store in Kathmandu, built around everyday style, fixed prices and a simpler way to shop.", facts: ["Men's streetwear", "Online and in store"], href: "/about", cta: "Our story", layout: "left", big: "/story/storefront.webp", bigAt: "40% 50%", small: "/story/man-backpack.webp" },
+  { label: "Why Easypick", title: ["The price", "is the *price*."], line: "No bargaining. No awkward asking. Clear prices, good clothes, and time to shop at your own pace.", facts: ["Price on every tag", "Same online and in store"], href: "/how-it-works", cta: "How the store works", layout: "right", big: "/story/tees-rail.webp", bigAt: "40% 50%", small: "/story/hang-tag.webp" },
+  { label: "How it works", title: ["Pick it.", "Pay it.", "*Wear it.*"], line: site.store.address ? "Online, Buy now and pay with eSewa. In the store, try it on, pay at the kiosk and walk out." : "Online, Buy now and pay with eSewa. In the store (opening soon), try it on, pay at the kiosk and walk out.", steps: ["Choose", "Pay", "Wear it"], href: "/how-it-works", cta: "How it works", layout: "left", big: "/story/phone.webp", scene: { kind: "steps" } },
+  { label: "The Rail", title: ["Find your", "next", "*favourite*."], line: "Everyday pieces on one rail per kind. Swipe along, stop on one, pick your size and buy.", steps: ["Swipe", "Pick a size", "Buy now"], href: "/the-rail", cta: "Explore the rail", layout: "right", big: "/story/rails.webp" },
+  { label: "The Pick", title: ["Your style.", "Your *choice*."], line: "Pick a top, a bottom and a layer, see the total, and take the whole fit in one go.", steps: ["Pick a top", "Add a bottom", "Take the fit"], href: "/fit", cta: "Build your fit", layout: "left", big: "/story/flatlay-cargo.webp", scene: { kind: "pick" } },
+  { label: "The Gift", title: ["Good taste", "makes a", "good *gift*."], line: "Choose a piece or a gift card, add a message and send it. They pick their size, and can swap within 14 days.", steps: ["Choose", "Add a message", "Send it"], href: "/gift", cta: "Send a gift", layout: "right", big: "/story/gift-box.webp", scene: { kind: "gift" } },
+  { label: "The Fits", title: ["Know", "your *fit*."], line: "Sizes vary. Every piece is measured in cm, and you can measure a piece you own to compare.", steps: ["Measure yours", "Compare in cm", "Pick your size"], href: "/size-guide", cta: "Find my size", layout: "left", big: "/story/tee-measure.webp", scene: { kind: "fits" } },
+  { label: "The Vault", title: ["Not", "everything", "is *ordinary*."], line: "Original brands and rare pieces, mostly one of each, with every size left shown on the piece.", facts: ["Original brands", "Not restocked"], href: "/vault", cta: "Enter the Vault", layout: "right", big: "/story/vault.webp", scene: { kind: "vault" } },
+  { label: "To Your Door", title: ["Your picks.", "Your *place*."], line: "Shop online and pay with eSewa. Kathmandu the next day, Lalitpur and Bhaktapur in one to two, or pick it up free.", steps: ["Buy now", "Pay", "At your door"], href: "/delivery", cta: "Delivery and pickup", layout: "left", big: "/story/door-box.webp", scene: { kind: "door" } },
+  { label: "Easypick", title: ["Pick it.", "Pay it.", "*Wear it.*"], line: "Great everyday clothing. Clear prices. A simpler way to shop.", facts: ["Men's streetwear", "Kathmandu"], href: "/shop", cta: "Shop now", layout: "right", big: "/story/bag.webp", scene: { kind: "close" } },
 ];
 
 const orgLd = {
@@ -97,6 +90,14 @@ export default async function HomePage() {
 
   const { looks } = designerFits(products, await getSavedLooks());
 
+  // The rail card's lesson plays on real pieces in stock; The Fits measures a real tee.
+  const lessonPieces = range.filter((p) => p.status === "live" && p.images[0]?.src && p.variants.some((v) => v.stock > 0)).slice(0, 7).map(toRailPiece);
+  const tee = products.find((p) => p.slug === "oversized-heavy-tee")?.measurements.M;
+  const marks = Object.entries(tee ?? {}).filter(([k, v]) => typeof v === "number" && ["chest", "length", "sleeve"].includes(k)) as [string, number][];
+  const story = CHAPTERS.map((c) =>
+    c.href === "/the-rail" && lessonPieces.length >= 3 ? { ...c, lesson: lessonPieces, beat: 8600 } : c.scene?.kind === "fits" ? (marks.length ? { ...c, scene: { kind: "fits" as const, marks } } : { ...c, scene: undefined }) : c,
+  );
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
@@ -105,7 +106,7 @@ export default async function HomePage() {
           pictures inside the letters, then four tiles. The rail and everything below are as they were. */}
       {on("hero") && (
         <div style={at("hero")}>
-          <LandingHero words={WORDS} chapters={CHAPTERS.map((c) => (c.href === "/the-rail" ? { ...c, reel: railReel(products) } : c))} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
+          <LandingHero words={WORDS} chapters={story} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
         </div>
       )}
 

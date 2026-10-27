@@ -8,19 +8,15 @@ import { toRailPiece } from "@/components/home/rail";
 import { ArrowIcon } from "@/components/icons";
 import { ProductImage } from "@/components/product-image";
 import { FlowButton } from "@/components/ui/flow-button";
-import { ClothingRailHero, type RailGarment } from "@/components/ui/product-rail-gallery";
 import { HeroPiece } from "@/components/hero-piece";
 import { RefreshAt } from "@/components/refresh-at";
-import { formatDropTime, formatPrice } from "@/lib/format";
+import { formatDropTime } from "@/lib/format";
 import { cutoutOf } from "@/lib/rack-cutouts";
 import { homeSetting } from "@/lib/settings/home";
 import { getDropTimeline, getDrops, getProducts, isReleased } from "@/lib/store";
 import type { Drop } from "@/lib/types";
 
 export const revalidate = 60;
-
-// The pieces with a cut-out hanging on its own hanger (public/rack/hung).
-const HUNG = new Set(["boxy-pocket-tee", "brushed-crewneck", "coach-jacket", "everyday-hoodie", "fleece-quarter-zip", "oversized-heavy-tee", "relaxed-straight-jean", "tapered-jogger", "washed-co-ord-set", "wide-cargo-pant"]);
 
 export const metadata: Metadata = {
   title: "Drops",
@@ -56,14 +52,6 @@ export default async function DropsPage() {
     return out;
   };
   const heroPieces = [...inTurn(withPhoto.filter(buyable)), ...inTurn(withPhoto.filter((p) => !buyable(p)))];
-  // The rail under the drop (owner, 27 Oct 2026): the drop's own pieces first, then the rest of the
-  // range, each with its hanging cut-out (the photos carry their own hanger) and its price on the tag.
-  const dropFirst = [...range.filter((p) => drop && p.dropSlug === drop.slug), ...range.filter((p) => !drop || p.dropSlug !== drop.slug)];
-  const railItems: RailGarment[] = dropFirst
-    .filter((p) => HUNG.has(p.slug) && p.status === "live")
-    .slice(0, 8)
-    .map((p) => ({ id: p.id, name: p.name, image: `/rack/hung/${p.slug}.webp`, tag: formatPrice(p.salePrice ?? p.price), href: `/product/${p.slug}`, details: p.colours.length > 1 ? [`${p.colours.length} colours`] : undefined }));
-
   return (
     <>
       {/* The drop: one piece and its price tag, the words, and the drop's numbers */}
@@ -143,24 +131,6 @@ export default async function DropsPage() {
           </div>
         </div>
       </section>
-
-      {/* The rail: the pieces hanging side-on, each turning to face you in turn */}
-      {railItems.length > 2 && (
-        <div className="container-ep pt-14 md:pt-20">
-          <ClothingRailHero
-            items={railItems}
-            eyebrow={drop ? drop.name : "On the rail"}
-            heading="On the rail"
-            caption="Point at a piece, or tap it, to turn it round"
-            autoplay
-            interval={2600}
-            hanger="none"
-            labels={{ front: "Front", back: "Back", close: "Close", show: "See the piece" }}
-            aria-label="The pieces on the rail"
-            className="[&_h2]:font-[family-name:var(--font-didone)] [&_h2]:text-[clamp(2.2rem,6vw,4rem)] [&_h2]:uppercase [&_h2]:leading-none [&_h2]:tracking-[-0.02em]"
-          />
-        </div>
-      )}
 
       {/* Every drop, as the Drops page always had it */}
       <div className="overflow-x-clip">

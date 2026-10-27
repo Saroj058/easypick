@@ -38,6 +38,10 @@ export interface CoverflowCarouselProps {
   overhang?: string;
   /** The slide at the centre to begin with. */
   initial?: number;
+  /** Drives the centre from outside: when it changes, the row glides there (a self-playing demo). */
+  index?: number;
+  /** false: no drag, keys or taps, for a demo that plays itself. */
+  interactive?: boolean;
   showNavigation?: boolean;
   /** Under it: how to move it (swipe / drag / arrows), the arrows and where you are. */
   hint?: boolean;
@@ -46,6 +50,9 @@ export interface CoverflowCarouselProps {
   className?: string;
   cardClassName?: string;
 }
+
+// A demo doesn't take the arrow keys from the page.
+const NO_REF = { current: null };
 
 /**
  * A cover-flow carousel: the slide at the centre faces you, its neighbours turn away and recede.
@@ -67,6 +74,8 @@ export function CoverflowCarousel({
   loop = true,
   overhang = "0px",
   initial = 0,
+  index: driven,
+  interactive = true,
   showNavigation = false,
   hint = false,
   label = "Carousel",
@@ -188,7 +197,11 @@ export function CoverflowCarousel({
     [clamp, settle, touched],
   );
   // ← and → move this carousel whenever it's the one in view, no click first.
-  useArrowKeys(frameRef, nudge);
+  useArrowKeys(interactive ? frameRef : NO_REF, nudge);
+  // Driven from outside (a demo): glide to the slide it names.
+  React.useEffect(() => {
+    if (driven !== undefined) goTo(driven);
+  }, [driven, goTo]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -274,12 +287,13 @@ export function CoverflowCarousel({
       <div className="relative">
         <div
           ref={frameRef}
-          tabIndex={0}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
+          tabIndex={interactive ? 0 : -1}
+          onPointerDown={interactive ? onPointerDown : undefined}
+          onPointerMove={interactive ? onPointerMove : undefined}
+          onPointerUp={interactive ? endDrag : undefined}
+          onPointerCancel={interactive ? endDrag : undefined}
           onKeyDown={(event) => {
+            if (!interactive) return;
             if (event.key === "ArrowLeft") {
               event.preventDefault();
               nudge(-1);

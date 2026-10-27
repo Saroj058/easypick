@@ -5,7 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import type { RailPiece } from "@/components/home/rail-wall";
+
 import { RailDemo, type ReelCard } from "./rail-demo";
+import { RailLesson } from "./rail-lesson";
+import { StoryScene, type SceneData } from "./story-scenes";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 /** The sideways glide, as in the reference (a short delay, then 1.2 s), in ms. */
@@ -31,6 +35,12 @@ export interface ChapterData {
   facts?: [string, string];
   /** The rail chapter: real pieces that slide along a rail in place of the big picture. */
   reel?: ReelCard[];
+  /** The rail card's lesson: the real rail card, played by a hand (in place of the big picture). */
+  lesson?: RailPiece[];
+  /** A moving picture in place of the big picture (story-scenes.tsx). */
+  scene?: SceneData;
+  /** How long this chapter stays, glide included, when not the usual beat (ms). */
+  beat?: number;
 }
 
 const wrap = (n: number, i: number) => ((i % n) + n) % n;
@@ -87,17 +97,18 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
   const still = !!useReducedMotion();
   const [[page, dir], setPage] = useState<[number, number]>([0, 1]);
   const [focus, setFocus] = useState(false);
+  const [stopped, setStopped] = useState(false);
   const tabHidden = useTabHidden();
   const panned = useRef(false);
   const n = chapters.length;
   const at = wrap(n, page);
   const ch = chapters[at];
   const next = chapters[wrap(n, page + 1)];
-  const rest = BEAT - GLIDE;
+  const rest = (ch.beat ?? BEAT) - GLIDE;
   // It always turns by itself (owner, 27 Oct 2026: "make it auto rotate"). The hero fills the screen, so
   // holding under the mouse meant it never moved; it holds only for the pause button, keyboard focus
   // and a hidden tab. Less motion still turns, with a quiet fade in place of the slide.
-  const paused = focus || tabHidden || n < 2;
+  const paused = stopped || focus || tabHidden || n < 2;
   const go = (d: number) => setPage(([p]) => [p + d, d]);
 
   useEffect(() => {
@@ -151,6 +162,10 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
           ))}
       </div>
 
+      {/* One small word to stop it (anything that moves by itself for more than 5 seconds needs a way to pause) */}
+      <button type="button" onClick={() => setStopped((v) => !v)} aria-pressed={stopped} className="absolute bottom-3 left-3 z-30 inline-flex min-h-11 cursor-pointer items-center px-1 font-mono text-[10.5px] uppercase tracking-[0.2em] text-[#555] hover:text-[#111] md:bottom-5 md:left-[4vw]">
+        {stopped ? "Play" : "Pause"}
+      </button>
       <p className="sr-only" aria-live="polite">{paused ? `${ch.label}, ${at + 1} of ${n}` : ""}</p>
     </div>
   );
@@ -162,7 +177,10 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
   const life = (GLIDE + rest) / 1000 + 1.2;
   // Where things sit. Phones: the words on top, one picture under them. Computers: side by side.
   const reel = ch.reel?.length ? ch.reel : null;
-  const big = reel
+  const lesson = ch.lesson?.length ? ch.lesson : null;
+  const big = lesson
+    ? "left-0 right-0 bottom-[6%] top-[37%] md:bottom-auto md:left-auto md:right-[3vw] md:top-[9%] md:h-[84%] md:w-[46vw]"
+    : reel
     ? "left-0 right-0 bottom-[12%] h-[32%] md:bottom-auto md:left-auto md:right-[3vw] md:top-[16%] md:h-[66%] md:w-[44vw]"
     : fig
     ? "left-4 bottom-[13%] h-[26%] w-[44vw] md:bottom-auto md:left-[8vw] md:top-[20%] md:h-[58%] md:w-[22vw]"
@@ -181,7 +199,18 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
   return (
     <>
       {/* The big picture (far, slow) */}
-      {reel ? (
+      {lesson ? (
+        // The rail chapter: the real rail card, taught by a hand, where the picture would be
+        <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] will-change-transform ${big}`}>
+          <div className="h-full w-full origin-top max-md:scale-[0.8]">
+            <RailLesson pieces={lesson} />
+          </div>
+        </motion.div>
+      ) : ch.scene ? (
+        <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] overflow-hidden will-change-transform ${big}`}>
+          <StoryScene scene={ch.scene} still={still} />
+        </motion.div>
+      ) : reel ? (
         // The rail chapter: the rail itself, playing, where the picture would be
         <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] will-change-transform ${big}`}>
           <RailDemo reel={reel} />
@@ -194,7 +223,7 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
         </motion.div>
       )}
       {/* The small picture (near, fast; computers only) */}
-      {ch.small && !reel && (
+      {ch.small && !reel && !lesson && !ch.scene && (
         <motion.div custom={dir} variants={layer(1.25, still)} className={`absolute z-[3] hidden overflow-hidden bg-[#ececea] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.35)] will-change-transform md:block ${small}`}>
           <motion.div className="h-full w-full" initial={false} animate={still ? undefined : { x: [0, -22], scale: [1.06, 1.06] }} transition={{ duration: life, ease: "linear" }}>
             <Image src={ch.small} alt="" fill sizes={SIZES.small} className="object-cover grayscale" />
@@ -216,10 +245,11 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
           ))}
         </h2>
         <div className={`max-w-[36ch] ${end ? "md:ml-auto" : ""} ${fig ? "md:mt-[28vh]" : ""}`}>
-          <motion.p variants={item(3, still)} className="mt-4 text-[13.5px] leading-relaxed text-[#111]/75 md:mt-7 md:text-[14.5px]">
+          {/* On a phone the rail lesson needs the room: its own captions say the steps */}
+          <motion.p variants={item(3, still)} className={`mt-4 text-[13.5px] leading-relaxed text-[#111]/75 md:mt-7 md:text-[14.5px] ${lesson ? "max-md:hidden" : ""}`}>
             {ch.line}
           </motion.p>
-          <motion.div variants={item(4, still)}>
+          <motion.div variants={item(4, still)} className={lesson ? "max-md:hidden" : ""}>
             <Info ch={ch} />
           </motion.div>
           <motion.div variants={item(5, still)}>
