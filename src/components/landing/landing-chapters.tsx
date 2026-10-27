@@ -40,11 +40,8 @@ const subVis = (cb: () => void) => {
 };
 const useTabHidden = () => useSyncExternalStore(subVis, () => document.hidden, () => false);
 
-/** How long a chapter rests after its glide: long enough to read it, never so long it stands still (ms). */
-function restFor(ch: ChapterData) {
-  const words = [...ch.title, ch.line, ...(ch.steps ?? ch.facts ?? [])].join(" ").split(/\s+/).length;
-  return Math.min(5200, Math.max(3400, 1400 + words * 120));
-}
+/** A new chapter every 3 seconds, glide included (owner, 27 Oct 2026: "change in 3 sec"); the rest is what's left after the glide (ms). */
+const BEAT = 3000;
 
 // The same picture sizes for the slides and for fetching the next chapter early, so nothing loads twice.
 const SIZES = { big: "(min-width: 768px) 30vw, 92vw", small: "(min-width: 768px) 12vw, 1px", figure: "(min-width: 768px) 420px, 50vw" };
@@ -81,27 +78,26 @@ function Line({ text, k, still }: { text: string; k: number; still: boolean }) {
  * scrolling): after the EASYPICK opening, one chapter at a time slides in sideways, its pictures and
  * words at different depths. They explain the whole system and how to use it (planned with ten agents:
  * story, copy, facts checked against the code, pictures, motion, access): a headline, a line, three
- * steps or two facts, and one way to learn more. Each rests long enough to read (it depends on the
- * words), with the pictures and title still drifting so it never stands still. A big *0N counter with a
- * line that fills, a pause button, arrows and dots; swipe on phones, arrow keys; it holds while pointed
- * at or used, and when the tab is hidden. People who ask for less motion get still chapters.
+ * steps or two facts, and one way to learn more. A new chapter every 3 seconds, the pictures and title
+ * drifting so it never stands still. No counter, arrows, dots or pause button (owner, 27 Oct 2026:
+ * "remove these"); swipe on phones and the arrow keys still move it. It holds only for keyboard focus
+ * and a hidden tab; less motion still turns, with a fade.
  */
 export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
   const still = !!useReducedMotion();
   const [[page, dir], setPage] = useState<[number, number]>([0, 1]);
   const [focus, setFocus] = useState(false);
-  const [stopped, setStopped] = useState(false);
   const tabHidden = useTabHidden();
   const panned = useRef(false);
   const n = chapters.length;
   const at = wrap(n, page);
   const ch = chapters[at];
   const next = chapters[wrap(n, page + 1)];
-  const rest = restFor(ch);
+  const rest = BEAT - GLIDE;
   // It always turns by itself (owner, 27 Oct 2026: "make it auto rotate"). The hero fills the screen, so
   // holding under the mouse meant it never moved; it holds only for the pause button, keyboard focus
   // and a hidden tab. Less motion still turns, with a quiet fade in place of the slide.
-  const paused = stopped || focus || tabHidden || n < 2;
+  const paused = focus || tabHidden || n < 2;
   const go = (d: number) => setPage(([p]) => [p + d, d]);
 
   useEffect(() => {
@@ -155,45 +151,6 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
           ))}
       </div>
 
-      {/* The big counter, with a line that fills while the chapter rests */}
-      <div aria-hidden className="pointer-events-none absolute bottom-5 right-4 z-30 text-right md:bottom-8 md:right-[4vw]">
-        <div className="flex items-baseline justify-end gap-1 font-[family-name:var(--font-didone)] leading-none">
-          <span className="text-[26px] md:text-[34px]">*</span>
-          <span className="relative block h-[40px] overflow-hidden md:h-[58px]">
-            <AnimatePresence initial={false} custom={dir} mode="popLayout">
-              <motion.span key={page} custom={dir} className="block text-[40px] font-medium tabular-nums md:text-[58px]" variants={{ enter: (d: number) => ({ y: d > 0 ? "100%" : "-100%" }), center: { y: 0 }, exit: (d: number) => ({ y: d > 0 ? "-100%" : "100%" }) }} initial="enter" animate="center" exit="exit" transition={{ duration: 0.35, ease: EASE }}>
-                {String(at + 1).padStart(2, "0")}
-              </motion.span>
-            </AnimatePresence>
-          </span>
-          <span className="ml-1 text-[12px] text-[#111]/60">/ {String(n).padStart(2, "0")}</span>
-        </div>
-        <span className="mt-2 block h-px w-24 bg-[#111]/15 md:w-32">
-          {!paused && <motion.span key={page} className="block h-px origin-left bg-[#111]" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: GLIDE / 1000, duration: rest / 1000, ease: "linear" }} />}
-        </span>
-      </div>
-
-      {/* Pause, arrows and dots: always visible, 44px */}
-      <div className="absolute bottom-4 left-1 z-30 flex items-center md:bottom-7 md:left-[3.4vw]">
-        <button type="button" onClick={() => setStopped((s) => !s)} aria-pressed={stopped} aria-label={stopped ? "Play the chapters" : "Pause the chapters"} className="grid size-11 cursor-pointer place-items-center text-[#111]">
-          {stopped ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 5v14l12-7z" /></svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></svg>
-          )}
-        </button>
-        <button type="button" onClick={() => go(-1)} aria-label="Previous chapter" className="grid size-11 cursor-pointer place-items-center text-[#111]">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
-        </button>
-        {chapters.map((c, i) => (
-          <button key={c.label} type="button" aria-label={c.label} aria-current={i === at || undefined} onClick={() => { if (i !== at) setPage(([p]) => [p + i - at, i > at ? 1 : -1]); }} className="hidden h-11 w-7 cursor-pointer place-items-center md:grid">
-            <span className={`block h-px transition-all duration-500 ${i === at ? "w-6 bg-[#111]" : "w-3 bg-[#111]/30"}`} />
-          </button>
-        ))}
-        <button type="button" onClick={() => go(1)} aria-label="Next chapter" className="grid size-11 cursor-pointer place-items-center text-[#111]">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
-        </button>
-      </div>
       <p className="sr-only" aria-live="polite">{paused ? `${ch.label}, ${at + 1} of ${n}` : ""}</p>
     </div>
   );
