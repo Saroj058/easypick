@@ -51,6 +51,20 @@ export function PickLazy({ where = "gift" }: { where?: "gift" | "shop" }) {
     keepOpen(v);
     setChosen(v);
   };
+  // A question from the home page's Ask Pick (/shop?ask=…#pick): he opens and asks it straight away.
+  // It comes off the address at once, so a reload doesn't ask it again.
+  const [question, setQuestion] = useState<string | null>(null);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const q = url.searchParams.get("ask")?.trim().slice(0, 200);
+    if (!q) return;
+    url.searchParams.delete("ask");
+    window.history.replaceState(window.history.state, "", url);
+    keepOpen(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is only readable after mount
+    setChosen(true);
+    setQuestion(q);
+  }, []);
   const opener = useRef<HTMLButtonElement>(null);
   const hider = useRef<HTMLButtonElement>(null);
   const [moved, setMoved] = useState(false);
@@ -95,13 +109,13 @@ export function PickLazy({ where = "gift" }: { where?: "gift" | "shop" }) {
       >
         <X aria-hidden className="h-4 w-4" />
       </button>
-      <PickReady where={where} />
+      <PickReady where={where} question={question} />
     </div>
   );
 }
 
 /** The loader stays until the chat's code has arrived. */
-function PickReady({ where }: { where: "gift" | "shop" }) {
+function PickReady({ where, question }: { where: "gift" | "shop"; question: string | null }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let live = true;
@@ -110,5 +124,5 @@ function PickReady({ where }: { where: "gift" | "shop" }) {
       live = false;
     };
   }, []);
-  return ready ? <PickChat where={where} /> : <PickLoader where={where} />;
+  return ready ? <PickChat where={where} question={question} /> : <PickLoader where={where} />;
 }

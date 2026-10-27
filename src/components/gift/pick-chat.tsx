@@ -64,7 +64,7 @@ const first = (where: Where): Saved => ({
   hidden: true,
 });
 
-export function PickChat({ where = "gift" }: { where?: Where } = {}) {
+export function PickChat({ where = "gift", question = null }: { where?: Where; /** Asked as soon as he's ready (the home page's Ask Pick). */ question?: string | null } = {}) {
   const KEY = keyFor(where);
   const mySize = useMySize();
   const FIRST = first(where);
@@ -245,6 +245,14 @@ export function PickChat({ where = "gift" }: { where?: Where } = {}) {
     },
     [now, thinking, launch, known, where, mySize],
   );
+
+  // A question brought from the home page: asked once, as soon as what he knew in this tab is back.
+  const asked = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready || !question || asked.current === question) return;
+    asked.current = question;
+    void ask({ text: question }, question);
+  }, [ready, question, ask]);
 
   const choose = (q: Quick) => {
     if (q.action === "restart") {

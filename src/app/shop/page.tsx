@@ -352,7 +352,7 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
         )}
 
         {/* Pick, the robot: for themselves first, gifts too; sizes, delivery, swaps and small talk */}
-        <div className="mt-12 md:mt-16">
+        <div id="pick" className="mt-12 scroll-mt-24 md:mt-16 md:scroll-mt-28">
           <PickLazy where="shop" />
         </div>
   

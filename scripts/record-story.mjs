@@ -10,7 +10,8 @@
 // a caption for every step ("03 / 08 · Pick your size"), jump cuts over loading, speed ramps (typing
 // fast, clicks at life speed, captions held long enough to read), a title card and an end card.
 // CDP screencast frames → frames edited with sharp → VP8 WebM through Playwright's own ffmpeg.
-// Contact sheets (<name>-sheet.png) land in the current folder, to check each film by eye.
+// Contact sheets (<name>-sheet.png) land in the current folder, to check each film by eye. Each film's
+// steps and when they show (s) are printed, for its card's step list (src/app/page.tsx).
 import { chromium } from "@playwright/test";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -440,6 +441,7 @@ async function record(name, url, meta, act) {
     .png()
     .toFile(`${name}-sheet.png`);
   const secs = (INTRO + nOut + END) / FPS;
+  console.log(name, "steps", JSON.stringify(caps.map((c) => [c.text, Math.round((INTRO / FPS + c.o0 + 0.15) * 10) / 10])));
   console.log(name, `${secs.toFixed(1)}s`, `${Math.round(fs.statSync(`${OUT}/${name}.webm`).size / 1024)} KB`, `${N} captions`);
 }
 
@@ -471,8 +473,8 @@ await record("shop", "/", { title: "How shopping works", end: "Order confirmed",
   await h.esewa();
 });
 
-// 2. The Pick: a ready-made Designer Fit, an occasion, the sizes, Quick buy, pay, confirmed.
-await record("pick", "/fits", { title: "The Pick", end: "Order confirmed", sub: "The whole fit, in one go" }, async (h) => {
+// 2. Designer Fits: a ready-made fit, an occasion, the sizes, Quick buy, pay, confirmed.
+await record("outfits", "/fits", { title: "Designer Fits", end: "Order confirmed", sub: "The whole fit, in one go" }, async (h) => {
   const p = h.page;
   const occasions = p.getByRole("navigation", { name: "Occasions" }).locator("a:visible, button:visible");
   h.say("Choose an occasion");
@@ -544,8 +546,8 @@ await record("giftcards", "/gift", { title: "Gift cards", end: "Gift card sent",
   await h.esewa("Sent, with its code");
 });
 
-// 5. The Fits: height and weight, build and fit, your size, saved; then a piece opens on your size.
-await record("fits", "/size-guide", { title: "Find your size", end: "Your size, picked", sub: "Every piece measured in cm" }, async (h) => {
+// 5. Your size: height and weight, build and fit, your size, saved; then a piece opens on your size.
+await record("size", "/size-guide", { title: "Find your size", end: "Your size, picked", sub: "Every piece measured in cm" }, async (h) => {
   const p = h.page;
   h.say("Tap Find my size");
   await h.click(p.getByRole("button", { name: /Find my size/ }).first(), { after: 900 });
@@ -600,3 +602,43 @@ await record("drops", "/drops", { title: "The Drop", end: "You're in", sub: "One
 });
 
 console.log("done");
+
+// 8. Pick, our AI assistant (on the test copy his answers come from the rules alone, PICK_AI=off): your
+// own words, real pieces in your size, one into the bag.
+await record("ask-pick", "/shop", { title: "Ask Pick", end: "In your bag", sub: "Your words · real pieces · your size" }, async (h) => {
+  const p = h.page;
+  await h.scrollTo("#pick", 150);
+  h.say("Tap Ask Pick");
+  await h.click(p.getByRole("button", { name: /Ask Pick, our AI assistant/ }), { after: 300 });
+  // Cut while he arrives.
+  h.cut.from();
+  const line = p.getByRole("button", { name: /Tap me to chat/ });
+  await line.waitFor({ timeout: 60000 });
+  await h.pause(500);
+  await h.cut.to();
+  h.say("Tap Pick to chat");
+  await h.click(line, { after: 500 });
+  // He walks, so the tap can miss his line: tapped again, off camera.
+  const box = p.locator("#pick-say");
+  if (!(await box.isVisible().catch(() => false))) {
+    h.cut.from();
+    await line.click({ force: true }).catch(() => {});
+    await box.waitFor({ timeout: 20000 });
+    await h.pause(400);
+    await h.cut.to();
+  }
+  h.say("Ask in your own words");
+  await h.type(p.locator("#pick-say"), "something oversized in M, under 2500");
+  h.say("Tap Send");
+  await h.click(p.getByRole("button", { name: "Send", exact: true }), { after: 300 });
+  // A moment of him thinking, then a cut to his answer.
+  await h.pause(1700);
+  h.cut.from();
+  await p.getByLabel("Pick's suggestions").waitFor({ timeout: 30000 });
+  await h.pause(400);
+  await h.cut.to();
+  h.say("Real pieces, in your size");
+  await h.pause(2400);
+  h.say("Add one to your bag");
+  await h.click(p.getByRole("button", { name: /^Add .+ in M to bag$/ }).first(), { after: 1800 });
+});
