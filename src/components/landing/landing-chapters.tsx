@@ -72,9 +72,6 @@ export interface ChapterData {
   bubble: string;
   /** Three promises: an icon, a word or two, and a small line. */
   beats: Promise3;
-  photo: string;
-  photoAt?: string;
-  dark?: boolean;
   kind: Kind;
   film: Film;
   /** When in the film each promise lights again (s); without it all three stay lit. */
@@ -383,10 +380,6 @@ function Card({
 
   return (
     <div className={cls} aria-hidden={!live} role="group" aria-roledescription="slide" aria-label={`${index + 1}: ${ch.label}`}>
-      <div className={`hc-photo ${ch.dark ? "hc-dark" : ""}`}>
-        <Image src={ch.photo} alt="" fill priority={index === 0} sizes="(min-width: 768px) 46vw, 100vw" className="object-cover" style={{ objectPosition: ch.photoAt ?? "60% 40%" }} />
-      </div>
-
       <div className="hc-words">
         <p className="hc-label">
           {String(index + 1).padStart(2, "0")} — {ch.label}

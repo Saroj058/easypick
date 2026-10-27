@@ -41,7 +41,7 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 // Only the darker pictures, so the letters read crisp (owner, 26 Oct 2026: "make that hero better").
 const WORDS = ["/drops/hero-2.webp", "/visit/store-night-open.avif", "/visit/door-poster.avif", "/visit/store-dusk-open.avif"];
 // What plays after the word (owner, 27 Oct 2026: picked the "explainer" mockup; "build it but even better").
-// Each card: a photo and a two-line title, the usual way of shopping crossed out, a small machine that shows
+// Each card (no background photos, owner, 27 Oct 2026): a two-line title, the usual way of shopping crossed out, a small machine that shows
 // the idea (fed with real pieces from the shop), three promises, then its film of the real site, recorded
 // on a test copy with no real orders (public/story/video, scripts/record-story.mjs). Each step's time is when
 // its caption shows in the film. Every fact is checked against the code.
@@ -56,7 +56,6 @@ const CHAPTERS: ChapterData[] = [
     line: `Why Easypick: the same price on the tag online and in store, your size in cm, a 7-day size swap, pay with ${walletList()}, Kathmandu the next day or free pickup.`,
     bubble: "“Price? DM me”",
     beats: [["tag", "Fixed price", "on every tag"], ["ruler", "Size in cm", "worked out once"], ["swap", "7-day swap", "tags on"]],
-    photo: "/drops/hero-white.webp",
     kind: "tag",
     film: SHOP_FILM,
     upto: 15,
@@ -70,7 +69,6 @@ const CHAPTERS: ChapterData[] = [
     line: `Swipe the rail, pick your size, tap Buy now, add your number and pay with ${walletList()}. No account, no bargaining.`,
     bubble: "“DM to order”",
     beats: [["shirt", "Pick", "a size"], ["bag", "Buy now", "no account"], ["wallet", "Pay", `with ${walletList()}`]],
-    photo: "/drops/hero-showroom.webp",
     kind: "shop",
     film: SHOP_FILM,
     thr: [7.6, 10.4, 18.8],
@@ -84,7 +82,6 @@ const CHAPTERS: ChapterData[] = [
     line: "Pick is our AI assistant: tell him what you're after in your own words and he shows real pieces in your size.",
     bubble: "“Too many choices”",
     beats: [["chat", "Ask", "your own words"], ["spark", "Picks", "real pieces"], ["bag", "Add", "in your size"]],
-    photo: "/visit/store-day-open.avif",
     kind: "pick",
     film: film("ask-pick", 31.1, [["Tap Ask Pick", 2.3], ["Tap Pick to chat", 7.6], ["Ask in your own words", 11.1], ["Tap Send", 18], ["Real pieces, in your size", 22.4], ["Add one to your bag", 24.7]]),
     thr: [11.1, 22.4, 24.7],
@@ -98,8 +95,6 @@ const CHAPTERS: ChapterData[] = [
     line: "Send a piece as a gift: they open it, pick their own size, and can swap within 14 days. Or send a gift card, from Rs 1,000.",
     bubble: "“What's their size?”",
     beats: [["gift", "Choose", "a piece"], ["mail", "Send", "by email"], ["ruler", "They size", "14-day swap"]],
-    photo: "/drops/hero-white.webp",
-    photoAt: "25% 40%",
     kind: "gift",
     film: film("gift", 59.2, [["Send a piece", 1.6], ["Send it as a gift", 5.2], ["Let them pick the size", 9.2], ["Write their name", 15.2], ["Pick the occasion", 21.6], ["Add their email", 28.4], ["Your mobile number", 32.8], ["Tap Pay", 36.8], ["Log in to eSewa", 40.4], ["Enter the code", 46], ["Confirm the payment", 50.8], ["Sent. They pick their size", 56.4]]),
     thr: [1.6, 28.4, 56.4],
@@ -113,8 +108,6 @@ const CHAPTERS: ChapterData[] = [
     line: "Ready-made outfits for every occasion. Choose one, pick each size, and buy the whole fit in one go.",
     bubble: "“What goes with this?”",
     beats: [["calendar", "Occasion", "choose one"], ["ruler", "Sizes", "for each piece"], ["zap", "One tap", "the whole fit"]],
-    photo: "/drops/hero-2.webp",
-    dark: true,
     kind: "fits",
     film: film("outfits", 47.7, [["Choose an occasion", 1.6], ["Browse the fits", 6.4], ["Pick each size", 10.4], ["Tap Quick buy", 15.6], ["Enter your number", 20], ["Tap Pay", 24.8], ["Log in to eSewa", 28.4], ["Enter the code", 34.4], ["Confirm the payment", 39.2], ["Paid. Your order is in", 44.8]]),
     thr: [1.6, 10.4, 15.6],
@@ -128,8 +121,6 @@ const CHAPTERS: ChapterData[] = [
     line: "Your height and weight, a size you wear, or a piece you own: we work out your size in cm once, and every piece opens on it.",
     bubble: "“Will M fit me?”",
     beats: [["ruler", "Measure", "height and weight"], ["check", "Match", "in cm"], ["mark", "Saved", "on every piece"]],
-    photo: "/drops/hero-showroom.webp",
-    photoAt: "75% 40%",
     kind: "size",
     film: film("size", 25.4, [["Tap Find my size", 1.6], ["Use height and weight", 4.8], ["Set your height", 7.6], ["Tap Next", 11.2], ["See your size", 14], ["Save your size", 17.2], ["Your size, already picked", 20.4]]),
     thr: [4.8, 14, 17.2],
@@ -143,9 +134,6 @@ const CHAPTERS: ChapterData[] = [
     line: "The Vault: original brands and rare pieces, mostly one of each. Choose a brand, see every piece, open the one you want.",
     bubble: "“Is it original?”",
     beats: [["gem", "Originals", "real brands"], ["star", "Rare", "mostly one each"], ["bag", "Yours", "buy now"]],
-    photo: "/drops/hero-2.webp",
-    photoAt: "20% 50%",
-    dark: true,
     kind: "vault",
     film: film("vault", 23.4, [["Choose a brand", 2], ["See every piece", 3.6], ["Open a piece", 4.8], ["Pick your size", 13.6], ["Tap Buy now", 16.8]]),
     thr: [2, 4.8, 16.8],
@@ -159,7 +147,6 @@ const CHAPTERS: ChapterData[] = [
     line: "Small batches of new pieces, each on its day. Leave your WhatsApp or email and we send one message when it lands.",
     bubble: "“Missed it again”",
     beats: [["bell", "Notify", "one message"], ["zap", "Drop", "on its day"], ["bag", "Shop", "before it's gone"]],
-    photo: "/visit/store-night-open.avif",
     kind: "drop",
     film: film("drops", 15.8, [["Leave your email", 1.6], ["Tap Notify me", 5.6], ["Shop the drop", 9.6]]),
     thr: [1.6, 5.6, 9.6],
