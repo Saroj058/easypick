@@ -89,7 +89,6 @@ function Line({ text, k, still }: { text: string; k: number; still: boolean }) {
 export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
   const still = !!useReducedMotion();
   const [[page, dir], setPage] = useState<[number, number]>([0, 1]);
-  const [hover, setHover] = useState(false);
   const [focus, setFocus] = useState(false);
   const [stopped, setStopped] = useState(false);
   const tabHidden = useTabHidden();
@@ -99,7 +98,10 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
   const ch = chapters[at];
   const next = chapters[wrap(n, page + 1)];
   const rest = restFor(ch);
-  const paused = still || stopped || hover || focus || tabHidden || n < 2;
+  // It always turns by itself (owner, 27 Oct 2026: "make it auto rotate"). The hero fills the screen, so
+  // holding under the mouse meant it never moved; it holds only for the pause button, keyboard focus
+  // and a hidden tab. Less motion still turns, with a quiet fade in place of the slide.
+  const paused = stopped || focus || tabHidden || n < 2;
   const go = (d: number) => setPage(([p]) => [p + d, d]);
 
   useEffect(() => {
@@ -113,9 +115,7 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
       role="region"
       aria-roledescription="carousel"
       aria-label="How Easypick works"
-      onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)}
-      onPointerLeave={() => setHover(false)}
-      onFocus={() => setFocus(true)}
+      onFocus={(e) => e.target.matches(":focus-visible") && setFocus(true)}
       onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setFocus(false)}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") go(1);
@@ -128,10 +128,7 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
         className="absolute inset-0 touch-pan-y"
         onPanStart={() => (panned.current = true)}
         onPanEnd={(_, i) => {
-          if (Math.abs(i.offset.x) > 60 || Math.abs(i.velocity.x) > 400) {
-            setStopped(true);
-            go(i.offset.x < 0 ? 1 : -1);
-          }
+          if (Math.abs(i.offset.x) > 60 || Math.abs(i.velocity.x) > 400) go(i.offset.x < 0 ? 1 : -1);
           setTimeout(() => (panned.current = false), 0);
         }}
         onClickCapture={(e) => panned.current && e.preventDefault()}
@@ -178,24 +175,22 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
 
       {/* Pause, arrows and dots: always visible, 44px */}
       <div className="absolute bottom-4 left-1 z-30 flex items-center md:bottom-7 md:left-[3.4vw]">
-        {!still && (
-          <button type="button" onClick={() => setStopped((s) => !s)} aria-pressed={stopped} aria-label={stopped ? "Play the chapters" : "Pause the chapters"} className="grid size-11 cursor-pointer place-items-center text-[#111]">
-            {stopped ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 5v14l12-7z" /></svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></svg>
-            )}
-          </button>
-        )}
-        <button type="button" onClick={() => { setStopped(true); go(-1); }} aria-label="Previous chapter" className="grid size-11 cursor-pointer place-items-center text-[#111]">
+        <button type="button" onClick={() => setStopped((s) => !s)} aria-pressed={stopped} aria-label={stopped ? "Play the chapters" : "Pause the chapters"} className="grid size-11 cursor-pointer place-items-center text-[#111]">
+          {stopped ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 5v14l12-7z" /></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></svg>
+          )}
+        </button>
+        <button type="button" onClick={() => go(-1)} aria-label="Previous chapter" className="grid size-11 cursor-pointer place-items-center text-[#111]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden><path d="M15 18l-6-6 6-6" /></svg>
         </button>
         {chapters.map((c, i) => (
-          <button key={c.label} type="button" aria-label={c.label} aria-current={i === at || undefined} onClick={() => { setStopped(true); if (i !== at) setPage(([p]) => [p + i - at, i > at ? 1 : -1]); }} className="hidden h-11 w-7 cursor-pointer place-items-center md:grid">
+          <button key={c.label} type="button" aria-label={c.label} aria-current={i === at || undefined} onClick={() => { if (i !== at) setPage(([p]) => [p + i - at, i > at ? 1 : -1]); }} className="hidden h-11 w-7 cursor-pointer place-items-center md:grid">
             <span className={`block h-px transition-all duration-500 ${i === at ? "w-6 bg-[#111]" : "w-3 bg-[#111]/30"}`} />
           </button>
         ))}
-        <button type="button" onClick={() => { setStopped(true); go(1); }} aria-label="Next chapter" className="grid size-11 cursor-pointer place-items-center text-[#111]">
+        <button type="button" onClick={() => go(1)} aria-label="Next chapter" className="grid size-11 cursor-pointer place-items-center text-[#111]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden><path d="M9 18l6-6-6-6" /></svg>
         </button>
       </div>

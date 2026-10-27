@@ -29,7 +29,7 @@ export function RailDemo({ reel, every = 2100, className = "" }: { reel: ReelCar
   const [at, setAt] = useState(0);
   const n = reel.length;
   useEffect(() => {
-    if (still || hidden || n < 2) return;
+    if (hidden || n < 2) return;
     const t = setInterval(() => setAt((a) => (a + 1) % n), every);
     return () => clearInterval(t);
   }, [still, hidden, n, every]);
@@ -50,7 +50,7 @@ export function RailDemo({ reel, every = 2100, className = "" }: { reel: ReelCar
             className="absolute left-1/2 top-[9%] flex h-[84%] w-[30%] origin-top flex-col items-center"
             initial={false}
             animate={{ x: `calc(-50% + ${o * 118}%)`, scale: front ? 1.08 : 0.84, opacity: Math.abs(o) > 2 ? 0 : front ? 1 : 0.45 }}
-            transition={{ duration: still ? 0 : 0.8, ease: EASE }}
+            transition={{ duration: still ? 0.4 : 0.8, ease: EASE }}
             style={{ zIndex: 10 - Math.abs(o) }}
           >
             {/* The hanger */}
