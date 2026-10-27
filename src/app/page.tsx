@@ -6,7 +6,8 @@ import { StoreBand } from "@/components/home/store-band";
 import { Rail } from "@/components/home/rail";
 import { Vault } from "@/components/home/vault";
 import { LandingHero } from "@/components/landing/landing-hero";
-import type { ChapterData, Film } from "@/components/landing/landing-chapters";
+import type { ChapterData, Film, Piece, Showcase } from "@/components/landing/landing-chapters";
+import type { Product } from "@/lib/types";
 
 import { RefreshAt } from "@/components/refresh-at";
 import { RevealRoot } from "@/components/reveal-root";
@@ -39,121 +40,142 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 // The pictures inside the letters, and the four tiles above the rail (owner: "use the current images").
 // Only the darker pictures, so the letters read crisp (owner, 26 Oct 2026: "make that hero better").
 const WORDS = ["/drops/hero-2.webp", "/visit/store-night-open.avif", "/visit/door-poster.avif", "/visit/store-dusk-open.avif"];
-// What plays after the word (owner, 27 Oct 2026, planned with twenty agents): why Easypick first ("why
-// should a user choose it, as we have a lot of other options"), then how each part of the store works,
-// each a whole process recorded on the real site (a test copy: no real orders) and edited with a camera
-// that follows each action (public/story/video, scripts/record-story.mjs). The films play in full, a
-// little faster than life ("run the full videos ... fast and easy to understand"), their steps listed
-// beside them; each step's time is when its caption shows in the film. Every fact is checked against the code.
-/** A recording: its length (s) and its steps. The window's bar shows the page, not a domain: the domain isn't chosen yet (site.ts). */
-const film = (name: string, length: number, path: string, steps: [string, number][], label?: string): Film => ({
-  src: `/story/video/${name}.webm`,
-  poster: `/story/video/${name}.webp`,
-  url: `easypick${path === "/" ? "" : path}`,
-  length,
-  steps,
-  label,
-});
+// What plays after the word (owner, 27 Oct 2026: picked the "explainer" mockup; "build it but even better").
+// Each card: a photo and a two-line title, the usual way of shopping crossed out, a small machine that shows
+// the idea (fed with real pieces from the shop), three promises, then its film of the real site, recorded
+// on a test copy with no real orders (public/story/video, scripts/record-story.mjs). Each step's time is when
+// its caption shows in the film. Every fact is checked against the code.
+/** A recording: its length (s) and its steps. */
+const film = (name: string, length: number, steps: [string, number][]): Film => ({ src: `/story/video/${name}.webm`, poster: `/story/video/${name}.webp`, length, steps });
+const SHOP_FILM = film("shop", 40.8, [["Find the rail", 1.6], ["Swipe to browse", 3.2], ["Pick your size", 7.6], ["Tap Buy now", 10.4], ["Enter your number", 13.6], ["Pickup is free", 17.6], ["Tap Pay", 18.8], ["Log in to eSewa", 22.4], ["Enter the code", 27.6], ["Confirm the payment", 32.4], ["Paid. Your order is in", 38]]);
 const CHAPTERS: ChapterData[] = [
   {
     topic: "Why",
     label: "Why Easypick",
-    title: ["Why", "*Easypick*?"],
-    line: "There are lots of places to buy clothes. Here's what's different when you buy from us.",
-    compare: [
-      ["DM for the price, then bargain", "Same price on the tag, online and in store"],
-      ["Guess your size", "Your size worked out, in cm"],
-      ["Wrong size? Stuck with it", "Swap the size within 7 days"],
-      ["Pay cash and hope it turns up", `Pay with ${walletList()}, no account needed`],
-      ["Wait and keep asking", "Kathmandu the next day, or pick it up free"],
-    ],
+    title: ["No bargain.", "No *guessing.*"],
+    line: `Why Easypick: the same price on the tag online and in store, your size in cm, a 7-day size swap, pay with ${walletList()}, Kathmandu the next day or free pickup.`,
+    bubble: "“Price? DM me”",
+    beats: [["tag", "Fixed price", "on every tag"], ["ruler", "Size in cm", "worked out once"], ["swap", "7-day swap", "tags on"]],
+    photo: "/drops/hero-white.webp",
+    kind: "tag",
+    film: SHOP_FILM,
+    upto: 15,
     href: "/how-it-works",
     cta: "How the store works",
-    layout: "right",
-    photo: "/story/storefront.webp",
-    beat: 10000,
   },
   {
     topic: "Shop",
     label: "How shopping works",
-    title: ["Pick it.", "Pay it.", "*Wear it.*"],
+    title: ["Pick. Pay.", "*Wear.*"],
     line: `Swipe the rail, pick your size, tap Buy now, add your number and pay with ${walletList()}. No account, no bargaining.`,
-    films: [film("shop", 40.8, "/", [["Find the rail", 1.6], ["Swipe to browse", 3.2], ["Pick your size", 7.6], ["Tap Buy now", 10.4], ["Enter your number", 13.6], ["Pickup is free", 17.6], ["Tap Pay", 18.8], ["Log in to eSewa", 22.4], ["Enter the code", 27.6], ["Confirm the payment", 32.4], ["Paid. Your order is in", 38]])],
-    href: "/how-it-works",
-    cta: "How it works",
-    layout: "left",
-    photo: "/story/tees-rail.webp",
+    bubble: "“DM to order”",
+    beats: [["shirt", "Pick", "a size"], ["bag", "Buy now", "no account"], ["wallet", "Pay", `with ${walletList()}`]],
+    photo: "/drops/hero-showroom.webp",
+    kind: "shop",
+    film: SHOP_FILM,
+    thr: [7.6, 10.4, 18.8],
+    href: "/shop",
+    cta: "Start shopping",
   },
   {
     topic: "Pick",
     label: "Pick, our AI assistant",
-    title: ["Not sure?", "Ask *Pick*."],
-    line: "Tell him what you're after, in your own words. He shows real pieces in stock, in your size.",
-    ask: ["Something oversized in M, under 2500", "A black hoodie in L", "A gift for my brother, under 3000"],
-    films: [film("ask-pick", 31.1, "/shop", [["Tap Ask Pick", 2.3], ["Tap Pick to chat", 7.6], ["Ask in your own words", 11.1], ["Tap Send", 18], ["Real pieces, in your size", 22.4], ["Add one to your bag", 24.7]])],
+    title: ["Not sure?", "Ask *Pick.*"],
+    line: "Pick is our AI assistant: tell him what you're after in your own words and he shows real pieces in your size.",
+    bubble: "“Too many choices”",
+    beats: [["chat", "Ask", "your own words"], ["spark", "Picks", "real pieces"], ["bag", "Add", "in your size"]],
+    photo: "/visit/store-day-open.avif",
+    kind: "pick",
+    film: film("ask-pick", 31.1, [["Tap Ask Pick", 2.3], ["Tap Pick to chat", 7.6], ["Ask in your own words", 11.1], ["Tap Send", 18], ["Real pieces, in your size", 22.4], ["Add one to your bag", 24.7]]),
+    thr: [11.1, 22.4, 24.7],
     href: "/shop#pick",
-    cta: "Shop with Pick",
-    layout: "right",
+    cta: "Ask Pick",
   },
   {
     topic: "Gifts",
     label: "The Gift",
-    title: ["Good taste", "makes a", "good *gift*."],
+    title: ["They pick", "the *size.*"],
     line: "Send a piece as a gift: they open it, pick their own size, and can swap within 14 days. Or send a gift card, from Rs 1,000.",
-    films: [
-      film("gift", 59.2, "/gift", [["Send a piece", 1.6], ["Send it as a gift", 5.2], ["Let them pick the size", 9.2], ["Write their name", 15.2], ["Pick the occasion", 21.6], ["Add their email", 28.4], ["Your mobile number", 32.8], ["Tap Pay", 36.8], ["Log in to eSewa", 40.4], ["Enter the code", 46], ["Confirm the payment", 50.8], ["Sent. They pick their size", 56.4]], "A piece"),
-      film("giftcards", 38.6, "/gift", [["Pick an amount", 2], ["Write their name", 5.2], ["Add their email", 8], ["Add your name", 12], ["Your mobile number", 14], ["Tap Buy gift card", 17.6], ["Log in to eSewa", 20], ["Enter the code", 25.2], ["Confirm the payment", 30.4], ["Sent, with its code", 36]], "A gift card"),
-    ],
+    bubble: "“What's their size?”",
+    beats: [["gift", "Choose", "a piece"], ["mail", "Send", "by email"], ["ruler", "They size", "14-day swap"]],
+    photo: "/drops/hero-white.webp",
+    photoAt: "25% 40%",
+    kind: "gift",
+    film: film("gift", 59.2, [["Send a piece", 1.6], ["Send it as a gift", 5.2], ["Let them pick the size", 9.2], ["Write their name", 15.2], ["Pick the occasion", 21.6], ["Add their email", 28.4], ["Your mobile number", 32.8], ["Tap Pay", 36.8], ["Log in to eSewa", 40.4], ["Enter the code", 46], ["Confirm the payment", 50.8], ["Sent. They pick their size", 56.4]]),
+    thr: [1.6, 28.4, 56.4],
     href: "/gift",
     cta: "Send a gift",
-    layout: "left",
-    photo: "/story/gift-box.webp",
   },
   {
     topic: "Fits",
     label: "Designer Fits",
-    title: ["Whole fits,", "*ready*."],
+    title: ["Whole fits,", "*ready.*"],
     line: "Ready-made outfits for every occasion. Choose one, pick each size, and buy the whole fit in one go.",
-    films: [film("outfits", 47.7, "/fits", [["Choose an occasion", 1.6], ["Browse the fits", 6.4], ["Pick each size", 10.4], ["Tap Quick buy", 15.6], ["Enter your number", 20], ["Tap Pay", 24.8], ["Log in to eSewa", 28.4], ["Enter the code", 34.4], ["Confirm the payment", 39.2], ["Paid. Your order is in", 44.8]])],
+    bubble: "“What goes with this?”",
+    beats: [["calendar", "Occasion", "choose one"], ["ruler", "Sizes", "for each piece"], ["zap", "One tap", "the whole fit"]],
+    photo: "/drops/hero-2.webp",
+    dark: true,
+    kind: "fits",
+    film: film("outfits", 47.7, [["Choose an occasion", 1.6], ["Browse the fits", 6.4], ["Pick each size", 10.4], ["Tap Quick buy", 15.6], ["Enter your number", 20], ["Tap Pay", 24.8], ["Log in to eSewa", 28.4], ["Enter the code", 34.4], ["Confirm the payment", 39.2], ["Paid. Your order is in", 44.8]]),
+    thr: [1.6, 10.4, 15.6],
     href: "/fits",
     cta: "See the fits",
-    layout: "right",
-    photo: "/story/flatlay-cargo.webp",
   },
   {
     topic: "Size",
     label: "Your size",
-    title: ["Know", "your *size*."],
-    line: "Your height and weight, a size you wear, or a piece you own: we work out your size, in cm, once. Every piece opens on it.",
-    films: [film("size", 25.4, "/size-guide", [["Tap Find my size", 1.6], ["Use height and weight", 4.8], ["Set your height", 7.6], ["Tap Next", 11.2], ["See your size", 14], ["Save your size", 17.2], ["Your size, already picked", 20.4]])],
+    title: ["Know your", "*size.*"],
+    line: "Your height and weight, a size you wear, or a piece you own: we work out your size in cm once, and every piece opens on it.",
+    bubble: "“Will M fit me?”",
+    beats: [["ruler", "Measure", "height and weight"], ["check", "Match", "in cm"], ["mark", "Saved", "on every piece"]],
+    photo: "/drops/hero-showroom.webp",
+    photoAt: "75% 40%",
+    kind: "size",
+    film: film("size", 25.4, [["Tap Find my size", 1.6], ["Use height and weight", 4.8], ["Set your height", 7.6], ["Tap Next", 11.2], ["See your size", 14], ["Save your size", 17.2], ["Your size, already picked", 20.4]]),
+    thr: [4.8, 14, 17.2],
     href: "/size-guide",
     cta: "Find my size",
-    layout: "left",
-    photo: "/story/tee-measure.webp",
   },
   {
     topic: "Vault",
     label: "The Vault",
-    title: ["Not", "everything", "is *ordinary*."],
-    line: "Original brands and rare pieces, mostly one of each. Choose a brand, see every piece, open the one you want.",
-    films: [film("vault", 23.4, "/vault", [["Choose a brand", 2], ["See every piece", 3.6], ["Open a piece", 4.8], ["Pick your size", 13.6], ["Tap Buy now", 16.8]])],
+    title: ["Not", "*ordinary.*"],
+    line: "The Vault: original brands and rare pieces, mostly one of each. Choose a brand, see every piece, open the one you want.",
+    bubble: "“Is it original?”",
+    beats: [["gem", "Originals", "real brands"], ["star", "Rare", "mostly one each"], ["bag", "Yours", "buy now"]],
+    photo: "/drops/hero-2.webp",
+    photoAt: "20% 50%",
+    dark: true,
+    kind: "vault",
+    film: film("vault", 23.4, [["Choose a brand", 2], ["See every piece", 3.6], ["Open a piece", 4.8], ["Pick your size", 13.6], ["Tap Buy now", 16.8]]),
+    thr: [2, 4.8, 16.8],
     href: "/vault",
     cta: "Enter the Vault",
-    layout: "right",
-    photo: "/story/vault.webp",
   },
   {
     topic: "Drop",
     label: "The Drop",
-    title: ["New pieces,", "every *drop*."],
+    title: ["New pieces,", "every *drop.*"],
     line: "Small batches of new pieces, each on its day. Leave your WhatsApp or email and we send one message when it lands.",
-    films: [film("drops", 15.8, "/drops", [["Leave your email", 1.6], ["Tap Notify me", 5.6], ["Shop the drop", 9.6]])],
+    bubble: "“Missed it again”",
+    beats: [["bell", "Notify", "one message"], ["zap", "Drop", "on its day"], ["bag", "Shop", "before it's gone"]],
+    photo: "/visit/store-night-open.avif",
+    kind: "drop",
+    film: film("drops", 15.8, [["Leave your email", 1.6], ["Tap Notify me", 5.6], ["Shop the drop", 9.6]]),
+    thr: [1.6, 5.6, 9.6],
     href: "/drops",
     cta: "See the drops",
-    layout: "left",
-    photo: "/story/store-rails.webp",
   },
 ];
+
+/** A real piece for the cards' small machines: its photo, price and (for the tag) its M measurements. */
+const piece = (p: Product): Piece => {
+  const m = p.measurements.M as Record<string, number | undefined> | undefined;
+  return { name: p.name, price: p.salePrice ?? p.price, img: p.images[0]?.src ?? "/story/hoodie-detail.webp", chest: m?.chest, length: m?.length };
+};
+
+/** With no pieces live yet, the machines show the house hoodie. */
+const FALLBACK: Showcase = { hero: { name: "Everyday Hoodie", price: 1999, img: "/story/hoodie-detail.webp" }, picks: [], drop: { name: "Everyday Hoodie", price: 1999, img: "/story/hoodie-detail.webp" } };
 
 const orgLd = {
   "@context": "https://schema.org",
@@ -189,6 +211,16 @@ export default async function HomePage() {
   const { looks } = designerFits(products, await getSavedLooks());
 
   const storeInfo = await getStoreInfo();
+  // The real pieces the cards' machines show; any live piece with a photo stands in if one is gone.
+  const shown = range.filter((p) => p.status === "live" && p.images[0]?.src);
+  const bySlug = (slug: string, k: number) => shown.find((p) => p.slug === slug) ?? shown[k] ?? shown[0];
+  const showcase: Showcase | null = shown.length
+    ? {
+        hero: piece(bySlug("everyday-hoodie", 0)),
+        picks: ["everyday-hoodie", "brushed-crewneck", "oversized-heavy-tee"].map((slug, k) => piece(bySlug(slug, k))),
+        drop: piece(shown.find((p) => p.dropSlug) ?? bySlug("everyday-hoodie", 0)),
+      }
+    : null;
 
   return (
     <>
@@ -198,7 +230,7 @@ export default async function HomePage() {
           pictures inside the letters, then four tiles. The rail and everything below are as they were. */}
       {on("hero") && (
         <div style={at("hero")}>
-          <LandingHero words={WORDS} chapters={CHAPTERS} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
+          <LandingHero words={WORDS} chapters={CHAPTERS} showcase={showcase ?? FALLBACK} line={home.hero.eyebrow || "Pick it. Pay it. Wear it."} />
         </div>
       )}
 

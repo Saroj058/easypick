@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
-import { LandingChapters, type ChapterData } from "./landing-chapters";
+import { LandingChapters, type ChapterData, type Showcase } from "./landing-chapters";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const GLIDE = [0.65, 0, 0.35, 1] as const;
@@ -41,7 +41,7 @@ function markSeen() {
  * (landing-chapters.tsx). Everything below (the rail and the rest) is unchanged. People who ask for
  * less motion go straight to still chapters.
  */
-export function LandingHero({ words, chapters, line }: { words: string[]; chapters: ChapterData[]; /** The small line over the word. */ line: string }) {
+export function LandingHero({ words, chapters, showcase, line }: { words: string[]; chapters: ChapterData[]; showcase: Showcase; /** The small line over the word. */ line: string }) {
   const still = useReducedMotion();
   const status = useSyncExternalStore(noop, readSeen, () => "unknown" as const);
   const [stage, setStage] = useState<"word" | "chapters">("word");
@@ -61,7 +61,7 @@ export function LandingHero({ words, chapters, line }: { words: string[]; chapte
   const show = status === "unknown" ? null : status === "seen" ? "chapters" : stage;
 
   return (
-    <section aria-labelledby="landing-title" className="relative isolate h-[86svh] min-h-[600px] overflow-hidden bg-white md:h-svh md:min-h-[640px]">
+    <section aria-labelledby="landing-title" className="relative isolate h-[calc(100svh-62px-env(safe-area-inset-bottom))] min-h-[560px] overflow-hidden bg-white md:min-h-[640px] lg:h-svh">
       <h1 id="landing-title" className="sr-only">
         Easypick: men&apos;s streetwear in Kathmandu
       </h1>
@@ -109,7 +109,7 @@ export function LandingHero({ words, chapters, line }: { words: string[]; chapte
           </motion.button>
         ) : show === null ? null : (
           <motion.div key="chapters" className="absolute inset-0" initial={still ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-            <LandingChapters chapters={chapters} />
+            <LandingChapters chapters={chapters} showcase={showcase} />
           </motion.div>
         )}
       </AnimatePresence>
