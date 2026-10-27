@@ -207,9 +207,8 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
     <>
       {/* The big picture (far, slow) */}
       {video ? (
-        // The real site, recorded while it is used, in a phone over the card's picture
-        <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] overflow-hidden bg-[#ececea] will-change-transform ${big}`}>
-          <Image src={ch.big} alt="" fill sizes={SIZES.big} className="object-cover opacity-70 grayscale" style={{ objectPosition: ch.bigAt ?? "50% 50%" }} />
+        // The real site, recorded while it is used, in a browser window on a clean ground (the photo sits by the words)
+        <motion.div custom={dir} variants={layer(0.85, still)} className={`absolute z-[1] overflow-hidden bg-[#f2f1ee] will-change-transform ${big}`}>
           <Recording video={video} still={still} />
         </motion.div>
       ) : lesson ? (
@@ -245,6 +244,12 @@ function Slide({ ch, still, dir, first, rest }: { ch: ChapterData; still: boolea
       )}
       {/* The words */}
       <motion.div custom={dir} variants={layer(1, still)} className={`absolute z-[2] will-change-transform ${words}`}>
+        {/* On the recording cards the photo moves here, a small portrait over the words (owner, 27 Oct 2026: not behind the video) */}
+        {video && (
+          <motion.div variants={item(0, still)} className={`relative mb-6 hidden aspect-[3/4] h-[20vh] overflow-hidden bg-[#ececea] md:block ${end ? "ml-auto" : ""}`}>
+            <Image src={ch.big} alt="" fill sizes="15vw" className="object-cover grayscale" style={{ objectPosition: ch.bigAt ?? "50% 50%" }} />
+          </motion.div>
+        )}
         <motion.p variants={item(0, still)} className={`font-mono text-[10.5px] uppercase tracking-[0.3em] text-[#555] ${end ? "md:text-right" : ""}`}>
           {ch.label}
         </motion.p>
