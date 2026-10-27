@@ -236,7 +236,7 @@ export function acknowledge(field: keyof PickState, s: PickState): string {
     if (s.style === "unsure") return "Any fit. I'll show the best of everything.";
     return "Noted.";
   }
-  if (field === "sizing" && forSelf(s)) return s.sizing === "unknown" ? "No problem. I'll show every size, and you can swap it within 14 days." : "Great, that makes it easy.";
+  if (field === "sizing" && forSelf(s)) return s.sizing === "unknown" ? "No problem. I'll show every size, and you can swap it within 7 days." : "Great, that makes it easy.";
   if (field === "recipient") {
     if (s.recipient === "partner") return "Someone special. Let's find something they'll actually wear.";
     if (s.recipient === "friend") return "A friend. Love that.";

@@ -177,7 +177,7 @@ export async function turn(products: Product[], rawState: unknown, input: PickIn
     case "fit":
       lines.push(
         forSelf(s)
-          ? "If it doesn't fit, swap the size within 14 days, in our store or by delivery."
+          ? "If it doesn't fit, swap the size within 7 days, tags on, in our store or by delivery."
           : "If it doesn't fit, they change the size from their gift link. Or they come to our store, try it on and swap it there.",
       );
       mood = "reassuring";
