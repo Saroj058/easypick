@@ -241,7 +241,7 @@ export function LandingChapters({ chapters }: { chapters: ChapterData[] }) {
   );
 }
 
-/** The topics, one word each; the current one's underline fills as its card plays. Tap one to go there. */
+/** The topics, one word each, at the foot of the hero (owner, 27 Oct 2026: "keep it below not top"); the current one's underline fills as its card plays. Tap one to go there. */
 function Topics({ chapters, at, progress, onPick }: { chapters: ChapterData[]; at: number; progress: MotionValue<number>; onPick: (i: number) => void }) {
   const row = useRef<HTMLDivElement>(null);
   // On a phone the row scrolls sideways: keep the current word in view.
@@ -252,8 +252,8 @@ function Topics({ chapters, at, progress, onPick }: { chapters: ChapterData[]; a
     r.scrollTo({ left: b.offsetLeft - (r.clientWidth - b.offsetWidth) / 2, behavior: "smooth" });
   }, [at]);
   return (
-    <div className="absolute inset-x-0 top-[74px] z-30 flex justify-center md:top-[98px]">
-      <div ref={row} role="group" aria-label="Topics" className="no-scrollbar relative flex max-w-full overflow-x-auto px-2 max-md:[mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-28px),transparent)] md:gap-2">
+    <div className="pointer-events-none absolute inset-x-0 bottom-[44px] z-30 flex justify-center lg:bottom-3">
+      <div ref={row} role="group" aria-label="Topics" className="no-scrollbar pointer-events-auto relative flex max-w-full overflow-x-auto px-2 max-md:[mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-28px),transparent)] md:gap-2">
         {chapters.map((c, i) => (
           <button
             key={c.topic}
@@ -312,14 +312,14 @@ function Slide({
   // Full screen carries on from where the card's film is.
   const expand = () => film && onWatch(film, plays ? (video.current?.currentTime ?? 0) : 0);
 
-  // Phones: the words on top, the film (or table, or Pick's questions) at the foot, clear of the Pause
-  // row. Computers: side by side under the topics, each centred in its half.
+  // Phones: the words on top, the film (or table, or Pick's questions) at the foot, clear of the topics
+  // and the Pause row. Computers: side by side, each centred in its half, above the topics.
   const big = right
-    ? "inset-x-0 bottom-[52px] md:inset-x-auto md:right-[3vw] md:top-[160px] md:bottom-[9%] md:w-[52vw]"
-    : "inset-x-0 bottom-[52px] md:inset-x-auto md:left-[3vw] md:top-[160px] md:bottom-[9%] md:w-[52vw]";
+    ? "inset-x-0 bottom-[100px] md:inset-x-auto md:right-[3vw] md:top-[112px] md:bottom-[104px] md:w-[52vw] lg:bottom-[76px]"
+    : "inset-x-0 bottom-[100px] md:inset-x-auto md:left-[3vw] md:top-[112px] md:bottom-[104px] md:w-[52vw] lg:bottom-[76px]";
   const words = right
-    ? "left-4 right-4 top-[128px] md:left-[6vw] md:right-auto md:top-[150px] md:bottom-[7%] md:w-[34vw]"
-    : "left-4 right-4 top-[128px] md:left-auto md:right-[5vw] md:top-[150px] md:bottom-[7%] md:w-[34vw]";
+    ? "left-4 right-4 top-[84px] md:left-[6vw] md:right-auto md:top-[104px] md:bottom-[96px] md:w-[34vw] lg:bottom-[68px]"
+    : "left-4 right-4 top-[84px] md:left-auto md:right-[5vw] md:top-[104px] md:bottom-[96px] md:w-[34vw] lg:bottom-[68px]";
   // On a phone a film card shows only its label and title over the film; the film and its step say the rest.
   const filmCard = !!film && !ch.ask;
 
@@ -404,7 +404,7 @@ function Slide({
           ))}
         </h2>
         <div className="max-w-[44ch]">
-          <motion.p variants={item(3, still)} className={`mt-4 text-[13.5px] leading-relaxed text-[#111]/75 md:mt-6 md:text-[14.5px] ${ch.compare || filmCard ? "max-md:hidden" : ""}`}>
+          <motion.p variants={item(3, still)} className={`mt-4 text-[13.5px] leading-relaxed text-[#111]/75 md:mt-6 md:text-[14.5px] ${ch.compare || filmCard ? "max-md:hidden" : "max-md:[@media(max-height:740px)]:hidden"}`}>
             {ch.line}
           </motion.p>
           {film && wide && !ch.ask && (
@@ -418,7 +418,7 @@ function Slide({
             </motion.div>
           )}
           {/* Short phones keep the room for the film */}
-          <motion.div variants={item(5, still)} className={ch.compare || filmCard ? "max-md:[@media(max-height:740px)]:hidden" : ""}>
+          <motion.div variants={item(5, still)} className="max-md:[@media(max-height:740px)]:hidden">
             <Link href={ch.href} className="group mt-2 inline-flex min-h-11 w-fit items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#111] md:mt-4">
               <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:100%_1px] bg-bottom bg-no-repeat pb-1 transition-[background-size] duration-500 group-hover:bg-[length:0%_1px]">{ch.cta}</span>
               <span aria-hidden className="transition-transform duration-500 group-hover:translate-x-1">→</span>
