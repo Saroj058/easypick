@@ -175,7 +175,8 @@ const piece = (p: Product): Piece => {
 };
 
 /** With no pieces live yet, the machines show the house hoodie. */
-const FALLBACK: Showcase = { hero: { name: "Everyday Hoodie", price: 1999, img: "/story/hoodie-detail.webp" }, picks: [], drop: { name: "Everyday Hoodie", price: 1999, img: "/story/hoodie-detail.webp" } };
+const HOUSE = { name: "Everyday Hoodie", price: 1999, img: "/story/hoodie-detail.webp" };
+const FALLBACK: Showcase = { hero: HOUSE, picks: [], drop: HOUSE, fit: [], vault: HOUSE };
 
 const orgLd = {
   "@context": "https://schema.org",
@@ -219,6 +220,8 @@ export default async function HomePage() {
         hero: piece(bySlug("everyday-hoodie", 0)),
         picks: ["everyday-hoodie", "brushed-crewneck", "oversized-heavy-tee"].map((slug, k) => piece(bySlug(slug, k))),
         drop: piece(shown.find((p) => p.dropSlug) ?? bySlug("everyday-hoodie", 0)),
+        fit: ["oversized-heavy-tee", "tapered-jogger", "coach-jacket"].map((slug, k) => piece(bySlug(slug, k))),
+        vault: piece(products.find((p) => p.vault && p.status === "live" && p.images[0]?.src) ?? bySlug("coach-jacket", 0)),
       }
     : null;
 

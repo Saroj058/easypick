@@ -97,6 +97,10 @@ export interface Showcase {
   /** Pick's three. */
   picks: Piece[];
   drop: Piece;
+  /** A whole fit: a top, a bottom, an outer layer. */
+  fit: Piece[];
+  /** A Vault piece. */
+  vault: Piece;
 }
 
 const wrap = (n: number, i: number) => ((i % n) + n) % n;
@@ -457,15 +461,16 @@ function Card({
 }
 
 type Img = (src: string, cls?: string, sizes?: string) => ReactNode;
+const img: Img = (src, cls = "", sizes = "280px") => (
+  <span className={`hc-img ${cls}`}>
+    <Image src={src} alt="" fill sizes={sizes} className="object-cover" />
+  </span>
+);
 
-/** Each card's small machine: what it does, in three moves (s1–s3). */
+/** Each card's small machine: what it does, in three moves (s1–s3), on real pieces. */
 function Machine({ kind, s, showcase }: { kind: Kind; s: number; showcase: Showcase }) {
-  const { hero, picks, drop } = showcase;
-  const img: Img = (src, cls = "", sizes = "280px") => (
-    <span className={`hc-img block ${cls}`}>
-      <Image src={src} alt="" fill sizes={sizes} className="object-cover" />
-    </span>
-  );
+  const { hero, picks, drop, fit, vault } = showcase;
+  const done = s >= 3 ? "hc-done" : "";
   if (kind === "tag")
     return (
       <div className="hc-tagobj">
@@ -473,22 +478,22 @@ function Machine({ kind, s, showcase }: { kind: Kind; s: number; showcase: Showc
         <div className="hc-tag">
           <div className="hc-mono">{hero.name}</div>
           <div className="hc-price">{formatPrice(hero.price)}</div>
-          <span className="hc-stamp">FIXED · ONLINE = STORE</span>
+          <span className="hc-stamp">FIXED · ONLINE = IN STORE</span>
           <div className="hc-rows">
             {hero.chest != null && (
               <div className="hc-r1">
-                <span>Chest · M</span>
+                <span>Chest, M</span>
                 <b>{hero.chest} cm</b>
               </div>
             )}
             {hero.length != null && (
-              <div>
-                <span>Length · M</span>
+              <div className="hc-r2">
+                <span>Length, M</span>
                 <b>{hero.length} cm</b>
               </div>
             )}
             <div className="hc-r3">
-              <span>Swap</span>
+              <span>Size swap</span>
               <b>7 days</b>
             </div>
           </div>
@@ -497,103 +502,127 @@ function Machine({ kind, s, showcase }: { kind: Kind; s: number; showcase: Showc
     );
   if (kind === "shop")
     return (
-      <>
-        <div className="hc-panel hc-prod">
-          {img(hero.img, "h-[170px]")}
-          <div className="hc-pad">
-            <div className="hc-row">
-              <span>{hero.name}</span>
-              <span>{formatPrice(hero.price)}</span>
-            </div>
-            <div className="hc-sizes">
-              {["S", "M", "L", "XL"].map((z) => (
-                <span key={z} className={`hc-chip ${z === "M" && s >= 1 ? "hc-lit" : ""}`}>
-                  {z}
-                </span>
-              ))}
-            </div>
-            <div className="hc-btn">Buy now</div>
+      <div className={`hc-sheet ${done}`}>
+        {img(hero.img, "hc-shot")}
+        <div className="hc-pad">
+          <div className="hc-mono">New in</div>
+          <div className="hc-name">
+            <span>{hero.name}</span>
+            <span>{formatPrice(hero.price)}</span>
           </div>
-        </div>
-        <div className="hc-toast">
-          <CircleCheck className="hc-ic" />
-          Paid with eSewa
-        </div>
-      </>
-    );
-  if (kind === "pick") return <PickChat s={s} picks={picks} img={img} />;
-  if (kind === "gift")
-    return (
-      <>
-        <div className="hc-panel hc-gift">
-          {img("/story/gift-box.webp")}
-          {img("/story/gift-open.webp", "hc-open")}
-          <div className="hc-dial">
-            {["S", "M", "L"].map((z) => (
-              <span key={z} className="hc-chip">
+          <div className="hc-chips">
+            {["S", "M", "L", "XL"].map((z) => (
+              <span key={z} className={`hc-chip ${z === "M" && s >= 1 ? "hc-lit" : ""}`}>
                 {z}
               </span>
             ))}
           </div>
+          <div className="hc-btn">
+            <span>Buy now</span>
+            <span>
+              <CircleCheck className="hc-ic" /> Paid with eSewa
+            </span>
+          </div>
         </div>
-        <div className="hc-toast">
-          <Mail className="hc-ic" />
-          Sent. They pick the size
-        </div>
-      </>
-    );
-  if (kind === "fits")
-    return (
-      <div className="hc-fan">
-        {img("/story/flatlay-cargo.webp", "", "140px")}
-        {img("/story/flatlay-cream.webp", "", "140px")}
-        {img("/story/flatlay.webp", "", "140px")}
-        <span className="hc-sz" style={{ left: 0 }}>
-          M
-        </span>
-        <span className="hc-sz" style={{ left: 118 }}>
-          M
-        </span>
-        <span className="hc-sz" style={{ right: 0 }}>
-          M
-        </span>
-        <div className="hc-btn">Quick buy the fit</div>
       </div>
     );
+  if (kind === "pick") return <PickChat s={s} picks={picks} />;
+  if (kind === "gift") {
+    const g = picks[1] ?? hero;
+    return (
+      <div className="hc-sheet">
+        {img(g.img, "hc-shot")}
+        <div className="hc-giftcard">
+          <div className="hc-mono">A gift for Sita</div>
+          <p>She picks the size</p>
+          <div className="hc-chips">
+            {["S", "M", "L"].map((z) => (
+              <span key={z} className={`hc-chip ${z === "L" && s >= 3 ? "hc-lit" : ""}`}>
+                {z}
+              </span>
+            ))}
+          </div>
+          <div className="hc-sent">
+            <CircleCheck className="hc-ic" /> Sent · swap within 14 days
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (kind === "fits") {
+    const total = fit.reduce((a, p) => a + p.price, 0);
+    return (
+      <div className={`hc-fan ${done}`}>
+        {fit.slice(0, 3).map((p, k) => (
+          <div key={k} className="hc-sheet">
+            {img(p.img, "", "140px")}
+            <div className="hc-cap">
+              <span className="truncate">{p.name.split(" ").slice(-1)[0]}</span>
+              <b>M</b>
+            </div>
+          </div>
+        ))}
+        <div className="hc-btn">
+          <span>Quick buy the fit · {formatPrice(total)}</span>
+          <span>
+            <CircleCheck className="hc-ic" /> The whole fit, in M
+          </span>
+        </div>
+      </div>
+    );
+  }
   if (kind === "size")
     return (
-      <>
-        <div className="hc-panel hc-meas">
-          {img("/story/tee-measure.webp")}
-          <div className="hc-tape" />
-          <div className="hc-cm hc-mono">Chest · cm</div>
-          <div className="hc-big">M</div>
+      <div className="hc-sheet">
+        <span className="relative block">
+          {img(hero.img, "hc-shot")}
+          <span className="hc-dim hc-w">
+            <i />
+            <span>Chest {hero.chest ? `${hero.chest} cm` : "in cm"}</span>
+          </span>
+          <span className="hc-dim hc-h">
+            <i />
+            <span>Length {hero.length ? `${hero.length} cm` : "in cm"}</span>
+          </span>
+        </span>
+        <div className="hc-pad hc-yours">
+          <div>
+            <div className="hc-mono">Your size</div>
+            <div className="hc-name">
+              <span>Saved for every piece</span>
+            </div>
+          </div>
+          <b>M</b>
         </div>
-        <div className="hc-toast">
-          <Bookmark className="hc-ic" />
-          Saved for every piece
-        </div>
-      </>
+      </div>
     );
   if (kind === "vault")
     return (
-      <>
-        <div className="hc-panel hc-vault">
-          {img("/story/vault-jacket.webp")}
-          <div className="hc-door" />
-          <div className="hc-badge hc-mono">Mostly one of each</div>
+      <div className={`hc-sheet hc-vault ${done}`}>
+        <span className="relative block bg-[#161616]">
+          {img(vault.img, "hc-shot")}
+          <span className="hc-num hc-mono">Mostly one of each</span>
+        </span>
+        <div className="hc-pad">
+          <div className="hc-mono">The Vault · original</div>
+          <div className="hc-name">
+            <span className="truncate">{vault.name}</span>
+            <span>{formatPrice(vault.price)}</span>
+          </div>
+          <div className="hc-btn">
+            <span>Buy now</span>
+            <span>
+              <CircleCheck className="hc-ic" /> Yours
+            </span>
+          </div>
         </div>
-        <div className="hc-toast">
-          <Gem className="hc-ic" />
-          Original brands
-        </div>
-      </>
+      </div>
     );
-  return <DropCount s={s} drop={drop} img={img} />;
+  return <DropCount s={s} drop={drop} />;
 }
 
 const ASK = "something oversized in M, under 2500";
-function PickChat({ s, picks, img }: { s: number; picks: Piece[]; img: Img }) {
+function PickChat({ s, picks }: { s: number; picks: Piece[] }) {
   const [typed, setTyped] = useState(0);
   useEffect(() => {
     if (s < 1 || typed >= ASK.length) return;
@@ -601,7 +630,8 @@ function PickChat({ s, picks, img }: { s: number; picks: Piece[]; img: Img }) {
     return () => clearTimeout(t);
   }, [s, typed]);
   return (
-    <div className="hc-panel hc-chat">
+    <div className="hc-sheet hc-chat">
+      <div className="hc-mono">Pick · AI assistant</div>
       <div className="hc-me">{ASK.slice(0, s >= 3 ? ASK.length : typed)}</div>
       <div className="hc-dots">
         <i />
@@ -611,7 +641,7 @@ function PickChat({ s, picks, img }: { s: number; picks: Piece[]; img: Img }) {
       <div className="hc-picks">
         {picks.slice(0, 3).map((p, k) => (
           <div key={k} className="hc-pk">
-            {img(p.img, "", "40px")}
+            {img(p.img, "", "48px")}
             <span>
               {p.name}
               <small>{formatPrice(p.price)}</small>
@@ -624,28 +654,31 @@ function PickChat({ s, picks, img }: { s: number; picks: Piece[]; img: Img }) {
   );
 }
 
-function DropCount({ s, drop, img }: { s: number; drop: Piece; img: Img }) {
+function DropCount({ s, drop }: { s: number; drop: Piece }) {
   const [n, setN] = useState(3);
   useEffect(() => {
-    if (s < 1 || n <= 1) return;
-    const t = setTimeout(() => setN((v) => v - 1), 300);
+    if (s < 1 || n <= 0) return;
+    const t = setTimeout(() => setN((v) => v - 1), 420);
     return () => clearTimeout(t);
   }, [s, n]);
   return (
-    <div className="hc-panel">
-      <div className="hc-count">
-        <div className="hc-mono">The next drop</div>
-        <div className="hc-digit">{n}</div>
-        <div className="hc-bell">
-          <Bell className="hc-ic" />
-        </div>
-      </div>
-      <div className="hc-live">
-        {img(drop.img, "", "56px")}
-        <span>
-          {drop.name}
-          <small>One message, on drop day</small>
+    <div className="hc-sheet hc-drop">
+      <span className="relative block">
+        {img(drop.img, "hc-shot")}
+        <span className="hc-clock">
+          <span className="hc-mono">The next drop</span>
+          <b>00:00:0{Math.max(0, n)}</b>
         </span>
+        <span className="hc-livetag hc-mono">
+          <i /> Live now
+        </span>
+      </span>
+      <div className="hc-pad">
+        <div className="hc-mono">One message on drop day</div>
+        <div className="hc-name">
+          <span className="truncate">{drop.name}</span>
+          <span>{formatPrice(drop.price)}</span>
+        </div>
       </div>
     </div>
   );
