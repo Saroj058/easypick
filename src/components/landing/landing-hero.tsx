@@ -1,18 +1,14 @@
-import Image from "next/image";
+import { DotIntro } from "./dot-intro";
 
 /**
- * The top of the home page, above the rail: just one picture for now (owner, 28 Oct 2026: "keep the home
- * page black or an image, just image"). The store at night, black and white, edge to edge; the phone gets
- * its own crop. How each part of the store works is shown in its own section instead.
+ * The top of the home page, above the rail (owner, 28 Oct 2026: "that dot is better, put it in the system"):
+ * the dot intro, which settles on the first screen. How each part of the store works is shown in its own
+ * section instead (how-it-works.tsx).
  */
 export function LandingHero() {
   return (
-    <section aria-labelledby="landing-title" className="relative isolate h-[calc(100svh-62px-env(safe-area-inset-bottom))] min-h-[520px] overflow-hidden bg-[#0a0a0a] md:min-h-[600px] lg:h-svh">
-      <h1 id="landing-title" className="sr-only">
-        Easypick: men&apos;s streetwear in Kathmandu
-      </h1>
-      <Image src="/drops/hero-2.webp" alt="" fill priority sizes="100vw" className="hidden object-cover grayscale md:block" />
-      <Image src="/drops/hero-2-phone.webp" alt="" fill priority sizes="100vw" className="object-cover object-[78%_50%] grayscale md:hidden" />
+    <section aria-labelledby="landing-title" className="relative isolate h-[calc(100svh-62px-env(safe-area-inset-bottom))] min-h-[520px] overflow-hidden bg-white md:min-h-[600px] lg:h-svh">
+      <DotIntro />
     </section>
   );
 }
