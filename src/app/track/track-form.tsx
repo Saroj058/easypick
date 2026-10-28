@@ -8,18 +8,24 @@ const input = "mt-2 h-[52px] w-full rounded-[2px] border border-mist bg-paper px
 
 /**
  * Order number + phone → the order page. No account needed.
- * `compact`: fields and button in one row on wide screens (the home page). `id` keeps field ids unique per page.
+ * `compact`: fields and button in one row on wide screens (the home page). `narrow`: the two fields side by side and
+ * the button under them, for a small box (the home page's first screen). `id` keeps field ids unique per page.
  */
-export function TrackForm({ compact = false, id = "track" }: { compact?: boolean; id?: string }) {
+export function TrackForm({ compact = false, narrow = false, id = "track" }: { compact?: boolean; narrow?: boolean; id?: string }) {
   const [state, action, pending] = useActionState<TrackState, FormData>(trackOrder, { status: "idle" });
   // The form resets after each try; keep what they typed.
   const typed = state.status === "error" ? state : { number: "", phone: "" };
   // The home page strip is small: shorter fields, a quiet button, and no empty line kept for errors.
-  const field = compact ? "mt-1.5 h-11 w-full rounded-[2px] border border-mist bg-paper px-3 text-[15px] outline-none focus:border-ink" : input;
+  const field = narrow
+    ? "mt-1 h-[38px] w-full min-w-0 rounded-[3px] border border-[#d3d2cc] bg-[#fafaf7] px-2.5 text-[13px] outline-none focus:border-ink focus:bg-white"
+    : compact
+      ? "mt-1.5 h-11 w-full rounded-[2px] border border-mist bg-paper px-3 text-[15px] outline-none focus:border-ink"
+      : input;
+  const label = narrow ? "block font-mono text-[9.5px] uppercase tracking-[0.06em] text-steel-dark" : `block font-semibold ${compact ? "text-[13px]" : "text-sm"}`;
   return (
-    <form action={action} className={compact ? "grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end" : "mt-10 space-y-6"}>
+    <form action={action} className={narrow ? "grid grid-cols-2 gap-x-2 gap-y-2" : compact ? "grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end" : "mt-10 space-y-6"}>
       <div>
-        <label htmlFor={`${id}-number`} className={`block font-semibold ${compact ? "text-[13px]" : "text-sm"}`}>
+        <label htmlFor={`${id}-number`} className={label}>
           Order number
         </label>
         <input
@@ -35,7 +41,7 @@ export function TrackForm({ compact = false, id = "track" }: { compact?: boolean
         />
       </div>
       <div>
-        <label htmlFor={`${id}-phone`} className={`block font-semibold ${compact ? "text-[13px]" : "text-sm"}`}>
+        <label htmlFor={`${id}-phone`} className={label}>
           Mobile number
         </label>
         <input
@@ -52,10 +58,10 @@ export function TrackForm({ compact = false, id = "track" }: { compact?: boolean
           className={`${field} font-mono`}
         />
       </div>
-      <button type="submit" disabled={pending} className={compact ? "h-11 w-full rounded-[2px] border border-ink bg-paper px-5 text-[14px] font-semibold hover:bg-ink hover:text-paper disabled:opacity-60 md:w-auto" : "btn btn-volt w-full"}>
-        {pending ? "Checking…" : compact ? "Track order" : "Check status"}
+      <button type="submit" disabled={pending} className={narrow ? "col-span-2 mt-0.5 h-[38px] rounded-[3px] border border-ink text-[12px] font-medium transition-colors hover:bg-ink hover:text-paper disabled:opacity-60" : compact ? "h-11 w-full rounded-[2px] border border-ink bg-paper px-5 text-[14px] font-semibold hover:bg-ink hover:text-paper disabled:opacity-60 md:w-auto" : "btn btn-volt w-full"}>
+        {pending ? "Checking…" : narrow ? "Track" : compact ? "Track order" : "Check status"}
       </button>
-      <p id={`${id}-error`} role="alert" className={`text-[14px] text-error-light ${compact ? "md:col-span-3" : "min-h-5"}`}>
+      <p id={`${id}-error`} role="alert" className={`text-error-light ${narrow ? "col-span-2 text-[12px] empty:hidden" : compact ? "text-[14px] md:col-span-3" : "min-h-5 text-[14px]"}`}>
         {state.status === "error" ? state.message : ""}
       </p>
     </form>

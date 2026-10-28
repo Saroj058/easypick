@@ -1,14 +1,13 @@
-import type { MosaicPiece } from "./hero-mosaic";
-import { HomeQuick, type HomeStats } from "./home-quick";
-import { StoryFilm } from "./story-film";
+import { Showroom, type ShowroomData } from "./showroom";
 
-/** The top of the home page: the lime dot intro, then the logo, the store in numbers and the pieces. */
-export function LandingHero({ pieces, stats }: { pieces: MosaicPiece[]; stats: HomeStats }) {
+/** The top of the home page: the showroom, one screen on a computer; on a phone it reads top to bottom. */
+export function LandingHero({ data }: { data: ShowroomData }) {
   return (
-    <section aria-labelledby="landing-title" className="relative isolate h-[calc(100svh-62px-env(safe-area-inset-bottom))] min-h-[560px] overflow-hidden bg-white md:min-h-[640px] lg:h-svh">
-      <StoryFilm pieces={pieces}>
-        <HomeQuick stats={stats} />
-      </StoryFilm>
+    <section aria-labelledby="landing-title" className="relative isolate bg-[#fafaf7] min-[761px]:h-svh min-[761px]:max-h-[1000px] min-[761px]:min-h-[760px]">
+      <span id="landing-title" className="sr-only">
+        The showroom
+      </span>
+      <Showroom data={data} />
     </section>
   );
 }

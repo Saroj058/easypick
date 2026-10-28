@@ -1,10 +1,13 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import type { Metadata } from "next";
 
 import { FitsTeaser } from "@/components/home/fits-teaser";
 import { GiftBlock } from "@/components/home/gift-block";
 import { StoreBand } from "@/components/home/store-band";
 import { Rail } from "@/components/home/rail";
-import { Vault } from "@/components/home/vault";
+import { Vault, vaultBrands } from "@/components/home/vault";
 import { LandingHero } from "@/components/landing/landing-hero";
 
 import { RefreshAt } from "@/components/refresh-at";
@@ -13,6 +16,7 @@ import { OfferSection } from "@/components/offer-section";
 import { ktmDay } from "@/lib/ktm-day";
 import { getOffers } from "@/lib/offers";
 import { getStoreInfo } from "@/lib/store-info";
+import { sellable } from "@/lib/inventory";
 import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
 import { site } from "@/lib/site";
@@ -62,22 +66,48 @@ export default async function HomePage() {
   const on = (id: HomeSection) => home.sections.find((x) => x.id === id)?.on !== false;
   // Vault pieces have their own section; the rail holds the house range.
   const range = products.filter((p) => !p.vault);
-  // The pieces for the cards at the end of the home film: live house pieces, those with real photos first.
-  const heroPieces = range
-    .filter((p) => p.status === "live" && p.images[0])
-    .sort((a, b) => Number(!!b.images[0].src) - Number(!!a.images[0].src))
-    .slice(0, 30)
-    .map((p) => ({ slug: p.slug, name: p.name, price: p.salePrice ?? p.price, category: p.category, hex: p.colours[0]?.hex ?? "#d9d9d6", image: p.images[0] }));
-
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
-  // The store in numbers, under the logo at the top (owner, 28 Oct 2026), all worked out from the stock.
+  // The showroom at the top (owner, 28 Oct 2026, design 2): the live house pieces, those in stock first, with what
+  // each size has left online; the Vault's count and brands; the next drop.
+  const VAULT_LOGOS = new Set(["nike", "adidas", "carhartt", "new-balance", "converse", "puma"]);
+  const left = (p: (typeof products)[number]) => p.variants.reduce((n, v) => n + sellable(v), 0);
   const liveRange = range.filter((p) => p.status === "live");
-  const heroStats = {
-    live: liveRange.length,
-    from: liveRange.length ? Math.min(...liveRange.map((p) => p.salePrice ?? p.price)) : null,
+  const showPieces = [...liveRange]
+    .sort((a, b) => Number(left(b) > 0) - Number(left(a) > 0) || Number(!!b.cutout) - Number(!!a.cutout))
+    .slice(0, 12)
+    .map((p) => {
+      const colour = p.colours.find((c) => p.variants.some((v) => v.colour === c.name && sellable(v) > 0))?.name ?? p.colours[0]?.name ?? "";
+      return {
+        slug: p.slug,
+        name: p.name,
+        kind: kv.name(p.category),
+        price: p.salePrice ?? p.price,
+        line: p.shortDescription,
+        isNew: !!p.isNew,
+        // Its cut-out from Admin → Photos, else the rack's own cut-out of it when there is one.
+        cutout: p.cutout ?? (existsSync(join(process.cwd(), "public/rack", `${p.slug}.webp`)) ? `/rack/${p.slug}.webp` : null),
+        photo: p.images[0] ?? { src: null, alt: p.name, kind: "front" as const },
+        category: p.category,
+        hex: p.colours.find((c) => c.name === colour)?.hex ?? "#d9d9d6",
+        colour,
+        sizes: p.variants.filter((v) => v.colour === colour).map((v) => ({ size: v.size, sku: v.sku, left: sellable(v) })),
+      };
+    });
+  const stocked = liveRange.filter((p) => left(p) > 0);
+  const vaultLive = products.filter((p) => p.vault && (p.status === "live" || p.status === "sold_out"));
+  const showroom = {
+    pieces: showPieces,
+    inStock: stocked.length,
+    from: stocked.length ? Math.min(...stocked.map((p) => p.salePrice ?? p.price)) : null,
     fresh: liveRange.filter((p) => p.isNew).length,
-    offers: on("offers") ? offers.length : 0,
-    nextDrop: next ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kathmandu" }).format(new Date(next.releaseAt)) : null,
+    vault: {
+      pieces: vaultLive.length,
+      brands: vaultBrands(vaultLive).map((b) => {
+        const slug = b.name.toLowerCase().replace(/\s+/g, "-");
+        return { name: b.name, logo: VAULT_LOGOS.has(slug) ? `/brand/vault/${slug}.png` : null };
+      }),
+    },
+    drop: next ? { name: next.name, at: next.releaseAt } : null,
   };
   const offerList = await getOffers();
 
@@ -89,12 +119,11 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
       <div className="flex flex-col">
-      {/* Above the rail: the lime dot intro, then the logo, the store in numbers and the pieces as turning cards
-          (owner, 28 Oct 2026). The full story film is on /about.
+      {/* Above the rail: the showroom (owner, 28 Oct 2026, design 2 of five). The story film is on /about.
           How each part works is shown in its own section instead. */}
       {on("hero") && (
         <div style={at("hero")}>
-          <LandingHero pieces={heroPieces} stats={heroStats} />
+          <LandingHero data={showroom} />
         </div>
       )}
 
