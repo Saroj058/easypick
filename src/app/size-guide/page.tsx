@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { FitFinder } from "@/components/fit-finder";
 import { PageIntro } from "@/components/page-intro";
+import { HowItWorks } from "@/components/how-it-works";
 
 export const metadata: Metadata = {
   title: "Size guide",
@@ -71,6 +72,7 @@ export default function SizeGuidePage() {
           <p className="mt-2 max-w-[52ch] text-steel-dark">
             Your height and weight, a size you wear in another brand, or a tee you own. Every piece then opens on the size that suits you, worked out from its own measurements.
           </p>
+          <HowItWorks guide="size" className="mt-4" />
           <div className="mt-8">
             <FitFinder />
           </div>

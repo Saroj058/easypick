@@ -7,6 +7,7 @@ import { GiftCardPicture, PRINTED_CARDS } from "@/components/gift-card-art";
 import { GiftCardForm } from "@/components/gift-card-form";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { formatPrice } from "@/lib/format";
+import { HowItWorks } from "@/components/how-it-works";
 
 // Gift cards live here, on the Gift page: there is no separate page. The section says who the card
 // is for (the choice at the top), shows every card, and opens the form in a sheet over the page when
@@ -32,6 +33,7 @@ export function GiftCardPicker() {
             Gift cards.
           </h2>
           <p className="mt-2 max-w-[44ch] text-steel-dark">Pick a card and fill it in right here.</p>
+          <HowItWorks guide="giftcards" className="mt-3" />
         </div>
         {/* Who it's for: the form opens already set this way */}
         <div role="radiogroup" aria-label="Who is the card for" className="flex rounded-full border border-ink p-1 md:w-auto">

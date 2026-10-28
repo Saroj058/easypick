@@ -15,6 +15,7 @@ import { cutoutOf } from "@/lib/rack-cutouts";
 import { homeSetting } from "@/lib/settings/home";
 import { getDropTimeline, getDrops, getProducts, isReleased } from "@/lib/store";
 import type { Drop } from "@/lib/types";
+import { HowItWorks } from "@/components/how-it-works";
 
 export const revalidate = 60;
 
@@ -101,6 +102,7 @@ export default async function DropsPage() {
                 {home.hero.line1} {home.hero.line2}
               </p>
             </div>
+            <HowItWorks guide="drops" className="mt-4" />
             {/* One clear way in (the drop) and a quiet link to the store, on one line. */}
             <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
               <Link

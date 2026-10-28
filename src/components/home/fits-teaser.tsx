@@ -3,6 +3,7 @@ import Link from "next/link";
 import { GarmentSvg } from "@/components/product-image";
 import { FlowButton } from "@/components/ui/flow-button";
 import type { Look } from "@/lib/occasions";
+import { HowItWorks } from "@/components/how-it-works";
 
 /**
  * Designer Fits on the home page, as a pointer rather than the whole section: the first fit
@@ -37,6 +38,7 @@ export function FitsTeaser({ looks, title = "Designer Fits", button = "See the f
           <p className="mt-1 text-[14px] text-steel-dark">
             {looks.length} ready fits · {groups.length} occasions
           </p>
+          <HowItWorks guide="fits" className="mt-2" />
         </div>
       </div>
 

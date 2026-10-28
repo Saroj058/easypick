@@ -5,6 +5,7 @@ import { FitsShowcase } from "@/components/fits-showcase";
 import { getSavedLooks } from "@/lib/looks";
 import { designerFits, swapOptions } from "@/lib/occasions";
 import { getProducts } from "@/lib/store";
+import { HowItWorks } from "@/components/how-it-works";
 
 export const revalidate = 60;
 
@@ -26,6 +27,9 @@ export default async function FitsPage() {
       <h1 className="sr-only">Fits</h1>
       {looks.length > 0 ? (
         <section aria-labelledby="occasion-title">
+          <div className="container-ep flex justify-end pb-1 pt-3">
+            <HowItWorks guide="fits" />
+          </div>
           <FitsShowcase looks={looks} options={swapOptions(products)} />
         </section>
       ) : (

@@ -19,6 +19,7 @@ import { kindView } from "@/lib/settings/categories-rules";
 import { categoryLabels } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import type { Category, Fit, Product } from "@/lib/types";
+import { HowItWorks } from "@/components/how-it-works";
 
 /** Only what quick buy reads (sizes, colours, stock, fit): the words and extra photos stay on the server. */
 const forQuickBuy = (p: Product): Product => ({ ...p, details: [], shortDescription: "", tags: [], images: p.images.slice(0, 1), story: undefined, modelNote: undefined });
@@ -344,6 +345,8 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
           )}
         </p>
   
+        <HowItWorks guide="buy" className="mt-3" />
+
         {/* Festival offers: on the sale view and each offer's own page, the offers running now as one fanned stack of cards. */}
         {(f.sale || offer) && offers.length > 0 && (
           <div className="mt-10">
@@ -353,6 +356,9 @@ export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
 
         {/* Pick, the robot: for themselves first, gifts too; sizes, delivery, swaps and small talk */}
         <div id="pick" className="mt-12 scroll-mt-24 md:mt-16 md:scroll-mt-28">
+          <div className="mb-3 flex justify-center">
+            <HowItWorks guide="pick" />
+          </div>
           <PickLazy where="shop" />
         </div>
   
