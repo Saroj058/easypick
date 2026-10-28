@@ -64,7 +64,7 @@
 .di-btn { display: inline-flex; align-items: center; justify-content: center; height: 52px; padding: 0 28px; border-radius: 999px; background: var(--di-black); color: var(--di-white); font-weight: 600; font-size: 15px; transition: background-color 0.2s; }
 .di-btn:hover { background: #2a2a2a; }
 .di-link { font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
-.di-promise { width: 100vw; border-top: 1px solid var(--di-line); display: flex; justify-content: center; gap: 10px 40px; flex-wrap: wrap; padding: 13px 16px; font-size: 13px; color: var(--di-muted); }
+.di-promise { justify-self: stretch; margin: 0 -16px; border-top: 1px solid var(--di-line); display: flex; justify-content: center; gap: 10px 40px; flex-wrap: wrap; padding: 13px 16px; font-size: 13px; color: var(--di-muted); }
 .di-promise span::before { content: "✓ "; color: var(--di-black); font-weight: 700; }
 
 /* Skip, while it plays */
