@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { Archivo, Instrument_Serif } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { showBagToast, useAddToBag } from "@/components/bag-gate";
+import { openBuyNow } from "@/components/buy-sheets";
 import { ProductImage } from "@/components/product-image";
 import { TrackForm } from "@/app/track/track-form";
 import { formatPrice } from "@/lib/format";
@@ -84,7 +85,7 @@ function Countdown({ at }: { at: string }) {
 /**
  * The top of the home page: the showroom (owner, 28 Oct 2026, design 2 of the five). One piece stands large on a calm
  * stage with its name, price and the sizes it comes in; a strip of the rail's pieces switches it; your size is picked
- * once (the rail below uses it too) and the piece goes in the bag from here; the Vault, tracking an order and the next
+ * once (the rail below uses it too), and the piece is bought from here with Quick buy or goes in the bag; the Vault, tracking an order and the next
  * drop sit as small boxes on the right. Real pieces, prices and stock.
  */
 export function Showroom({ data }: { data: ShowroomData }) {
@@ -124,7 +125,8 @@ export function Showroom({ data }: { data: ShowroomData }) {
             : `${size} in stock.`
           : `${size} is out in this piece.`;
   const canAdd = !sold && !!pick && pick.left > 0;
-  const addLabel = sold ? "Sold out" : canAdd ? "Add to bag" : size && !single ? `Not in ${size}` : "Choose a size";
+  const addLabel = sold ? "Sold out" : canAdd ? "Quick buy" : size && !single ? `Not in ${size}` : "Choose a size";
+  const line = pick ? { slug: p.slug, sku: pick.sku, name: p.name, size: pick.size, colour: p.colour, price: p.price } : null;
 
   return (
     <div className={`sr ${archivo.variable} ${serif.variable}`}>
@@ -163,16 +165,21 @@ export function Showroom({ data }: { data: ShowroomData }) {
             {note}
           </p>
           <div className="sr-cta">
+            {/* Quick buy: straight to paying for this one piece, as Buy now does on a product page (owner, 28 Oct 2026) */}
+            <button type="button" className="sr-btn sr-btn-dark" disabled={!canAdd} onClick={() => line && openBuyNow([{ ...line, qty: 1 }], "Quick buy")}>
+              {addLabel}
+            </button>
             <button
               type="button"
-              className="sr-btn sr-btn-dark"
+              className="sr-btn sr-btn-ghost"
               disabled={!canAdd}
+              aria-label={`Add ${p.name} to bag`}
+              title="Add to bag"
               onClick={() => {
-                if (!pick) return;
-                if (add([{ slug: p.slug, sku: pick.sku, name: p.name, size: pick.size, colour: p.colour, price: p.price }])) showBagToast(`Added ${p.name} (${p.colour}${pick.size === "ONE" ? "" : `, ${pick.size}`}) to your bag.`);
+                if (line && add([line])) showBagToast(`Added ${p.name} (${p.colour}${line.size === "ONE" ? "" : `, ${line.size}`}) to your bag.`);
               }}
             >
-              {addLabel}
+              <ShoppingBag aria-hidden className="h-4 w-4" strokeWidth={1.5} />
             </button>
             <Link href={`/product/${p.slug}`} className="sr-btn sr-btn-ghost" aria-label={`See ${p.name}`}>
               <ArrowRight aria-hidden className="h-4 w-4" strokeWidth={1.5} />
@@ -215,9 +222,14 @@ export function Showroom({ data }: { data: ShowroomData }) {
               </span>
             )}
           </p>
-          <a className="sr-link" href="#rail-title">
-            Browse the rail <ArrowRight aria-hidden className="h-3 w-3" strokeWidth={1.6} />
-          </a>
+          <span className="sr-links">
+            <a className="sr-link" href="#rail-title">
+              Browse the rail <ArrowRight aria-hidden className="h-3 w-3" strokeWidth={1.6} />
+            </a>
+            <Link className="sr-link" href="/shop">
+              Go to the shop <ArrowRight aria-hidden className="h-3 w-3" strokeWidth={1.6} />
+            </Link>
+          </span>
         </div>
         <div className="sr-strip" style={{ gridTemplateColumns: `repeat(${pieces.length}, minmax(0, 1fr))` }}>
           {pieces.map((q, i) => (
