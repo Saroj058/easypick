@@ -62,6 +62,12 @@ export default async function HomePage() {
   const on = (id: HomeSection) => home.sections.find((x) => x.id === id)?.on !== false;
   // Vault pieces have their own section; the rail holds the house range.
   const range = products.filter((p) => !p.vault);
+  // The pieces for the cards at the end of the home film: live house pieces, those with real photos first.
+  const heroPieces = range
+    .filter((p) => p.status === "live" && p.images[0])
+    .sort((a, b) => Number(!!b.images[0].src) - Number(!!a.images[0].src))
+    .slice(0, 30)
+    .map((p) => ({ slug: p.slug, name: p.name, price: p.salePrice ?? p.price, category: p.category, hex: p.colours[0]?.hex ?? "#d9d9d6", image: p.images[0] }));
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
   const offerList = await getOffers();
@@ -74,11 +80,11 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
       <div className="flex flex-col">
-      {/* Above the rail: just one picture for now (owner, 28 Oct 2026: "keep the home page ... just image").
+      {/* Above the rail: the brand story film, ending on the logo and the pieces as turning cards (owner, 28 Oct 2026).
           How each part works is shown in its own section instead. */}
       {on("hero") && (
         <div style={at("hero")}>
-          <LandingHero />
+          <LandingHero pieces={heroPieces} />
         </div>
       )}
 

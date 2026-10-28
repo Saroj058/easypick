@@ -1,9 +1,11 @@
 "use client";
 
 import { Archivo } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { HeroMosaic, type MosaicPiece } from "./hero-mosaic";
 import "./story-film.css";
 
 const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
@@ -243,20 +245,22 @@ function makeSfx() {
 /**
  * The top of the home page (owner, 28 Oct 2026, after a Pinterest reference and the brand's own story): the story
  * told one line at a time on white, key words underlined as they land, big repeated words, a few store labels and
- * cards; then the dot ending: PICK IT. PAY IT. WEAR IT., the black flood, EASYPICK, the logo, and once it has
- * ended, a small Shop now under the logo (owner, 28 Oct 2026).
+ * cards; then the dot ending: PICK IT. PAY IT. WEAR IT., the black flood, EASYPICK, the logo. Once it has ended,
+ * the end screen: the words, the logo and Shop now on top, and the pieces below in a collage of cards that turn
+ * over at random (owner, 28 Oct 2026).
  * Sound and a man's voice are there on a tap (browsers start them muted). It plays once per visit; after that, and
  * for people who ask for less motion, the logo shows straight away, with Replay.
  */
-export function StoryFilm() {
+export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
   const root = useRef<HTMLDivElement>(null);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     const film = root.current;
     if (!film) return;
     const $ = <T extends HTMLElement>(s: string) => film.querySelector(s) as T;
     const host = $(".sf-scenes"), fin = $(".sf-fin"), bar = $(".sf-bar i");
-    const ring = film.querySelector<SVGCircleElement>(".sf-skip-ring")!;
+    const skipFill = $(".sf-skip-fill");
     const btn = {
       skip: $<HTMLButtonElement>("[data-sf=skip]"),
       sound: $<HTMLButtonElement>("[data-sf=sound]"),
@@ -281,6 +285,7 @@ export function StoryFilm() {
     // Which buttons show: while it plays, Sound, Voice, Pause and Skip; once it has ended, Replay.
     const mode = (playing: boolean) => {
       film.classList.toggle("sf-done", !playing);
+      setDone(!playing);
       btn.skip.hidden = btn.pause.hidden = !playing;
       btn.replay.hidden = playing;
     };
@@ -290,7 +295,7 @@ export function StoryFilm() {
       if (!paused) {
         const p = Math.min(1, (performance.now() - startT + elapsed) / TOTAL);
         bar.style.width = `${p * 100}%`;
-        ring.style.strokeDashoffset = String(100 - p * 100);
+        skipFill.style.transform = `scaleX(${p})`;
       }
       barRaf = requestAnimationFrame(tickBar);
     };
@@ -617,31 +622,35 @@ export function StoryFilm() {
       </div>
       <div className="sf-scenes" aria-hidden />
       <div className="sf-fin" hidden />
-      <Link href="/shop" className="sf-shop">
-        Shop now
-      </Link>
+      {/* The end: the words, the logo and Shop now on top; the pieces below, turning over at random */}
+      <div className="sf-end">
+        <div className="sf-end-top">
+          <p className="sf-end-words" aria-hidden>
+            <span>Pick it.</span> <span>Pay it.</span> <span>Wear it.</span>
+          </p>
+          <div className="sf-end-name" aria-hidden>
+            <span className="sf-end-badge">
+              <Image src={MARK} alt="" width={146} height={148} />
+            </span>
+            EASYPICK
+          </div>
+          <p className="sf-end-sub">Men&apos;s streetwear · Kathmandu</p>
+          <Link href="/shop" className="sf-shop">
+            Shop now
+          </Link>
+        </div>
+        <HeroMosaic pieces={pieces} play={done} />
+      </div>
       <div className="sf-bar" aria-hidden>
         <i />
       </div>
-      {/* Skip: big and round, its words turning around an arrow, the ring filling as the film plays */}
-      <button type="button" data-sf="skip" className="sf-skip" aria-label="Skip the story">
-        <svg viewBox="0 0 120 120" aria-hidden>
-          <defs>
-            <path id="sf-skip-path" d="M60,60 m-43,0 a43,43 0 1,1 86,0 a43,43 0 1,1 -86,0" />
-          </defs>
-          <circle className="sf-skip-track" cx="60" cy="60" r="57" />
-          <circle className="sf-skip-ring" cx="60" cy="60" r="57" pathLength={100} />
-          <g className="sf-skip-spin">
-            <text>
-              <textPath href="#sf-skip-path" textLength="266">
-                SKIP THE STORY · SKIP THE STORY ·
-              </textPath>
-            </text>
-          </g>
-        </svg>
+      {/* Skip: a black block at the top, its arrow in its own box, a line along its foot filling as the film plays */}
+      <button type="button" data-sf="skip" className="sf-skip">
+        <span className="sf-skip-label">Skip the story</span>
         <span className="sf-skip-arrow" aria-hidden>
-          →
+          <i>→</i>
         </span>
+        <span className="sf-skip-fill" aria-hidden />
       </button>
       <div className="sf-ctl">
         <button type="button" data-sf="sound" aria-pressed="false">
