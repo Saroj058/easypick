@@ -1,6 +1,7 @@
 "use client";
 
 import { Archivo } from "next/font/google";
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import "./story-film.css";
@@ -242,7 +243,8 @@ function makeSfx() {
 /**
  * The top of the home page (owner, 28 Oct 2026, after a Pinterest reference and the brand's own story): the story
  * told one line at a time on white, key words underlined as they land, big repeated words, a few store labels and
- * cards; then the dot ending: PICK IT. PAY IT. WEAR IT., the black flood, EASYPICK, the logo. No buttons at the end.
+ * cards; then the dot ending: PICK IT. PAY IT. WEAR IT., the black flood, EASYPICK, the logo, and once it has
+ * ended, a small Shop now under the logo (owner, 28 Oct 2026).
  * Sound and a man's voice are there on a tap (browsers start them muted). It plays once per visit; after that, and
  * for people who ask for less motion, the logo shows straight away, with Replay.
  */
@@ -254,6 +256,7 @@ export function StoryFilm() {
     if (!film) return;
     const $ = <T extends HTMLElement>(s: string) => film.querySelector(s) as T;
     const host = $(".sf-scenes"), fin = $(".sf-fin"), bar = $(".sf-bar i");
+    const ring = film.querySelector<SVGCircleElement>(".sf-skip-ring")!;
     const btn = {
       skip: $<HTMLButtonElement>("[data-sf=skip]"),
       sound: $<HTMLButtonElement>("[data-sf=sound]"),
@@ -277,13 +280,18 @@ export function StoryFilm() {
 
     // Which buttons show: while it plays, Sound, Voice, Pause and Skip; once it has ended, Replay.
     const mode = (playing: boolean) => {
+      film.classList.toggle("sf-done", !playing);
       btn.skip.hidden = btn.pause.hidden = !playing;
       btn.replay.hidden = playing;
     };
 
     const TOTAL = 40000;
     const tickBar = () => {
-      if (!paused) bar.style.width = `${Math.min(1, (performance.now() - startT + elapsed) / TOTAL) * 100}%`;
+      if (!paused) {
+        const p = Math.min(1, (performance.now() - startT + elapsed) / TOTAL);
+        bar.style.width = `${p * 100}%`;
+        ring.style.strokeDashoffset = String(100 - p * 100);
+      }
       barRaf = requestAnimationFrame(tickBar);
     };
 
@@ -609,9 +617,32 @@ export function StoryFilm() {
       </div>
       <div className="sf-scenes" aria-hidden />
       <div className="sf-fin" hidden />
+      <Link href="/shop" className="sf-shop">
+        Shop now
+      </Link>
       <div className="sf-bar" aria-hidden>
         <i />
       </div>
+      {/* Skip: big and round, its words turning around an arrow, the ring filling as the film plays */}
+      <button type="button" data-sf="skip" className="sf-skip" aria-label="Skip the story">
+        <svg viewBox="0 0 120 120" aria-hidden>
+          <defs>
+            <path id="sf-skip-path" d="M60,60 m-43,0 a43,43 0 1,1 86,0 a43,43 0 1,1 -86,0" />
+          </defs>
+          <circle className="sf-skip-track" cx="60" cy="60" r="57" />
+          <circle className="sf-skip-ring" cx="60" cy="60" r="57" pathLength={100} />
+          <g className="sf-skip-spin">
+            <text>
+              <textPath href="#sf-skip-path" textLength="266">
+                SKIP THE STORY · SKIP THE STORY ·
+              </textPath>
+            </text>
+          </g>
+        </svg>
+        <span className="sf-skip-arrow" aria-hidden>
+          →
+        </span>
+      </button>
       <div className="sf-ctl">
         <button type="button" data-sf="sound" aria-pressed="false">
           Sound on
@@ -621,9 +652,6 @@ export function StoryFilm() {
         </button>
         <button type="button" data-sf="pause">
           Pause
-        </button>
-        <button type="button" data-sf="skip">
-          Skip
         </button>
         <button type="button" data-sf="replay" hidden>
           Replay
