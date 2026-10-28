@@ -12,7 +12,7 @@ export function LandingHero() {
         Easypick: men&apos;s streetwear in Kathmandu
       </h1>
       <Image src="/drops/hero-2.webp" alt="" fill priority sizes="100vw" className="hidden object-cover grayscale md:block" />
-      <Image src="/drops/hero-2-phone.webp" alt="" fill priority sizes="100vw" className="object-cover grayscale md:hidden" />
+      <Image src="/drops/hero-2-phone.webp" alt="" fill priority sizes="100vw" className="object-cover object-[78%_50%] grayscale md:hidden" />
     </section>
   );
 }
