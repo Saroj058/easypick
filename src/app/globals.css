@@ -842,9 +842,3 @@
   }
 }
 
-/* The home chapters' title drifts a little while it rests (landing-chapters.tsx) */
-@keyframes chapter-drift {
-  to {
-    transform: translateX(-1vw);
-  }
-}
