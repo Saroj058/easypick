@@ -32,6 +32,18 @@ export default async function AboutPage() {
           </Link>
         </StoryFilm>
       </section>
+      {/* The founder's own note, on its own page */}
+      <Link href="/about/founder" className="group block border-b border-mist bg-paper">
+        <span className="container-ep flex items-center justify-between gap-4 py-5">
+          <span>
+            <span className="block font-mono text-[11px] uppercase tracking-[0.16em] text-steel-dark">From the founder</span>
+            <span className="mt-1 block font-didone text-[22px] font-bold leading-tight">A note from Saroj Devkota</span>
+          </span>
+          <span aria-hidden className="text-xl transition-transform group-hover:translate-x-1">
+            →
+          </span>
+        </span>
+      </Link>
       <PageIntro dark eyebrow="About" title="Shopping, minus the pressure." />
       <section className="section">
         <div className="container-ep max-w-3xl space-y-6 text-lg">
