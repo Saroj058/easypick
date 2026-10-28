@@ -60,6 +60,7 @@ const menu: SmoothDropdownItem[] = [
   { id: "/alerts", href: "/alerts", label: "Drop alerts", icon: Notification01Icon },
   { id: "/track", href: "/track", label: "Track an order", icon: DeliveryTracking01Icon },
   { id: "/about", href: "/about", label: "About", icon: InformationCircleIcon },
+  { id: "/about/founder", href: "/about/founder", label: "About the founder", icon: UserHugeIcon },
 ];
 
 /** Pill look once scrolled; flat (part of the full-width bar) at the very top. */

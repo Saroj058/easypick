@@ -40,6 +40,7 @@ export async function SiteFooter() {
         { href: "/visit", label: "Visit us" },
         { href: "/visit/tour", label: "Virtual tour" },
         { href: "/about", label: "About" },
+        { href: "/about/founder", label: "About the founder" },
       ],
     },
   ];
