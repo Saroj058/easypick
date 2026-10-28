@@ -94,8 +94,8 @@ export function SiteHeader() {
   // On Fits, Gift and the Vault (computers) the page's picture runs up behind a see-through header (owner, 25 Oct 2026).
   const clear = pathname === "/fits" || pathname === "/gift" || pathname === "/vault";
   // Pages whose opening runs full-bleed under the header, with no spacer: the home page, and the
-  // Drops page (the old home page's drop opening, which runs under it the same way).
-  const bleed = pathname === "/" || pathname === "/drops";
+  // Drops page (the old home page's drop opening, which runs under it the same way), and About (the story film).
+  const bleed = pathname === "/" || pathname === "/drops" || pathname === "/about";
   const expanded = open && !visit;
   const flat = atTop && !visit;
 

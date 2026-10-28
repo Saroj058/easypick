@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { StoryFilm } from "@/components/landing/story-film";
 import { PageIntro } from "@/components/page-intro";
+import { getProducts } from "@/lib/store";
 import { siteSetting } from "@/lib/settings/site";
 import { socialLinks } from "@/lib/settings/site-rules";
 
@@ -12,9 +14,24 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
-  const social = socialLinks(await siteSetting.get());
+  const [settings, products] = await Promise.all([siteSetting.get(), getProducts()]);
+  const social = socialLinks(settings);
+  // The pieces for the cards at the end of the story film, as on the home page.
+  const pieces = products
+    .filter((p) => !p.vault && p.status === "live" && p.images[0])
+    .sort((a, b) => Number(!!b.images[0].src) - Number(!!a.images[0].src))
+    .slice(0, 30)
+    .map((p) => ({ slug: p.slug, name: p.name, price: p.salePrice ?? p.price, category: p.category, hex: p.colours[0]?.hex ?? "#d9d9d6", image: p.images[0] }));
   return (
     <>
+      {/* The brand's story as a film, every time the page opens (owner, 28 Oct 2026: "that full story should be on about us") */}
+      <section aria-label="Our story" className="relative isolate h-[calc(100svh-62px-env(safe-area-inset-bottom))] min-h-[560px] overflow-hidden bg-white md:min-h-[640px] lg:h-svh">
+        <StoryFilm pieces={pieces} story once={false} heading={false}>
+          <Link href="/shop" className="sf-shop">
+            Shop now
+          </Link>
+        </StoryFilm>
+      </section>
       <PageIntro dark eyebrow="About" title="Shopping, minus the pressure." />
       <section className="section">
         <div className="container-ep max-w-3xl space-y-6 text-lg">

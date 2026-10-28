@@ -70,6 +70,15 @@ export default async function HomePage() {
     .map((p) => ({ slug: p.slug, name: p.name, price: p.salePrice ?? p.price, category: p.category, hex: p.colours[0]?.hex ?? "#d9d9d6", image: p.images[0] }));
 
   const offers = products.filter((p) => p.salePrice && p.status === "live" && !p.vault);
+  // The store in numbers, under the logo at the top (owner, 28 Oct 2026), all worked out from the stock.
+  const liveRange = range.filter((p) => p.status === "live");
+  const heroStats = {
+    live: liveRange.length,
+    from: liveRange.length ? Math.min(...liveRange.map((p) => p.salePrice ?? p.price)) : null,
+    fresh: liveRange.filter((p) => p.isNew).length,
+    offers: on("offers") ? offers.length : 0,
+    nextDrop: next ? new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kathmandu" }).format(new Date(next.releaseAt)) : null,
+  };
   const offerList = await getOffers();
 
   const { looks } = designerFits(products, await getSavedLooks());
@@ -80,11 +89,12 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
       <div className="flex flex-col">
-      {/* Above the rail: the brand story film, ending on the logo and the pieces as turning cards (owner, 28 Oct 2026).
+      {/* Above the rail: the lime dot intro, then the logo, the store in numbers and the pieces as turning cards
+          (owner, 28 Oct 2026). The full story film is on /about.
           How each part works is shown in its own section instead. */}
       {on("hero") && (
         <div style={at("hero")}>
-          <LandingHero pieces={heroPieces} />
+          <LandingHero pieces={heroPieces} stats={heroStats} />
         </div>
       )}
 

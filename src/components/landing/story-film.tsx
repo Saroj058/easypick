@@ -2,7 +2,6 @@
 
 import { Archivo } from "next/font/google";
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { HeroMosaic, type MosaicPiece } from "./hero-mosaic";
@@ -98,16 +97,17 @@ const FIN = `<div class="sf-fin-flip"></div>
   <div class="sf-fin-words" aria-hidden="true"><span>Pick it.</span><span>Pay it.</span><span>Wear it.</span></div>
   <div class="sf-fin-dot" aria-hidden="true"></div><div class="sf-fin-flood"></div>
   <div class="sf-fin-name" aria-hidden="true"><span class="sf-fin-badge"><img src="${MARK}" alt=""></span><span class="sf-fin-letters">${NAME.map((c) => `<span>${c}</span>`).join("")}</span></div>
-  <div class="sf-fin-sub">Men's streetwear · Kathmandu</div>`;
+  <div class="sf-fin-sub">Quality clothes · Real style · Kathmandu</div>`;
 
-// What the store promises, either side of the cards at the end (only what the store already does).
+// What the store stands for, either side of the cards at the end (owner, 28 Oct 2026: "we only sell quality
+// clothes and stylish clothes"), then what it already does.
 const SIDE_L = [
-  { no: "01", title: "Fixed prices", line: "The price on the tag is the price. No bargaining." },
-  { no: "02", title: "Your size in cm", line: "Every piece measured, so you know it fits." },
+  { no: "01", title: "Quality only", line: "Every piece picked for its fabric and its finish." },
+  { no: "02", title: "Real style", line: "Clean cuts you'll wear for years, not a season." },
 ];
 const SIDE_R = [
-  { no: "03", title: "Pay with eSewa", line: "Buy now, pay, done. No account needed." },
-  { no: "04", title: "Same price, everywhere", line: "Online or in the store. 7-day size swap." },
+  { no: "03", title: "Your size in cm", line: "Every piece measured, so you know it fits." },
+  { no: "04", title: "Fixed prices", line: "The tag is the price, online or in the store." },
 ];
 
 /** One side of the end screen: the promises in full on a wide screen, as one line up the edge on a phone. */
@@ -271,15 +271,16 @@ function makeSfx() {
 }
 
 /**
- * The top of the home page (owner, 28 Oct 2026, after a Pinterest reference and the brand's own story): the story
- * told one line at a time on white, key words underlined as they land, big repeated words, a few store labels and
- * cards; then the dot ending: PICK IT. PAY IT. WEAR IT., the black flood, EASYPICK, the logo. Once it has ended,
- * the end screen: the words, the logo and Shop now on top, and the pieces below in a collage of cards that turn
- * over at random (owner, 28 Oct 2026).
- * Sound and a man's voice are there on a tap (browsers start them muted). It plays once per visit; after that, and
- * for people who ask for less motion, the logo shows straight away, with Replay.
+ * The Easypick film (owner, 28 Oct 2026, after a Pinterest reference and the brand's own story). With `story`
+ * (the About page): the story told one line at a time on white, key words underlined as they land, big repeated
+ * words, a few store labels and cards. Then, and on its own as the home page's intro, the lime dot: it stamps
+ * PICK IT. PAY IT. WEAR IT., floods the screen black, EASYPICK types in, the logo. Once it has ended, the end
+ * screen: the logo and the page's own next steps (`children`) on top, and the pieces below in a collage of cards
+ * that turn over at random, with the store's promises either side.
+ * Sound and a man's voice are there on a tap (browsers start them muted). With `once`, it plays once per visit;
+ * after that, and for people who ask for less motion, the end screen shows straight away, with Replay.
  */
-export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
+export function StoryFilm({ pieces, story = false, once = true, heading = true, children }: { pieces: MosaicPiece[]; story?: boolean; once?: boolean; heading?: boolean; children?: React.ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const [done, setDone] = useState(false);
 
@@ -321,7 +322,9 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
       btn.replay.hidden = playing;
     };
 
-    const TOTAL = 40000;
+    // The full story (About) or just the dot (the home page's intro).
+    const list = story ? SCENES : SCENES.slice(-1);
+    const TOTAL = story ? 40000 : 6500;
     const tickBar = () => {
       if (!paused) {
         const p = Math.min(1, (performance.now() - startT + elapsed) / TOTAL);
@@ -333,7 +336,7 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
 
     const show = (i: number) => {
       if (!alive) return;
-      const s = SCENES[i];
+      const s = list[i];
       const old = host.querySelector(".sf-scene.on");
       if (old) {
         old.classList.replace("on", "off");
@@ -429,7 +432,7 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
       fin.innerHTML = FIN;
       film.classList.add("sf-fin-on");
       requestAnimationFrame(() => fin.classList.add("on"));
-      void voice.say(spoken(SCENES[SCENES.length - 1]));
+      void voice.say(spoken(list[list.length - 1]));
       const q = <T extends HTMLElement>(c: string) => fin.querySelector(c) as T;
       const dot = q(".sf-fin-dot"), flip = q(".sf-fin-flip"), flood = q(".sf-fin-flood"), nameEl = q(".sf-fin-name"), badge = q(".sf-fin-badge"), wordsEl = q(".sf-fin-words");
       const ws = [...wordsEl.children] as HTMLElement[];
@@ -606,7 +609,7 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
         voice.stop();
       } else {
         startT = performance.now();
-        show(at + 1 < SCENES.length ? at + 1 : at);
+        show(at + 1 < list.length ? at + 1 : at);
       }
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !btn.skip.hidden && still();
@@ -614,7 +617,7 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
 
     let seen = false;
     try {
-      seen = !!sessionStorage.getItem(SEEN);
+      seen = once && !!sessionStorage.getItem(SEEN);
     } catch {
       /* private mode */
     }
@@ -634,13 +637,15 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
       voice.dispose();
       sfx.dispose();
     };
-  }, []);
+  }, [story, once]);
 
   return (
     <div ref={root} className={`sf ${archivo.variable}`}>
-      <h1 id="landing-title" className="sr-only">
-        Easypick: men&apos;s streetwear in Kathmandu. Fixed prices, no bargaining.
-      </h1>
+      {heading && (
+        <h1 id="landing-title" className="sr-only">
+          Easypick: quality, stylish clothes in Kathmandu. Fixed prices, no bargaining.
+        </h1>
+      )}
       <div className="sf-glow" aria-hidden>
         <i />
         <i />
@@ -653,7 +658,7 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
       </div>
       <div className="sf-scenes" aria-hidden />
       <div className="sf-fin" hidden />
-      {/* The end: the logo and Shop now on top; the pieces below, turning over at random, with what the store
+      {/* The end: the logo and what to do next on top; the pieces below, turning over at random, with what the store
           promises on either side */}
       <div className="sf-end">
         <div className="sf-end-top">
@@ -663,10 +668,8 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
             </span>
             EASYPICK
           </div>
-          <p className="sf-end-sub">Men&apos;s streetwear · Kathmandu</p>
-          <Link href="/shop" className="sf-shop">
-            Shop now
-          </Link>
+          <p className="sf-end-sub">Quality clothes · Real style · Kathmandu</p>
+          {children}
         </div>
         <div className="sf-end-body">
           <Side side="l" items={SIDE_L} />
@@ -679,7 +682,7 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
       </div>
       {/* Skip: a black block at the top, its arrow in its own box, a line along its foot filling as the film plays */}
       <button type="button" data-sf="skip" className="sf-skip">
-        <span className="sf-skip-label">Skip the story</span>
+        <span className="sf-skip-label">{story ? "Skip the story" : "Skip"}</span>
         <span className="sf-skip-arrow" aria-hidden>
           <i>→</i>
         </span>

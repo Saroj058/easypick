@@ -68,14 +68,25 @@ const markSeen = (id: string) => {
     /* private mode: it may show again next visit */
   }
 };
+/** Someone said they've been here before: no more pop-ups for them. */
+const settle = () => {
+  try {
+    localStorage.setItem(VISITS, "99");
+  } catch {
+    /* private mode */
+  }
+};
 /** One pop-up at a time, across every section on the page. */
 let showing: string | null = null;
+/** The sections that ask by themselves (owner, 28 Oct 2026: "when they come on the rail, gift and shop"). */
+const ASKS: GuideId[] = ["buy", "gift"];
 
 /**
  * How a part of the store works, where that part is (owner, 28 Oct 2026: "put how it works on each section").
- * A small "How it works" button plays the film full screen for anyone. For a new visitor, the first time the
- * section comes into view the film pops up by itself in a small window in the corner (from the bottom on a
- * phone), muted, with the step it's on; never in checkout, never while typing, one at a time.
+ * A small "How it works" button plays the film full screen for anyone. On the rail, the shop and gift, a new
+ * visitor gets a small window in the corner (from the bottom on a phone) the first time the section comes into
+ * view. It asks first: "First time here?", then "Want to see how it's done?", and only then plays the film,
+ * all in that one window. Never in checkout, never while typing, one at a time.
  */
 export function HowItWorks({ guide, tone = "light", className = "" }: { guide: GuideId; tone?: "light" | "dark"; className?: string }) {
   const g = GUIDES[guide];
@@ -90,7 +101,7 @@ export function HowItWorks({ guide, tone = "light", className = "" }: { guide: G
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     // Automated browsers (tests, crawlers) don't get pop-ups; "ep-guides-try" in localStorage lets one see them.
     if (navigator.webdriver && !localStorage.getItem("ep-guides-try")) return;
-    if (!newVisitor() || seenList().includes(guide)) return;
+    if (!ASKS.includes(guide) || !newVisitor() || seenList().includes(guide)) return;
     let t = 0;
     const io = new IntersectionObserver(
       ([e]) => {
@@ -149,17 +160,32 @@ export function HowItWorks({ guide, tone = "light", className = "" }: { guide: G
   );
 }
 
-/** The small window that pops up by itself: the film, the step it's on, full screen or close. */
+/** The small window that pops up by itself: two quick questions, then the film, the step it's on, full screen. */
 function Popup({ g, onClose, onFull }: { g: Guide; onClose: () => void; onFull: (t: number) => void }) {
   const still = useReducedMotion();
   const video = useRef<HTMLVideoElement>(null);
   const bar = useRef<HTMLSpanElement>(null);
+  const [stage, setStage] = useState<"first" | "show" | "film">("first");
   const [step, setStep] = useState(-1);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+  const ask = (q: string, line: string, yes: string, no: string, onYes: () => void, onNo: () => void) => (
+    <motion.div key={q} initial={still ? false : { opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }} className="px-4 pb-4 pt-1">
+      <p className="text-[19px] font-semibold leading-tight tracking-[-0.01em]">{q}</p>
+      <p className="mt-1 text-[13px] text-steel-dark">{line}</p>
+      <div className="mt-4 flex gap-2">
+        <button type="button" onClick={onYes} className="h-10 flex-1 cursor-pointer rounded-full bg-ink px-4 text-[13px] font-semibold text-paper hover:bg-ink/85">
+          {yes}
+        </button>
+        <button type="button" onClick={onNo} className="h-10 flex-1 cursor-pointer rounded-full border border-ink/15 px-4 text-[13px] font-semibold hover:border-ink">
+          {no}
+        </button>
+      </div>
+    </motion.div>
+  );
   return (
     <motion.aside
       aria-label={g.title}
@@ -170,51 +196,76 @@ function Popup({ g, onClose, onFull }: { g: Guide; onClose: () => void; onFull: 
     >
       <div className="flex items-center gap-2 py-2 pl-4 pr-1.5">
         <p className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">
-          <span className="mr-2 font-mono text-[10px] font-normal uppercase tracking-[0.14em] text-steel-dark">New here?</span>
-          {g.title}
+          <span className="mr-2 font-mono text-[10px] font-normal uppercase tracking-[0.14em] text-steel-dark">{stage === "film" ? "How it works" : "Hi"}</span>
+          {stage === "film" && g.title}
         </p>
         <button type="button" onClick={onClose} aria-label="Close" className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full text-steel-dark hover:bg-mist hover:text-ink">
           <X aria-hidden className="h-4 w-4" />
         </button>
       </div>
-      <button type="button" onClick={() => onFull(video.current?.currentTime ?? 0)} aria-label="Watch full screen" className="relative block w-full cursor-zoom-in bg-mist">
-        <video
-          ref={video}
-          src={src(g)}
-          poster={poster(g)}
-          muted
-          playsInline
-          autoPlay
-          onLoadedMetadata={(e) => fast(e.currentTarget)}
-          onPlay={(e) => fast(e.currentTarget)}
-          onTimeUpdate={(e) => {
-            const v = e.currentTarget;
-            setStep(stepAt(g, v.currentTime));
-            if (bar.current) bar.current.style.transform = `scaleX(${v.currentTime / (v.duration || g.length)})`;
-          }}
-          onEnded={() => window.setTimeout(onClose, 1500)}
-          className="block aspect-[1120/700] w-full object-cover"
-          aria-hidden
-        />
-        <span aria-hidden className="absolute inset-x-0 bottom-0 h-[3px] bg-black/10">
-          <span ref={bar} className="block h-full origin-left scale-x-0 bg-ink" />
-        </span>
-      </button>
-      <div className="flex items-center gap-3 px-4 py-2.5">
-        <p className="min-w-0 flex-1 truncate text-[13px]" aria-live="polite">
-          {step >= 0 && (
-            <>
-              <span className="mr-2 font-mono text-[10.5px] text-steel-dark">
-                {String(step + 1).padStart(2, "0")}/{String(g.steps.length).padStart(2, "0")}
-              </span>
-              <span className="font-semibold">{g.steps[step][0]}</span>
-            </>
-          )}
-        </p>
-        <button type="button" onClick={() => onFull(video.current?.currentTime ?? 0)} className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-ink/15 px-3 text-[12px] font-semibold hover:border-ink">
-          <Maximize2 aria-hidden className="h-3 w-3" /> Full screen
-        </button>
-      </div>
+      {stage === "first" &&
+        ask(
+          "Is this your first time here?",
+          "Easypick works a little differently from other shops.",
+          "Yes, it is",
+          "No, I've been here",
+          () => setStage("show"),
+          () => {
+            settle();
+            onClose();
+          },
+        )}
+      {stage === "show" &&
+        ask(
+          `Want to see ${g.title.replace(/^How /, "how ").replace(/ works?$/, "")} works?`,
+          `A short film of the real site, ${clock(g.length / RATE)} long, no sound.`,
+          "Yes, show me",
+          "Not now",
+          () => setStage("film"),
+          onClose,
+        )}
+      {stage === "film" && (
+        <motion.div initial={still ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
+          <button type="button" onClick={() => onFull(video.current?.currentTime ?? 0)} aria-label="Watch full screen" className="relative block w-full cursor-zoom-in bg-mist">
+            <video
+              ref={video}
+              src={src(g)}
+              poster={poster(g)}
+              muted
+              playsInline
+              autoPlay
+              onLoadedMetadata={(e) => fast(e.currentTarget)}
+              onPlay={(e) => fast(e.currentTarget)}
+              onTimeUpdate={(e) => {
+                const v = e.currentTarget;
+                setStep(stepAt(g, v.currentTime));
+                if (bar.current) bar.current.style.transform = `scaleX(${v.currentTime / (v.duration || g.length)})`;
+              }}
+              onEnded={() => window.setTimeout(onClose, 1500)}
+              className="block aspect-[1120/700] w-full object-cover"
+              aria-hidden
+            />
+            <span aria-hidden className="absolute inset-x-0 bottom-0 h-[3px] bg-black/10">
+              <span ref={bar} className="block h-full origin-left scale-x-0 bg-ink" />
+            </span>
+          </button>
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            <p className="min-w-0 flex-1 truncate text-[13px]" aria-live="polite">
+              {step >= 0 && (
+                <>
+                  <span className="mr-2 font-mono text-[10.5px] text-steel-dark">
+                    {String(step + 1).padStart(2, "0")}/{String(g.steps.length).padStart(2, "0")}
+                  </span>
+                  <span className="font-semibold">{g.steps[step][0]}</span>
+                </>
+              )}
+            </p>
+            <button type="button" onClick={() => onFull(video.current?.currentTime ?? 0)} className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-ink/15 px-3 text-[12px] font-semibold hover:border-ink">
+              <Maximize2 aria-hidden className="h-3 w-3" /> Full screen
+            </button>
+          </div>
+        </motion.div>
+      )}
     </motion.aside>
   );
 }
