@@ -1,82 +1,68 @@
-/* The founder's statement: one long dark sheet, like a printed page (owner, 28 Oct 2026). The sheet's top is sized as
-   a share of its width (cqw) so it scales like paper; the statement flows below it. Scoped under .fd. */
-.fd {
-  --fd-bg: #0f0f0e;
-  --fd-ink: #f2efe8;
-  --fd-soft: rgba(242, 239, 232, 0.78);
-  --fd-faint: rgba(242, 239, 232, 0.5);
-  --fd-line: rgba(242, 239, 232, 0.16);
-  --fd-display: var(--font-founder), "Didot", serif;
-  --fd-text: var(--font-statement), Georgia, serif;
-  background: #e7e5e0;
-  padding: 40px 16px 64px;
+/* The founder's page, after the owner's reference (28 Oct 2026): one dark card on a dark, blurred backdrop.
+   Scoped under .fc. The accent is the brand's lime, used only on the short line, the icons and the arrows. */
+.fc {
+  --fc-card: #23262d;
+  --fc-ink: #f4f4f2;
+  --fc-soft: rgba(244, 244, 242, 0.62);
+  --fc-faint: rgba(244, 244, 242, 0.4);
+  --fc-accent: #c6ff3d;
+  --fc-panel: #d6d8e3;
+  --fc-sans: var(--font-founder), var(--font-sans), sans-serif;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: calc(100svh - 88px);
+  padding: 56px 24px 88px;
+  background: #15171b url("/founder/backdrop.webp") center / cover no-repeat;
+  font-family: var(--fc-sans);
+  overflow: hidden;
 }
-.fd-paper { container-type: inline-size; width: min(820px, 100%); margin: 0 auto; background: var(--fd-bg); color: var(--fd-ink); box-shadow: 0 50px 90px -45px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.12); }
+.fc::before { content: ""; position: absolute; inset: 0; background: rgba(12, 13, 16, 0.55); }
 
-/* The top of the sheet: the title, his portrait, the monogram */
-.fd-top { margin: 0; padding-top: 4.4cqw; text-align: center; font: 400 1.5cqw var(--font-sans); letter-spacing: 0.34em; text-transform: uppercase; color: var(--fd-soft); }
-.fd-hero { position: relative; height: 92cqw; overflow: hidden; }
-/* A soft light behind him, so the cut-out sits in the dark like a studio portrait */
-.fd-hero::before { content: ""; position: absolute; left: 30%; top: 8%; width: 70%; height: 92%; background: radial-gradient(ellipse at 55% 45%, rgba(242, 239, 232, 0.11), transparent 62%); pointer-events: none; }
-.fd-photo { position: absolute; right: -4cqw; bottom: 0; width: 66cqw; height: 86cqw; }
-.fd-hero::after { content: ""; position: absolute; inset: auto 0 0; height: 16cqw; background: linear-gradient(to top, var(--fd-bg), transparent); pointer-events: none; }
+.fc-card { position: relative; z-index: 1; width: min(1040px, 100%); aspect-ratio: 1040 / 600; background: var(--fc-card); color: var(--fc-ink); box-shadow: 0 60px 120px -50px rgba(0, 0, 0, 0.85); }
+.fc-logo { position: absolute; left: 8.5%; top: 7.5%; width: 15%; height: auto; }
 
-.fd-title { position: absolute; left: 6cqw; top: 15cqw; z-index: 2; margin: 0; display: flex; flex-direction: column; font: 400 13.6cqw/0.86 var(--fd-display); letter-spacing: -0.01em; text-transform: uppercase; }
-.fd-title em { font-style: italic; text-transform: none; font-size: 1.08em; line-height: 1; margin-top: 0.06em; }
+/* The side menu, written up the left edge */
+.fc-side { position: absolute; left: 3.2%; top: 30%; bottom: 10%; display: flex; flex-direction: column-reverse; justify-content: space-between; }
+.fc-side a { position: relative; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; letter-spacing: 0.06em; color: var(--fc-soft); text-decoration: none; transition: color 0.2s; }
+.fc-side a:hover { color: var(--fc-ink); }
+.fc-side a[aria-current="page"] { color: var(--fc-ink); }
+.fc-side a[aria-current="page"]::after { content: ""; position: absolute; right: -9px; top: -2px; bottom: -2px; width: 2px; background: var(--fc-accent); }
+.fc-side a:focus-visible { outline: 2px solid var(--fc-accent); outline-offset: 4px; }
 
-.fd-mark { position: absolute; right: 6cqw; top: 7.5cqw; z-index: 2; display: flex; gap: 2.2cqw; padding-left: 2.2cqw; }
-.fd-rule { position: absolute; left: 0; top: 0; bottom: -1cqw; width: 1px; background: var(--fd-ink); }
-.fd-mono { margin: 0; font: 400 6.4cqw/0.8 var(--fd-display); }
-.fd-mono i { font-style: italic; margin-left: -0.06em; color: transparent; -webkit-text-stroke: 0.1cqw var(--fd-ink); }
-.fd-small { margin: 0; font: 600 0.98cqw/1.55 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fd-soft); }
+/* His portrait in a light panel that hangs below the card */
+.fc-photo { position: absolute; left: 8.5%; top: 21%; width: 34%; height: 85%; overflow: hidden; background: var(--fc-panel); }
+.fc-img { object-fit: cover; object-position: 50% 4%; transform: scale(1.75); transform-origin: 46% 2%; }
 
-.fd-dots { position: absolute; left: 6cqw; bottom: 8cqw; z-index: 2; margin: 0; font: 400 1.15cqw var(--font-sans); letter-spacing: 0.06em; color: var(--fd-faint); }
-.fd-dots b { display: block; margin-top: 0.6cqw; font-weight: 700; font-size: 1.5cqw; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fd-ink); }
+/* Name, role, story */
+.fc-info { position: absolute; left: 51%; right: 12%; top: 17%; }
+.fc-accent { display: block; width: 88px; height: 3px; background: var(--fc-accent); }
+.fc-name { margin: 22px 0 0; font: 700 clamp(30px, 4.4vw, 46px)/1.05 var(--fc-sans); letter-spacing: -0.01em; }
+.fc-role { margin: 10px 0 0; font: 400 clamp(14px, 1.5vw, 17px) var(--fc-sans); letter-spacing: 0.02em; color: var(--fc-faint); }
+.fc-text { margin: 30px 0 0; min-height: 8.8em; max-width: 46ch; font: 400 13.5px/1.75 var(--fc-sans); color: var(--fc-soft); }
+.fc-count { margin: 4px 0 0; font: 500 11px var(--fc-sans); letter-spacing: 0.12em; color: var(--fc-faint); }
+.fc-sig { display: block; width: 190px; height: auto; margin-top: 6px; filter: invert(1); opacity: 0.55; }
+.fc-social { display: flex; gap: 18px; margin: 16px 0 0; padding: 0; list-style: none; }
+.fc-social a { color: var(--fc-accent); display: inline-flex; transition: opacity 0.2s; }
+.fc-social a:hover { opacity: 0.7; }
+.fc-social { align-items: center; }
+.fc-web a { font: 500 12px var(--fc-sans); letter-spacing: 0.04em; text-decoration: none; }
 
-/* The statement */
-.fd-body { margin: 0 6cqw; padding: 4cqw 3cqw 0; border-top: 1px solid var(--fd-line); }
-.fd-ne-open { margin: 0; text-align: center; font: 600 2.4cqw/1.5 var(--font-nepali); color: var(--fd-ink); }
-.fd-letter { margin-top: 4cqw; columns: 2; column-gap: 5cqw; font: 400 1.95cqw/1.62 var(--fd-text); color: var(--fd-soft); }
-.fd-letter p { margin: 0 0 1.6cqw; break-inside: avoid-column; }
-.fd-lead { font: italic 500 1.15em var(--fd-text); color: var(--fd-ink); }
-.fd-quote { break-inside: avoid; margin: 0.4cqw 0 2cqw; padding: 2cqw 0; border-block: 1px solid var(--fd-line); font: italic 400 3.4cqw/1.15 var(--fd-display); color: var(--fd-ink); }
+/* The square arrows on the right edge */
+.fc-arrows { position: absolute; right: -2.4%; top: 62%; display: grid; background: var(--fc-accent); }
+.fc-arrows button { display: grid; place-items: center; width: 48px; height: 50px; border: 0; background: transparent; color: #0b0b0b; cursor: pointer; transition: background 0.2s; }
+.fc-arrows button:hover { background: rgba(0, 0, 0, 0.08); }
+.fc-arrows button:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
 
-/* The sign-off, with the signature at the end */
-.fd-sign { margin-top: 3.4cqw; display: grid; justify-items: end; text-align: right; }
-.fd-sincerely { margin: 0; font: italic 400 2.2cqw var(--fd-text); color: var(--fd-soft); }
-.fd-sig { width: 26cqw; height: auto; margin: 0.6cqw -1cqw 0 0; filter: invert(1); }
-.fd-name { margin: 0.4cqw 0 0; font: 400 3.4cqw/1 var(--fd-display); }
-.fd-role { margin: 0.6cqw 0 0; font: 600 1.1cqw var(--font-sans); letter-spacing: 0.2em; text-transform: uppercase; color: var(--fd-soft); }
-.fd-date { margin: 0.4cqw 0 0; font: italic 400 1.6cqw var(--fd-text); color: var(--fd-faint); }
-
-.fd-foot { margin: 5cqw 6cqw 0; padding: 2.6cqw 0 3.4cqw; border-top: 1px solid var(--fd-line); display: flex; justify-content: space-between; align-items: baseline; gap: 2cqw; }
-.fd-ne { margin: 0; font: 600 1.8cqw var(--font-nepali); }
-.fd-handle { margin: 0; font: 700 1.3cqw var(--font-sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--fd-soft); }
-
-/* Phones: the same sheet, with sizes set for reading */
-@media (max-width: 640px) {
-  .fd { padding: 14px 10px 36px; }
-  .fd-top { padding-top: 18px; font-size: 9.5px; letter-spacing: 0.24em; }
-  .fd-hero { height: 128vw; }
-  .fd-photo { right: -14vw; width: 84vw; height: 112vw; }
-  .fd-title { left: 16px; top: 18vw; font-size: 15vw; }
-  .fd-mark { right: 14px; top: 6vw; gap: 8px; padding-left: 8px; }
-  .fd-mono { font-size: 30px; }
-  .fd-small { display: none; }
-  .fd-dots { left: 16px; bottom: 7vw; font-size: 9px; max-width: 46vw; }
-  .fd-dots b { font-size: 11px; }
-  .fd-body { margin: 0 16px; padding: 22px 0 0; }
-  .fd-ne-open { font-size: 16px; }
-  .fd-letter { columns: 1; margin-top: 20px; font-size: 16px; }
-  .fd-letter p { margin-bottom: 14px; }
-  .fd-quote { margin: 6px 0 18px; padding: 14px 0; font-size: 26px; }
-  .fd-sign { margin-top: 18px; }
-  .fd-sincerely { font-size: 16px; }
-  .fd-sig { width: 58%; }
-  .fd-name { font-size: 28px; }
-  .fd-role { font-size: 10px; }
-  .fd-date { font-size: 13px; }
-  .fd-foot { margin: 28px 16px 0; padding: 16px 0 22px; flex-direction: column; gap: 8px; }
-  .fd-ne { font-size: 15px; }
-  .fd-handle { font-size: 11px; }
+/* Smaller screens: the card grows to its content */
+@media (max-width: 860px) {
+  .fc { padding: 28px 14px 56px; }
+  .fc-card { aspect-ratio: auto; display: flex; flex-direction: column; padding: 26px 22px 30px 54px; }
+  .fc-logo { position: static; width: 132px; }
+  .fc-side { left: 16px; top: 120px; bottom: 30px; }
+  .fc-photo { position: relative; left: auto; top: auto; width: 100%; height: auto; aspect-ratio: 4 / 5; margin-top: 22px; }
+  .fc-info { position: static; margin-top: 26px; }
+  .fc-text { min-height: 11em; }
+  .fc-arrows { position: static; margin-top: 22px; grid-auto-flow: column; justify-self: start; width: max-content; }
 }
+@media (prefers-reduced-motion: reduce) { .fc * { transition: none !important; } }
