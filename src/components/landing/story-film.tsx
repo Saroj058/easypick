@@ -100,6 +100,34 @@ const FIN = `<div class="sf-fin-flip"></div>
   <div class="sf-fin-name" aria-hidden="true"><span class="sf-fin-badge"><img src="${MARK}" alt=""></span><span class="sf-fin-letters">${NAME.map((c) => `<span>${c}</span>`).join("")}</span></div>
   <div class="sf-fin-sub">Men's streetwear · Kathmandu</div>`;
 
+// What the store promises, either side of the cards at the end (only what the store already does).
+const SIDE_L = [
+  { no: "01", title: "Fixed prices", line: "The price on the tag is the price. No bargaining." },
+  { no: "02", title: "Your size in cm", line: "Every piece measured, so you know it fits." },
+];
+const SIDE_R = [
+  { no: "03", title: "Pay with eSewa", line: "Buy now, pay, done. No account needed." },
+  { no: "04", title: "Same price, everywhere", line: "Online or in the store. 7-day size swap." },
+];
+
+/** One side of the end screen: the promises in full on a wide screen, as one line up the edge on a phone. */
+function Side({ side, items }: { side: "l" | "r"; items: typeof SIDE_L }) {
+  return (
+    <aside className={`sf-side ${side}`}>
+      {items.map((x) => (
+        <div key={x.no} className="sf-side-item">
+          <span className="sf-side-no">{x.no}</span>
+          <b>{x.title}</b>
+          <span className="sf-side-line">{x.line}</span>
+        </div>
+      ))}
+      <span className="sf-side-v" aria-hidden>
+        {items.map((x) => x.title).join("  ·  ")}
+      </span>
+    </aside>
+  );
+}
+
 /** A man reading the story, with the most natural male English voice the device has. Off until asked for. */
 function makeVoice() {
   let on = false;
@@ -286,6 +314,9 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
     const mode = (playing: boolean) => {
       film.classList.toggle("sf-done", !playing);
       setDone(!playing);
+      // Sound and Voice belong to the story: once it has ended they go, and the hum fades out.
+      if (!playing && btn.sound.getAttribute("aria-pressed") === "true") btn.sound.click();
+      btn.sound.hidden = btn.voiceBtn.hidden = !playing;
       btn.skip.hidden = btn.pause.hidden = !playing;
       btn.replay.hidden = playing;
     };
@@ -622,12 +653,10 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
       </div>
       <div className="sf-scenes" aria-hidden />
       <div className="sf-fin" hidden />
-      {/* The end: the words, the logo and Shop now on top; the pieces below, turning over at random */}
+      {/* The end: the logo and Shop now on top; the pieces below, turning over at random, with what the store
+          promises on either side */}
       <div className="sf-end">
         <div className="sf-end-top">
-          <p className="sf-end-words" aria-hidden>
-            <span>Pick it.</span> <span>Pay it.</span> <span>Wear it.</span>
-          </p>
           <div className="sf-end-name" aria-hidden>
             <span className="sf-end-badge">
               <Image src={MARK} alt="" width={146} height={148} />
@@ -639,7 +668,11 @@ export function StoryFilm({ pieces }: { pieces: MosaicPiece[] }) {
             Shop now
           </Link>
         </div>
-        <HeroMosaic pieces={pieces} play={done} />
+        <div className="sf-end-body">
+          <Side side="l" items={SIDE_L} />
+          <HeroMosaic pieces={pieces} play={done} />
+          <Side side="r" items={SIDE_R} />
+        </div>
       </div>
       <div className="sf-bar" aria-hidden>
         <i />

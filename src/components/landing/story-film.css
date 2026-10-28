@@ -150,40 +150,72 @@
 
 /* Shop now: fades in under the logo once the film has ended */
 /* The end screen, over the film once it has ended: the words, the logo and Shop now on top; the cards below */
-.sf .sf-end { position: absolute; inset: 0; z-index: 7; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: clamp(14px, 2.4vh, 28px); padding: calc(var(--sf-head) + clamp(14px, 2.6vh, 30px)) max(16px, 4vw) 62px; background: #fff; opacity: 0; visibility: hidden; transition: opacity 0.7s, visibility 0s 0.7s; }
+.sf .sf-end { position: absolute; inset: 0; z-index: 7; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: clamp(12px, 2vh, 22px); padding: calc(var(--sf-head) + clamp(12px, 2.2vh, 24px)) max(16px, 3vw) 60px; background: #fff; opacity: 0; visibility: hidden; transition: opacity 0.7s, visibility 0s 0.7s; }
 .sf.sf-done .sf-end { opacity: 1; visibility: visible; transition: opacity 0.7s, visibility 0s; }
-.sf .sf-end-top { display: grid; justify-items: center; gap: 10px; text-align: center; }
-.sf .sf-end-words { margin: 0; font-family: var(--sf-word); font-stretch: 62%; font-weight: 900; font-size: clamp(20px, 2.5vw, 34px); line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; }
-.sf .sf-end-name { display: flex; align-items: center; gap: 0.3em; font-family: var(--sf-word); font-stretch: 125%; font-weight: 800; font-size: clamp(28px, 3.9vw, 52px); letter-spacing: 0.06em; line-height: 1; }
+.sf .sf-end-top { display: grid; justify-items: center; gap: 8px; text-align: center; }
+.sf .sf-end-name { display: flex; align-items: center; gap: 0.3em; font-family: var(--sf-word); font-stretch: 125%; font-weight: 800; font-size: clamp(26px, 3.2vw, 44px); letter-spacing: 0.06em; line-height: 1; }
 .sf .sf-end-badge { width: 1.05em; height: 1.05em; border-radius: 50%; background: var(--sf-ink); display: grid; place-items: center; flex: none; }
 .sf .sf-end-badge img { width: 56%; height: auto; }
 .sf .sf-end-sub { margin: 0; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #6d6c68; }
-.sf .sf-shop { margin-top: 4px; padding: 11px 26px; border-radius: 999px; background: var(--sf-ink); color: #fff; font: 600 14px var(--font-sans); letter-spacing: 0.02em; text-decoration: none; transition: background 0.2s; }
+.sf .sf-shop { margin-top: 2px; padding: 10px 26px; border-radius: 999px; background: var(--sf-ink); color: #fff; font: 600 14px var(--font-sans); letter-spacing: 0.02em; text-decoration: none; transition: background 0.2s; }
 .sf .sf-shop:hover { background: #2a2a2a; }
 .sf .sf-end-top > * { opacity: 0; transform: translateY(10px); transition: opacity 0.6s, transform 0.7s var(--sf-soft); }
 .sf.sf-done .sf-end-top > * { opacity: 1; transform: none; }
 .sf.sf-done .sf-end-top > :nth-child(2) { transition-delay: 0.1s; }
 .sf.sf-done .sf-end-top > :nth-child(3) { transition-delay: 0.2s; }
-.sf.sf-done .sf-end-top > :nth-child(4) { transition-delay: 0.3s; }
+
+/* The cards in the middle, the promises either side */
+.sf .sf-end-body { min-height: 0; display: grid; grid-template-columns: minmax(150px, 230px) minmax(0, 1fr) minmax(150px, 230px); gap: clamp(16px, 2.4vw, 40px); align-items: center; }
+.sf .sf-side { display: grid; gap: clamp(22px, 4vh, 44px); opacity: 0; transition: opacity 0.8s 0.4s, transform 0.9s var(--sf-soft) 0.4s; }
+.sf .sf-side.l { text-align: right; justify-items: end; transform: translateX(-20px); }
+.sf .sf-side.r { text-align: left; justify-items: start; transform: translateX(20px); }
+.sf.sf-done .sf-side { opacity: 1; transform: none; }
+.sf .sf-side-item { display: grid; gap: 6px; max-width: 220px; }
+.sf .sf-side-no { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; color: #8b8a85; }
+.sf .sf-side-item b { font-family: var(--sf-word); font-stretch: 115%; font-weight: 800; font-size: clamp(17px, 1.5vw, 22px); letter-spacing: 0.01em; line-height: 1.1; text-transform: uppercase; }
+.sf .sf-side-line { font-size: 13.5px; line-height: 1.5; color: #55544f; }
+.sf .sf-side-item::before { content: ""; width: 28px; height: 1px; background: var(--sf-ink); }
+.sf .sf-side.l .sf-side-item::before { justify-self: end; }
+.sf .sf-side-v { display: none; }
 
 /* The cards: a collage of pieces, each one turning over now and then */
 .sf .sf-mosaic { position: relative; justify-self: center; height: 100%; aspect-ratio: 1.62; max-width: 100%; }
-.sf .sf-tile { position: absolute; overflow: hidden; border-radius: 4px; background: #efefeb; opacity: 0; transform: translateY(18px) scale(0.96); transition: opacity 0.6s, transform 0.8s var(--sf-soft); }
+.sf .sf-tile { position: absolute; overflow: hidden; border-radius: 6px; background: #f1f1ee; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 22px 44px -28px rgba(0, 0, 0, 0.45); opacity: 0; transform: translateY(18px) scale(0.96); transition: opacity 0.6s, transform 0.8s var(--sf-soft), box-shadow 0.4s; }
 .sf.sf-done .sf-tile { opacity: 1; transform: none; }
-.sf .sf-tile-img { opacity: 0; transition: transform 0.6s var(--sf-soft); }
+.sf .sf-tile:hover { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12), 0 30px 54px -26px rgba(0, 0, 0, 0.55); }
+.sf .sf-tile-img { opacity: 0; transition: transform 0.8s var(--sf-soft); }
 .sf .sf-tile-img.on { opacity: 1; }
-.sf .sf-tile:hover .sf-tile-img.on { transform: scale(1.04); }
-.sf .sf-tile-price { position: absolute; left: 8px; bottom: 8px; padding: 3px 7px; border-radius: 2px; background: rgba(255, 255, 255, 0.92); color: var(--sf-ink); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; }
+.sf .sf-tile:hover .sf-tile-img.on { transform: scale(1.05); }
+/* The caption: name and price on a soft dark fade at the foot */
+.sf .sf-tile-cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 26px 12px 10px; background: linear-gradient(to top, rgba(10, 10, 10, 0.62), transparent); color: #fff; }
+.sf .sf-tile-cap .n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em; }
+.sf .sf-tile-cap .p { flex: none; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; }
+/* A narrow card has room for the price only */
+.sf .sf-tile.slim .sf-tile-cap .n { display: none; }
+
+/* Narrower screens: the promises become one line up each edge */
+@media (max-width: 1023px) {
+  .sf .sf-end-body { grid-template-columns: 18px minmax(0, 1fr) 18px; gap: 8px; }
+  .sf .sf-side-item { display: none; }
+  .sf .sf-side-v { display: block; writing-mode: vertical-rl; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: #6d6c68; white-space: nowrap; justify-self: center; }
+  .sf .sf-side.l .sf-side-v { transform: rotate(180deg); }
+  .sf .sf-mosaic { aspect-ratio: auto; width: 100%; }
+}
 @media (max-width: 640px) {
-  .sf .sf-end { padding-bottom: 58px; }
-  .sf .sf-end-top { gap: 8px; }
-  .sf .sf-shop { padding: 10px 22px; font-size: 13px; }
-  .sf .sf-tile-price { left: 4px; bottom: 4px; padding: 2px 4px; font-size: 8.5px; }
+  .sf .sf-end { padding-left: 10px; padding-right: 10px; padding-bottom: 56px; }
+  .sf .sf-end-top { gap: 6px; }
+  .sf .sf-shop { padding: 9px 22px; font-size: 13px; }
+  .sf .sf-tile { border-radius: 4px; }
+  .sf .sf-tile-cap { padding: 16px 5px 4px; }
+  .sf .sf-tile-cap .n { display: none; }
+  .sf .sf-tile-cap .p { font-size: 8.5px; letter-spacing: 0.02em; }
 }
 
 /* Progress (at the foot, clear of the site's header) and the controls */
 .sf .sf-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(0, 0, 0, 0.06); z-index: 8; }
 .sf .sf-bar i { display: block; height: 100%; width: 0; background: var(--sf-ink); }
+/* Once the story has ended, no line between the film and the rail below (owner, 28 Oct 2026) */
+.sf.sf-done .sf-bar { display: none; }
 .sf .sf-ctl { position: absolute; right: 16px; bottom: 14px; z-index: 8; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .sf .sf-ctl button { font: 500 12px var(--font-sans); background: rgba(255, 255, 255, 0.86); color: var(--sf-ink); border: 1px solid rgba(0, 0, 0, 0.14); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
 .sf .sf-ctl button:hover { border-color: var(--sf-ink); }

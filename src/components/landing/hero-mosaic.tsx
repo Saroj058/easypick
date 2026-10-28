@@ -111,7 +111,7 @@ export function HeroMosaic({ pieces, play }: { pieces: MosaicPiece[]; play: bool
             }}
             href={`/product/${p.slug}`}
             aria-label={`${p.name}, ${formatPrice(p.price)}`}
-            className="sf-tile"
+            className={`sf-tile${w < 20 ? " slim" : ""}`}
             style={{ left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%`, transitionDelay: `${i * 60}ms` }}
           >
             {[...new Set([c.cur, c.nxt])].map((k) => (
@@ -125,7 +125,10 @@ export function HeroMosaic({ pieces, play }: { pieces: MosaicPiece[]; play: bool
                 className={`sf-tile-img !absolute inset-0 !aspect-auto h-full w-full ${k === c.cur ? "on" : ""}`}
               />
             ))}
-            <span className="sf-tile-price">{formatPrice(p.price)}</span>
+            <span className="sf-tile-cap">
+              <span className="n">{p.name}</span>
+              <span className="p">{formatPrice(p.price)}</span>
+            </span>
           </Link>
         );
       })}
