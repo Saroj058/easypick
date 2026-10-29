@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 
 import { showBagToast, useAddToBag } from "@/components/bag-gate";
 import { openBuyNow } from "@/components/buy-sheets";
+import { PriceTag } from "@/components/hang-tag";
 import { ProductImage } from "@/components/product-image";
 import { TrackForm } from "@/app/track/track-form";
 import { formatPrice } from "@/lib/format";
@@ -42,6 +43,8 @@ export type ShowroomData = {
   fresh: number;
   vault: { pieces: number; brands: { name: string; logo: string | null }[] };
   drop: { name: string; at: string } | null;
+  /** A few Designer Fits, for the small window on the left. */
+  fits: { label: string; group: string; total: number; pieces: { name: string; cutout: string | null; photo: Img; category: Category; hex: string }[] }[];
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -52,6 +55,48 @@ const oneSize = (p: ShowPiece) => p.sizes.length > 0 && p.sizes.every((s) => s.s
 function Shot({ p, big }: { p: ShowPiece; big?: boolean }) {
   if (p.cutout) return <Image src={p.cutout} alt={big ? p.name : ""} fill sizes={big ? "(min-width: 1024px) 560px, 80vw" : "80px"} className="object-contain" priority={big} />;
   return <ProductImage image={p.photo} category={p.category} colourHex={p.hex} decorative={!big} sizes={big ? "(min-width: 1024px) 560px, 80vw" : "80px"} ground="bg-transparent" className="!absolute inset-0 !aspect-auto h-full w-full" priority={big} />;
+}
+
+/** A small window onto Designer Fits: one fit at a time, its pieces and what it costs together. */
+function FitsWindow({ fits }: { fits: ShowroomData["fits"] }) {
+  const [i, setI] = useState(0);
+  const f = fits[i];
+  return (
+    <div className="sr-fits">
+      <div className="sr-fits-head">
+        <span className="sr-meta">Designer Fits</span>
+        {fits.length > 1 && (
+          <span className="sr-fits-nav">
+            {fits.map((x, k) => (
+              <button key={x.label + k} type="button" aria-label={`Show the ${x.label} fit`} aria-pressed={k === i} onClick={() => setI(k)} />
+            ))}
+          </span>
+        )}
+      </div>
+      <Link href="/fits" className="sr-fits-body">
+        <span className="sr-fits-pics">
+          {f.pieces.slice(0, 3).map((p) => (
+            <span key={p.name} className="sr-fits-pic">
+              {p.cutout ? (
+                <Image src={p.cutout} alt="" fill sizes="60px" className="object-contain" />
+              ) : (
+                <ProductImage image={p.photo} category={p.category} colourHex={p.hex} decorative sizes="60px" ground="bg-transparent" className="!absolute inset-0 !aspect-auto h-full w-full" />
+              )}
+            </span>
+          ))}
+        </span>
+        <span className="sr-fits-text">
+          <b>{f.label}</b>
+          <span>
+            {f.group} · {formatPrice(f.total)}
+          </span>
+          <em>
+            See the fits <ArrowRight aria-hidden className="inline h-3 w-3" strokeWidth={1.6} />
+          </em>
+        </span>
+      </Link>
+    </div>
+  );
 }
 
 /** The next drop, counting down. */
@@ -145,6 +190,9 @@ export function Showroom({ data }: { data: ShowroomData }) {
           {p.line && <p className="sr-detail">{p.line}</p>}
         </div>
 
+        {/* Designer Fits: a small window onto the fits (owner, 28 Oct 2026) */}
+        {data.fits.length > 0 && <FitsWindow fits={data.fits} />}
+
         <div className="sr-sizes">
           <div className="sr-sizes-head">
             <span className="sr-meta">Your size</span>
@@ -195,6 +243,10 @@ export function Showroom({ data }: { data: ShowroomData }) {
         <Link href={`/product/${p.slug}`} className={`sr-figure ${out ? "out" : ""}`} aria-label={`${p.name}, ${formatPrice(p.price)}`}>
           <Shot p={p} big />
         </Link>
+        {/* The store's hang tag on the piece: its fixed price and its code (owner, 28 Oct 2026) */}
+        <div key={p.slug} className={`sr-hangtag ${out ? "out" : ""}`}>
+          <PriceTag price={formatPrice(p.price)} sku={(pick ?? p.sizes[0])?.sku ?? p.slug} />
+        </div>
         <span className="sr-idx sr-meta">
           {pad(cur + 1)} / {pad(pieces.length)}
         </span>

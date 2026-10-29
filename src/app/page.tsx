@@ -95,6 +95,7 @@ export default async function HomePage() {
     });
   const stocked = liveRange.filter((p) => left(p) > 0);
   const vaultLive = products.filter((p) => p.vault && (p.status === "live" || p.status === "sold_out"));
+  const { looks } = designerFits(products, await getSavedLooks());
   const showroom = {
     pieces: showPieces,
     inStock: stocked.length,
@@ -108,10 +109,15 @@ export default async function HomePage() {
       }),
     },
     drop: next ? { name: next.name, at: next.releaseAt } : null,
+    fits: looks.slice(0, 4).map((l) => ({
+      label: l.label,
+      group: l.groupLabel,
+      total: l.pieces.reduce((n, x) => n + x.price, 0),
+      pieces: l.pieces.map((x) => ({ name: x.name, cutout: x.cutout ?? null, photo: x.image, category: x.category, hex: x.hex })),
+    })),
   };
   const offerList = await getOffers();
 
-  const { looks } = designerFits(products, await getSavedLooks());
 
   const storeInfo = await getStoreInfo();
 
