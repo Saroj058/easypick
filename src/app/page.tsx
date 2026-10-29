@@ -17,7 +17,6 @@ import { ktmDay } from "@/lib/ktm-day";
 import { getOffers } from "@/lib/offers";
 import { getStoreInfo } from "@/lib/store-info";
 import { sellable } from "@/lib/inventory";
-import { TrackForm } from "@/app/track/track-form";
 import { jsonLd } from "@/lib/json-ld";
 import { site } from "@/lib/site";
 import { getDropTimeline, getProducts } from "@/lib/store";
@@ -193,20 +192,7 @@ export default async function HomePage() {
         </div>
       )}
 
-      {/* Track an order: no account needed */}
-      {on("track") && (
-      <section aria-labelledby="track-title" style={at("track")} className="border-t border-mist py-7 md:py-8">
-        <div className="container-ep grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-end lg:gap-10">
-          <div className="lg:pb-2.5">
-            <h2 id="track-title" className="text-xl font-bold">
-              {home.track.title}
-            </h2>
-            <p className="text-[13px] text-steel-dark">{home.track.line}</p>
-          </div>
-          <TrackForm compact id="home-track" />
-        </div>
-      </section>
-      )}
+      {/* Track an order lives in the showroom at the top now (owner, 29 Oct 2026: "remove the track order as it's already on top") */}
 
       </div>
       {next && <RefreshAt at={next.releaseAt} />}

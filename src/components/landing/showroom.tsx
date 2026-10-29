@@ -329,15 +329,17 @@ export function Showroom({ data }: { data: ShowroomData }) {
           </span>
         </Link>
 
-        <div className="sr-mod">
+        <section className="sr-mod" aria-labelledby="hero-track-title">
           <div className="sr-mod-head">
-            <span className="sr-mod-title">Track an order</span>
+            <h2 id="hero-track-title" className="sr-mod-title">
+              Track an order
+            </h2>
             <span className="sr-meta">No login</span>
           </div>
           <div className="mt-3">
             <TrackForm narrow id="hero-track" />
           </div>
-        </div>
+        </section>
 
         <div className="sr-mod">
           <div className="sr-mod-head">

@@ -174,11 +174,12 @@ test("track an order page rejects wrong details", async ({ page }) => {
 
 test("track an order from the home page @phone", async ({ page }) => {
   await page.goto("/");
-  const track = page.getByRole("region", { name: "Track an order." });
+  // In the showroom at the top (owner, 29 Oct 2026).
+  const track = page.getByRole("region", { name: "Track an order" });
   await track.scrollIntoViewIfNeeded();
   await track.getByLabel("Order number").fill("EP-9999999");
   await track.getByLabel("Mobile number").fill(randomPhone());
-  await track.getByRole("button", { name: "Track order" }).click();
+  await track.getByRole("button", { name: "Track", exact: true }).click();
   await expect(track.getByRole("alert")).toContainText(/\w/);
 });
 
