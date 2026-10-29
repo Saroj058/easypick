@@ -12,6 +12,7 @@ import { HangTag } from "@/components/hang-tag";
 import { ProductImage } from "@/components/product-image";
 import { TrackForm } from "@/app/track/track-form";
 import { formatPrice } from "@/lib/format";
+import { fitSlot } from "@/lib/occasions";
 import { MY_SIZES, setMySize, useMySize } from "@/lib/my-size";
 import type { Category, Product, ProductImage as Img, Size } from "@/lib/types";
 
@@ -59,39 +60,84 @@ function Shot({ p, big }: { p: ShowPiece; big?: boolean }) {
   return <ProductImage image={p.photo} category={p.category} colourHex={p.hex} decorative={!big} sizes={big ? "(min-width: 1024px) 560px, 80vw" : "80px"} ground="bg-transparent" className="!absolute inset-0 !aspect-auto h-full w-full" priority={big} />;
 }
 
-/** Designer Fits as small cards (owner, 29 Oct 2026): each fit's pieces, its name and what it costs together. */
-function FitsCards({ fits }: { fits: ShowroomData["fits"] }) {
+// Where each piece lies in the fit, as on the Fits page (fits-showcase.tsx): percent of a 10:17 box [x0, y0, x1, y1].
+type Slot = ReturnType<typeof fitSlot>;
+function lay(slot: Slot, layered: boolean, set: boolean): { b: [number, number, number, number]; z: number; r: number; pos: string } {
+  if (slot === "cap") return { b: [38, 0, 62, 10], z: 40, r: -8, pos: "center" };
+  if (slot === "layer") return { b: [6, 10, 80, 52], z: 30, r: -2.5, pos: "bottom" };
+  if (slot === "top") {
+    if (set) return { b: [14, 10, 86, 94], z: 20, r: 0, pos: "top" };
+    if (layered) return { b: [16, 15, 88, 57], z: 20, r: 1.5, pos: "bottom" };
+    return { b: [12, 11, 88, 50], z: 20, r: 0, pos: "bottom" };
+  }
+  return { b: [23, 45, 77, 94], z: 10, r: 0, pos: "top" };
+}
+
+/**
+ * Designer Fits as one small card, the Fits page in miniature (owner, 29 Oct 2026): the fit laid out piece by piece
+ * with its name faint behind it, the occasion, its pieces and what they cost together; arrows step through the fits.
+ */
+function FitCard({ fits }: { fits: ShowroomData["fits"] }) {
+  const [i, setI] = useState(0);
+  const f = fits[i];
+  const worn = (["cap", "layer", "top", "bottom"] as Slot[]).flatMap((slot) => {
+    const p = f.pieces.find((x) => fitSlot(x.category) === slot);
+    return p ? [{ slot, p }] : [];
+  });
+  const layered = worn.some((w) => w.slot === "layer");
+  const set = worn.some((w) => w.slot === "top" && w.p.category === "co-ords");
   return (
     <div className="sr-fits">
       <div className="sr-fits-head">
-        <p className="sr-meta">Designer Fits</p>
-        <Link href="/fits" className="sr-fits-all">
-          See all <ArrowRight aria-hidden className="inline h-3 w-3" strokeWidth={1.6} />
-        </Link>
+        <p className="sr-meta">
+          Designer Fits · {pad(i + 1)} / {pad(fits.length)}
+        </p>
+        {fits.length > 1 && (
+          <span className="sr-fits-nav">
+            <button type="button" aria-label="Previous fit" onClick={() => setI((n) => (n - 1 + fits.length) % fits.length)}>
+              <ChevronLeft aria-hidden className="h-3.5 w-3.5" strokeWidth={1.6} />
+            </button>
+            <button type="button" aria-label="Next fit" onClick={() => setI((n) => (n + 1) % fits.length)}>
+              <ChevronRight aria-hidden className="h-3.5 w-3.5" strokeWidth={1.6} />
+            </button>
+          </span>
+        )}
       </div>
-      <div className="sr-fits-list">
-        {fits.slice(0, 2).map((f) => (
-          <Link key={f.label} href="/fits" className="sr-fit">
-            <span className="sr-fit-pics">
-              {f.pieces.slice(0, 3).map((p) => (
-                <span key={p.name} className="sr-fit-pic">
+      <Link href="/fits" className="sr-fit" aria-label={`${f.label}, ${f.group}, ${formatPrice(f.total)}. See the fits`}>
+        <span key={f.label} className="sr-fit-stage" aria-hidden>
+          <span className="sr-fit-ghost">{f.label}</span>
+          <span className="sr-fit-lay">
+            {worn.map(({ slot, p }) => {
+              const { b, z, r, pos } = lay(slot, layered, set);
+              return (
+                <span key={slot} className="sr-fit-piece" style={{ left: `${b[0]}%`, top: `${b[1]}%`, width: `${b[2] - b[0]}%`, height: `${b[3] - b[1]}%`, zIndex: z, transform: r ? `rotate(${r}deg)` : undefined }}>
                   {p.cutout ? (
-                    <Image src={p.cutout} alt="" fill sizes="80px" className="object-contain" />
+                    <Image src={p.cutout} alt="" fill sizes="90px" className="object-contain" style={{ objectPosition: `center ${pos}` }} />
                   ) : (
-                    <ProductImage image={p.photo} category={p.category} colourHex={p.hex} decorative sizes="80px" ground="bg-transparent" className="!absolute inset-0 !aspect-auto h-full w-full" />
+                    <ProductImage image={p.photo} category={p.category} colourHex={p.hex} decorative sizes="90px" ground="bg-transparent" className="!absolute inset-0 !aspect-auto h-full w-full" />
                   )}
                 </span>
-              ))}
-            </span>
-            <span className="sr-fit-text">
-              <b>{f.label}</b>
-              <span>
-                {f.group} · {formatPrice(f.total)}
-              </span>
-            </span>
-          </Link>
-        ))}
-      </div>
+              );
+            })}
+          </span>
+        </span>
+        <span className="sr-fit-text">
+          <span className="sr-fit-group">{f.group}</span>
+          <b>{f.label}</b>
+          <span className="sr-fit-list">
+            {worn.map(({ slot, p }) => (
+              <span key={slot}>{p.name}</span>
+            ))}
+          </span>
+          <span className="sr-fit-total">
+            <span>All {worn.length} pieces</span>
+            <strong>{formatPrice(f.total)}</strong>
+          </span>
+          <em>
+            See the fit <ArrowRight aria-hidden className="inline h-3 w-3" strokeWidth={1.6} />
+          </em>
+        </span>
+      </Link>
     </div>
   );
 }
@@ -127,7 +173,7 @@ function Countdown({ at }: { at: string }) {
 /**
  * The top of the home page: the showroom (owner, 28 Oct 2026, design 2 of the five). One piece stands large on a calm
  * stage wearing the store's hang tag (its price, its cm, its code); on the left, its name and line, your size (the rail
- * below uses it too), Quick buy and the bag, then Designer Fits cards; a strip of the rail's pieces switches it; the
+ * below uses it too), Quick buy and the bag, then a small Designer Fits card; a strip of the rail's pieces switches it; the
  * Vault, tracking an order and the next drop sit as small boxes on the right. Real pieces, prices and stock.
  */
 export function Showroom({ data }: { data: ShowroomData }) {
@@ -224,7 +270,7 @@ export function Showroom({ data }: { data: ShowroomData }) {
           </div>
         </div>
 
-        {data.fits.length > 0 && <FitsCards fits={data.fits} />}
+        {data.fits.length > 0 && <FitCard fits={data.fits} />}
       </section>
 
       {/* Centre: the stage */}
