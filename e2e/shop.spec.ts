@@ -449,14 +449,13 @@ test("the arrow keys move the strip in view, with no click first (owner, 18 Oct 
   await expect(centre).toHaveText(before);
 });
 
-test("home: the store as one line with a way to visit, and buying for someone as one button", async ({ page }) => {
+test("home: the live store with a way to visit, and buying for someone beside it (owner, 29 Oct 2026)", async ({ page }) => {
   await page.goto("/");
-  // How the store and self-checkout work is told in the home story; here it is just a way to come in person.
-  const store = page.getByRole("region", { name: "Come in person" });
-  await store.scrollIntoViewIfNeeded();
-  await expect(store.getByRole("link", { name: /Visit the store/ })).toHaveAttribute("href", "/visit");
-  expect((await store.boundingBox())!.height).toBeLessThan(140);
-  const gift = page.getByRole("region", { name: "Buying for someone?" });
+  const end = page.getByRole("region", { name: "Come in person." });
+  await end.scrollIntoViewIfNeeded();
+  await expect(end.getByRole("link", { name: /^Visit the store/ }).last()).toHaveAttribute("href", "/visit");
+  await expect(end.getByRole("link", { name: "Walk it in 3D" })).toHaveAttribute("href", "/visit/tour");
+  await expect(end.getByLabel("Opening hours this week")).toBeVisible();
+  const gift = page.getByRole("article", { name: "Buying for someone?" });
   await expect(gift.getByRole("link", { name: /Send a gift/ })).toHaveAttribute("href", "/gift");
-  expect((await gift.boundingBox())!.height).toBeLessThan(140);
 });

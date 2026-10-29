@@ -4,8 +4,7 @@ import { join } from "node:path";
 import type { Metadata } from "next";
 
 import { FitsTeaser } from "@/components/home/fits-teaser";
-import { GiftBlock } from "@/components/home/gift-block";
-import { StoreBand } from "@/components/home/store-band";
+import { StoreAndGift } from "@/components/home/store-and-gift";
 import { Rail } from "@/components/home/rail";
 import { Vault, vaultBrands } from "@/components/home/vault";
 import { LandingHero } from "@/components/landing/landing-hero";
@@ -179,16 +178,10 @@ export default async function HomePage() {
 
 
       {/* Buying for someone: one quiet line, by Track an order (owner, 19 Oct 2026). */}
-      {on("gift") && (
-        <div style={at("gift")}>
-          <GiftBlock copy={home.gift} />
-        </div>
-      )}
-
-      {/* Our store and self-checkout, in one small band (owner, 19 Oct 2026); each half has its own switch. */}
-      {(on("store") || on("checkout")) && (
-        <div style={{ order: Math.min(on("store") ? at("store").order : 99, on("checkout") ? at("checkout").order : 99) }}>
-          <StoreBand info={storeInfo} store={on("store")} checkout={on("checkout")} />
+      {/* The end: the live store and sending a gift (owner, 29 Oct 2026, design 4 of ten); each half has its own switch. */}
+      {(on("store") || on("gift")) && (
+        <div style={{ order: Math.min(on("store") ? at("store").order : 99, on("gift") ? at("gift").order : 99) }}>
+          <StoreAndGift info={storeInfo} store={on("store")} gift={on("gift")} copy={home.gift} />
         </div>
       )}
 
