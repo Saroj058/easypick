@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ChevronIcon } from "@/components/icons";
-import { PageIntro } from "@/components/page-intro";
+import { GuideShowcase } from "@/components/how-it-works";
 import { jsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = {
   title: "How it works",
-  description: "Pick, try, pay by QR with eSewa, and walk out. How Easypick's self-checkout store in Kathmandu works.",
+  description: "Films of the real site: buying, gifts, gift cards, Designer Fits, your size, the Vault and drops. Then how the self-checkout store works.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -56,14 +56,19 @@ export default function HowItWorksPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(faqLd)} />
-      <PageIntro dark eyebrow="How it works" title="Pick. Pay. Wear." lead="A clothing store without the queue or the pressure. Here's what a visit looks like." />
+      {/* Every film of the site in one place, like Designer Fits (owner, 29 Oct 2026); then a visit to the store. */}
+      <GuideShowcase />
 
-      <section className="section">
+      <section id="questions" className="section scroll-mt-24">
+        <div className="container-ep mb-10">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-steel-dark">In the store</p>
+          <h2 className="display mt-2 text-[34px] md:text-[44px]">Pick. Pay. Wear.</h2>
+        </div>
         <ol className="container-ep grid gap-12 md:grid-cols-5 md:gap-8">
           {steps.map((s) => (
             <li key={s.n}>
               <span className="font-mono text-sm text-steel-dark">{s.n}</span>
-              <h2 className="display mt-2 text-4xl">{s.t}</h2>
+              <h3 className="display mt-2 text-4xl">{s.t}</h3>
               <p className="mt-2 text-[15px] text-steel-dark">{s.d}</p>
             </li>
           ))}

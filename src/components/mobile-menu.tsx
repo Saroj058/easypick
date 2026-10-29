@@ -48,7 +48,7 @@ const GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Visit",
     links: [
       { href: "/visit", label: "The store" },
-      { href: "/how-it-works", label: "How the store works" },
+      { href: "/how-it-works", label: "How it works" },
       { href: "/visit/tour", label: "Walk the store in 3D" },
       { href: "/about", label: "About" },
       { href: "/about/founder", label: "About the founder" },

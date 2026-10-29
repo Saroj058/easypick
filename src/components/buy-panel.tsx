@@ -16,7 +16,6 @@ import { useMe } from "./session";
 import { ArrowIcon, GiftIcon } from "./icons";
 import { useFitProfile } from "./fit-finder";
 import { openSizeFinder } from "./size-finder";
-import { HowItWorks } from "@/components/how-it-works";
 
 /** Opened from the gift page (?from=gift): the panel only sends. Read in the browser, since the
  *  product pages are built ahead of time and can't see the address. */
@@ -274,7 +273,6 @@ export function BuyPanel(props: Props) {
       {status === "live" && !giftOnly && (
         <>
           <p className="mt-2 text-[13px] text-steel-dark">Buy now needs no account. The bag needs you to log in.</p>
-          <HowItWorks guide="buy" className="mt-2" />
           <div className="mt-3 flex gap-2.5">
             <button type="button" onClick={() => setGifting(true)} className="group flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full border border-ink/30 bg-paper px-3 text-[13.5px] font-semibold uppercase tracking-[0.06em] transition-[background-color,border-color,color,scale] duration-200 hover:border-ink hover:bg-ink hover:text-paper active:scale-[0.98]">
               <GiftIcon className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5" />

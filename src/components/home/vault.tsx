@@ -6,7 +6,6 @@ import { VaultBrandAccordion } from "@/components/home/vault-brand-accordion";
 import { MONO, themeVars, V, type Theme } from "@/components/vault/look";
 import { VaultTile, type TileData } from "@/components/vault/vault-tile";
 import type { Product } from "@/lib/types";
-import { HowItWorks } from "@/components/how-it-works";
 
 // The Vault: original brands and numbered pieces. Cold since 18 Oct 2026 (owner, from the FRZN
 // reference): a slate panel on frost, pieces on notched ice tiles. See components/vault/ for the parts
@@ -157,7 +156,6 @@ export function Vault({ products, copy = { title: "The Vault", line: "Original b
               <span className="hidden font-mono text-[11px] uppercase tracking-[0.16em] text-white/60 lg:inline">
                 {left.length} of {pieces.length} available · checked by hand
               </span>
-              <HowItWorks guide="vault" tone="dark" />
             </div>
           </div>
 

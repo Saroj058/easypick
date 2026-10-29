@@ -2,7 +2,6 @@ import { sellable } from "@/lib/inventory";
 import type { HomeSettings } from "@/lib/settings/home-rules";
 import type { Category, Product, Size } from "@/lib/types";
 import { RailWall, type RailColour, type RailPiece, type RailSection } from "./rail-wall";
-import { HowItWorks } from "@/components/how-it-works";
 
 const SIZE_ORDER: Size[] = ["XS", "S", "M", "L", "XL", "XXL", "ONE"];
 /** A section holds three or four pieces; smaller kinds share a section with the next one. */
@@ -105,7 +104,6 @@ export function Rail({ products, settings, kinds }: { products: Product[]; setti
       <div className="container-ep">
         {/* How buying works, for new visitors it pops up as the rail comes into view (owner, 28 Oct 2026) */}
         <div className="mb-3 flex justify-end">
-          <HowItWorks guide="buy" />
         </div>
         <RailWall
           sections={sections}

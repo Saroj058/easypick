@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { HowItWorks } from "@/components/how-it-works";
 import { hourLabel, ktmNow, storeState, toMinutes, type StoreInfo } from "@/lib/store-state";
 
 import "./store-and-gift.css";
@@ -182,7 +181,6 @@ export function StoreAndGift({ info, store = true, gift = true, copy }: { info: 
               <Link className="sg-btn line" href="/gift#buy">
                 {copy.cards}
               </Link>
-              <HowItWorks guide="gift" />
             </div>
           </article>
         )}

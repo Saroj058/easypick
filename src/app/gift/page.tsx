@@ -14,7 +14,6 @@ import { site } from "@/lib/site";
 import { getProducts } from "@/lib/store";
 import { getTrending } from "@/lib/trending";
 import type { Product } from "@/lib/types";
-import { HowItWorks } from "@/components/how-it-works";
 
 // Find a gift ("I am buying for someone"). The page opens on the two things to do (send a piece,
 // send a gift card), then goes straight to the pieces: one strip of cards, as on the drops page,
@@ -65,7 +64,6 @@ export default async function GiftPage() {
                 <ArrowIcon className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </a>
             </nav>
-            <HowItWorks guide="gift" className="mt-4" />
             {/* Already holding a gift card: checked right here in the opening (owner, 14 Oct 2026), straight on the picture, no panel. */}
             <section id="balance" aria-labelledby="balance-h" className="mt-7 scroll-mt-24 border-t border-ink/10 pt-5 md:mt-8 md:max-w-[440px]">
               <div className="flex items-baseline gap-2 text-[14px]">

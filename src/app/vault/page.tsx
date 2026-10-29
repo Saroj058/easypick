@@ -10,7 +10,6 @@ import { VaultSpotlight } from "@/components/vault/vault-spotlight";
 import { VaultTriptych } from "@/components/vault/vault-triptych";
 import { vaultSetting } from "@/lib/settings/vault";
 import { getProducts } from "@/lib/store";
-import { HowItWorks } from "@/components/how-it-works";
 
 export const revalidate = 60;
 
@@ -81,7 +80,6 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
           />
         </div>
         <div className="px-5 pt-4 md:px-6">
-          <HowItWorks guide="vault" />
         </div>
         {brands.length > 0 && (
           <section id="vault-brands" aria-label="Brands" className="scroll-mt-24 px-3 pt-3 md:px-4 md:pt-4">
