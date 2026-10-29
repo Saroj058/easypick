@@ -89,6 +89,7 @@ export default async function HomePage() {
         hex: p.colours.find((c) => c.name === colour)?.hex ?? "#d9d9d6",
         colour,
         sizes: p.variants.filter((v) => v.colour === colour).map((v) => ({ size: v.size, sku: v.sku, left: sellable(v) })),
+        measurements: p.measurements,
       };
     });
   const stocked = liveRange.filter((p) => left(p) > 0);

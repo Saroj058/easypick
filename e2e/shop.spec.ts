@@ -82,7 +82,6 @@ test("home: the rail (cover-flow rows, size asked once, buy or bag, search), the
   await expect(rail.getByRole("status").first()).toContainText(/of \d+ under Rs/);
   await rail.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(budget).toHaveAttribute("aria-pressed", "false");
-  await expect(rail.getByRole("link", { name: "Shop all" }).last()).toHaveAttribute("href", "/shop?size=M");
   // Each section's Show all opens everything of that kind in the shop.
   await expect(rail.getByRole("link", { name: /^Show all/ }).first()).toHaveAttribute("href", /\/shop\?category=tees.*size=M/);
 

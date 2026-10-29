@@ -14,7 +14,6 @@ import { addableFromRail } from "@/lib/addable";
 import { ProductImage } from "@/components/product-image";
 import { CoverflowCarousel } from "@/components/ui/coverflow-carousel";
 import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock";
-import { FlowButton } from "@/components/ui/flow-button";
 import { ShinyLink } from "@/components/ui/shiny-button";
 import {
   Sheet,
@@ -802,7 +801,7 @@ export function RailWall({
 
   return (
     <div>
-      {/* One bar with a thin black line round it, rounded at the top and square at the bottom. Only the name is solid black, as a tab at its left end. Then their size (asked once), search, Filter and Shop all. On a phone it is two rows. */}
+      {/* One bar with a thin black line round it, rounded at the top and square at the bottom. Only the name is solid black, as a tab at its left end. Then their size (asked once), search and Filter (Shop all is in the showroom at the top, owner 29 Oct 2026). On a phone it is two rows. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-t-2xl border border-ink py-2 pr-3 lg:flex-nowrap">
         <h2
           id="rail-title"
@@ -810,9 +809,6 @@ export function RailWall({
         >
           {title}
         </h2>
-        <div className="order-2 ml-auto shrink-0 lg:order-last lg:ml-0">
-          <FlowButton href={withSize("/shop")} text="Shop all" solid />
-        </div>
         <span aria-hidden className="order-3 h-0 basis-full lg:hidden" />
         <span
           aria-hidden

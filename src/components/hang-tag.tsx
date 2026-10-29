@@ -26,7 +26,10 @@ const MEASURE: Record<string, string> = { chest: "Chest", length: "Length", slee
  * The store's promise, printed: fixed price and garment measurements in cm.
  * Used as art on the home hero and featured tiles.
  */
-export function HangTag({ product, size = "M", colour, className = "" }: { product: Product; size?: Size; colour?: string; className?: string }) {
+/** What the tag needs of a piece (a whole Product will do). */
+type Tagged = Pick<Product, "id" | "name" | "price" | "salePrice" | "measurements"> & { variants: { sku: string; size: Size; colour: string }[] };
+
+export function HangTag({ product, size = "M", colour, className = "" }: { product: Tagged; size?: Size; colour?: string; className?: string }) {
   const sku =
     product.variants.find((v) => v.size === size && (!colour || v.colour === colour))?.sku ?? product.variants[0]?.sku ?? product.id;
   const m = product.measurements[size];

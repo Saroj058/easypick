@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { Archivo, Instrument_Serif } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,12 +8,12 @@ import { useEffect, useState } from "react";
 
 import { showBagToast, useAddToBag } from "@/components/bag-gate";
 import { openBuyNow } from "@/components/buy-sheets";
-import { PriceTag } from "@/components/hang-tag";
+import { HangTag } from "@/components/hang-tag";
 import { ProductImage } from "@/components/product-image";
 import { TrackForm } from "@/app/track/track-form";
 import { formatPrice } from "@/lib/format";
 import { MY_SIZES, setMySize, useMySize } from "@/lib/my-size";
-import type { Category, ProductImage as Img, Size } from "@/lib/types";
+import type { Category, Product, ProductImage as Img, Size } from "@/lib/types";
 
 import "./showroom.css";
 
@@ -35,6 +35,8 @@ export type ShowPiece = {
   /** The first colour's sizes, with how many can be bought online. */
   colour: string;
   sizes: { size: Size; sku: string; left: number }[];
+  /** Garment measurements in cm, for its hang tag. */
+  measurements: Product["measurements"];
 };
 export type ShowroomData = {
   pieces: ShowPiece[];
@@ -57,44 +59,39 @@ function Shot({ p, big }: { p: ShowPiece; big?: boolean }) {
   return <ProductImage image={p.photo} category={p.category} colourHex={p.hex} decorative={!big} sizes={big ? "(min-width: 1024px) 560px, 80vw" : "80px"} ground="bg-transparent" className="!absolute inset-0 !aspect-auto h-full w-full" priority={big} />;
 }
 
-/** A small window onto Designer Fits: one fit at a time, its pieces and what it costs together. */
-function FitsWindow({ fits }: { fits: ShowroomData["fits"] }) {
-  const [i, setI] = useState(0);
-  const f = fits[i];
+/** Designer Fits as small cards (owner, 29 Oct 2026): each fit's pieces, its name and what it costs together. */
+function FitsCards({ fits }: { fits: ShowroomData["fits"] }) {
   return (
     <div className="sr-fits">
       <div className="sr-fits-head">
-        <span className="sr-meta">Designer Fits</span>
-        {fits.length > 1 && (
-          <span className="sr-fits-nav">
-            {fits.map((x, k) => (
-              <button key={x.label + k} type="button" aria-label={`Show the ${x.label} fit`} aria-pressed={k === i} onClick={() => setI(k)} />
-            ))}
-          </span>
-        )}
+        <p className="sr-meta">Designer Fits</p>
+        <Link href="/fits" className="sr-fits-all">
+          See all <ArrowRight aria-hidden className="inline h-3 w-3" strokeWidth={1.6} />
+        </Link>
       </div>
-      <Link href="/fits" className="sr-fits-body">
-        <span className="sr-fits-pics">
-          {f.pieces.slice(0, 3).map((p) => (
-            <span key={p.name} className="sr-fits-pic">
-              {p.cutout ? (
-                <Image src={p.cutout} alt="" fill sizes="60px" className="object-contain" />
-              ) : (
-                <ProductImage image={p.photo} category={p.category} colourHex={p.hex} decorative sizes="60px" ground="bg-transparent" className="!absolute inset-0 !aspect-auto h-full w-full" />
-              )}
+      <div className="sr-fits-list">
+        {fits.slice(0, 2).map((f) => (
+          <Link key={f.label} href="/fits" className="sr-fit">
+            <span className="sr-fit-pics">
+              {f.pieces.slice(0, 3).map((p) => (
+                <span key={p.name} className="sr-fit-pic">
+                  {p.cutout ? (
+                    <Image src={p.cutout} alt="" fill sizes="80px" className="object-contain" />
+                  ) : (
+                    <ProductImage image={p.photo} category={p.category} colourHex={p.hex} decorative sizes="80px" ground="bg-transparent" className="!absolute inset-0 !aspect-auto h-full w-full" />
+                  )}
+                </span>
+              ))}
             </span>
-          ))}
-        </span>
-        <span className="sr-fits-text">
-          <b>{f.label}</b>
-          <span>
-            {f.group} · {formatPrice(f.total)}
-          </span>
-          <em>
-            See the fits <ArrowRight aria-hidden className="inline h-3 w-3" strokeWidth={1.6} />
-          </em>
-        </span>
-      </Link>
+            <span className="sr-fit-text">
+              <b>{f.label}</b>
+              <span>
+                {f.group} · {formatPrice(f.total)}
+              </span>
+            </span>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
@@ -129,9 +126,9 @@ function Countdown({ at }: { at: string }) {
 
 /**
  * The top of the home page: the showroom (owner, 28 Oct 2026, design 2 of the five). One piece stands large on a calm
- * stage with its name, price and the sizes it comes in; a strip of the rail's pieces switches it; your size is picked
- * once (the rail below uses it too), and the piece is bought from here with Quick buy or goes in the bag; the Vault, tracking an order and the next
- * drop sit as small boxes on the right. Real pieces, prices and stock.
+ * stage wearing the store's hang tag (its price, its cm, its code); on the left, its name and line, your size (the rail
+ * below uses it too), Quick buy and the bag, then Designer Fits cards; a strip of the rail's pieces switches it; the
+ * Vault, tracking an order and the next drop sit as small boxes on the right. Real pieces, prices and stock.
  */
 export function Showroom({ data }: { data: ShowroomData }) {
   const { pieces } = data;
@@ -177,21 +174,13 @@ export function Showroom({ data }: { data: ShowroomData }) {
     <div className={`sr ${archivo.variable} ${serif.variable}`}>
       <h1 className="sr-only">Easypick: quality clothes and real style in Kathmandu</h1>
 
-      {/* Left: the line, the piece, your size */}
+      {/* Left: the piece and buying it at the top (its price is on its tag), then Designer Fits (owner, 29 Oct 2026) */}
       <section className="sr-info" aria-label="The piece on show">
-        <p className="sr-line">
-          Quality clothes. <em>Real style.</em> Kathmandu.
-        </p>
-        <div className="sr-rule" />
         <div className={`sr-piece sr-swap ${out ? "out" : ""}`}>
           <p className="sr-meta">{p.kind}</p>
           <h2 className="sr-name">{p.name}</h2>
-          <p className="sr-price">{formatPrice(p.price)}</p>
           {p.line && <p className="sr-detail">{p.line}</p>}
         </div>
-
-        {/* Designer Fits: a small window onto the fits (owner, 28 Oct 2026) */}
-        {data.fits.length > 0 && <FitsWindow fits={data.fits} />}
 
         <div className="sr-sizes">
           <div className="sr-sizes-head">
@@ -234,6 +223,8 @@ export function Showroom({ data }: { data: ShowroomData }) {
             </Link>
           </div>
         </div>
+
+        {data.fits.length > 0 && <FitsCards fits={data.fits} />}
       </section>
 
       {/* Centre: the stage */}
@@ -243,9 +234,17 @@ export function Showroom({ data }: { data: ShowroomData }) {
         <Link href={`/product/${p.slug}`} className={`sr-figure ${out ? "out" : ""}`} aria-label={`${p.name}, ${formatPrice(p.price)}`}>
           <Shot p={p} big />
         </Link>
-        {/* The store's hang tag on the piece: its fixed price and its code (owner, 28 Oct 2026) */}
-        <div key={p.slug} className={`sr-hangtag ${out ? "out" : ""}`}>
-          <PriceTag price={formatPrice(p.price)} sku={(pick ?? p.sizes[0])?.sku ?? p.slug} />
+        {/* The product page's hang tag, small, on the piece: fixed price, its cm in your size, its code (owner, 29 Oct 2026) */}
+        <div key={p.slug} className={`sr-hangtag ${out ? "out" : ""}`} aria-hidden>
+          <span className="sr-string" />
+          <div className="sr-tagscale">
+            <HangTag
+              product={{ id: p.slug, name: p.name, price: p.price, measurements: p.measurements, variants: p.sizes.map((v) => ({ sku: v.sku, size: v.size, colour: p.colour })) }}
+              size={pick?.size ?? (p.sizes.some((v) => v.size === "M") ? "M" : (p.sizes[0]?.size ?? "M"))}
+              colour={p.colour}
+              className="[--hole:#efeeea]"
+            />
+          </div>
         </div>
         <span className="sr-idx sr-meta">
           {pad(cur + 1)} / {pad(pieces.length)}
@@ -274,14 +273,9 @@ export function Showroom({ data }: { data: ShowroomData }) {
               </span>
             )}
           </p>
-          <span className="sr-links">
-            <a className="sr-link" href="#rail-title">
-              Browse the rail <ArrowRight aria-hidden className="h-3 w-3" strokeWidth={1.6} />
-            </a>
-            <Link className="sr-link" href="/shop">
-              Go to the shop <ArrowRight aria-hidden className="h-3 w-3" strokeWidth={1.6} />
-            </Link>
-          </span>
+          <a className="sr-btn sr-btn-line sr-btn-sm" href="#rail-title">
+            Browse the rail <ChevronDown aria-hidden className="h-3.5 w-3.5" strokeWidth={1.6} />
+          </a>
         </div>
         <div className="sr-strip" style={{ gridTemplateColumns: `repeat(${pieces.length}, minmax(0, 1fr))` }}>
           {pieces.map((q, i) => (
@@ -377,7 +371,9 @@ export function Showroom({ data }: { data: ShowroomData }) {
           <li>Fixed prices</li>
           <li>Pay with eSewa</li>
         </ul>
-        <span className="sr-meta">Self-checkout store, Kathmandu</span>
+        <Link className="sr-btn sr-btn-dark sr-btn-sm" href="/shop">
+          Shop all <ArrowRight aria-hidden className="h-3.5 w-3.5" strokeWidth={1.6} />
+        </Link>
       </footer>
     </div>
   );
